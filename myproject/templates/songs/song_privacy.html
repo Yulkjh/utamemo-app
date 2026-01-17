@@ -1,0 +1,157 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}楽曲プライバシー設定 - {{ song.title }}{% endblock %}
+
+{% block extra_css %}
+<style>
+.privacy-container {
+    max-width: 600px;
+    margin: 0 auto;
+    padding: 2rem;
+}
+
+.song-info-card {
+    background: linear-gradient(135deg, rgba(255, 121, 64, 0.1) 0%, rgba(255, 107, 53, 0.05) 100%);
+    border: 1px solid rgba(255, 121, 64, 0.2);
+    border-radius: 15px;
+    padding: 2rem;
+    margin-bottom: 2rem;
+    text-align: center;
+}
+
+.privacy-form-card {
+    background: white;
+    border-radius: 15px;
+    padding: 2rem;
+    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.1);
+    border: 1px solid rgba(255, 121, 64, 0.1);
+}
+
+.form-check-custom {
+    background: rgba(255, 121, 64, 0.05);
+    border-radius: 10px;
+    padding: 1.5rem;
+    margin: 1rem 0;
+    border: 2px solid transparent;
+    transition: all 0.3s ease;
+}
+
+.form-check-custom:hover {
+    border-color: rgba(255, 121, 64, 0.3);
+    background: rgba(255, 121, 64, 0.1);
+}
+
+.form-check-custom input[type="checkbox"] {
+    transform: scale(1.2);
+    margin-right: 0.75rem;
+}
+
+.btn-privacy-save {
+    background: linear-gradient(135deg, #ff7940 0%, #ff6b35 100%);
+    color: white;
+    border: none;
+    padding: 12px 30px;
+    border-radius: 50px;
+    font-weight: bold;
+    transition: all 0.3s ease;
+    box-shadow: 0 4px 15px rgba(255, 121, 64, 0.3);
+}
+
+.btn-privacy-save:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 8px 25px rgba(255, 121, 64, 0.4);
+    color: white;
+}
+
+.btn-skip {
+    background: transparent;
+    color: #6c757d;
+    border: 2px solid #6c757d;
+    padding: 12px 30px;
+    border-radius: 50px;
+    font-weight: bold;
+    transition: all 0.3s ease;
+}
+
+.btn-skip:hover {
+    background: #6c757d;
+    color: white;
+}
+
+.privacy-icon {
+    font-size: 3rem;
+    color: #ff7940;
+    margin-bottom: 1rem;
+}
+
+.privacy-explanation {
+    background: rgba(33, 37, 41, 0.05);
+    border-radius: 10px;
+    padding: 1rem;
+    margin-top: 1rem;
+    font-size: 0.9rem;
+    color: #6c757d;
+}
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container mt-4">
+    <div class="privacy-container">
+        <!-- 楽曲情報 -->
+        <div class="song-info-card">
+            <div class="privacy-icon">
+                <i class="bi bi-music-note-beamed"></i>
+            </div>
+            <h2 style="color: #ff7940; margin-bottom: 0.5rem;">{{ song.title }}</h2>
+            <p class="text-muted mb-0">楽曲が正常に作成されました！</p>
+        </div>
+
+        <!-- プライバシー設定フォーム -->
+        <div class="privacy-form-card">
+            <h3 style="color: #333; margin-bottom: 1.5rem; text-align: center;">
+                <i class="bi bi-shield-check" style="color: #ff7940;"></i>
+                プライバシー設定
+            </h3>
+
+            <form method="post">
+                {% csrf_token %}
+                
+                <div class="form-check-custom">
+                    <div class="d-flex align-items-start">
+                        {{ form.is_public }}
+                        <div class="ms-2">
+                            <label class="form-check-label fw-bold" for="{{ form.is_public.id_for_label }}" style="color: #333;">
+                                {{ form.is_public.label }}
+                            </label>
+                            <div class="privacy-explanation">
+                                {{ form.is_public.help_text }}
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="text-center mt-4">
+                    <button type="submit" class="btn btn-privacy-save me-3">
+                        <i class="bi bi-check-circle"></i> 設定を保存
+                    </button>
+                    <a href="{% url 'songs:song_detail' pk=song.pk %}" class="btn btn-skip">
+                        <i class="bi bi-skip-forward"></i> 後で設定
+                    </a>
+                </div>
+            </form>
+
+            <!-- 説明 -->
+            <div class="mt-4 p-3" style="background: rgba(255, 193, 7, 0.1); border-radius: 10px; border-left: 4px solid #ffc107;">
+                <h6 style="color: #856404; margin-bottom: 0.5rem;">
+                    <i class="bi bi-info-circle"></i> プライバシーについて
+                </h6>
+                <small style="color: #856404;">
+                    この設定はいつでも「MY楽曲」ページから変更できます。公開後も非公開に戻すことが可能です。
+                </small>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

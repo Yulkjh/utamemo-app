@@ -1,0 +1,564 @@
+{% extends 'base.html' %}
+
+{% block title %}{% if is_english %}Create Song{% elif is_chinese %}创建歌曲{% else %}楽曲作成{% endif %} - UTAMEMO{% endblock %}
+
+{% block content %}
+<div class="container py-5">
+    <div class="row justify-content-center">
+        <div class="col-lg-8">
+            <!-- ヘッダーセクション -->
+            <div class="text-center mb-5 fade-in">
+                <h1 class="display-6 fw-bold mb-3">{% if is_english %}Create Song{% elif is_chinese %}创建歌曲{% else %}楽曲を作成{% endif %}</h1>
+                <p class="lead text-secondary">
+                    {% if is_english %}
+                    Generate learning songs from extracted text<br>
+                    AI will automatically create optimal lyrics and melody
+                    {% elif is_chinese %}
+                    从提取的文本生成学习歌曲<br>
+                    AI将自动创建最佳歌词和旋律
+                    {% else %}
+                    抽出されたテキストから学習楽曲を生成<br>
+                    AIが最適な歌詞とメロディーを自動作成
+                    {% endif %}
+                </p>
+            </div>
+
+            <!-- メインフォーム -->
+            <div class="create-form-card fade-in">
+                <div class="form-header">
+                    <h3>{% if is_english %}AI Song Generation{% elif is_chinese %}AI歌曲生成{% else %}AI楽曲生成{% endif %}</h3>
+                    <p class="mb-0">{% if is_english %}Enter the information below to create your own learning song{% elif is_chinese %}输入以下信息，创建您的专属学习歌曲{% else %}以下の情報を入力して、あなただけの学習楽曲を作成しましょう{% endif %}</p>
+                </div>
+                
+                <div class="form-body">
+                    <form method="post" id="create-song-form">
+                        {% csrf_token %}
+                        
+                        <!-- タイトル入力 -->
+                        <div class="form-group mb-4">
+                            <label for="{{ form.title.id_for_label }}" class="form-label">
+                                {% if is_english %}Song Title{% elif is_chinese %}歌曲标题{% else %}楽曲タイトル{% endif %} <span class="text-danger">*</span>
+                            </label>
+                            {{ form.title }}
+                            <div class="form-text">{% if is_english %}Give it a memorable title that expresses the content{% elif is_chinese %}取一个易于记忆且能表达内容的标题{% else %}覚えやすく、内容を表現するタイトルを付けましょう{% endif %}</div>
+                            {% if form.title.errors %}
+                            <div class="text-danger mt-2">
+                                {% for error in form.title.errors %}
+                                <small>{{ error }}</small>
+                                {% endfor %}
+                            </div>
+                            {% endif %}
+                        </div>
+                        
+                        <!-- ジャンル入力 -->
+                        <div class="form-group mb-4">
+                            <label for="{{ form.genre.id_for_label }}" class="form-label">
+                                {% if is_english %}Music Genre{% elif is_chinese %}音乐类型{% else %}音楽ジャンル{% endif %}
+                            </label>
+                            {{ form.genre }}
+                            <div class="form-text">
+                                {% if is_english %}Select a genre that fits your learning content{% elif is_chinese %}选择适合您学习内容的类型{% else %}学習内容に合ったジャンルを選択してください{% endif %}
+                                <div class="genre-suggestions mt-2">
+                                    {% if is_english %}
+                                    <span class="genre-tag active" onclick="setGenre('Auto')">Auto</span>
+                                    <span class="genre-tag" onclick="setGenre('Pop')">Pop</span>
+                                    <span class="genre-tag" onclick="setGenre('Rock')">Rock</span>
+                                    <span class="genre-tag" onclick="setGenre('Ballad')">Ballad</span>
+                                    <span class="genre-tag" onclick="setGenre('Rap')">Rap</span>
+                                    <span class="genre-tag" onclick="setGenre('Electronic')">Electronic</span>
+                                    <span class="genre-tag" onclick="setGenre('Classical')">Classical</span>
+                                    <span class="genre-tag" onclick="setGenre('Jazz')">Jazz</span>
+                                    {% elif is_chinese %}
+                                    <span class="genre-tag active" onclick="setGenre('Auto')">自动</span>
+                                    <span class="genre-tag" onclick="setGenre('流行')">流行</span>
+                                    <span class="genre-tag" onclick="setGenre('摇滚')">摇滚</span>
+                                    <span class="genre-tag" onclick="setGenre('抒情')">抒情</span>
+                                    <span class="genre-tag" onclick="setGenre('说唱')">说唱</span>
+                                    <span class="genre-tag" onclick="setGenre('电子')">电子</span>
+                                    <span class="genre-tag" onclick="setGenre('古典')">古典</span>
+                                    <span class="genre-tag" onclick="setGenre('爵士')">爵士</span>
+                                    {% else %}
+                                    <span class="genre-tag active" onclick="setGenre('Auto')">おまかせ</span>
+                                    <span class="genre-tag" onclick="setGenre('ポップ')">ポップ</span>
+                                    <span class="genre-tag" onclick="setGenre('ロック')">ロック</span>
+                                    <span class="genre-tag" onclick="setGenre('バラード')">バラード</span>
+                                    <span class="genre-tag" onclick="setGenre('ラップ')">ラップ</span>
+                                    <span class="genre-tag" onclick="setGenre('電子音楽')">電子音楽</span>
+                                    <span class="genre-tag" onclick="setGenre('クラシック')">クラシック</span>
+                                    <span class="genre-tag" onclick="setGenre('ジャズ')">ジャズ</span>
+                                    {% endif %}
+                                </div>
+                            </div>
+                            {% if form.genre.errors %}
+                            <div class="text-danger mt-2">
+                                {% for error in form.genre.errors %}
+                                <small>{{ error }}</small>
+                                {% endfor %}
+                            </div>
+                            {% endif %}
+                        </div>
+                        
+                        <!-- ボーカルスタイル選択 -->
+                        <div class="form-group mb-4">
+                            <label class="form-label">
+                                {% if is_english %}Vocal Style{% elif is_chinese %}声音性别{% else %}ボーカルの性別{% endif %} <span class="text-danger">*</span>
+                            </label>
+                            <div class="vocal-toggle-container">
+                                <input type="radio" name="vocal_style" id="vocal-female" value="female" class="vocal-toggle-input" checked>
+                                <input type="radio" name="vocal_style" id="vocal-male" value="male" class="vocal-toggle-input">
+                                <div class="vocal-toggle-wrapper">
+                                    <label for="vocal-female" class="vocal-toggle-btn">
+                                        {% if is_english %}Female{% elif is_chinese %}女声{% else %}女性{% endif %}
+                                    </label>
+                                    <label for="vocal-male" class="vocal-toggle-btn">
+                                        {% if is_english %}Male{% elif is_chinese %}男声{% else %}男性{% endif %}
+                                    </label>
+                                </div>
+                            </div>
+                            {% if form.vocal_style.errors %}
+                            <div class="text-danger mt-2">
+                                <small>{% if is_english %}This field is required.{% elif is_chinese %}此字段为必填项。{% else %}このフィールドは必須です。{% endif %}</small>
+                            </div>
+                            {% endif %}
+                        </div>
+                        
+                        <!-- AIモデル選択 -->
+                        <div class="form-group mb-4">
+                            <label class="form-label">
+                                <i class="bi bi-cpu me-1"></i>
+                                {% if is_english %}AI Model{% elif is_chinese %}AI模型{% else %}AIモデル{% endif %}
+                            </label>
+                            <select name="mureka_model" class="form-select">
+                                <option value="mureka-7.5" selected>{% if is_english %}Standard{% elif is_chinese %}标准{% else %}スタンダード{% endif %}</option>
+                                <option value="mureka-7.6">{% if is_english %}High Quality{% elif is_chinese %}高品质{% else %}高品質{% endif %}</option>
+                                <option value="mureka-o2">{% if is_english %}Premium{% elif is_chinese %}专业{% else %}プレミアム{% endif %}</option>
+                            </select>
+                        </div>
+                        
+                        <!-- カスタマイズ入力欄（自由記述） -->
+                        <div class="form-group mb-4">
+                            <label for="music_prompt" class="form-label">
+                                <i class="bi bi-chat-dots me-1"></i>
+                                {% if is_english %}Customize (Optional){% elif is_chinese %}自定义（可选）{% else %}カスタマイズ（任意）{% endif %}
+                            </label>
+                            <textarea name="music_prompt" id="music_prompt" class="form-control custom-request-input" rows="2" 
+                                placeholder="{% if is_english %}e.g. 'Make it upbeat', 'Add piano', 'Emotional ballad style', 'Like a J-pop song'{% elif is_chinese %}例如：'轻快一点'、'加钢琴'、'抒情风格'、'像日本流行歌曲'{% else %}例：「アップテンポで」「ピアノを入れて」「感動的なバラード調」「J-POPっぽく」{% endif %}"></textarea>
+                            <small class="text-muted">
+                                {% if is_english %}Tell AI how you want your song to sound{% elif is_chinese %}告诉AI你想要什么样的歌曲{% else %}AIにどのような曲を作ってほしいか自由に伝えられます{% endif %}
+                            </small>
+                        </div>
+                        
+                        <!-- 元テキスト（隠しフィールド） -->
+                        <div style="display: none;">
+                            {{ form.original_text }}
+                        </div>
+                        
+                        <!-- 送信ボタン -->
+                        <div class="form-actions">
+                            <button type="submit" class="btn-create-song">
+                                <span class="btn-text">{% if is_english %}Generate AI Song{% elif is_chinese %}AI生成歌曲{% else %}AI楽曲を生成{% endif %}</span>
+                                <span class="btn-loading" style="display: none;">
+                                    <span class="spinner-border spinner-border-sm"></span>
+                                    {% if is_english %}Generating...{% elif is_chinese %}生成中...{% else %}楽曲を生成中...{% endif %}
+                                </span>
+                            </button>
+                            <a href="{% url 'songs:upload_image' %}" class="btn-secondary-action">
+                                {% if is_english %}Back to Upload{% elif is_chinese %}返回上传{% else %}画像アップロードに戻る{% endif %}
+                            </a>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<style>
+.create-form-card {
+    background: var(--surface);
+    border-radius: var(--radius-xl);
+    box-shadow: var(--shadow-lg);
+    overflow: hidden;
+    border: 1px solid rgba(255, 121, 64, 0.1);
+}
+
+.form-header {
+    background: var(--primary-gradient);
+    color: white;
+    padding: 2rem;
+    text-align: center;
+}
+
+.form-header h3 {
+    margin-bottom: 0.5rem;
+    font-weight: 700;
+}
+
+.form-body {
+    padding: 2rem;
+}
+
+.form-group .form-label {
+    font-weight: 600;
+    color: var(--text-primary);
+    margin-bottom: 0.75rem;
+    display: flex;
+    align-items: center;
+}
+
+.form-group input[type="text"],
+.form-group textarea {
+    width: 100%;
+    padding: 1rem;
+    border: 2px solid var(--border-color);
+    border-radius: var(--radius-md);
+    font-size: 1rem;
+    transition: all 0.3s ease;
+    background: var(--surface);
+}
+
+.form-group input[type="text"]:focus,
+.form-group textarea:focus {
+    outline: none;
+    border-color: var(--primary-color);
+    box-shadow: 0 0 0 3px rgba(255, 121, 64, 0.1);
+    background: var(--surface-elevated);
+}
+
+.form-text {
+    font-size: 0.9rem;
+    color: var(--text-muted);
+    margin-top: 0.5rem;
+}
+
+.genre-suggestions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+}
+
+.genre-tag {
+    padding: 0.25rem 0.75rem;
+    background: var(--surface-elevated);
+    border: 1px solid var(--border-color);
+    border-radius: var(--radius-md);
+    font-size: 0.8rem;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    color: var(--text-secondary);
+}
+
+.genre-tag:hover {
+    background: var(--primary-color);
+    color: white;
+    border-color: var(--primary-color);
+    transform: translateY(-1px);
+}
+
+/* カスタマイズ入力欄 */
+.custom-request-input {
+    border: 2px solid #e0e0e0;
+    border-radius: 10px;
+    padding: 0.75rem 1rem;
+    font-size: 0.95rem;
+    transition: all 0.2s ease;
+    resize: none;
+}
+
+.custom-request-input:focus {
+    border-color: #ff7940;
+    box-shadow: 0 0 0 3px rgba(255, 121, 64, 0.1);
+    outline: none;
+}
+
+.custom-request-input::placeholder {
+    color: #aaa;
+}
+
+.privacy-card {
+    background: var(--surface-elevated);
+    border: 1px solid var(--border-color);
+    border-radius: var(--radius-lg);
+    padding: 1.5rem;
+}
+
+.privacy-header h6 {
+    margin: 0;
+    color: var(--text-primary);
+}
+
+.form-check-modern {
+    margin-bottom: 1rem;
+}
+
+.form-check-modern input[type="checkbox"] {
+    width: 1.5rem;
+    height: 1.5rem;
+    margin-right: 1rem;
+    accent-color: var(--primary-color);
+}
+
+.form-check-modern .form-check-label {
+    display: block;
+    margin-left: 2.5rem;
+    cursor: pointer;
+}
+
+.check-title {
+    display: block;
+    font-weight: 600;
+    color: var(--text-primary);
+    margin-bottom: 0.25rem;
+}
+
+.check-description {
+    display: block;
+    font-size: 0.9rem;
+    color: var(--text-secondary);
+    line-height: 1.5;
+}
+
+.privacy-note {
+    background: rgba(255, 193, 7, 0.1);
+    border: 1px solid rgba(255, 193, 7, 0.3);
+    border-radius: var(--radius-md);
+    padding: 1rem;
+    font-size: 0.9rem;
+    color: #856404;
+}
+
+.success-alert {
+    background: rgba(40, 167, 69, 0.1);
+    border: 1px solid rgba(40, 167, 69, 0.3);
+    border-radius: var(--radius-lg);
+    padding: 1.5rem;
+}
+
+.alert-title {
+    font-weight: 700;
+    color: #155724;
+    margin-bottom: 0.25rem;
+}
+
+.alert-text {
+    color: #155724;
+    font-size: 0.9rem;
+}
+
+.form-actions {
+    display: flex;
+    flex-direction: column;
+    gap: 1rem;
+    align-items: center;
+}
+
+.btn-create-song {
+    background: var(--primary-gradient);
+    border: none;
+    color: white;
+    padding: 1rem 3rem;
+    border-radius: var(--radius-lg);
+    font-size: 1.1rem;
+    font-weight: 700;
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    transition: all 0.3s ease;
+    box-shadow: var(--shadow-md);
+    cursor: pointer;
+    min-width: 250px;
+    justify-content: center;
+}
+
+.btn-create-song:hover {
+    transform: translateY(-3px);
+    box-shadow: var(--shadow-lg);
+}
+
+.btn-create-song:disabled {
+    opacity: 0.7;
+    cursor: not-allowed;
+    transform: none;
+}
+
+.btn-secondary-action {
+    color: var(--text-secondary);
+    text-decoration: none;
+    font-weight: 500;
+    padding: 0.75rem 1.5rem;
+    border-radius: var(--radius-md);
+    transition: all 0.3s ease;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+}
+
+.btn-secondary-action:hover {
+    background: var(--surface-elevated);
+    color: var(--primary-color);
+    text-decoration: none;
+}
+
+/* ボーカルスタイル トグルボタン */
+.vocal-toggle-container {
+    position: relative;
+}
+
+.vocal-toggle-input {
+    display: none;
+}
+
+.vocal-toggle-wrapper {
+    display: inline-flex;
+    background: #e8e8e8;
+    border-radius: 8px;
+    padding: 4px;
+    gap: 2px;
+}
+
+.vocal-toggle-btn {
+    padding: 10px 32px;
+    font-size: 0.95rem;
+    font-weight: 500;
+    color: #666;
+    background: transparent;
+    border: none;
+    border-radius: 6px;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    margin: 0;
+}
+
+.vocal-toggle-btn:hover {
+    color: #444;
+}
+
+#vocal-female:checked ~ .vocal-toggle-wrapper label[for="vocal-female"],
+#vocal-male:checked ~ .vocal-toggle-wrapper label[for="vocal-male"] {
+    background: #fff;
+    color: #333;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+}
+
+/* アニメーション */
+.fade-in {
+    animation: fadeInUp 0.6s ease forwards;
+}
+
+.fade-in:nth-child(2) { animation-delay: 0.2s; }
+.fade-in:nth-child(3) { animation-delay: 0.4s; }
+
+@keyframes fadeInUp {
+    from {
+        opacity: 0;
+        transform: translateY(30px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+/* レスポンシブ調整 */
+@media (max-width: 768px) {
+    .form-header {
+        padding: 1.5rem;
+    }
+    
+    .form-body {
+        padding: 1.5rem;
+    }
+    
+    .genre-suggestions {
+        justify-content: center;
+    }
+    
+    .vocal-style-options {
+        flex-direction: column;
+    }
+    
+    .vocal-option {
+        min-width: auto;
+        width: 100%;
+    }
+    
+    .form-check-modern .form-check-label {
+        margin-left: 0;
+        margin-top: 0.5rem;
+    }
+    
+    .form-check-modern input[type="checkbox"] {
+        margin-right: 0.5rem;
+    }
+    
+    .btn-create-song {
+        width: 100%;
+        min-width: auto;
+    }
+}
+</style>
+
+<script>
+// ジャンル選択機能
+function setGenre(genre) {
+    document.getElementById('{{ form.genre.id_for_label }}').value = genre;
+    
+    // 視覚的フィードバック
+    document.querySelectorAll('.genre-tag').forEach(tag => {
+        tag.classList.remove('active');
+    });
+    event.target.classList.add('active');
+}
+
+// フォーム送信時の処理
+document.addEventListener('DOMContentLoaded', function() {
+    const form = document.getElementById('create-song-form');
+    const submitBtn = document.querySelector('.btn-create-song');
+    const btnText = submitBtn.querySelector('.btn-text');
+    const btnLoading = submitBtn.querySelector('.btn-loading');
+    
+    // プレースホルダーを言語に応じて変更
+    const genreInput = document.getElementById('{{ form.genre.id_for_label }}');
+    const titleInput = document.getElementById('{{ form.title.id_for_label }}');
+    
+    {% if is_english %}
+    if (genreInput) genreInput.placeholder = 'Genre (e.g. Pop, Rock, Classical)';
+    if (titleInput) titleInput.placeholder = 'Enter the song title';
+    {% elif is_chinese %}
+    if (genreInput) genreInput.placeholder = '类型（例：流行、摇滚、古典）';
+    if (titleInput) titleInput.placeholder = '输入歌曲标题';
+    {% endif %}
+    
+    form.addEventListener('submit', function(e) {
+        // ローディング状態に変更
+        submitBtn.disabled = true;
+        btnText.style.display = 'none';
+        btnLoading.style.display = 'flex';
+        
+        // 送信を続行
+        return true;
+    });
+    
+    // ジャンルタグにアクティブクラス追加のスタイル
+    const currentGenre = genreInput.value;
+    
+    document.querySelectorAll('.genre-tag').forEach(tag => {
+        if (tag.textContent.trim() === currentGenre) {
+            tag.classList.add('active');
+        }
+    });
+});
+
+// CSS for active genre tag
+const style = document.createElement('style');
+style.textContent = `
+    .genre-tag.active {
+        background: var(--primary-color) !important;
+        color: white !important;
+        border-color: var(--primary-color) !important;
+        transform: translateY(-1px);
+    }
+`;
+document.head.appendChild(style);
+</script>
+{% endblock %}

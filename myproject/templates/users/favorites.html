@@ -1,0 +1,228 @@
+{% extends 'base.html' %}
+{% load lyrics_filters %}
+
+{% block title %}{% if is_english %}Favorites{% elif is_chinese %}收藏{% else %}お気に入り{% endif %} - UTAMEMO{% endblock %}
+
+{% block content %}
+{% if user.is_authenticated %}
+{% csrf_token %}
+{% endif %}
+<div class="music-library">
+    <div class="library-header">
+        <div class="container">
+            <div class="header-content">
+                <h1 class="library-title">{% if is_english %}Favorites{% elif is_chinese %}收藏{% else %}お気に入り{% endif %}</h1>
+                <p class="library-subtitle">{% if is_english %}Your favorite song collection{% elif is_chinese %}您的收藏歌曲集{% else %}あなたのお気に入り楽曲コレクション{% endif %}</p>
+            </div>
+        </div>
+    </div>
+
+    <div class="library-content">
+        <div class="container">
+            {% if favorites %}
+            <div class="songs-list" id="songsList">
+                {% for favorite in favorites %}
+                {% with song=favorite.song %}
+                <div class="song-item" data-url="{% url 'songs:song_detail' song.pk %}" onclick="navigateToSong(event, this)">
+                    <a href="{% url 'users:profile' song.created_by.username %}" class="song-creator-avatar" onclick="event.stopPropagation();" title="{{ song.created_by.username }}">
+                        {% if song.created_by.profile_image_data %}
+                        <img src="{{ song.created_by.profile_image_data }}" alt="{{ song.created_by.username }}">
+                        {% elif song.created_by.profile_image and song.created_by.profile_image.name %}
+                        <img src="{{ song.created_by.profile_image.url }}" alt="{{ song.created_by.username }}" onerror="this.style.display='none'; this.nextElementSibling.style.display='flex';">
+                        <div class="creator-default-avatar" style="display: none;"><i class="bi bi-person-fill"></i></div>
+                        {% else %}
+                        <div class="creator-default-avatar"><i class="bi bi-person-fill"></i></div>
+                        {% endif %}
+                    </a>
+                    
+                    <div class="song-info">
+                        <div class="song-main-info">
+                            <h3 class="song-title">{{ song.title }}</h3>
+                            <a href="{% url 'users:profile' song.created_by.username %}" class="song-artist-link" onclick="event.stopPropagation();">{{ song.created_by.username }}</a>
+                        </div>
+                        <div class="song-details">
+                            {% if song.genre %}<span class="song-genre">{{ song.genre }}</span>{% endif %}
+                            <span class="song-duration">{{ song.duration|format_duration|default:"3:45" }}</span>
+                        </div>
+                    </div>
+                    
+                    <div class="song-actions">
+                        {% if song.audio_url %}
+                        <button class="play-button" onclick="event.stopPropagation(); playAudio('{{ song.audio_url }}', this, {{ song.pk }})" data-song-id="{{ song.pk }}">
+                            <i class="bi bi-play-fill"></i><span>{% if is_english %}Play{% elif is_chinese %}播放{% else %}再生{% endif %}</span>
+                        </button>
+                        {% else %}
+                        <a href="{% url 'songs:song_detail' song.pk %}" class="play-button" onclick="event.stopPropagation();">
+                            <i class="bi bi-play-fill"></i><span>{% if is_english %}Play{% elif is_chinese %}播放{% else %}再生{% endif %}</span>
+                        </a>
+                        {% endif %}
+                        {% if user.is_authenticated %}
+                        <button class="action-button like-button{% if song.pk in user_liked_songs %} liked{% endif %}" onclick="event.stopPropagation(); toggleLike({{ song.pk }})" id="like-btn-{{ song.pk }}">
+                            <i class="bi bi-heart{% if song.pk in user_liked_songs %}-fill{% endif %}"></i>
+                            <span class="like-count" id="like-count-{{ song.pk }}">{{ song.likes_count }}</span>
+                        </button>
+                        <button class="action-button favorite-button active" onclick="event.stopPropagation(); toggleFavorite({{ song.pk }})" id="fav-btn-{{ song.pk }}">
+                            <i class="bi bi-bookmark-fill"></i>
+                        </button>
+                        {% endif %}
+                    </div>
+                </div>
+                {% endwith %}
+                {% endfor %}
+            </div>
+            {% else %}
+            <div class="empty-state">
+                <div class="empty-icon"><i class="bi bi-bookmark-heart"></i></div>
+                <h3>{% if is_english %}No favorites yet{% elif is_chinese %}还没有收藏{% else %}お気に入りがありません{% endif %}</h3>
+                <p>{% if is_english %}Browse songs and add your favorites!{% elif is_chinese %}浏览歌曲并添加您的收藏！{% else %}楽曲を探して、お気に入りに追加しましょう！{% endif %}</p>
+                <a href="{% url 'songs:song_list' %}" class="btn-primary">{% if is_english %}Browse Songs{% elif is_chinese %}浏览歌曲{% else %}楽曲を探す{% endif %}</a>
+            </div>
+            {% endif %}
+        </div>
+    </div>
+</div>
+
+<style>
+.music-library { background: #f5f5f7; min-height: 100vh; }
+.library-header { background: linear-gradient(135deg, #ff7940 0%, #ff6b35 100%); color: white; padding: 2rem 0 3rem 0; }
+.header-content { text-align: center; margin-bottom: 1rem; }
+.library-title { font-size: 2.5rem; font-weight: 700; margin: 0 0 0.5rem 0; }
+.library-subtitle { font-size: 1.1rem; opacity: 0.9; margin: 0; }
+.library-content { padding: 2rem 0; margin-top: -1rem; position: relative; z-index: 2; }
+.songs-list { background: white; border-radius: 20px; box-shadow: 0 4px 20px rgba(0,0,0,0.1); overflow: hidden; }
+.song-item { display: flex; align-items: center; padding: 16px 20px; border-bottom: 1px solid #f0f0f0; cursor: pointer; transition: background 0.2s; }
+.song-item:hover { background: #f8f9fa; }
+.song-item:last-child { border-bottom: none; }
+.song-creator-avatar { width: 48px; height: 48px; border-radius: 50%; overflow: hidden; margin-right: 15px; flex-shrink: 0; display: flex; align-items: center; justify-content: center; background: #f0f0f0; }
+.song-creator-avatar:hover { transform: scale(1.05); }
+.song-creator-avatar img { width: 100%; height: 100%; object-fit: cover; }
+.creator-default-avatar { width: 100%; height: 100%; display: flex; align-items: center; justify-content: center; background: linear-gradient(135deg, #ff7940, #ff6b35); color: white; font-size: 1.2rem; }
+.song-info { flex: 1; min-width: 0; }
+.song-title { font-size: 1.05rem; font-weight: 600; color: #333; margin: 0 0 4px 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.song-artist-link { font-size: 0.9rem; color: #666; text-decoration: none; }
+.song-artist-link:hover { color: #ff7940; }
+.song-details { display: flex; gap: 10px; align-items: center; margin-top: 4px; }
+.song-genre { background: #e3f2fd; color: #1976d2; padding: 2px 8px; border-radius: 10px; font-size: 0.75rem; }
+.song-duration { color: #999; font-size: 0.85rem; }
+.song-actions { display: flex; align-items: center; gap: 8px; flex-shrink: 0; }
+.play-button { background: linear-gradient(135deg, #ff7940, #ff6b35); color: white; padding: 8px 16px; border-radius: 20px; font-size: 0.9rem; font-weight: 500; display: flex; align-items: center; gap: 5px; border: none; cursor: pointer; text-decoration: none; }
+.play-button:hover { transform: translateY(-1px); box-shadow: 0 4px 12px rgba(255,121,64,0.4); color: white; }
+.action-button { width: 36px; height: 36px; border: none; background: transparent; border-radius: 50%; display: flex; align-items: center; justify-content: center; color: #999; cursor: pointer; }
+.action-button:hover { background: #f0f0f0; color: #ff7940; }
+.action-button.active, .action-button.liked { color: #ff7940; }
+.like-button { width: auto; border-radius: 20px; padding: 8px 12px; gap: 6px; }
+.like-count { font-size: 0.85rem; font-weight: 500; }
+.empty-state { text-align: center; padding: 4rem 2rem; background: white; border-radius: 20px; box-shadow: 0 4px 20px rgba(0,0,0,0.1); }
+.empty-icon { font-size: 4rem; color: #ddd; margin-bottom: 1rem; }
+.empty-state h3 { color: #333; margin-bottom: 0.5rem; }
+.empty-state p { color: #666; margin-bottom: 2rem; }
+.btn-primary { background: linear-gradient(135deg, #ff7940, #ff6b35); color: white; padding: 12px 24px; border-radius: 25px; text-decoration: none; font-weight: 600; display: inline-block; }
+.btn-primary:hover { transform: translateY(-2px); color: white; }
+@media (max-width: 768px) {
+    .library-title { font-size: 1.8rem; }
+    .song-item { flex-wrap: wrap; padding: 12px 15px; gap: 10px; }
+    .song-creator-avatar { width: 40px; height: 40px; margin-right: 10px; }
+    .song-actions { width: 100%; justify-content: space-between; }
+    .play-button { flex: 1; justify-content: center; }
+}
+</style>
+
+<script>
+let currentAudio = null;
+let currentPlayButton = null;
+
+function navigateToSong(event, element) {
+    if (event.target.closest('.song-actions')) return;
+    const url = element.dataset.url;
+    if (url) window.location.href = url;
+}
+
+function playAudio(audioUrl, button, songId) {
+    const icon = button.querySelector('i');
+    const textSpan = button.querySelector('span');
+    
+    if (currentAudio && currentPlayButton === button) {
+        if (currentAudio.paused) {
+            currentAudio.play();
+            icon.className = 'bi bi-pause-fill';
+            textSpan.textContent = '{% if is_english %}Pause{% elif is_chinese %}暂停{% else %}停止{% endif %}';
+        } else {
+            currentAudio.pause();
+            icon.className = 'bi bi-play-fill';
+            textSpan.textContent = '{% if is_english %}Play{% elif is_chinese %}播放{% else %}再生{% endif %}';
+        }
+        return;
+    }
+    
+    if (currentAudio) {
+        currentAudio.pause();
+        if (currentPlayButton) {
+            currentPlayButton.querySelector('i').className = 'bi bi-play-fill';
+            currentPlayButton.querySelector('span').textContent = '{% if is_english %}Play{% elif is_chinese %}播放{% else %}再生{% endif %}';
+        }
+    }
+    
+    currentAudio = new Audio(audioUrl);
+    currentPlayButton = button;
+    
+    currentAudio.play().then(() => {
+        icon.className = 'bi bi-pause-fill';
+        textSpan.textContent = '{% if is_english %}Pause{% elif is_chinese %}暂停{% else %}停止{% endif %}';
+    }).catch(error => {
+        window.location.href = '/songs/' + songId + '/';
+    });
+    
+    currentAudio.addEventListener('ended', () => {
+        icon.className = 'bi bi-play-fill';
+        textSpan.textContent = '{% if is_english %}Play{% elif is_chinese %}播放{% else %}再生{% endif %}';
+        currentAudio = null;
+        currentPlayButton = null;
+    });
+}
+
+{% if user.is_authenticated %}
+function toggleLike(songId) {
+    fetch('/songs/' + songId + '/like/', {
+        method: 'POST',
+        headers: {
+            'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]').value,
+            'X-Requested-With': 'XMLHttpRequest'
+        }
+    })
+    .then(response => response.json())
+    .then(data => {
+        const likeBtn = document.getElementById('like-btn-' + songId);
+        if (data.liked) {
+            likeBtn.classList.add('liked');
+            likeBtn.innerHTML = '<i class="bi bi-heart-fill"></i><span class="like-count">' + data.likes_count + '</span>';
+        } else {
+            likeBtn.classList.remove('liked');
+            likeBtn.innerHTML = '<i class="bi bi-heart"></i><span class="like-count">' + data.likes_count + '</span>';
+        }
+    });
+}
+
+function toggleFavorite(songId) {
+    fetch('/songs/' + songId + '/favorite/', {
+        method: 'POST',
+        headers: {
+            'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]').value,
+            'X-Requested-With': 'XMLHttpRequest'
+        }
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (!data.favorited) {
+            const songItem = document.getElementById('fav-btn-' + songId).closest('.song-item');
+            songItem.style.opacity = '0';
+            setTimeout(() => {
+                songItem.remove();
+                const songsList = document.getElementById('songsList');
+                if (songsList && songsList.children.length === 0) location.reload();
+            }, 300);
+        }
+    });
+}
+{% endif %}
+</script>
+{% endblock %}

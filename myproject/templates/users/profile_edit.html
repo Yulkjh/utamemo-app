@@ -1,0 +1,540 @@
+{% extends 'base.html' %}
+
+{% block title %}{% if is_english %}Edit Profile{% elif is_chinese %}编辑个人资料{% else %}プロフィール編集{% endif %} - UTAMEMO{% endblock %}
+
+{% block content %}
+<div class="profile-edit-container">
+    <div class="profile-edit-wrapper fade-in">
+        <div class="edit-header">
+            <a href="{% url 'users:profile' user.username %}" class="back-link">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <path d="M19 12H5"/>
+                    <path d="M12 19l-7-7 7-7"/>
+                </svg>
+                {% if is_english %}Back{% elif is_chinese %}返回{% else %}戻る{% endif %}
+            </a>
+            <h1>{% if is_english %}Edit Profile{% elif is_chinese %}编辑个人资料{% else %}プロフィール編集{% endif %}</h1>
+        </div>
+
+        <form method="post" enctype="multipart/form-data" class="profile-edit-form">
+            {% csrf_token %}
+            
+            <!-- プロフィール画像セクション -->
+            <div class="image-upload-section">
+                <div class="current-avatar" id="avatar-preview">
+                    {% if user.profile_image_data %}
+                    <img src="{{ user.profile_image_data }}" alt="{{ user.username }}" id="preview-image">
+                    <div class="avatar-placeholder" id="placeholder-avatar" style="display: none;">
+                        <svg width="60" height="60" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/>
+                            <circle cx="12" cy="7" r="4"/>
+                        </svg>
+                    </div>
+                    {% elif user.profile_image and user.profile_image.name %}
+                    <img src="{{ user.profile_image.url }}" alt="{{ user.username }}" id="preview-image" onerror="this.style.display='none'; document.getElementById('placeholder-avatar').style.display='flex';">
+                    <div class="avatar-placeholder" id="placeholder-avatar" style="display: none;">
+                        <svg width="60" height="60" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/>
+                            <circle cx="12" cy="7" r="4"/>
+                        </svg>
+                    </div>
+                    {% else %}
+                    <div class="avatar-placeholder" id="placeholder-avatar">
+                        <svg width="60" height="60" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/>
+                            <circle cx="12" cy="7" r="4"/>
+                        </svg>
+                    </div>
+                    {% endif %}
+                    <div class="avatar-overlay" id="avatar-overlay">
+                        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/>
+                            <circle cx="12" cy="13" r="4"/>
+                        </svg>
+                        <span>{% if is_english %}Change photo{% elif is_chinese %}更换照片{% else %}写真を変更{% endif %}</span>
+                    </div>
+                </div>
+                
+                <input type="file" 
+                       name="profile_image" 
+                       id="profile-image-input" 
+                       accept="image/*" 
+                       class="hidden-input">
+                
+                <div class="image-buttons">
+                    <button type="button" class="btn-upload" id="btn-choose-image">
+                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
+                            <polyline points="17 8 12 3 7 8"/>
+                            <line x1="12" y1="3" x2="12" y2="15"/>
+                        </svg>
+                        <span class="desktop-text">{% if is_english %}Select Image{% elif is_chinese %}选择图片{% else %}画像を選択{% endif %}</span>
+                        <span class="mobile-text">{% if is_english %}Select Photo{% elif is_chinese %}选择照片{% else %}写真を選択{% endif %}</span>
+                    </button>
+                    
+                    {% if user.profile_image_data or user.profile_image %}
+                    <button type="button" class="btn-delete-image" id="btn-delete-image">
+                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <polyline points="3 6 5 6 21 6"/>
+                            <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/>
+                        </svg>
+                        {% if is_english %}Delete{% elif is_chinese %}删除{% else %}削除{% endif %}
+                    </button>
+                    {% endif %}
+                </div>
+                <p class="image-hint">{% if is_english %}JPG, PNG, GIF (Max 5MB){% elif is_chinese %}JPG、PNG、GIF格式（最大5MB）{% else %}JPG、PNG、GIF形式（最大5MB）{% endif %}</p>
+            </div>
+
+            <!-- 自己紹介セクション -->
+            <div class="bio-section">
+                <label for="id_bio" class="form-label">{% if is_english %}Bio{% elif is_chinese %}个人简介{% else %}自己紹介{% endif %}</label>
+                <textarea name="bio" 
+                          id="id_bio" 
+                          rows="4" 
+                          maxlength="500" 
+                          placeholder="{% if is_english %}Enter your bio...{% elif is_chinese %}输入个人简介...{% else %}自己紹介を入力...{% endif %}"
+                          class="bio-textarea">{{ user.bio }}</textarea>
+                <div class="char-counter">
+                    <span id="bio-length">{{ user.bio|length|default:0 }}</span>/500
+                </div>
+            </div>
+
+            <!-- 送信ボタン -->
+            <div class="form-actions">
+                <a href="{% url 'users:profile' user.username %}" class="btn-cancel">{% if is_english %}Cancel{% elif is_chinese %}取消{% else %}キャンセル{% endif %}</a>
+                <button type="submit" class="btn-save">
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/>
+                        <polyline points="17 21 17 13 7 13 7 21"/>
+                        <polyline points="7 3 7 8 15 8"/>
+                    </svg>
+                    {% if is_english %}Save{% elif is_chinese %}保存{% else %}保存する{% endif %}
+                </button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<style>
+.profile-edit-container {
+    min-height: 100vh;
+    background: linear-gradient(135deg, #fff4f0 0%, #ffd4c4 100%);
+    padding: 2rem 1rem;
+}
+
+.profile-edit-wrapper {
+    max-width: 600px;
+    margin: 0 auto;
+    background: var(--surface);
+    border-radius: var(--radius-xl);
+    box-shadow: var(--shadow-lg);
+    overflow: hidden;
+    border: 1px solid rgba(255, 121, 64, 0.1);
+}
+
+.edit-header {
+    background: var(--primary-gradient);
+    color: white;
+    padding: 1.5rem 2rem;
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+}
+
+.back-link {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    color: white;
+    text-decoration: none;
+    font-size: 0.9rem;
+    opacity: 0.9;
+    transition: opacity 0.2s;
+}
+
+.back-link:hover {
+    opacity: 1;
+    color: white;
+}
+
+.edit-header h1 {
+    font-size: 1.5rem;
+    font-weight: 700;
+    margin: 0;
+    flex: 1;
+    text-align: center;
+    margin-right: 60px;
+}
+
+.profile-edit-form {
+    padding: 2rem;
+}
+
+/* 画像アップロードセクション */
+.image-upload-section {
+    text-align: center;
+    margin-bottom: 2rem;
+    padding-bottom: 2rem;
+    border-bottom: 1px solid var(--border-color);
+}
+
+.current-avatar {
+    width: 150px;
+    height: 150px;
+    margin: 0 auto 1.5rem;
+    position: relative;
+    cursor: pointer;
+    border-radius: 50%;
+    overflow: hidden;
+}
+
+.current-avatar img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    border-radius: 50%;
+    border: 4px solid white;
+    box-shadow: var(--shadow-lg);
+}
+
+.avatar-placeholder {
+    width: 100%;
+    height: 100%;
+    background: var(--surface-elevated);
+    border: 4px solid white;
+    box-shadow: var(--shadow-lg);
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: var(--text-muted);
+}
+
+.avatar-overlay {
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: rgba(0, 0, 0, 0.6);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    color: white;
+    opacity: 0;
+    transition: opacity 0.3s ease;
+    border-radius: 50%;
+    gap: 0.5rem;
+    font-size: 0.85rem;
+}
+
+.current-avatar:hover .avatar-overlay {
+    opacity: 1;
+}
+
+.hidden-input {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    padding: 0;
+    margin: -1px;
+    overflow: hidden;
+    clip: rect(0, 0, 0, 0);
+    white-space: nowrap;
+    border: 0;
+}
+
+.image-buttons {
+    display: flex;
+    justify-content: center;
+    gap: 1rem;
+    margin-bottom: 0.75rem;
+}
+
+.btn-upload {
+    background: var(--primary-gradient);
+    color: white;
+    border: none;
+    padding: 0.75rem 1.5rem;
+    border-radius: var(--radius-lg);
+    font-weight: 600;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    transition: all 0.3s ease;
+    box-shadow: var(--shadow-sm);
+}
+
+.btn-upload:hover {
+    transform: translateY(-2px);
+    box-shadow: var(--shadow-md);
+}
+
+.btn-delete-image {
+    background: transparent;
+    color: #dc3545;
+    border: 2px solid #dc3545;
+    padding: 0.75rem 1.5rem;
+    border-radius: var(--radius-lg);
+    font-weight: 600;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    transition: all 0.3s ease;
+}
+
+.btn-delete-image:hover {
+    background: #dc3545;
+    color: white;
+}
+
+.image-hint {
+    color: var(--text-muted);
+    font-size: 0.85rem;
+    margin: 0;
+}
+
+/* デスクトップ/モバイルテキスト切り替え */
+.mobile-text {
+    display: none;
+}
+
+@media (max-width: 768px) {
+    .desktop-text {
+        display: none;
+    }
+    .mobile-text {
+        display: inline;
+    }
+}
+
+/* 自己紹介セクション */
+.bio-section {
+    margin-bottom: 2rem;
+}
+
+.form-label {
+    display: block;
+    font-weight: 600;
+    color: var(--text-primary);
+    margin-bottom: 0.75rem;
+}
+
+.bio-textarea {
+    width: 100%;
+    padding: 1rem;
+    border: 2px solid var(--border-color);
+    border-radius: var(--radius-lg);
+    font-size: 1rem;
+    resize: vertical;
+    min-height: 120px;
+    transition: border-color 0.3s ease;
+    font-family: inherit;
+}
+
+.bio-textarea:focus {
+    outline: none;
+    border-color: var(--primary-color);
+}
+
+.bio-textarea::placeholder {
+    color: var(--text-muted);
+}
+
+.char-counter {
+    text-align: right;
+    font-size: 0.85rem;
+    color: var(--text-muted);
+    margin-top: 0.5rem;
+}
+
+/* ボタン */
+.form-actions {
+    display: flex;
+    justify-content: flex-end;
+    gap: 1rem;
+}
+
+.btn-cancel {
+    background: var(--surface-elevated);
+    color: var(--text-secondary);
+    border: 2px solid var(--border-color);
+    padding: 0.875rem 1.5rem;
+    border-radius: var(--radius-lg);
+    font-weight: 600;
+    cursor: pointer;
+    text-decoration: none;
+    transition: all 0.3s ease;
+}
+
+.btn-cancel:hover {
+    background: var(--border-color);
+    color: var(--text-primary);
+    text-decoration: none;
+}
+
+.btn-save {
+    background: var(--primary-gradient);
+    color: white;
+    border: none;
+    padding: 0.875rem 2rem;
+    border-radius: var(--radius-lg);
+    font-weight: 600;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    transition: all 0.3s ease;
+    box-shadow: var(--shadow-sm);
+}
+
+.btn-save:hover {
+    transform: translateY(-2px);
+    box-shadow: var(--shadow-md);
+}
+
+/* アニメーション */
+.fade-in {
+    animation: fadeInUp 0.6s ease forwards;
+}
+
+@keyframes fadeInUp {
+    from {
+        opacity: 0;
+        transform: translateY(30px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+/* レスポンシブ */
+@media (max-width: 768px) {
+    .profile-edit-container {
+        padding: 1rem;
+    }
+    
+    .profile-edit-form {
+        padding: 1.5rem;
+    }
+    
+    .edit-header h1 {
+        font-size: 1.25rem;
+        margin-right: 0;
+    }
+    
+    .form-actions {
+        flex-direction: column-reverse;
+    }
+    
+    .btn-cancel, .btn-save {
+        width: 100%;
+        justify-content: center;
+    }
+    
+    .image-buttons {
+        flex-direction: column;
+        gap: 0.75rem;
+    }
+    
+    .btn-upload, .btn-delete-image {
+        width: 100%;
+        justify-content: center;
+    }
+}
+</style>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const imageInput = document.getElementById('profile-image-input');
+    const chooseBtn = document.getElementById('btn-choose-image');
+    const deleteBtn = document.getElementById('btn-delete-image');
+    const avatarPreview = document.getElementById('avatar-preview');
+    const avatarOverlay = document.getElementById('avatar-overlay');
+    const bioTextarea = document.getElementById('id_bio');
+    const bioLength = document.getElementById('bio-length');
+
+    // 画像選択ボタンクリック
+    chooseBtn.addEventListener('click', function() {
+        imageInput.click();
+    });
+
+    // アバター部分クリックでも選択
+    avatarPreview.addEventListener('click', function() {
+        imageInput.click();
+    });
+
+    // 画像選択時のプレビュー
+    imageInput.addEventListener('change', function(e) {
+        const file = e.target.files[0];
+        if (file) {
+            // ファイルサイズチェック（5MB）
+            if (file.size > 5 * 1024 * 1024) {
+                alert('ファイルサイズは5MB以下にしてください');
+                imageInput.value = '';
+                return;
+            }
+
+            // プレビュー表示
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                let img = document.getElementById('preview-image');
+                const placeholder = document.getElementById('placeholder-avatar');
+                
+                if (!img) {
+                    // 画像要素がない場合は新規作成
+                    img = document.createElement('img');
+                    img.id = 'preview-image';
+                    img.alt = '{{ user.username }}';
+                    avatarPreview.insertBefore(img, avatarOverlay);
+                }
+                
+                // 画像を表示
+                img.src = e.target.result;
+                img.style.display = 'block';
+                
+                // プレースホルダーを非表示
+                if (placeholder) {
+                    placeholder.style.display = 'none';
+                }
+            };
+            reader.readAsDataURL(file);
+        }
+    });
+
+    // 画像削除
+    if (deleteBtn) {
+        deleteBtn.addEventListener('click', function() {
+            if (confirm('プロフィール画像を削除しますか？')) {
+                fetch('{% url "users:delete_profile_image" %}', {
+                    method: 'POST',
+                    headers: {
+                        'X-CSRFToken': '{{ csrf_token }}',
+                    }
+                })
+                .then(response => response.json())
+                .then(data => {
+                    if (data.success) {
+                        location.reload();
+                    } else {
+                        alert('削除に失敗しました');
+                    }
+                })
+                .catch(() => {
+                    alert('エラーが発生しました');
+                });
+            }
+        });
+    }
+
+    // 文字数カウンター
+    bioTextarea.addEventListener('input', function() {
+        bioLength.textContent = this.value.length;
+    });
+});
+</script>
+{% endblock %}

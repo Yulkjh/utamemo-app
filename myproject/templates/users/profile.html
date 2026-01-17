@@ -1,0 +1,785 @@
+{% extends 'base.html' %}
+
+{% block title %}{{ profile_user.username }}{% if is_english %}'s Profile{% elif is_chinese %}的个人资料{% else %}のプロフィール{% endif %} - UTAMEMO{% endblock %}
+
+{% block content %}
+{% csrf_token %}
+<div class="profile-container">
+    <div class="profile-wrapper">
+        <!-- Profile Header -->
+        <div class="profile-header fade-in">
+            <div class="profile-hero">
+                <div class="hero-background"></div>
+                <div class="profile-main">
+                    <div class="avatar-section">
+                        {% if profile_user.profile_image_data %}
+                        <img src="{{ profile_user.profile_image_data }}" class="profile-avatar" alt="{{ profile_user.username }}">
+                        {% elif profile_user.profile_image and profile_user.profile_image.name %}
+                        <img src="{{ profile_user.profile_image.url }}" class="profile-avatar" alt="{{ profile_user.username }}" onerror="this.style.display='none'; this.nextElementSibling.style.display='flex';">
+                        <div class="profile-avatar-placeholder" style="display: none;">
+                            <svg width="60" height="60" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/>
+                                <circle cx="12" cy="7" r="4"/>
+                            </svg>
+                        </div>
+                        {% else %}
+                        <div class="profile-avatar-placeholder">
+                            <svg width="60" height="60" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/>
+                                <circle cx="12" cy="7" r="4"/>
+                            </svg>
+                        </div>
+                        {% endif %}
+                        
+                        {% if user.is_authenticated and user == profile_user %}
+                        <a href="{% url 'users:profile_edit' %}" class="avatar-edit-btn" title="{% if is_english %}Edit Profile{% elif is_chinese %}编辑个人资料{% else %}プロフィールを編集{% endif %}">
+                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                <path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/>
+                                <circle cx="12" cy="13" r="4"/>
+                            </svg>
+                        </a>
+                        {% endif %}
+                    </div>
+                    
+                    <div class="profile-info">
+                        <div class="profile-name-row">
+                            <h2 class="profile-name">{{ profile_user.username }}</h2>
+                            {% if user.is_authenticated and user == profile_user %}
+                            <a href="{% url 'users:profile_edit' %}" class="btn-edit-profile">
+                                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                    <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/>
+                                    <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/>
+                                </svg>
+                                {% if is_english %}Edit{% elif is_chinese %}编辑{% else %}編集{% endif %}
+                            </a>
+                            {% endif %}
+                        </div>
+                        {% if profile_user.bio %}
+                        <p class="profile-bio">{{ profile_user.bio }}</p>
+                        {% else %}
+                        <p class="profile-bio">{% if is_english %}Experiencing learning revolution with UTAMEMO{% elif is_chinese %}用UTAMEMO体验学习革命{% else %}UTAMEMOで学習の革命を体験中{% endif %}</p>
+                        {% endif %}
+                        
+                        <div class="profile-stats">
+                            <div class="stat-item">
+                                <div class="stat-number">{{ user_songs.count }}</div>
+                                <div class="stat-label">{% if is_english %}Songs{% elif is_chinese %}歌曲{% else %}楽曲{% endif %}</div>
+                            </div>
+                            <div class="stat-divider"></div>
+                            <div class="stat-item">
+                                <div class="stat-number">{{ total_likes }}</div>
+                                <div class="stat-label">{% if is_english %}Total Likes{% elif is_chinese %}总点赞{% else %}総いいね数{% endif %}</div>
+                            </div>
+                            <div class="stat-divider"></div>
+                            <div class="stat-item">
+                                <div class="stat-number">{{ profile_user.date_joined|date:"Y.m" }}</div>
+                                <div class="stat-label">{% if is_english %}Joined{% elif is_chinese %}加入{% else %}開始{% endif %}</div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Songs Section -->
+        <div class="songs-section fade-in">
+            <div class="section-header">
+                <div class="section-title">
+                    <h3>{{ profile_user.username }}{% if is_english %}'s Songs{% elif is_chinese %}的歌曲{% else %}の楽曲{% endif %}</h3>
+                </div>
+                <div class="song-count-badge">{{ user_songs.count }}{% if is_english %} songs{% elif is_chinese %}首{% else %}曲{% endif %}</div>
+            </div>
+
+            {% if user_songs %}
+            <div class="songs-list">
+                {% for song in user_songs %}
+                <div class="song-list-item">
+                    <a href="{% url 'songs:song_detail' song.pk %}" class="song-list-link">
+                        <div class="song-list-info">
+                            <h6 class="song-list-title">{{ song.title }}</h6>
+                            <div class="song-list-meta">
+                                {% if song.genre %}
+                                <span class="song-list-genre">{{ song.genre }}</span>
+                                {% endif %}
+                                <span class="song-list-date">{{ song.created_at|date:"Y/m/d" }}</span>
+                            </div>
+                        </div>
+                    </a>
+                    <div class="song-list-stats">
+                        <button class="song-like-btn{% if song.pk in user_liked_songs %} liked{% endif %}" 
+                                onclick="toggleLike({{ song.pk }}, this)" 
+                                data-song-id="{{ song.pk }}"
+                                title="{% if is_english %}Like{% elif is_chinese %}点赞{% else %}いいね{% endif %}">
+                            <i class="bi bi-heart{% if song.pk in user_liked_songs %}-fill{% endif %}"></i>
+                            <span class="like-count">{{ song.likes_count|default:0 }}</span>
+                        </button>
+                        <a href="{% url 'songs:song_detail' song.pk %}" class="song-list-arrow-link">
+                            <i class="bi bi-chevron-right song-list-arrow"></i>
+                        </a>
+                    </div>
+                </div>
+                {% endfor %}
+            </div>
+            {% else %}
+            <div class="empty-state">
+                <div class="empty-icon">
+                    <i class="bi bi-music-note-beamed" style="font-size: 4rem; color: #ccc;"></i>
+                </div>
+                <h5 class="empty-title">{% if is_english %}No songs yet{% elif is_chinese %}暂无歌曲{% else %}まだ楽曲がありません{% endif %}</h5>
+                <p class="empty-description">
+                    {% if user == profile_user %}
+                    {% if is_english %}Create your first song with UTAMEMO and revolutionize your learning{% elif is_chinese %}用UTAMEMO创作您的第一首歌曲，革新您的学习{% else %}UTAMEMOで最初の楽曲を作成して、学習を革新しましょう{% endif %}
+                    {% else %}
+                    {% if is_english %}{{ profile_user.username }} hasn't created any songs yet{% elif is_chinese %}{{ profile_user.username }}还没有创作任何歌曲{% else %}{{ profile_user.username }}さんはまだ楽曲を作成していません{% endif %}
+                    {% endif %}
+                </p>
+                {% if user == profile_user %}
+                <a href="{% url 'songs:upload_image' %}" class="btn-create-first">
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <circle cx="12" cy="12" r="10"/>
+                        <line x1="12" y1="8" x2="12" y2="16"/>
+                        <line x1="8" y1="12" x2="16" y2="12"/>
+                    </svg>
+                    {% if is_english %}Create First Song{% elif is_chinese %}创作第一首歌{% else %}最初の楽曲を作成{% endif %}
+                </a>
+                {% endif %}
+            </div>
+            {% endif %}
+        </div>
+    </div>
+</div>
+
+<style>
+.profile-container {
+    min-height: 100vh;
+    background: linear-gradient(135deg, #fff4f0 0%, #ffd4c4 100%);
+    padding: 2rem 1rem;
+}
+
+.profile-wrapper {
+    max-width: 1200px;
+    margin: 0 auto;
+}
+
+.profile-header {
+    margin-bottom: 3rem;
+}
+
+.profile-hero {
+    background: var(--surface);
+    border-radius: var(--radius-xl);
+    box-shadow: var(--shadow-lg);
+    overflow: hidden;
+    position: relative;
+    border: 1px solid rgba(255, 121, 64, 0.1);
+}
+
+.hero-background {
+    height: 120px;
+    background: var(--primary-gradient);
+    position: relative;
+}
+
+.hero-background::after {
+    content: '';
+    position: absolute;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    height: 30px;
+    background: var(--surface);
+    border-radius: 30px 30px 0 0;
+}
+
+.profile-main {
+    padding: 0 2rem 2rem;
+    display: flex;
+    align-items: flex-start;
+    gap: 2rem;
+    position: relative;
+    margin-top: -60px;
+    z-index: 2;
+}
+
+.avatar-section {
+    flex-shrink: 0;
+    position: relative;
+}
+
+.profile-avatar {
+    width: 120px;
+    height: 120px;
+    border-radius: 50%;
+    border: 4px solid white;
+    box-shadow: var(--shadow-lg);
+    object-fit: cover;
+}
+
+.profile-avatar-placeholder {
+    width: 120px;
+    height: 120px;
+    border-radius: 50%;
+    border: 4px solid white;
+    box-shadow: var(--shadow-lg);
+    background: var(--surface-elevated);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: var(--text-muted);
+}
+
+.avatar-edit-btn {
+    position: absolute;
+    bottom: 0;
+    right: 0;
+    width: 36px;
+    height: 36px;
+    background: var(--primary-gradient);
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: white;
+    text-decoration: none;
+    box-shadow: var(--shadow-md);
+    border: 3px solid white;
+    transition: all 0.3s ease;
+}
+
+.avatar-edit-btn:hover {
+    transform: scale(1.1);
+    color: white;
+}
+
+.profile-info {
+    flex: 1;
+    padding-top: 60px;
+}
+
+.profile-name-row {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+    margin-bottom: 0.5rem;
+}
+
+.profile-name {
+    font-size: 2rem;
+    font-weight: 800;
+    color: var(--text-primary);
+    margin: 0;
+}
+
+.btn-edit-profile {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+    background: var(--surface-elevated);
+    color: var(--text-secondary);
+    border: 2px solid var(--border-color);
+    padding: 0.5rem 1rem;
+    border-radius: var(--radius-lg);
+    font-size: 0.85rem;
+    font-weight: 600;
+    text-decoration: none;
+    transition: all 0.3s ease;
+}
+
+.btn-edit-profile:hover {
+    background: var(--primary-color);
+    color: white;
+    border-color: var(--primary-color);
+    text-decoration: none;
+}
+
+.profile-bio {
+    color: var(--text-secondary);
+    font-size: 1.1rem;
+    margin-bottom: 1.5rem;
+    line-height: 1.6;
+}
+
+.profile-stats {
+    display: flex;
+    align-items: center;
+    gap: 1.5rem;
+}
+
+.stat-item {
+    text-align: center;
+}
+
+.stat-number {
+    font-size: 1.5rem;
+    font-weight: 800;
+    color: var(--primary-color);
+    line-height: 1;
+}
+
+.stat-label {
+    font-size: 0.9rem;
+    color: var(--text-muted);
+    margin-top: 0.25rem;
+}
+
+.stat-divider {
+    width: 1px;
+    height: 40px;
+    background: var(--border-color);
+}
+
+.songs-section {
+    background: var(--surface);
+    border-radius: var(--radius-xl);
+    box-shadow: var(--shadow-lg);
+    padding: 2rem;
+    border: 1px solid rgba(255, 121, 64, 0.1);
+}
+
+.section-header {
+    display: flex;
+    justify-content: between;
+    align-items: center;
+    margin-bottom: 2rem;
+    padding-bottom: 1rem;
+    border-bottom: 2px solid var(--border-color);
+}
+
+.section-title {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    flex: 1;
+}
+
+.section-title svg {
+    color: var(--primary-color);
+}
+
+.section-title h3 {
+    color: var(--text-primary);
+    font-weight: 700;
+    margin: 0;
+}
+
+.song-count-badge {
+    background: var(--primary-gradient);
+    color: white;
+    padding: 0.5rem 1rem;
+    border-radius: var(--radius-lg);
+    font-size: 0.9rem;
+    font-weight: 600;
+    box-shadow: var(--shadow-sm);
+}
+
+/* 楽曲リスト */
+.songs-list {
+    display: flex;
+    flex-direction: column;
+    gap: 0;
+    background: var(--surface);
+    border-radius: var(--radius-lg);
+    border: 1px solid var(--border-color);
+    overflow: hidden;
+}
+
+.song-list-item {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 1rem 1.25rem;
+    text-decoration: none;
+    color: inherit;
+    transition: all 0.2s ease;
+    border-bottom: 1px solid var(--border-color);
+}
+
+.song-list-item:last-child {
+    border-bottom: none;
+}
+
+.song-list-item:hover {
+    background: var(--surface-elevated);
+}
+
+.song-list-info {
+    flex: 1;
+    min-width: 0;
+}
+
+.song-list-title {
+    font-size: 1rem;
+    font-weight: 600;
+    color: var(--text-primary);
+    margin: 0 0 0.25rem 0;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.song-list-meta {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    font-size: 0.85rem;
+    color: var(--text-muted);
+}
+
+.song-list-genre {
+    background: rgba(255, 121, 64, 0.1);
+    color: var(--primary-color);
+    padding: 0.15rem 0.5rem;
+    border-radius: 4px;
+    font-size: 0.75rem;
+    font-weight: 500;
+}
+
+.song-list-date {
+    color: var(--text-muted);
+}
+
+.song-list-stats {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    flex-shrink: 0;
+}
+
+.song-like-btn {
+    display: flex;
+    align-items: center;
+    gap: 0.35rem;
+    color: var(--text-muted);
+    font-size: 0.9rem;
+    background: none;
+    border: none;
+    cursor: pointer;
+    padding: 0.4rem 0.6rem;
+    border-radius: 6px;
+    transition: all 0.2s ease;
+}
+
+.song-like-btn:hover {
+    background: rgba(255, 59, 48, 0.1);
+    color: #ff3b30;
+}
+
+.song-like-btn.liked {
+    color: #ff3b30;
+}
+
+.song-like-btn.liked i {
+    animation: likePopIn 0.3s ease;
+}
+
+.song-like-btn i {
+    font-size: 1rem;
+}
+
+.song-like-btn .like-count {
+    font-size: 0.85rem;
+    min-width: 1rem;
+}
+
+@keyframes likePopIn {
+    0% { transform: scale(1); }
+    50% { transform: scale(1.3); }
+    100% { transform: scale(1); }
+}
+
+.song-list-link {
+    flex: 1;
+    min-width: 0;
+    text-decoration: none;
+    color: inherit;
+}
+
+.song-list-arrow-link {
+    display: flex;
+    align-items: center;
+    text-decoration: none;
+    color: inherit;
+}
+
+.song-list-likes {
+    display: flex;
+    align-items: center;
+    gap: 0.35rem;
+    color: var(--text-muted);
+    font-size: 0.9rem;
+}
+
+.song-list-likes i {
+    font-size: 0.9rem;
+}
+
+.song-list-arrow {
+    color: var(--text-muted);
+    font-size: 0.85rem;
+    transition: transform 0.2s ease;
+}
+
+.song-list-item:hover .song-list-arrow {
+    transform: translateX(3px);
+    color: var(--primary-color);
+}
+
+/* 古いカードスタイル（後方互換性のため残す） */
+.song-card-content {
+    padding: 1.25rem;
+}
+
+.song-title {
+    font-size: 1.1rem;
+    font-weight: 700;
+    color: var(--text-primary);
+    margin-bottom: 0.25rem;
+    line-height: 1.3;
+}
+
+.song-meta {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.song-stats {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+}
+
+.stat-item-small {
+    display: flex;
+    align-items: center;
+    gap: 0.25rem;
+    color: var(--text-muted);
+    font-size: 0.8rem;
+}
+
+.stat-item-small svg {
+    color: #dc3545;
+}
+
+.song-date {
+    color: var(--text-muted);
+    font-size: 0.8rem;
+}
+
+.privacy-badge {
+    display: flex;
+    align-items: center;
+    gap: 0.25rem;
+    padding: 0.25rem 0.5rem;
+    border-radius: var(--radius-sm);
+    font-size: 0.7rem;
+    font-weight: 600;
+}
+
+.privacy-badge.public {
+    background: rgba(40, 167, 69, 0.1);
+    color: #28a745;
+}
+
+.privacy-badge.private {
+    background: rgba(108, 117, 125, 0.1);
+    color: #6c757d;
+}
+
+.empty-state {
+    text-align: center;
+    padding: 4rem 2rem;
+}
+
+.empty-icon {
+    margin-bottom: 1.5rem;
+    opacity: 0.5;
+}
+
+.empty-icon svg {
+    color: var(--text-muted);
+}
+
+.empty-title {
+    color: var(--text-primary);
+    font-weight: 700;
+    margin-bottom: 0.75rem;
+}
+
+.empty-description {
+    color: var(--text-secondary);
+    font-size: 1rem;
+    line-height: 1.6;
+    margin-bottom: 2rem;
+    max-width: 400px;
+    margin-left: auto;
+    margin-right: auto;
+}
+
+.btn-create-first {
+    background: var(--primary-gradient);
+    color: white;
+    padding: 1rem 2rem;
+    border-radius: var(--radius-lg);
+    text-decoration: none;
+    font-weight: 600;
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+    transition: all 0.3s ease;
+    box-shadow: var(--shadow-md);
+}
+
+.btn-create-first:hover {
+    transform: translateY(-2px);
+    box-shadow: var(--shadow-lg);
+    color: white;
+    text-decoration: none;
+}
+
+/* アニメーション */
+.fade-in {
+    animation: fadeInUp 0.6s ease forwards;
+}
+
+.fade-in:nth-child(2) { animation-delay: 0.2s; }
+
+@keyframes fadeInUp {
+    from {
+        opacity: 0;
+        transform: translateY(30px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+/* レスポンシブ調整 */
+@media (max-width: 768px) {
+    .profile-container {
+        padding: 1rem;
+    }
+    
+    .profile-main {
+        flex-direction: column;
+        align-items: center;
+        text-align: center;
+        padding: 0 1.5rem 2rem;
+        margin-top: -60px;
+    }
+    
+    .profile-info {
+        padding-top: 1rem;
+    }
+    
+    .profile-name-row {
+        flex-direction: column;
+        gap: 0.75rem;
+    }
+    
+    .btn-edit-profile {
+        margin-top: 0.5rem;
+    }
+    
+    .profile-stats {
+        justify-content: center;
+    }
+    
+    .songs-section {
+        padding: 1.5rem;
+    }
+    
+    .section-header {
+        flex-direction: column;
+        gap: 1rem;
+        align-items: flex-start;
+    }
+    
+    .songs-list {
+        border-radius: var(--radius-md);
+    }
+    
+    .song-list-item {
+        padding: 0.875rem 1rem;
+    }
+    
+    .song-list-title {
+        font-size: 0.95rem;
+    }
+    
+    .profile-name {
+        font-size: 1.75rem;
+    }
+}
+
+@media (max-width: 480px) {
+    .stat-divider {
+        height: 30px;
+    }
+    
+    .profile-stats {
+        gap: 1rem;
+    }
+    
+    .song-card-content {
+        padding: 1rem;
+    }
+}
+</style>
+
+<script>
+function toggleLike(songId, button) {
+    const csrfToken = document.querySelector('[name=csrfmiddlewaretoken]');
+    if (!csrfToken) {
+        {% if is_english %}
+        alert('Please login to like');
+        {% elif is_chinese %}
+        alert('请登录后点赞');
+        {% else %}
+        alert('いいねするにはログインが必要です');
+        {% endif %}
+        window.location.href = '{% url "users:login" %}';
+        return;
+    }
+    
+    fetch(`/songs/${songId}/like/`, {
+        method: 'POST',
+        headers: {
+            'X-CSRFToken': csrfToken.value,
+            'X-Requested-With': 'XMLHttpRequest'
+        }
+    })
+    .then(response => {
+        if (!response.ok) {
+            throw new Error('Network response was not ok');
+        }
+        return response.json();
+    })
+    .then(data => {
+        const icon = button.querySelector('i');
+        const countSpan = button.querySelector('.like-count');
+        
+        if (data.liked) {
+            button.classList.add('liked');
+            icon.className = 'bi bi-heart-fill';
+        } else {
+            button.classList.remove('liked');
+            icon.className = 'bi bi-heart';
+        }
+        
+        countSpan.textContent = data.likes_count;
+    })
+    .catch(error => {
+        console.error('Error:', error);
+        {% if is_english %}
+        alert('An error occurred');
+        {% elif is_chinese %}
+        alert('发生错误');
+        {% else %}
+        alert('エラーが発生しました');
+        {% endif %}
+    });
+}
+</script>
+{% endblock %}

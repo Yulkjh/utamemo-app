@@ -1,0 +1,584 @@
+{% extends 'base.html' %}
+
+{% block title %}{% if is_english %}Lyrics Confirmation{% elif is_chinese %}歌词确认{% else %}歌詞確認{% endif %} - UTAMEMO{% endblock %}
+
+{% block content %}
+<div class="container py-5">
+    <div class="row justify-content-center">
+        <div class="col-lg-10">
+            <!-- ヘッダーセクション -->
+            <div class="text-center mb-5 fade-in">
+                {% if manual_mode %}
+                <h1 class="display-6 fw-bold mb-3">
+                    {% if is_english %}Create Lyrics{% elif is_chinese %}创作歌词{% else %}歌詞を入力{% endif %}
+                </h1>
+                <p class="lead text-secondary">
+                    {% if is_english %}
+                    Create your own lyrics<br>
+                    Generate a song when you're done
+                    {% elif is_chinese %}
+                    自由创作歌词<br>
+                    完成后即可生成歌曲
+                    {% else %}
+                    自由に歌詞を作成してください<br>
+                    完成したら楽曲を生成できます
+                    {% endif %}
+                </p>
+                {% else %}
+                <h1 class="display-6 fw-bold mb-3">
+                    {% if is_english %}Edit Lyrics{% elif is_chinese %}编辑歌词{% else %}歌詞を編集{% endif %}
+                </h1>
+                <p class="lead text-secondary">
+                    {% if is_english %}
+                    AI-generated lyrics from your content<br>
+                    Edit freely before creating the song
+                    {% elif is_chinese %}
+                    AI会根据你所放的内容并生成歌词<br>
+                    您可以自由编辑后创造歌曲
+                    {% else %}
+                    ノートや教科書の内容から生成された歌詞です<br>
+                    自由に編集してから楽曲を作成できます
+                    {% endif %}
+                </p>
+                {% endif %}
+            </div>
+
+            <!-- メインコンテンツ -->
+            <div class="row g-4 justify-content-center">
+                <!-- 生成された歌詞 -->
+                <div class="col-lg-8">
+                    <div class="card-modern">
+                        <div class="card-body">
+                            <form method="post" action="{% url 'songs:create_song' %}" id="lyrics-form">
+                                {% csrf_token %}
+                                
+                                <!-- 楽曲情報 -->
+                                <div class="mb-4">
+                                    <div class="row g-3">
+                                        <div class="col-md-6">
+                                            <label for="song-title" class="form-label fw-bold">
+                                                {% if is_english %}Song Title{% elif is_chinese %}歌曲标题{% else %}楽曲タイトル{% endif %}
+                                            </label>
+                                            <input type="text" class="form-control form-control-lg" id="song-title" name="title" placeholder="{% if is_english %}e.g. My Study Song{% elif is_chinese %}例: 我的学习歌{% else %}例: 数学の歌{% endif %}" required>
+                                        </div>
+                                        <div class="col-md-6">
+                                            <label for="song-genre" class="form-label fw-bold">
+                                                {% if is_english %}Genre{% elif is_chinese %}曲风{% else %}ジャンル{% endif %}
+                                            </label>
+                                            <select class="form-select form-select-lg" id="song-genre" name="genre">
+                                                <option value="Auto" selected>{% if is_english %}Auto (AI chooses){% elif is_chinese %}自动（AI选择）{% else %}おまかせ（AIが自動選択）{% endif %}</option>
+                                                <option value="ポップ">{% if is_english %}Pop{% elif is_chinese %}流行{% else %}ポップ{% endif %}</option>
+                                                <option value="ロック">{% if is_english %}Rock{% elif is_chinese %}摇滚{% else %}ロック{% endif %}</option>
+                                                <option value="バラード">{% if is_english %}Ballad{% elif is_chinese %}抒情{% else %}バラード{% endif %}</option>
+                                                <option value="ダンス">{% if is_english %}Dance{% elif is_chinese %}舞曲{% else %}ダンス{% endif %}</option>
+                                                <option value="ジャズ">{% if is_english %}Jazz{% elif is_chinese %}爵士{% else %}ジャズ{% endif %}</option>
+                                                <option value="クラシック">{% if is_english %}Classical{% elif is_chinese %}古典{% else %}クラシック{% endif %}</option>
+                                                <option value="ヒップホップ">{% if is_english %}Hip Hop{% elif is_chinese %}嘻哈{% else %}ヒップホップ{% endif %}</option>
+                                                <option value="ラップ">{% if is_english %}Rap{% elif is_chinese %}说唱{% else %}ラップ{% endif %}</option>
+                                                <option value="R&B">R&B</option>
+                                                <option value="エレクトロニック">{% if is_english %}Electronic{% elif is_chinese %}电子{% else %}エレクトロニック{% endif %}</option>
+                                                <option value="カントリー">{% if is_english %}Country{% elif is_chinese %}乡村{% else %}カントリー{% endif %}</option>
+                                                <option value="フォーク">{% if is_english %}Folk{% elif is_chinese %}民谣{% else %}フォーク{% endif %}</option>
+                                                <option value="レゲエ">{% if is_english %}Reggae{% elif is_chinese %}雷鬼{% else %}レゲエ{% endif %}</option>
+                                                <option value="ブルース">{% if is_english %}Blues{% elif is_chinese %}蓝调{% else %}ブルース{% endif %}</option>
+                                                <option value="メタル">{% if is_english %}Metal{% elif is_chinese %}金属{% else %}メタル{% endif %}</option>
+                                                <option value="パンク">{% if is_english %}Punk{% elif is_chinese %}朋克{% else %}パンク{% endif %}</option>
+                                                <option value="ソウル">{% if is_english %}Soul{% elif is_chinese %}灵魂{% else %}ソウル{% endif %}</option>
+                                                <option value="ファンク">{% if is_english %}Funk{% elif is_chinese %}放克{% else %}ファンク{% endif %}</option>
+                                                <option value="ディスコ">{% if is_english %}Disco{% elif is_chinese %}迪斯科{% else %}ディスコ{% endif %}</option>
+                                                <option value="アンビエント">{% if is_english %}Ambient{% elif is_chinese %}氛围{% else %}アンビエント{% endif %}</option>
+                                                <option value="J-POP">J-Pop</option>
+                                                <option value="K-POP">K-Pop</option>
+                                                <option value="アニソン">{% if is_english %}Anime{% elif is_chinese %}动漫{% else %}アニソン{% endif %}</option>
+                                                <option value="ボカロ">{% if is_english %}Vocaloid{% elif is_chinese %}V家{% else %}ボカロ{% endif %}</option>
+                                            </select>
+                                        </div>
+                                    </div>
+                                    
+                                    <!-- ボーカルスタイル -->
+                                    <div class="mt-3">
+                                        <label class="form-label fw-bold">
+                                            {% if is_english %}Vocal Style{% elif is_chinese %}声音性别{% else %}ボーカルの性別{% endif %}
+                                        </label>
+                                        <div class="vocal-toggle-container">
+                                            <input type="radio" name="vocal_style" id="vocal-female" value="female" class="vocal-toggle-input" checked>
+                                            <input type="radio" name="vocal_style" id="vocal-male" value="male" class="vocal-toggle-input">
+                                            <div class="vocal-toggle-wrapper">
+                                                <label for="vocal-female" class="vocal-toggle-btn">
+                                                    {% if is_english %}Female{% elif is_chinese %}女声{% else %}女性{% endif %}
+                                                </label>
+                                                <label for="vocal-male" class="vocal-toggle-btn">
+                                                    {% if is_english %}Male{% elif is_chinese %}男声{% else %}男性{% endif %}
+                                                </label>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    
+                                    <!-- AIモデル選択 -->
+                                    <div class="mt-3">
+                                        <label class="form-label fw-bold">
+                                            <i class="bi bi-cpu me-1"></i>
+                                            {% if is_english %}AI Model{% elif is_chinese %}AI模型{% else %}AIモデル{% endif %}
+                                        </label>
+                                        <select name="mureka_model" class="form-select">
+                                            <option value="mureka-7.5" selected>{% if is_english %}Standard{% elif is_chinese %}标准{% else %}スタンダード{% endif %}</option>
+                                            <option value="mureka-7.6">{% if is_english %}High Quality{% elif is_chinese %}高品质{% else %}高品質{% endif %}</option>
+                                            <option value="mureka-o2">{% if is_english %}Premium{% elif is_chinese %}专业{% else %}プレミアム{% endif %}</option>
+                                        </select>
+                                    </div>
+                                </div>
+                                
+                                <!-- カスタマイズ入力欄（自由記述） -->
+                                <div class="mb-4">
+                                    <label for="music_prompt" class="form-label fw-bold">
+                                        <i class="bi bi-chat-dots me-1"></i>
+                                        {% if is_english %}Customize (Optional){% elif is_chinese %}自定义（可选）{% else %}カスタマイズ（任意）{% endif %}
+                                    </label>
+                                    <textarea name="music_prompt" id="music_prompt" class="form-control custom-request-input" rows="2" 
+                                        placeholder="{% if is_english %}e.g. 'Make it upbeat', 'Add piano', 'Emotional ballad style'{% elif is_chinese %}例如：'轻快一点'、'加钢琴'、'抒情风格'{% else %}例：「アップテンポで」「ピアノを入れて」「感動的なバラード調」{% endif %}"></textarea>
+                                    <small class="text-muted">
+                                        {% if is_english %}Tell AI how you want your song to sound{% elif is_chinese %}告诉AI你想要什么样的歌曲{% else %}AIにどのような曲を作ってほしいか自由に伝えられます{% endif %}
+                                    </small>
+                                </div>
+                                
+                                <!-- 歌詞エディタ -->
+                                <div class="mb-3">
+                                    <label for="lyrics-textarea" class="form-label fw-bold">
+                                        {% if is_english %}Lyrics{% elif is_chinese %}歌词{% else %}歌詞{% endif %}
+                                    </label>
+                                    <textarea id="lyrics-textarea" name="generated_lyrics" class="lyrics-editor" rows="15" {% if manual_mode %}placeholder="{% if is_english %}[Verse 1]&#10;Enter your lyrics here...&#10;&#10;[Chorus]&#10;Your chorus lyrics...{% elif is_chinese %}[Verse 1]&#10;在此输入歌词...&#10;&#10;[Chorus]&#10;副歌歌词...{% else %}[Verse 1]&#10;ここに歌詞を入力...&#10;&#10;[Chorus]&#10;サビの歌詞...{% endif %}"{% endif %}>{{ generated_lyrics }}</textarea>
+                                </div>
+                                
+                                {% if not manual_mode %}
+                                <div class="lyrics-actions">
+                                    <div class="row g-2">
+                                        <div class="col-6">
+                                            <button type="button" class="btn btn-outline-secondary btn-sm w-100" id="regenerate-btn">
+                                                {% if is_english %}Regenerate{% elif is_chinese %}重新生成{% else %}再生成{% endif %}
+                                            </button>
+                                        </div>
+                                        <div class="col-6">
+                                            <button type="button" class="btn btn-outline-info btn-sm w-100" id="edit-btn">
+                                                {% if is_english %}Edit Mode{% elif is_chinese %}编辑模式{% else %}編集モード{% endif %}
+                                            </button>
+                                        </div>
+                                    </div>
+                                </div>
+                                {% endif %}
+                                
+                                <!-- 元テキスト（非表示） -->
+                                <input type="hidden" name="original_text" value="{{ extracted_text|default:'' }}">
+                            </form>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- アクションボタン -->
+            <div class="text-center mt-5">
+                <div class="d-flex flex-column flex-md-row gap-3 justify-content-center">
+                    <a href="{% url 'songs:upload_image' %}" class="btn btn-outline-secondary btn-lg">
+                        {% if is_english %}Back{% elif is_chinese %}返回{% else %}戻る{% endif %}
+                    </a>
+                    <button type="submit" form="lyrics-form" class="btn btn-gradient-primary btn-lg px-5" id="create-song-btn">
+                        <span class="d-block text-center w-100">{% if is_english %}Create Song with These Lyrics{% elif is_chinese %}用这些歌词创作歌曲{% else %}この歌詞で楽曲を作成{% endif %}</span>
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<style>
+/* カスタマイズ入力欄 */
+.custom-request-input {
+    border: 2px solid #e0e0e0;
+    border-radius: 10px;
+    padding: 0.75rem 1rem;
+    font-size: 0.95rem;
+    transition: all 0.2s ease;
+    resize: none;
+}
+
+.custom-request-input:focus {
+    border-color: #ff7940;
+    box-shadow: 0 0 0 3px rgba(255, 121, 64, 0.1);
+    outline: none;
+}
+
+.custom-request-input::placeholder {
+    color: #aaa;
+}
+
+/* リファレンス音声アップロードエリア */
+.upload-drop-area {
+    border: 2px dashed #ddd;
+    border-radius: 10px;
+    padding: 2rem;
+    text-align: center;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    background: #fafafa;
+}
+
+.upload-drop-area:hover {
+    border-color: #ff7940;
+    background: #fff5f0;
+}
+
+.upload-drop-area.dragover {
+    border-color: #ff7940;
+    background: #fff5f0;
+}
+
+.uploaded-file-info {
+    display: flex;
+    align-items: center;
+    padding: 1rem;
+    background: #f0f9ff;
+    border: 1px solid #bae6fd;
+    border-radius: 10px;
+}
+
+/* プログレスバー */
+.progress-section {
+    background: var(--surface);
+    padding: 2rem;
+    border-radius: var(--radius-xl);
+    box-shadow: var(--shadow-md);
+}
+
+.progress-wrapper {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    max-width: 500px;
+    margin: 0 auto;
+}
+
+.step {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    text-align: center;
+    flex: 1;
+    position: relative;
+}
+
+.step-icon {
+    width: 3rem;
+    height: 3rem;
+    border-radius: 50%;
+    background: var(--border-color);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1.2rem;
+    color: var(--text-muted);
+    transition: all 0.3s ease;
+    margin-bottom: 0.5rem;
+}
+
+.step.completed .step-icon {
+    background: var(--success);
+    color: white;
+}
+
+.step.active .step-icon {
+    background: var(--primary-gradient);
+    color: white;
+    box-shadow: 0 0 20px rgba(255, 121, 64, 0.3);
+}
+
+.step span {
+    font-size: 0.875rem;
+    font-weight: 600;
+    color: var(--text-muted);
+}
+
+.step.completed span,
+.step.active span {
+    color: var(--text-primary);
+}
+
+.progress-line {
+    height: 2px;
+    background: var(--border-color);
+    flex: 1;
+    margin: 0 1rem;
+    position: relative;
+    top: -1.5rem;
+}
+
+.progress-line.completed {
+    background: var(--success);
+}
+
+/* カード */
+.card-modern {
+    background: var(--surface);
+    border: 1px solid var(--border-color);
+    border-radius: var(--radius-xl);
+    box-shadow: var(--shadow-md);
+    overflow: hidden;
+    transition: all 0.3s ease;
+}
+
+.card-modern:hover {
+    box-shadow: var(--shadow-lg);
+    transform: translateY(-2px);
+}
+
+.card-header {
+    background: linear-gradient(135deg, var(--surface-elevated) 0%, var(--surface) 100%);
+    border-bottom: 1px solid var(--border-color);
+    padding: 1.5rem;
+}
+
+.card-body {
+    padding: 1.5rem;
+}
+
+/* テキスト表示 */
+.source-text {
+    background: var(--surface-elevated);
+    border: 1px solid var(--border-color-light);
+    border-radius: var(--radius-md);
+    padding: 1rem;
+    height: 300px;
+    overflow-y: auto;
+    line-height: 1.6;
+    font-family: 'Segoe UI', system-ui, sans-serif;
+    white-space: pre-wrap;
+    word-wrap: break-word;
+}
+
+/* 歌詞エディタ */
+.lyrics-editor {
+    width: 100%;
+    background: var(--surface-elevated);
+    border: 2px solid var(--border-color);
+    border-radius: var(--radius-md);
+    padding: 1rem;
+    font-family: 'Georgia', serif;
+    line-height: 1.8;
+    font-size: 1rem;
+    resize: vertical;
+    transition: all 0.3s ease;
+}
+
+.lyrics-editor:focus {
+    outline: none;
+    border-color: var(--primary-color);
+    box-shadow: 0 0 0 3px rgba(255, 121, 64, 0.1);
+}
+
+.lyrics-editor[readonly] {
+    background: var(--surface);
+    cursor: default;
+}
+
+/* ローディング状態 */
+.loading {
+    opacity: 0.7;
+    pointer-events: none;
+}
+
+.loading .lyrics-editor {
+    background: linear-gradient(90deg, var(--surface) 25%, var(--surface-elevated) 50%, var(--surface) 75%);
+    background-size: 200% 100%;
+    animation: loading 2s infinite;
+}
+
+@keyframes loading {
+    0% { background-position: 200% 0; }
+    100% { background-position: -200% 0; }
+}
+
+/* アニメーション */
+.fade-in {
+    animation: fadeInUp 0.6s ease forwards;
+}
+
+@keyframes fadeInUp {
+    from {
+        opacity: 0;
+        transform: translateY(30px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+/* レスポンシブ */
+@media (max-width: 768px) {
+    .progress-wrapper {
+        flex-direction: column;
+        gap: 1rem;
+    }
+    
+    .progress-line {
+        width: 2px;
+        height: 2rem;
+        margin: 0;
+        top: 0;
+    }
+    
+    .btn-lg {
+        width: 100%;
+    }
+}
+
+/* ボーカルスタイル トグルボタン */
+.vocal-toggle-container {
+    position: relative;
+}
+
+.vocal-toggle-input {
+    display: none;
+}
+
+.vocal-toggle-wrapper {
+    display: inline-flex;
+    background: #e8e8e8;
+    border-radius: 8px;
+    padding: 4px;
+    gap: 2px;
+}
+
+.vocal-toggle-btn {
+    padding: 10px 32px;
+    font-size: 0.95rem;
+    font-weight: 500;
+    color: #666;
+    background: transparent;
+    border: none;
+    border-radius: 6px;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    margin: 0;
+}
+
+.vocal-toggle-btn:hover {
+    color: #444;
+}
+
+#vocal-female:checked ~ .vocal-toggle-wrapper label[for="vocal-female"],
+#vocal-male:checked ~ .vocal-toggle-wrapper label[for="vocal-male"] {
+    background: #fff;
+    color: #333;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+}
+</style>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const lyricsTextarea = document.getElementById('lyrics-textarea');
+    const regenerateBtn = document.getElementById('regenerate-btn');
+    const editBtn = document.getElementById('edit-btn');
+    const createSongBtn = document.getElementById('create-song-btn');
+    const lyricsForm = document.getElementById('lyrics-form');
+    
+    let isEditing = false;
+    
+    const isManualMode = {{ manual_mode|default:False|lower }};
+    
+    // 初期状態: 手動入力モードなら編集可能、それ以外は読み取り専用
+    if (lyricsTextarea) {
+        lyricsTextarea.readOnly = !isManualMode;
+    }
+    
+    // 編集ボタン（存在する場合のみ）
+    if (editBtn) {
+        editBtn.addEventListener('click', function() {
+            if (!isEditing) {
+                // 編集モード開始
+                lyricsTextarea.readOnly = false;
+                lyricsTextarea.focus();
+                isEditing = true;
+                editBtn.innerHTML = '完了';
+                editBtn.className = 'btn btn-success btn-sm w-100';
+            } else {
+                // 編集モード終了
+                lyricsTextarea.readOnly = true;
+                isEditing = false;
+                editBtn.innerHTML = '編集';
+                editBtn.className = 'btn btn-outline-info btn-sm w-100';
+            }
+        });
+    }
+    
+    // 再生成ボタン（存在する場合のみ）
+    if (regenerateBtn) {
+        regenerateBtn.addEventListener('click', function() {
+        if (confirm('歌詞を再生成しますか？現在の内容は失われます。')) {
+            // ローディング状態
+            const originalText = regenerateBtn.innerHTML;
+            regenerateBtn.innerHTML = '生成中...';
+            regenerateBtn.disabled = true;
+            lyricsTextarea.parentElement.classList.add('loading');
+            
+            // AJAX で歌詞を再生成
+            fetch(window.location.href, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/x-www-form-urlencoded',
+                    'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]').value
+                },
+                body: 'action=regenerate'
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    lyricsTextarea.value = data.lyrics;
+                } else {
+                    alert('{% if is_english %}Failed to generate lyrics. Please try again.{% elif is_chinese %}歌词生成失败，请重试。{% else %}歌詞の生成に失敗しました。もう一度お試しください。{% endif %}');
+                }
+            })
+            .catch(error => {
+                console.error('Error:', error);
+                alert('{% if is_english %}An error occurred.{% elif is_chinese %}发生错误。{% else %}エラーが発生しました。{% endif %}');
+            })
+            .finally(() => {
+                regenerateBtn.innerHTML = originalText;
+                regenerateBtn.disabled = false;
+                lyricsTextarea.parentElement.classList.remove('loading');
+            });
+            }
+        });
+    }
+    
+    // フォーム送信
+    if (lyricsForm) {
+        lyricsForm.addEventListener('submit', function(e) {
+            const lyrics = lyricsTextarea.value.trim();
+            const title = document.getElementById('song-title').value.trim();
+            
+            if (!lyrics) {
+                e.preventDefault();
+                alert('{% if is_english %}Lyrics are empty.{% elif is_chinese %}歌词为空。{% else %}歌詞が入力されていません。{% endif %}');
+                return;
+            }
+            
+            if (!title) {
+                e.preventDefault();
+                alert('{% if is_english %}Please enter a song title.{% elif is_chinese %}请输入歌曲标题。{% else %}楽曲タイトルを入力してください。{% endif %}');
+                return;
+            }
+            
+            // ローディング状態
+            if (createSongBtn) {
+                createSongBtn.innerHTML = '{% if is_english %}Generating...{% elif is_chinese %}生成中...{% else %}楽曲を生成中...{% endif %}';
+                createSongBtn.disabled = true;
+            }
+            
+            // フォームを通常送信
+            return true;
+        });
+    }
+    
+    console.log('Lyrics confirmation page loaded');
+});
+</script>
+{% endblock %}

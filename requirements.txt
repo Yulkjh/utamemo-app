@@ -1,0 +1,17 @@
+Django==5.2.7
+Pillow==10.4.0
+requests==2.31.0
+python-dotenv==1.0.0
+google-generativeai
+gunicorn==20.1.0
+whitenoise==6.5.0
+dj-database-url==2.1.0
+cryptography==41.0.0
+psycopg2-binary==2.9.9
+fugashi
+unidic-lite
+PyMuPDF==1.24.0
+channels==4.0.0
+channels-redis==4.1.0
+daphne==4.0.0
+stripe==7.0.0

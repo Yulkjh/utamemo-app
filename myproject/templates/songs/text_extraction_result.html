@@ -1,0 +1,291 @@
+{% extends 'base.html' %}
+
+{% block title %}{% if is_english %}Text Extraction Result{% elif is_chinese %}文本提取结果{% else %}テキスト抽出結果{% endif %} - UTAMEMO{% endblock %}
+
+{% block content %}
+<div class="container py-5">
+    <div class="row justify-content-center">
+        <div class="col-lg-8">
+            <!-- ヘッダーセクション -->
+            <div class="text-center mb-5 fade-in">
+                <div class="success-icon-wrapper mx-auto mb-4">
+                    <svg width="80" height="80" viewBox="0 0 80 80" xmlns="http://www.w3.org/2000/svg">
+                        <defs>
+                            <linearGradient id="successGradient" x1="0%" y1="0%" x2="100%" y2="100%">
+                                <stop offset="0%" style="stop-color:#28a745;stop-opacity:1" />
+                                <stop offset="100%" style="stop-color:#20c997;stop-opacity:1" />
+                            </linearGradient>
+                        </defs>
+                        
+                        <!-- 成功アイコン -->
+                        <circle cx="40" cy="40" r="30" fill="url(#successGradient)" opacity="0.9"/>
+                        <path d="M25 40 L35 50 L55 30" stroke="white" stroke-width="4" fill="none" stroke-linecap="round" stroke-linejoin="round"/>
+                        
+                        <!-- テキストライン -->
+                        <line x1="15" y1="20" x2="35" y2="20" stroke="url(#successGradient)" stroke-width="2" opacity="0.6"/>
+                        <line x1="45" y1="20" x2="65" y2="20" stroke="url(#successGradient)" stroke-width="2" opacity="0.6"/>
+                        
+                        <line x1="55" y1="65" x2="65" y2="65" stroke="url(#successGradient)" stroke-width="2" opacity="0.4"/>
+                    </svg>
+                </div>
+                <h1 class="display-6 fw-bold mb-3 text-success">{% if is_english %}Text Extraction Complete!{% elif is_chinese %}文本提取完成！{% else %}テキスト抽出完了！{% endif %}</h1>
+                <p class="lead text-secondary">
+                    {% if is_english %}
+                    Text successfully extracted from the image<br>
+                    Review the result and proceed to create your song
+                    {% elif is_chinese %}
+                    已成功从图片中提取文本<br>
+                    确认提取结果后，继续创作歌曲
+                    {% else %}
+                    画像からテキストを正常に抽出しました<br>
+                    抽出結果を確認して、楽曲作成に進みましょう
+                    {% endif %}
+                </p>
+            </div>
+
+            <!-- 抽出結果表示 -->
+            <div class="result-container fade-in">
+                <div class="card-modern p-4 mb-4">
+                    <div class="d-flex justify-content-between align-items-center mb-3">
+                        <h5 class="fw-bold mb-0">
+                            <i class="bi bi-file-text text-primary me-2"></i>
+                            {% if is_english %}Extracted Text{% elif is_chinese %}提取的文本{% else %}抽出されたテキスト{% endif %}
+                        </h5>
+                        <div class="text-muted">
+                            <small>{{ extracted_text|length }} {% if is_english %}characters{% elif is_chinese %}字{% else %}文字{% endif %}</small>
+                        </div>
+                    </div>
+                    
+                    <div class="extracted-text-container">
+                        <div class="extracted-text" id="extracted-text">{{ extracted_text }}</div>
+                        
+                        <!-- コピーボタン -->
+                        <div class="text-end mt-3">
+                            <button type="button" class="btn-outline-modern btn-sm" id="copy-text-btn">
+                                <i class="bi bi-clipboard"></i> {% if is_english %}Copy Text{% elif is_chinese %}复制文本{% else %}テキストをコピー{% endif %}
+                            </button>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 画像プレビュー -->
+                {% if uploaded_image %}
+                <div class="card-modern p-4 mb-4">
+                    <h6 class="fw-bold mb-3">
+                        <i class="bi bi-image text-info me-2"></i>
+                        {% if is_english %}Uploaded Image{% elif is_chinese %}上传的图片{% else %}アップロードした画像{% endif %}
+                    </h6>
+                    <div class="text-center">
+                        <img src="{{ uploaded_image.image.url }}" alt="{% if is_english %}Uploaded Image{% elif is_chinese %}上传的图片{% else %}アップロード画像{% endif %}" class="uploaded-image-preview">
+                    </div>
+                </div>
+                {% endif %}
+
+                <!-- アクションボタン -->
+                <div class="text-center mt-4">
+                    <a href="{% url 'songs:lyrics_confirmation' %}" class="btn-gradient-primary btn-lg me-3">
+                        <i class="bi bi-file-text"></i> {% if is_english %}Confirm Lyrics{% elif is_chinese %}确认歌词{% else %}歌詞を確認{% endif %}
+                    </a>
+                    <a href="{% url 'songs:upload_image' %}" class="btn-outline-modern btn-lg">
+                        <i class="bi bi-arrow-left"></i> {% if is_english %}Upload Another Image{% elif is_chinese %}上传其他图片{% else %}別の画像をアップロード{% endif %}
+                    </a>
+                </div>
+
+                <!-- 使用ガイド -->
+                <div class="guide-section mt-5">
+                    <div class="card-modern p-4">
+                        <h6 class="fw-bold mb-3 d-flex align-items-center">
+                            <i class="bi bi-lightbulb text-warning me-2"></i>
+                            {% if is_english %}Next Steps{% elif is_chinese %}下一步{% else %}次のステップ{% endif %}
+                        </h6>
+                        <div class="row g-3">
+                            <div class="col-md-6">
+                                <div class="guide-item">
+                                    <div class="guide-icon">
+                                        <i class="bi bi-check-circle"></i>
+                                    </div>
+                                    <div>
+                                        <div class="fw-semibold">{% if is_english %}Review Text{% elif is_chinese %}确认文本{% else %}テキストを確認{% endif %}</div>
+                                        <small class="text-muted">{% if is_english %}Check if the extraction is correct{% elif is_chinese %}检查提取结果是否正确{% else %}抽出結果が正しいかチェック{% endif %}</small>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="guide-item">
+                                    <div class="guide-icon">
+                                        <i class="bi bi-file-text"></i>
+                                    </div>
+                                    <div>
+                                        <div class="fw-semibold">{% if is_english %}Confirm Lyrics{% elif is_chinese %}确认歌词{% else %}歌詞生成確認{% endif %}</div>
+                                        <small class="text-muted">{% if is_english %}Review the AI-generated lyrics{% elif is_chinese %}查看AI生成的歌词{% else %}AIが作成した歌詞を確認{% endif %}</small>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<style>
+.success-icon-wrapper {
+    width: 100px;
+    height: 100px;
+    border-radius: var(--radius-xl);
+    background: linear-gradient(135deg, rgba(40, 167, 69, 0.1) 0%, rgba(32, 201, 151, 0.1) 100%);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    box-shadow: var(--shadow-md);
+}
+
+.result-container {
+    margin-bottom: 2rem;
+}
+
+.extracted-text-container {
+    background: var(--surface-elevated);
+    border: 1px solid var(--border-color);
+    border-radius: var(--radius-lg);
+    padding: 1.5rem;
+}
+
+.extracted-text {
+    background: white;
+    border: 1px solid var(--border-color-light);
+    border-radius: var(--radius-md);
+    padding: 1rem;
+    min-height: 150px;
+    max-height: 400px;
+    overflow-y: auto;
+    line-height: 1.6;
+    white-space: pre-wrap;
+    word-wrap: break-word;
+    font-family: "Helvetica Neue", Arial, sans-serif;
+    font-size: 0.95rem;
+}
+
+.uploaded-image-preview {
+    max-width: 100%;
+    max-height: 300px;
+    border-radius: var(--radius-lg);
+    box-shadow: var(--shadow-md);
+}
+
+.guide-item {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+}
+
+.guide-icon {
+    width: 2.5rem;
+    height: 2.5rem;
+    border-radius: var(--radius-md);
+    background: var(--accent-gradient);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: white;
+    font-size: 1.1rem;
+    flex-shrink: 0;
+}
+
+/* アニメーション */
+.fade-in {
+    animation: fadeInUp 0.6s ease forwards;
+}
+
+.fade-in:nth-child(2) { animation-delay: 0.2s; }
+.fade-in:nth-child(3) { animation-delay: 0.4s; }
+
+@keyframes fadeInUp {
+    from {
+        opacity: 0;
+        transform: translateY(30px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+/* レスポンシブ調整 */
+@media (max-width: 768px) {
+    .btn-lg {
+        width: 100%;
+        margin-bottom: 0.5rem !important;
+    }
+    
+    .guide-item {
+        flex-direction: column;
+        text-align: center;
+        gap: 0.5rem;
+    }
+}
+</style>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // テキストコピー機能
+    const copyBtn = document.getElementById('copy-text-btn');
+    const textElement = document.getElementById('extracted-text');
+
+    copyBtn.addEventListener('click', function() {
+        // テキストを選択してコピー
+        if (navigator.clipboard) {
+            navigator.clipboard.writeText(textElement.textContent).then(function() {
+                // 成功時の表示
+                const originalText = copyBtn.innerHTML;
+                copyBtn.innerHTML = '<i class="bi bi-check"></i> {% if is_english %}Copied!{% elif is_chinese %}已复制！{% else %}コピーしました！{% endif %}';
+                copyBtn.classList.add('btn-success');
+                copyBtn.classList.remove('btn-outline-modern');
+                
+                setTimeout(function() {
+                    copyBtn.innerHTML = originalText;
+                    copyBtn.classList.remove('btn-success');
+                    copyBtn.classList.add('btn-outline-modern');
+                }, 2000);
+            }).catch(function(err) {
+                console.error('{% if is_english %}Copy failed:{% elif is_chinese %}复制失败：{% else %}コピーに失敗しました:{% endif %}', err);
+                fallbackCopyToClipboard();
+            });
+        } else {
+            fallbackCopyToClipboard();
+        }
+    });
+
+    // フォールバック用のコピー機能
+    function fallbackCopyToClipboard() {
+        const textArea = document.createElement('textarea');
+        textArea.value = textElement.textContent;
+        textArea.style.position = 'fixed';
+        textArea.style.left = '-999999px';
+        textArea.style.top = '-999999px';
+        document.body.appendChild(textArea);
+        textArea.focus();
+        textArea.select();
+        
+        try {
+            document.execCommand('copy');
+            const originalText = copyBtn.innerHTML;
+            copyBtn.innerHTML = '<i class="bi bi-check"></i> {% if is_english %}Copied!{% elif is_chinese %}已复制！{% else %}コピーしました！{% endif %}';
+            copyBtn.classList.add('btn-success');
+            copyBtn.classList.remove('btn-outline-modern');
+            
+            setTimeout(function() {
+                copyBtn.innerHTML = originalText;
+                copyBtn.classList.remove('btn-success');
+                copyBtn.classList.add('btn-outline-modern');
+            }, 2000);
+        } catch (err) {
+            console.error('{% if is_english %}Fallback copy failed:{% elif is_chinese %}备用复制失败：{% else %}フォールバックコピーに失敗しました:{% endif %}', err);
+        }
+        
+        document.body.removeChild(textArea);
+    }
+});
+</script>
+{% endblock %}

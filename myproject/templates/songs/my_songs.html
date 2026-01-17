@@ -1,0 +1,859 @@
+{% extends 'base.html' %}
+{% load lyrics_filters %}
+
+{% block title %}{% if is_english %}My Songs{% elif is_chinese %}我的歌曲{% else %}MY楽曲{% endif %} - UTAMEMO{% endblock %}
+
+{% block content %}
+{% csrf_token %}
+<div class="container py-4">
+    <!-- ヘッダーセクション -->
+    <div class="mb-4 fade-in">
+        <h1 class="h4 fw-bold mb-0">{% if is_english %}My Songs{% elif is_chinese %}我的歌曲{% else %}MY楽曲{% endif %}</h1>
+    </div>
+
+    <!-- 楽曲一覧（Spotify風リスト） -->
+    {% if songs %}
+    <div class="song-list fade-in">
+        {% for song in songs %}
+        <div class="song-row {% if song.generation_status == 'failed' %}song-row-failed{% elif song.generation_status == 'generating' or song.generation_status == 'pending' %}song-row-pending{% endif %}" onclick="navigateToSong('{% url 'songs:song_detail' song.pk %}', event)">
+            <!-- 再生ボタン / ステータスアイコン -->
+            <div class="song-play">
+                {% if song.generation_status == 'completed' and song.audio_url %}
+                <div class="play-icon">
+                    <i class="bi bi-play-fill"></i>
+                </div>
+                {% elif song.generation_status == 'generating' %}
+                <div class="status-icon generating"><i class="bi bi-arrow-repeat spin"></i></div>
+                {% elif song.generation_status == 'pending' %}
+                <div class="status-icon pending"><i class="bi bi-hourglass-split"></i></div>
+                {% elif song.generation_status == 'failed' %}
+                <div class="status-icon failed"><i class="bi bi-x-circle"></i></div>
+                {% else %}
+                <div class="status-icon"><i class="bi bi-music-note"></i></div>
+                {% endif %}
+            </div>
+
+            <!-- タイトル -->
+            <div class="song-info">
+                <span class="song-title-text">{{ song.title|truncatechars:40 }}</span>
+                {% if song.genre %}
+                <span class="song-genre-badge">{{ song.genre|translate_genre:app_language }}</span>
+                {% endif %}
+                {% if song.is_public %}
+                <span class="song-public-badge">{% if is_english %}Public{% elif is_chinese %}公开{% else %}公開{% endif %}</span>
+                {% else %}
+                <span class="song-private-badge">{% if is_english %}Private{% elif is_chinese %}私密{% else %}非公開{% endif %}</span>
+                {% endif %}
+                {% if song.generation_status == 'pending' and song.queue_position %}
+                <span class="queue-badge">#{{ song.queue_position }}</span>
+                {% endif %}
+            </div>
+
+            <!-- ステータス表示 -->
+            <div class="song-status">
+                {% if song.generation_status == 'generating' %}
+                <span class="status-text generating">{% if is_english %}Generating...{% elif is_chinese %}生成中...{% else %}生成中...{% endif %}</span>
+                {% elif song.generation_status == 'pending' %}
+                <span class="status-text pending">{% if is_english %}Waiting{% elif is_chinese %}等待中{% else %}待機中{% endif %}</span>
+                {% elif song.generation_status == 'failed' %}
+                <span class="status-text failed">{% if is_english %}Failed{% elif is_chinese %}失败{% else %}失敗{% endif %}</span>
+                {% elif song.duration %}
+                <span class="song-duration">{{ song.duration|format_duration }}</span>
+                {% endif %}
+            </div>
+
+            <!-- メニューボタン -->
+            <div class="song-menu" onclick="event.stopPropagation();">
+                <button class="menu-btn" onclick="toggleSongMenu(this, {{ song.pk }})">
+                    <i class="bi bi-three-dots-vertical"></i>
+                </button>
+                <div class="menu-dropdown" id="menu-{{ song.pk }}">
+                    <a href="{% url 'songs:song_detail' song.pk %}" class="menu-item">
+                        <i class="bi bi-eye"></i>
+                        <span>{% if is_english %}View Details{% elif is_chinese %}查看详情{% else %}詳細を見る{% endif %}</span>
+                    </a>
+                    <button class="menu-item delete-item" onclick="confirmDelete({{ song.pk }}, '{{ song.title|escapejs }}')">
+                        <i class="bi bi-trash"></i>
+                        <span>{% if is_english %}Delete{% elif is_chinese %}删除{% else %}削除{% endif %}</span>
+                    </button>
+                </div>
+            </div>
+
+            <!-- 矢印アイコン -->
+            <div class="song-arrow">
+                <i class="bi bi-chevron-right"></i>
+            </div>
+        </div>
+        {% endfor %}
+    </div>
+
+    <!-- ページネーション -->
+    {% if is_paginated %}
+    <nav aria-label="{% if is_english %}Song pagination{% elif is_chinese %}歌曲分页{% else %}楽曲ページネーション{% endif %}" class="mt-5">
+        <ul class="pagination justify-content-center">
+            {% if page_obj.has_previous %}
+            <li class="page-item">
+                <a class="page-link" href="?page={{ page_obj.previous_page_number }}">{% if is_english %}Prev{% elif is_chinese %}上一页{% else %}前へ{% endif %}</a>
+            </li>
+            {% endif %}
+            
+            {% for num in page_obj.paginator.page_range %}
+            {% if page_obj.number == num %}
+            <li class="page-item active">
+                <span class="page-link">{{ num }}</span>
+            </li>
+            {% elif num > page_obj.number|add:'-3' and num < page_obj.number|add:'3' %}
+            <li class="page-item">
+                <a class="page-link" href="?page={{ num }}">{{ num }}</a>
+            </li>
+            {% endif %}
+            {% endfor %}
+            
+            {% if page_obj.has_next %}
+            <li class="page-item">
+                <a class="page-link" href="?page={{ page_obj.next_page_number }}">{% if is_english %}Next{% elif is_chinese %}下一页{% else %}次へ{% endif %}</a>
+            </li>
+            {% endif %}
+        </ul>
+    </nav>
+    {% endif %}
+
+    {% else %}
+    <!-- 楽曲がない場合 -->
+    <div class="text-center py-5 fade-in">
+        <div class="empty-state-icon mx-auto mb-4">
+            <i class="bi bi-music-note-beamed" style="font-size: 4rem; color: var(--text-muted);"></i>
+        </div>
+        <h4 class="text-muted mb-3">{% if is_english %}No songs yet{% elif is_chinese %}还没有歌曲{% else %}まだ楽曲がありません{% endif %}</h4>
+        <p class="text-muted mb-4">
+            {% if is_english %}
+            Upload a photo of your study material<br>
+            and create your first song!
+            {% elif is_chinese %}
+            上传你的学习资料照片<br>
+            创作你的第一首歌曲！
+            {% else %}
+            教材の写真をアップロードして、<br>
+            初めての楽曲を作成しましょう！
+            {% endif %}
+        </p>
+        <a href="{% url 'songs:upload_image' %}" class="btn-gradient-primary me-3">
+            <i class="bi bi-camera"></i> {% if is_english %}Upload Image{% elif is_chinese %}上传图片{% else %}画像をアップロード{% endif %}
+        </a>
+        <a href="{% url 'songs:create_song' %}" class="btn-outline-modern">
+            <i class="bi bi-pencil-square"></i> {% if is_english %}Create Directly{% elif is_chinese %}直接创作{% else %}直接作成{% endif %}
+        </a>
+    </div>
+    {% endif %}
+</div>
+
+<style>
+/* リストスタイル */
+.song-list {
+    background: white;
+    border-radius: 16px;
+    overflow: visible;
+    box-shadow: 0 2px 12px rgba(0, 0, 0, 0.06);
+}
+
+.song-row {
+    display: flex;
+    align-items: center;
+    padding: 1rem 1.25rem;
+    border-bottom: 1px solid #f0f0f0;
+    transition: all 0.2s ease;
+    text-decoration: none;
+    color: inherit;
+    cursor: pointer;
+}
+
+.song-row:last-child {
+    border-bottom: none;
+}
+
+.song-row:hover {
+    background: linear-gradient(135deg, #fff8f5 0%, #fff0eb 100%);
+}
+
+.song-row:hover .play-icon {
+    transform: scale(1.1);
+    box-shadow: 0 4px 12px rgba(255, 121, 64, 0.3);
+}
+
+.song-row:hover .song-arrow {
+    opacity: 1;
+    transform: translateX(0);
+}
+
+.song-row-failed {
+    border-left: 4px solid #ef4444;
+    background: #fef2f2;
+}
+
+.song-row-failed:hover {
+    background: #fee2e2;
+}
+
+.song-row-pending {
+    border-left: 4px solid #f59e0b;
+    background: #fffbeb;
+}
+
+.song-row-pending:hover {
+    background: #fef3c7;
+}
+
+/* 再生アイコン */
+.song-play {
+    width: 48px;
+    flex-shrink: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.play-icon {
+    width: 40px;
+    height: 40px;
+    border-radius: 50%;
+    background: linear-gradient(135deg, #ff7940 0%, #ff6b35 100%);
+    color: white;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1.1rem;
+    transition: all 0.25s ease;
+    box-shadow: 0 2px 8px rgba(255, 121, 64, 0.2);
+}
+
+.play-icon i {
+    margin-left: 2px;
+}
+
+.status-icon {
+    width: 40px;
+    height: 40px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 50%;
+    font-size: 1.1rem;
+    background: #f5f5f5;
+}
+
+.status-icon.generating {
+    color: #3b82f6;
+    background: #eff6ff;
+}
+
+.status-icon.pending {
+    color: #f59e0b;
+    background: #fffbeb;
+}
+
+.status-icon.failed {
+    color: #ef4444;
+    background: #fef2f2;
+}
+
+/* 曲情報 */
+.song-info {
+    flex: 1;
+    min-width: 0;
+    padding: 0 1rem;
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+}
+
+.song-title-text {
+    color: #1f2937;
+    font-weight: 600;
+    font-size: 0.95rem;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.song-genre-badge {
+    background: linear-gradient(135deg, #ffeee6 0%, #ffd4c4 100%);
+    color: #ff7940;
+    font-size: 0.7rem;
+    padding: 0.25rem 0.6rem;
+    border-radius: 12px;
+    font-weight: 600;
+    flex-shrink: 0;
+}
+
+.song-public-badge {
+    background: linear-gradient(135deg, #d1fae5 0%, #a7f3d0 100%);
+    color: #059669;
+    font-size: 0.65rem;
+    padding: 0.2rem 0.5rem;
+    border-radius: 10px;
+    font-weight: 600;
+    flex-shrink: 0;
+}
+
+.song-private-badge {
+    background: linear-gradient(135deg, #f3f4f6 0%, #e5e7eb 100%);
+    color: #6b7280;
+    font-size: 0.65rem;
+    padding: 0.2rem 0.5rem;
+    border-radius: 10px;
+    font-weight: 600;
+    flex-shrink: 0;
+}
+
+.queue-badge {
+    background: #fef3c7;
+    color: #b45309;
+    font-size: 0.7rem;
+    padding: 0.2rem 0.5rem;
+    border-radius: 10px;
+    font-weight: 600;
+    flex-shrink: 0;
+}
+
+/* ステータス */
+.song-status {
+    flex-shrink: 0;
+    padding-right: 0.5rem;
+}
+
+.status-text {
+    font-size: 0.8rem;
+    font-weight: 500;
+}
+
+.status-text.generating {
+    color: #3b82f6;
+}
+
+.status-text.pending {
+    color: #f59e0b;
+}
+
+.status-text.failed {
+    color: #ef4444;
+}
+
+.song-duration {
+    font-size: 0.85rem;
+    color: #9ca3af;
+    font-weight: 500;
+}
+
+/* 矢印 */
+.song-arrow {
+    width: 24px;
+    flex-shrink: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: #d1d5db;
+    font-size: 0.9rem;
+    opacity: 0;
+    transform: translateX(-8px);
+    transition: all 0.2s ease;
+}
+
+/* メニュー */
+.song-menu {
+    position: relative;
+    flex-shrink: 0;
+    margin-right: 0.5rem;
+}
+
+.menu-btn {
+    width: 36px;
+    height: 36px;
+    border: none;
+    background: transparent;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: #9ca3af;
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+
+.menu-btn:hover {
+    background: #f3f4f6;
+    color: #6b7280;
+}
+
+.menu-dropdown {
+    position: absolute;
+    top: 100%;
+    right: 0;
+    background: white;
+    border-radius: 12px;
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.15);
+    min-width: 160px;
+    opacity: 0;
+    visibility: hidden;
+    transform: translateY(-8px);
+    transition: all 0.2s ease;
+    z-index: 9999;
+    overflow: hidden;
+}
+
+.menu-dropdown.show {
+    opacity: 1;
+    visibility: visible;
+    transform: translateY(0);
+}
+
+.menu-dropdown.open-up {
+    top: auto;
+    bottom: 100%;
+    transform: translateY(8px);
+}
+
+.menu-dropdown.open-up.show {
+    opacity: 1;
+    visibility: visible;
+    transform: translateY(0);
+}
+
+.menu-item {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    padding: 0.75rem 1rem;
+    color: #374151;
+    text-decoration: none;
+    font-size: 0.9rem;
+    border: none;
+    background: none;
+    width: 100%;
+    cursor: pointer;
+    transition: background 0.15s ease;
+}
+
+.menu-item:hover {
+    background: #f3f4f6;
+}
+
+.menu-item i {
+    font-size: 1rem;
+    opacity: 0.7;
+}
+
+.menu-item.delete-item {
+    color: #ef4444;
+}
+
+.menu-item.delete-item:hover {
+    background: #fef2f2;
+}
+
+/* 削除確認モーダル */
+.delete-modal {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: rgba(0, 0, 0, 0.5);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 1000;
+    opacity: 0;
+    visibility: hidden;
+    transition: all 0.2s ease;
+}
+
+.delete-modal.show {
+    opacity: 1;
+    visibility: visible;
+}
+
+.delete-modal-content {
+    background: white;
+    border-radius: 16px;
+    padding: 1.5rem;
+    max-width: 400px;
+    width: 90%;
+    text-align: center;
+    transform: scale(0.9);
+    transition: transform 0.2s ease;
+}
+
+.delete-modal.show .delete-modal-content {
+    transform: scale(1);
+}
+
+.delete-modal-icon {
+    width: 60px;
+    height: 60px;
+    border-radius: 50%;
+    background: #fef2f2;
+    color: #ef4444;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1.5rem;
+    margin: 0 auto 1rem;
+}
+
+.delete-modal-title {
+    font-size: 1.1rem;
+    font-weight: 600;
+    color: #1f2937;
+    margin-bottom: 0.5rem;
+}
+
+.delete-modal-text {
+    color: #6b7280;
+    font-size: 0.9rem;
+    margin-bottom: 1.5rem;
+}
+
+.delete-modal-actions {
+    display: flex;
+    gap: 0.75rem;
+    justify-content: center;
+}
+
+.btn-cancel {
+    padding: 0.6rem 1.5rem;
+    border: 1px solid #e5e7eb;
+    background: white;
+    border-radius: 8px;
+    color: #374151;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+
+.btn-cancel:hover {
+    background: #f3f4f6;
+}
+
+.btn-delete {
+    padding: 0.6rem 1.5rem;
+    border: none;
+    background: #ef4444;
+    border-radius: 8px;
+    color: white;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+
+.btn-delete:hover {
+    background: #dc2626;
+}
+
+/* Spin animation */
+.spin {
+    animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+    from { transform: rotate(0deg); }
+    to { transform: rotate(360deg); }
+}
+
+/* Empty state */
+.empty-state-icon {
+    width: 6rem;
+    height: 6rem;
+    border-radius: var(--radius-xl);
+    background: var(--surface-elevated);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+/* モバイル対応 */
+@media (max-width: 576px) {
+    .song-row {
+        padding: 0.875rem 1rem;
+    }
+    
+    .song-info {
+        padding: 0 0.75rem;
+    }
+    
+    .song-genre-badge {
+        display: none;
+    }
+    
+    .song-arrow {
+        display: none;
+    }
+}
+
+/* アニメーション */
+.fade-in {
+    animation: fadeInUp 0.4s ease forwards;
+}
+
+@keyframes fadeInUp {
+    from {
+        opacity: 0;
+        transform: translateY(20px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+/* ページネーション */
+.pagination {
+    gap: 0.25rem;
+}
+
+.page-link {
+    color: #ff7940;
+    border: 1px solid #f0f0f0;
+    border-radius: 8px;
+    padding: 0.5rem 1rem;
+    background: white;
+    transition: all 0.2s ease;
+}
+
+.page-link:hover {
+    background: #fff8f5;
+    border-color: #ff7940;
+    color: #ff7940;
+}
+
+.page-item.active .page-link {
+    background: linear-gradient(135deg, #ff7940 0%, #ff6b35 100%);
+    border-color: #ff7940;
+    color: white;
+}
+
+.page-item.disabled .page-link {
+    color: #d1d5db;
+    background: #f9fafb;
+}
+
+/* レスポンシブ */
+@media (max-width: 576px) {
+    .song-row {
+        padding: 0.6rem 0.75rem;
+    }
+    
+    .song-title-link {
+        font-size: 0.9rem;
+    }
+    
+    .btn-play-mini,
+    .status-icon,
+    .btn-action {
+        width: 28px;
+        height: 28px;
+        font-size: 0.8rem;
+    }
+}
+</style>
+
+<script>
+// 行クリックで詳細ページへ遷移
+function navigateToSong(url, event) {
+    if (event.target.closest('.song-menu')) {
+        return;
+    }
+    window.location.href = url;
+}
+
+// メニュー開閉
+function toggleSongMenu(button, songId) {
+    // 他のメニューを閉じる
+    document.querySelectorAll('.menu-dropdown.show').forEach(menu => {
+        if (menu.id !== `menu-${songId}`) {
+            menu.classList.remove('show');
+            menu.classList.remove('open-up');
+        }
+    });
+    
+    const menu = document.getElementById(`menu-${songId}`);
+    
+    // メニューが画面下部に近い場合は上方向に開く
+    if (!menu.classList.contains('show')) {
+        const buttonRect = button.getBoundingClientRect();
+        const menuHeight = 120; // メニューの概算高さ
+        const spaceBelow = window.innerHeight - buttonRect.bottom;
+        
+        if (spaceBelow < menuHeight) {
+            menu.classList.add('open-up');
+        } else {
+            menu.classList.remove('open-up');
+        }
+    }
+    
+    menu.classList.toggle('show');
+}
+
+// メニュー外クリックで閉じる
+document.addEventListener('click', function(e) {
+    if (!e.target.closest('.song-menu')) {
+        document.querySelectorAll('.menu-dropdown.show').forEach(menu => {
+            menu.classList.remove('show');
+        });
+    }
+});
+
+// 削除確認モーダル
+let deleteSongId = null;
+
+function confirmDelete(songId, songTitle) {
+    deleteSongId = songId;
+    
+    // モーダルを作成
+    let modal = document.getElementById('deleteModal');
+    if (!modal) {
+        modal = document.createElement('div');
+        modal.id = 'deleteModal';
+        modal.className = 'delete-modal';
+        modal.innerHTML = `
+            <div class="delete-modal-content">
+                <div class="delete-modal-icon">
+                    <i class="bi bi-trash"></i>
+                </div>
+                <h3 class="delete-modal-title">{% if is_english %}Delete Song?{% elif is_chinese %}删除歌曲？{% else %}楽曲を削除しますか？{% endif %}</h3>
+                <p class="delete-modal-text" id="deleteSongTitle"></p>
+                <div class="delete-modal-actions">
+                    <button class="btn-cancel" onclick="closeDeleteModal()">{% if is_english %}Cancel{% elif is_chinese %}取消{% else %}キャンセル{% endif %}</button>
+                    <button class="btn-delete" onclick="deleteSong()">{% if is_english %}Delete{% elif is_chinese %}删除{% else %}削除{% endif %}</button>
+                </div>
+            </div>
+        `;
+        document.body.appendChild(modal);
+    }
+    
+    document.getElementById('deleteSongTitle').textContent = `「${songTitle}」{% if is_english %} will be permanently deleted.{% elif is_chinese %}将被永久删除。{% else %}を完全に削除します。{% endif %}`;
+    
+    // メニューを閉じる
+    document.querySelectorAll('.menu-dropdown.show').forEach(menu => {
+        menu.classList.remove('show');
+    });
+    
+    setTimeout(() => modal.classList.add('show'), 10);
+}
+
+function closeDeleteModal() {
+    const modal = document.getElementById('deleteModal');
+    if (modal) {
+        modal.classList.remove('show');
+    }
+    deleteSongId = null;
+}
+
+function deleteSong() {
+    if (!deleteSongId) return;
+    
+    const csrfToken = document.querySelector('[name=csrfmiddlewaretoken]')?.value;
+    
+    fetch(`/songs/${deleteSongId}/delete/`, {
+        method: 'POST',
+        headers: {
+            'X-CSRFToken': csrfToken,
+            'X-Requested-With': 'XMLHttpRequest'
+        }
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            // 行を削除
+            const row = document.querySelector(`.song-row[onclick*="${deleteSongId}"]`) || 
+                       document.querySelector(`#menu-${deleteSongId}`)?.closest('.song-row');
+            if (row) {
+                row.style.transform = 'translateX(-100%)';
+                row.style.opacity = '0';
+                setTimeout(() => row.remove(), 300);
+            }
+            closeDeleteModal();
+        } else {
+            alert(data.error || '{% if is_english %}Failed to delete{% elif is_chinese %}删除失败{% else %}削除に失敗しました{% endif %}');
+        }
+    })
+    .catch(error => {
+        console.error('Delete error:', error);
+        alert('{% if is_english %}Failed to delete{% elif is_chinese %}删除失败{% else %}削除に失敗しました{% endif %}');
+    });
+}
+
+document.addEventListener('DOMContentLoaded', function() {
+    // 音楽再生機能
+    const playButtons = document.querySelectorAll('.btn-play-mini');
+    let currentAudio = null;
+    let currentSongId = null;
+    let playRecorded = {};
+    
+    // CSRFトークン取得
+    function getCsrfToken() {
+        return document.querySelector('[name=csrfmiddlewaretoken]')?.value || 
+               document.cookie.split('; ').find(row => row.startsWith('csrftoken='))?.split('=')[1];
+    }
+    
+    // 再生回数を記録
+    function recordPlay(songId) {
+        if (playRecorded[songId]) return;
+        playRecorded[songId] = true;
+        
+        fetch(`/songs/${songId}/play/`, {
+            method: 'POST',
+            headers: {
+                'X-CSRFToken': getCsrfToken(),
+                'X-Requested-With': 'XMLHttpRequest'
+            }
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                console.log(`Play recorded for song ${songId}: total ${data.total_plays} times`);
+            }
+        })
+        .catch(error => console.error('Play record error:', error));
+    }
+    
+    playButtons.forEach(button => {
+        button.addEventListener('click', function() {
+            const audioUrl = this.dataset.audioUrl;
+            const songId = this.dataset.songId;
+            
+            if (currentAudio && !currentAudio.paused) {
+                currentAudio.pause();
+                document.querySelectorAll('.btn-play-mini').forEach(btn => {
+                    btn.innerHTML = '<i class="bi bi-play-fill"></i>';
+                    btn.classList.remove('playing');
+                });
+            }
+            
+            if (currentAudio && currentAudio.src === audioUrl && currentSongId === songId) {
+                currentAudio = null;
+                currentSongId = null;
+                return;
+            }
+            
+            currentAudio = new Audio(audioUrl);
+            currentSongId = songId;
+            this.innerHTML = '<i class="bi bi-pause-fill"></i>';
+            this.classList.add('playing');
+            
+            currentAudio.play().then(() => {
+                // 再生開始時に記録
+                if (songId) {
+                    recordPlay(songId);
+                }
+            }).catch(console.error);
+            
+            currentAudio.addEventListener('ended', () => {
+                this.innerHTML = '<i class="bi bi-play-fill"></i>';
+                this.classList.remove('playing');
+            });
+        });
+    });
+
+});
+</script>
+{% endblock %}

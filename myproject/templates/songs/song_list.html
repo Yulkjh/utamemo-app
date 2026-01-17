@@ -1,0 +1,983 @@
+{% extends 'base.html' %}
+{% load lyrics_filters %}
+
+{% block title %}{% if is_english %}Browse Songs{% elif is_chinese %}浏览歌曲{% else %}楽曲を探す{% endif %} - UTAMEMO{% endblock %}
+
+{% block content %}
+{% if user.is_authenticated %}
+{% csrf_token %}
+{% endif %}
+<div class="music-library">
+    <!-- ヘッダーセクション -->
+    <div class="library-header">
+        <div class="container">
+            <div class="header-content">
+                <h1 class="library-title">{% if is_english %}Browse Songs{% elif is_chinese %}浏览歌曲{% else %}楽曲を探す{% endif %}</h1>
+            </div>
+            
+            <!-- 検索バー -->
+            <div class="search-section">
+                <form class="search-container" action="{% url 'songs:song_list' %}" method="get">
+                    <div class="search-input-wrapper">
+                        <div class="search-icon">
+                            <svg width="18" height="18" viewBox="0 0 18 18" fill="none" xmlns="http://www.w3.org/2000/svg">
+                                <circle cx="8" cy="8" r="6" stroke="currentColor" stroke-width="1.5"/>
+                                <path d="m14 14 3 3" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>
+                            </svg>
+                        </div>
+                        <input type="text" name="q" class="search-input" id="songSearch" 
+                               placeholder="{% if is_english %}Search songs, genres...{% elif is_chinese %}搜索歌曲、类型...{% else %}楽曲、ジャンルで検索...{% endif %}" 
+                               value="{{ request.GET.q|default:'' }}"
+                               autocomplete="off">
+                        <button type="submit" class="search-button">
+                            <i class="bi bi-search"></i>
+                            <span class="search-button-text">{% if is_english %}Search{% elif is_chinese %}搜索{% else %}検索{% endif %}</span>
+                        </button>
+                        <button type="button" class="search-clear" id="clearSearch" style="display: none;">
+                            <i class="bi bi-x-circle-fill"></i>
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <!-- 楽曲リスト -->
+    <div class="library-content">
+        <div class="container">
+            {% if songs %}
+            <div class="songs-list" id="songsList">
+                {% for song in songs %}
+                <div class="song-item" data-title="{{ song.title|lower }}" data-artist="{{ song.created_by.username|lower }}" data-genre="{{ song.genre|lower }}" data-url="{% url 'songs:song_detail' song.pk %}" onclick="navigateToSong(event, this)">
+                    <!-- 作成者アバター -->
+                    <a href="{% url 'users:profile' song.created_by.username %}" class="song-creator-avatar" onclick="event.stopPropagation();" title="{{ song.created_by.username }}">
+                        {% if song.created_by.profile_image_data %}
+                        <img src="{{ song.created_by.profile_image_data }}" alt="{{ song.created_by.username }}">
+                        {% elif song.created_by.profile_image and song.created_by.profile_image.name %}
+                        <img src="{{ song.created_by.profile_image.url }}" alt="{{ song.created_by.username }}" onerror="this.style.display='none'; this.nextElementSibling.style.display='flex';">
+                        <div class="creator-default-avatar" style="display: none;">
+                            <i class="bi bi-person-fill"></i>
+                        </div>
+                        {% else %}
+                        <div class="creator-default-avatar">
+                            <i class="bi bi-person-fill"></i>
+                        </div>
+                        {% endif %}
+                    </a>
+                    
+                    <div class="song-info">
+                        <div class="song-main-info">
+                            <h3 class="song-title">{{ song.title }}</h3>
+                            <a href="{% url 'users:profile' song.created_by.username %}" class="song-artist-link" onclick="event.stopPropagation();">{{ song.created_by.username }}</a>
+                        </div>
+                        
+                        <div class="song-details">
+                            {% if song.genre %}
+                            <span class="song-genre">{{ song.genre|translate_genre:app_language }}</span>
+                            {% endif %}
+                            <span class="song-duration">{{ song.duration|format_duration|default:"3:45" }}</span>
+                        </div>
+                        
+                        {% if song.tags.exists %}
+                        <div class="song-tags">
+                            {% for tag in song.tags.all|slice:":5" %}
+                            <span class="tag-badge-small">#{{ tag.name }}</span>
+                            {% endfor %}
+                        </div>
+                        {% endif %}
+                    </div>
+                    
+                    <div class="song-actions">
+                        {% if song.audio_url %}
+                        <button class="play-button" onclick="event.stopPropagation(); playAudio('{{ song.audio_url }}', this, {{ song.pk }})" data-song-id="{{ song.pk }}">
+                            <i class="bi bi-play-fill"></i><span>{% if is_english %}Play{% elif is_chinese %}播放{% else %}再生{% endif %}</span>
+                        </button>
+                        {% else %}
+                        <a href="{% url 'songs:song_detail' song.pk %}" class="play-button" onclick="event.stopPropagation();">
+                            <i class="bi bi-play-fill"></i><span>{% if is_english %}Play{% elif is_chinese %}播放{% else %}再生{% endif %}</span>
+                        </a>
+                        {% endif %}
+                        {% if user.is_authenticated %}
+                        <button class="action-button like-button{% if song.pk in user_liked_songs %} liked{% endif %}" onclick="event.stopPropagation(); toggleLike({{ song.pk }})" id="like-btn-{{ song.pk }}">
+                            <i class="bi bi-heart{% if song.pk in user_liked_songs %}-fill{% endif %}"></i>
+                            <span class="like-count" id="like-count-{{ song.pk }}">{{ song.likes_count }}</span>
+                        </button>
+                        <button class="action-button favorite-button{% if song.pk in user_favorite_songs %} active{% endif %}" onclick="event.stopPropagation(); toggleFavorite({{ song.pk }})" id="fav-btn-{{ song.pk }}">
+                            <i class="bi bi-bookmark{% if song.pk in user_favorite_songs %}-fill{% endif %}"></i>
+                        </button>
+                        {% else %}
+                        <span class="action-button like-display">
+                            <i class="bi bi-heart"></i>
+                            <span class="like-count">{{ song.likes_count }}</span>
+                        </span>
+                        {% endif %}
+                    </div>
+                </div>
+                {% endfor %}
+            </div>
+            {% else %}
+            <!-- 楽曲がない場合 -->
+            <div class="empty-state">
+                <div class="empty-icon">
+                    <i class="bi bi-music-note-beamed"></i>
+                </div>
+                <h3>{% if is_english %}No songs found{% elif is_chinese %}未找到歌曲{% else %}楽曲がありません{% endif %}</h3>
+                <p>{% if is_english %}Would you like to create the first learning song?{% elif is_chinese %}要不要创作第一首学习歌曲？{% else %}最初の学習楽曲を作成しませんか？{% endif %}</p>
+                {% if user.is_authenticated %}
+                <a href="{% url 'songs:upload_image' %}" class="btn-primary">{% if is_english %}Create Song{% elif is_chinese %}创作歌曲{% else %}楽曲を作成{% endif %}</a>
+                {% else %}
+                <a href="{% url 'users:register' %}" class="btn-primary">{% if is_english %}Get Started{% elif is_chinese %}开始使用{% else %}今すぐ始める{% endif %}</a>
+                {% endif %}
+            </div>
+            {% endif %}
+        </div>
+    </div>
+</div>
+
+<style>
+/* アニメーション無効化 */
+.music-library,
+.music-library * {
+    animation: none !important;
+    animation-delay: 0s !important;
+}
+
+/* Apple Music風のスタイル */
+.music-library {
+    background: #f5f5f7;
+    min-height: 100vh;
+}
+
+.library-header {
+    background: linear-gradient(135deg, #ff7940 0%, #ff6b35 100%);
+    color: white;
+    padding: 2rem 0 3rem 0;
+    position: relative;
+}
+
+.header-content {
+    text-align: center;
+    margin-bottom: 2rem;
+}
+
+.library-title {
+    font-size: 3rem;
+    font-weight: 700;
+    margin: 0 0 0.5rem 0;
+}
+
+.library-subtitle {
+    font-size: 1.2rem;
+    opacity: 0.9;
+    margin: 0;
+}
+
+.search-section {
+    display: flex;
+    justify-content: center;
+    padding: 0 15px;
+}
+
+.search-container {
+    width: 100%;
+    max-width: 600px;
+}
+
+.search-input-wrapper {
+    position: relative;
+    background: rgba(255, 255, 255, 0.15);
+    border-radius: 25px;
+    backdrop-filter: blur(10px);
+    border: 1px solid rgba(255, 255, 255, 0.2);
+    display: flex;
+    align-items: center;
+    padding: 0 10px;
+}
+
+.search-icon {
+    position: absolute;
+    left: 16px;
+    top: 50%;
+    transform: translateY(-50%);
+    color: rgba(255, 255, 255, 0.8);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    pointer-events: none;
+}
+
+.search-input {
+    flex: 1;
+    padding: 14px 14px 14px 45px;
+    border: none;
+    background: transparent;
+    color: white;
+    font-size: 1rem;
+    border-radius: 25px;
+    outline: none;
+    min-width: 0;
+}
+
+.search-input::placeholder {
+    color: rgba(255, 255, 255, 0.7);
+}
+
+.search-button {
+    background: linear-gradient(135deg, #ff7940 0%, #ff6b35 100%);
+    border: none;
+    color: white;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+    border-radius: 20px;
+    padding: 10px 18px;
+    transition: all 0.3s ease;
+    font-size: 0.9rem;
+    font-weight: 500;
+    flex-shrink: 0;
+    white-space: nowrap;
+}
+
+.search-button:hover {
+    transform: scale(1.05);
+    box-shadow: 0 4px 12px rgba(102, 126, 234, 0.4);
+}
+
+.search-clear {
+    background: none;
+    border: none;
+    color: rgba(255, 255, 255, 0.8);
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 50%;
+    padding: 6px;
+    margin-left: 5px;
+    transition: background-color 0.2s ease;
+    flex-shrink: 0;
+}
+
+.search-clear:hover {
+    background: rgba(255, 255, 255, 0.1);
+}
+
+/* モバイル対応 - 検索フォーム */
+@media (max-width: 576px) {
+    .search-input-wrapper {
+        padding: 0 8px;
+    }
+    
+    .search-icon {
+        left: 12px;
+    }
+    
+    .search-input {
+        padding: 12px 10px 12px 38px;
+        font-size: 0.95rem;
+    }
+    
+    .search-input::placeholder {
+        font-size: 0.85rem;
+    }
+    
+    .search-button {
+        padding: 8px 12px;
+        font-size: 0.85rem;
+    }
+    
+    .search-button-text {
+        display: none;
+    }
+    
+    .search-clear {
+        padding: 4px;
+    }
+}
+
+.library-content {
+    padding: 2rem 0;
+    margin-top: -1rem;
+    position: relative;
+    z-index: 2;
+}
+
+.songs-list {
+    background: white;
+    border-radius: 20px;
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.1);
+    overflow: hidden;
+}
+
+.song-item {
+    display: flex;
+    align-items: center;
+    padding: 20px;
+    border-bottom: 1px solid #f0f0f0;
+    transition: all 0.2s ease;
+    cursor: pointer;
+}
+
+.song-item:hover {
+    background: #f8f9fa;
+}
+
+.song-item:active {
+    background: #f0f0f0;
+}
+
+.song-item:last-child {
+    border-bottom: none;
+}
+
+.song-info {
+    flex: 1;
+    padding-right: 15px;
+}
+
+.song-main-info {
+    margin-bottom: 5px;
+}
+
+.song-title {
+    font-size: 1.1rem;
+    font-weight: 600;
+    color: #333;
+    margin: 0 0 2px 0;
+    line-height: 1.3;
+}
+
+.song-artist {
+    font-size: 0.95rem;
+    color: #666;
+    margin: 0;
+}
+
+.song-artist-link {
+    font-size: 0.95rem;
+    color: #666;
+    margin: 0;
+    text-decoration: none;
+    transition: color 0.2s ease;
+}
+
+.song-artist-link:hover {
+    color: #ff7940;
+    text-decoration: underline;
+}
+
+/* 作成者アバター */
+.song-creator-avatar {
+    width: 48px;
+    height: 48px;
+    border-radius: 50%;
+    overflow: hidden;
+    margin-right: 15px;
+    flex-shrink: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: #f0f0f0;
+    transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+
+.song-creator-avatar:hover {
+    transform: scale(1.08);
+    box-shadow: 0 4px 12px rgba(255, 121, 64, 0.3);
+}
+
+.song-creator-avatar img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+}
+
+.creator-default-avatar {
+    width: 100%;
+    height: 100%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: linear-gradient(135deg, #ff7940 0%, #ff6b35 100%);
+    color: white;
+    font-size: 1.2rem;
+}
+
+.song-details {
+    display: flex;
+    gap: 10px;
+    align-items: center;
+}
+
+.song-genre {
+    background: #e3f2fd;
+    color: #1976d2;
+    padding: 3px 8px;
+    border-radius: 12px;
+    font-size: 0.8rem;
+    font-weight: 500;
+}
+
+.song-duration {
+    color: #999;
+    font-size: 0.9rem;
+}
+
+.song-tags {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.4rem;
+    margin-top: 0.5rem;
+}
+
+.tag-badge-small {
+    background: linear-gradient(135deg, #ff7940 0%, #ff6b35 100%);
+    color: white;
+    padding: 0.2rem 0.6rem;
+    border-radius: 12px;
+    font-size: 0.75rem;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+
+.tag-badge-small:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 2px 8px rgba(102, 126, 234, 0.3);
+}
+
+.song-actions {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    flex-shrink: 0;
+}
+
+.play-button {
+    background: var(--primary-gradient);
+    color: white;
+    padding: 8px 16px;
+    border-radius: 20px;
+    text-decoration: none;
+    font-size: 0.9rem;
+    font-weight: 500;
+    display: flex;
+    align-items: center;
+    gap: 5px;
+    transition: all 0.2s ease;
+    border: none;
+    cursor: pointer;
+    position: relative;
+    z-index: 10;
+}
+
+.play-button:hover {
+    color: white;
+    text-decoration: none;
+    transform: translateY(-1px);
+    box-shadow: 0 4px 12px rgba(255, 121, 64, 0.4);
+}
+
+.play-overlay {
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: rgba(0, 0, 0, 0.6);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    opacity: 0;
+    transition: opacity 0.2s ease;
+}
+
+.song-item:hover .play-overlay {
+    opacity: 1;
+}
+
+.play-btn {
+    width: 30px;
+    height: 30px;
+    background: white;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: #333;
+    text-decoration: none;
+    font-size: 0.9rem;
+}
+
+.song-info {
+    flex: 1;
+    min-width: 0;
+}
+
+.song-main-info {
+    margin-bottom: 4px;
+}
+
+.song-title {
+    font-size: 1rem;
+    font-weight: 600;
+    color: #333;
+    margin: 0 0 2px 0;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.song-artist {
+    font-size: 0.9rem;
+    color: #666;
+    margin: 0;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.song-details {
+    display: flex;
+    gap: 10px;
+    align-items: center;
+}
+
+.song-genre {
+    background: #e9ecef;
+    color: #495057;
+    padding: 2px 8px;
+    border-radius: 12px;
+    font-size: 0.8rem;
+    font-weight: 500;
+}
+
+.song-duration {
+    font-size: 0.85rem;
+    color: #999;
+}
+
+.song-actions {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    flex-shrink: 0;
+}
+
+.action-button {
+    width: 32px;
+    height: 32px;
+    border: none;
+    background: transparent;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: #999;
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+
+.action-button:hover {
+    background: #f0f0f0;
+    color: #ff7940;
+}
+
+.action-button.active {
+    color: #ff7940;
+}
+
+.like-button, .like-display {
+    border-radius: 20px;
+    padding: 8px 12px;
+    gap: 6px;
+}
+
+.like-button .like-count, .like-display .like-count {
+    font-size: 0.85rem;
+    font-weight: 500;
+}
+
+.like-button.liked {
+    color: #ff7940;
+}
+
+.like-button.liked i {
+    color: #ff7940;
+}
+
+.empty-state {
+    text-align: center;
+    padding: 4rem 2rem;
+    background: white;
+    border-radius: 20px;
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.1);
+}
+
+.empty-icon {
+    font-size: 4rem;
+    color: #ddd;
+    margin-bottom: 1rem;
+}
+
+.empty-state h3 {
+    color: #333;
+    margin-bottom: 0.5rem;
+}
+
+.empty-state p {
+    color: #666;
+    margin-bottom: 2rem;
+}
+
+.btn-primary {
+    background: linear-gradient(135deg, #ff7940 0%, #ff6b35 100%);
+    color: white;
+    padding: 12px 24px;
+    border-radius: 25px;
+    text-decoration: none;
+    font-weight: 600;
+    display: inline-block;
+    transition: all 0.2s ease;
+}
+
+.btn-primary:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 15px rgba(255, 121, 64, 0.3);
+    color: white;
+    text-decoration: none;
+}
+
+/* レスポンシブ - 全体 */
+@media (max-width: 768px) {
+    .library-header {
+        padding: 1.5rem 0 2rem 0;
+    }
+    
+    .library-title {
+        font-size: 1.8rem;
+    }
+    
+    .library-subtitle {
+        font-size: 1rem;
+    }
+    
+    .header-content {
+        margin-bottom: 1.5rem;
+    }
+    
+    .song-item {
+        padding: 12px 15px;
+        flex-direction: row;
+        flex-wrap: wrap;
+        align-items: flex-start;
+        gap: 12px;
+    }
+    
+    .song-creator-avatar {
+        width: 40px;
+        height: 40px;
+        margin-right: 10px;
+    }
+    
+    .creator-default-avatar {
+        font-size: 1rem;
+    }
+    
+    .song-info {
+        flex: 1;
+        min-width: 0;
+        padding-right: 0;
+    }
+    
+    .song-cover {
+        width: 50px;
+        height: 50px;
+        margin-right: 12px;
+    }
+    
+    .song-title {
+        font-size: 1rem;
+    }
+    
+    .song-artist {
+        font-size: 0.85rem;
+    }
+    
+    .song-actions {
+        width: 100%;
+        justify-content: space-between;
+        flex-direction: row;
+        gap: 8px;
+    }
+    
+    .play-button {
+        flex: 1;
+        justify-content: center;
+        padding: 10px 12px;
+    }
+    
+    .action-button {
+        width: 36px;
+        height: 36px;
+    }
+    
+    .song-details {
+        flex-direction: row;
+        flex-wrap: wrap;
+        align-items: center;
+        gap: 6px;
+    }
+    
+    .song-tags {
+        width: 100%;
+    }
+}
+
+@media (max-width: 480px) {
+    .library-title {
+        font-size: 1.5rem;
+    }
+    
+    .song-item {
+        padding: 10px 12px;
+    }
+    
+    .song-title {
+        font-size: 0.95rem;
+    }
+    
+    .play-button {
+        font-size: 0.85rem;
+        padding: 8px 10px;
+    }
+}
+
+/* 検索結果のハイライト */
+.song-item.hidden {
+    display: none;
+}
+
+.song-item.highlight .song-title,
+.song-item.highlight .song-artist {
+    background: linear-gradient(135deg, #ff7940 0%, #ff6b35 100%);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+}
+</style>
+
+<script>
+// 現在再生中のオーディオ
+let currentAudio = null;
+let currentPlayButton = null;
+let playRecorded = {};
+
+// 再生回数を記録
+function recordPlay(songId) {
+    if (playRecorded[songId]) return;
+    playRecorded[songId] = true;
+    
+    const csrfToken = document.querySelector('[name=csrfmiddlewaretoken]')?.value || '';
+    
+    fetch(`/songs/${songId}/play/`, {
+        method: 'POST',
+        headers: {
+            'X-CSRFToken': csrfToken,
+            'X-Requested-With': 'XMLHttpRequest'
+        }
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            console.log(`Play recorded for song ${songId}: total ${data.total_plays} times`);
+        }
+    })
+    .catch(error => console.error('Play record error:', error));
+}
+
+// 行クリックで詳細ページへ遷移
+function navigateToSong(event, element) {
+    console.log('navigateToSong called', event.target);
+    // ボタンやリンクがクリックされた場合は遷移しない
+    if (event.target.closest('.song-actions')) {
+        console.log('Clicked on song-actions, not navigating');
+        return;
+    }
+    const url = element.dataset.url;
+    console.log('Navigating to:', url);
+    if (url) {
+        window.location.href = url;
+    }
+}
+
+// 音楽再生機能
+function playAudio(audioUrl, button, songId) {
+    console.log('playAudio called', audioUrl, songId);
+    const icon = button.querySelector('i');
+    const textSpan = button.querySelector('span');
+    
+    // 同じ曲が再生中の場合は一時停止
+    if (currentAudio && currentPlayButton === button) {
+        if (currentAudio.paused) {
+            currentAudio.play();
+            icon.className = 'bi bi-pause-fill';
+            textSpan.textContent = '{% if is_english %}Pause{% elif is_chinese %}暂停{% else %}停止{% endif %}';
+        } else {
+            currentAudio.pause();
+            icon.className = 'bi bi-play-fill';
+            textSpan.textContent = '{% if is_english %}Play{% elif is_chinese %}播放{% else %}再生{% endif %}';
+        }
+        return;
+    }
+    
+    // 他の曲が再生中の場合は停止
+    if (currentAudio) {
+        currentAudio.pause();
+        currentAudio = null;
+        if (currentPlayButton) {
+            const prevIcon = currentPlayButton.querySelector('i');
+            const prevTextSpan = currentPlayButton.querySelector('span');
+            prevIcon.className = 'bi bi-play-fill';
+            prevTextSpan.textContent = '{% if is_english %}Play{% elif is_chinese %}播放{% else %}再生{% endif %}';
+        }
+    }
+    
+    // 新しい曲を再生
+    currentAudio = new Audio(audioUrl);
+    currentPlayButton = button;
+    
+    currentAudio.play().then(() => {
+        console.log('Playing audio');
+        icon.className = 'bi bi-pause-fill';
+        textSpan.textContent = '{% if is_english %}Pause{% elif is_chinese %}暂停{% else %}停止{% endif %}';
+        // 再生回数を記録
+        recordPlay(songId);
+    }).catch(error => {
+        console.error('再生エラー:', error);
+        // エラー時は詳細ページへ遷移
+        window.location.href = `/songs/${songId}/`;
+    });
+    
+    // 再生終了時
+    currentAudio.addEventListener('ended', () => {
+        icon.className = 'bi bi-play-fill';
+        textSpan.textContent = '{% if is_english %}Play{% elif is_chinese %}播放{% else %}再生{% endif %}';
+        currentAudio = null;
+        currentPlayButton = null;
+    });
+}
+
+// 検索機能
+document.addEventListener('DOMContentLoaded', function() {
+    const searchInput = document.getElementById('songSearch');
+    const clearButton = document.getElementById('clearSearch');
+    const songItems = document.querySelectorAll('.song-item');
+    
+    // 初期値がある場合はクリアボタンを表示
+    if (searchInput && searchInput.value.trim() !== '') {
+        clearButton.style.display = 'flex';
+    }
+
+    function performClientSearch() {
+        const searchTerm = searchInput.value.toLowerCase().trim();
+        
+        if (searchTerm === '') {
+            // 検索語がない場合は全て表示
+            songItems.forEach(item => {
+                item.classList.remove('hidden', 'highlight');
+            });
+            clearButton.style.display = 'none';
+        } else {
+            clearButton.style.display = 'flex';
+            
+            songItems.forEach(item => {
+                const title = item.dataset.title || '';
+                const artist = item.dataset.artist || '';
+                const genre = item.dataset.genre || '';
+                
+                const matches = title.includes(searchTerm) || 
+                               artist.includes(searchTerm) || 
+                               genre.includes(searchTerm);
+                
+                if (matches) {
+                    item.classList.remove('hidden');
+                    item.classList.add('highlight');
+                } else {
+                    item.classList.add('hidden');
+                    item.classList.remove('highlight');
+                }
+            });
+        }
+    }
+
+    if (searchInput) {
+        searchInput.addEventListener('input', performClientSearch);
+    }
+    
+    if (clearButton) {
+        clearButton.addEventListener('click', function(e) {
+            e.preventDefault();
+            searchInput.value = '';
+            performClientSearch();
+            searchInput.focus();
+            // URLからクエリパラメータを削除してリダイレクト
+            if (window.location.search) {
+                window.location.href = window.location.pathname;
+            }
+        });
+    }
+});
+
+{% if user.is_authenticated %}
+function toggleLike(songId) {
+    fetch(`/songs/${songId}/like/`, {
+        method: 'POST',
+        headers: {
+            'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]').value,
+            'X-Requested-With': 'XMLHttpRequest'
+        }
+    })
+    .then(response => response.json())
+    .then(data => {
+        const likeBtn = document.getElementById(`like-btn-${songId}`);
+        const likeCount = document.getElementById(`like-count-${songId}`);
+        
+        if (data.liked) {
+            likeBtn.classList.add('liked');
+            likeBtn.innerHTML = `<i class="bi bi-heart-fill"></i><span class="like-count" id="like-count-${songId}">${data.likes_count}</span>`;
+        } else {
+            likeBtn.classList.remove('liked');
+            likeBtn.innerHTML = `<i class="bi bi-heart"></i><span class="like-count" id="like-count-${songId}">${data.likes_count}</span>`;
+        }
+    })
+    .catch(error => console.error('Error:', error));
+}
+
+function toggleFavorite(songId) {
+    fetch(`/songs/${songId}/favorite/`, {
+        method: 'POST',
+        headers: {
+            'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]').value,
+            'X-Requested-With': 'XMLHttpRequest'
+        }
+    })
+    .then(response => response.json())
+    .then(data => {
+        const favBtn = document.getElementById(`fav-btn-${songId}`);
+        
+        if (data.favorited) {
+            favBtn.classList.add('active');
+            favBtn.innerHTML = '<i class="bi bi-bookmark-fill"></i>';
+        } else {
+            favBtn.classList.remove('active');
+            favBtn.innerHTML = '<i class="bi bi-bookmark"></i>';
+        }
+    })
+    .catch(error => console.error('Error:', error));
+}
+{% endif %}
+</script>
+{% endblock %}

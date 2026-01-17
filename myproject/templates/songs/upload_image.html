@@ -1,0 +1,829 @@
+{% extends 'base.html' %}
+
+{% block title %}{% if is_english %}Upload Image{% elif is_chinese %}上传图片{% else %}テキスト抽出{% endif %} - UTAMEMO{% endblock %}
+
+{% block content %}
+<div class="container py-5">
+    <div class="row justify-content-center">
+        <div class="col-lg-8">
+            <!-- ヘッダーセクション -->
+            <div class="text-center mb-5 fade-in">
+                <h1 class="display-6 fw-bold mb-3">{% if is_english %}Scan Your Materials{% elif is_chinese %}扫描教材{% else %}教材をスキャン{% endif %}</h1>
+            </div>
+
+            <!-- アップロードエリア -->
+            <div class="upload-area-container fade-in">
+                <form method="post" enctype="multipart/form-data" id="upload-form" novalidate>
+                    {% csrf_token %}
+                    
+                    <div class="upload-area" id="upload-area">
+                        <div class="upload-content text-center">
+                            <div class="upload-icon mb-3">
+                                <i class="bi bi-cloud-upload" style="font-size: 3rem; color: var(--primary-color);"></i>
+                            </div>
+                            <h5 class="fw-bold mb-2">{% if is_english %}Drag and drop files here{% elif is_chinese %}拖放文件到这里{% else %}ファイルをドラッグ＆ドロップ{% endif %}</h5>
+                            
+                            <!-- 複数ファイル入力（非表示） -->
+                            {{ form.images }}
+                            
+                            <div class="d-flex gap-2 justify-content-center flex-wrap text-center">
+                                <button type="button" class="btn-gradient-primary mobile-only" id="camera-btn">
+                                    <i class="bi bi-camera"></i> {% if is_english %}Take Photo{% elif is_chinese %}拍照{% else %}カメラで撮影{% endif %}
+                                </button>
+                                <button type="button" class="btn-gradient-primary" id="file-select-btn">
+                                    <i class="bi bi-folder-open"></i> {% if is_english %}Select Photo{% elif is_chinese %}选择照片{% else %}写真を選択{% endif %}
+                                </button>
+                            </div>
+                            
+                            <div class="mt-3">
+                                <small class="text-muted">
+                                    {% if is_english %}JPG, PNG, JPEG, PDF formats • Max 10MB{% elif is_chinese %}JPG、PNG、JPEG、PDF格式 • 最大10MB{% else %}JPG、PNG、JPEG、PDF形式 • 最大10MB{% endif %}
+                                </small>
+                            </div>
+                        </div>
+                        
+                        <!-- プレビューエリア -->
+                        <div class="upload-preview text-center" id="upload-preview" style="display: none;">
+                            <div class="preview-container">
+                                <!-- 単一ファイルプレビュー -->
+                                <div id="single-preview" class="d-flex justify-content-center align-items-center flex-column" style="position: relative;">
+                                    <img id="preview-image" alt="{% if is_english %}Preview{% elif is_chinese %}预览{% else %}プレビュー{% endif %}" class="preview-image mx-auto">
+                                    <button type="button" class="single-preview-remove" id="single-remove-btn" title="{% if is_english %}Remove{% elif is_chinese %}删除{% else %}削除{% endif %}">
+                                        <i class="bi bi-x"></i>
+                                    </button>
+                                </div>
+                                <!-- 複数ファイルプレビュー -->
+                                <div id="multi-preview" class="multi-preview-grid" style="display: none;"></div>
+                                <div class="preview-overlay">
+                                    <div class="d-flex gap-2 justify-content-center">
+                                        <button type="button" class="btn-outline-modern btn-sm mobile-only" id="change-camera-btn">
+                                            <i class="bi bi-camera"></i> {% if is_english %}Camera{% elif is_chinese %}相机{% else %}カメラ{% endif %}
+                                        </button>
+                                        <button type="button" class="btn-outline-modern btn-sm" id="change-file-btn">
+                                            <i class="bi bi-folder-plus"></i> {% if is_english %}Add More{% elif is_chinese %}添加更多{% else %}追加{% endif %}
+                                        </button>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="preview-info mt-3">
+                                <div class="d-flex justify-content-between align-items-center">
+                                    <div>
+                                        <small class="text-muted" id="file-size"></small>
+                                    </div>
+                                    <div class="text-success">
+                                        <i class="bi bi-check-circle-fill"></i> {% if is_english %}Ready{% elif is_chinese %}准备就绪{% else %}準備完了{% endif %}
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- カスタマイズリクエスト入力欄 -->
+                    <div class="custom-request-section mb-4" id="custom-request-section" style="display: none;">
+                        <label class="form-label fw-bold mb-2">
+                            <i class="bi bi-chat-dots me-2"></i>{% if is_english %}Custom Request (Optional){% elif is_chinese %}自定义要求（可选）{% else %}カスタマイズ（任意）{% endif %}
+                        </label>
+                        <textarea name="custom_request" class="form-control custom-request-input" rows="2" 
+                            placeholder="{% if is_english %}e.g. 'Include more examples', 'Make it rhyme', 'Focus on grammar rules'{% elif is_chinese %}例如：'多加例句'、'要押韵'、'重点讲语法'{% else %}例：「例文を多めに」「韻を踏んで」「文法ルールを強調して」{% endif %}"></textarea>
+                        <small class="text-muted">
+                            {% if is_english %}Tell AI how you want your lyrics to be generated{% elif is_chinese %}告诉AI你想要什么样的歌词{% else %}AIにどのような歌詞を作ってほしいか伝えられます{% endif %}
+                        </small>
+                    </div>
+                    
+                    <!-- アクションボタン（画像選択時のみ表示） -->
+                    <div class="text-center mt-4" id="action-buttons" style="display: none;">
+                        <button type="submit" class="btn-gradient-secondary btn-lg">
+                            <i class="bi bi-magic"></i> {% if is_english %}Generate Lyrics{% elif is_chinese %}生成歌词{% else %}歌詞を生成{% endif %}
+                        </button>
+                    </div>
+                </form>
+            </div>
+
+            <!-- 手動入力ボタン（常に表示） -->
+            <div class="text-center mt-4 fade-in">
+                <div class="divider-with-text mb-4">
+                    <span>{% if is_english %}or{% elif is_chinese %}或者{% else %}または{% endif %}</span>
+                </div>
+                <div class="manual-input-options">
+                    {% if is_english %}
+                    <!-- 英語版：Englishモードのみ -->
+                    <a href="{% url 'songs:lyrics_confirmation' %}?manual=true&lang=english" class="btn-outline-modern btn-lg">
+                        <i class="bi bi-pencil-square"></i> Manual Input
+                    </a>
+                    {% elif is_chinese %}
+                    <!-- 中国語版 -->
+                    <a href="{% url 'songs:lyrics_confirmation' %}?manual=true&lang=chinese" class="btn-outline-modern btn-lg">
+                        <i class="bi bi-pencil-square"></i> 手动输入歌词（中文）
+                    </a>
+                    {% else %}
+                    <!-- 日本語版 -->
+                    <a href="{% url 'songs:lyrics_confirmation' %}?manual=true&lang=japanese" class="btn-outline-modern btn-lg">
+                        <i class="bi bi-pencil-square"></i> 手動で歌詞を入力
+                    </a>
+                    {% endif %}
+                </div>
+            </div>
+
+            <!-- 撮影ガイド -->
+        </div>
+    </div>
+</div>
+
+<style>
+/* カスタマイズリクエスト入力欄 */
+.custom-request-section {
+    background: #f8f9fa;
+    border-radius: 12px;
+    padding: 1.25rem;
+    margin-top: 1rem;
+}
+
+/* 複数ファイルプレビューグリッド */
+.multi-preview-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(80px, 1fr));
+    gap: 0.75rem;
+    padding: 1rem;
+    max-width: 400px;
+    margin: 0 auto;
+}
+
+.multi-preview-item {
+    position: relative;
+    aspect-ratio: 1;
+    border-radius: 8px;
+    overflow: hidden;
+    background: #f0f0f0;
+    border: 2px solid #e0e0e0;
+}
+
+.multi-preview-item img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+}
+
+.multi-preview-item .pdf-icon {
+    width: 100%;
+    height: 100%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: #fff5f5;
+}
+
+.multi-preview-item .pdf-icon i {
+    font-size: 2rem;
+    color: #dc3545;
+}
+
+.multi-preview-item .remove-btn {
+    position: absolute;
+    top: 4px;
+    right: 4px;
+    width: 24px;
+    height: 24px;
+    border-radius: 50%;
+    background: rgba(220, 53, 69, 0.9);
+    color: white;
+    border: none;
+    font-size: 12px;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    opacity: 1;
+    transition: all 0.2s ease;
+    z-index: 10;
+}
+
+.multi-preview-item .remove-btn:hover {
+    background: rgba(220, 53, 69, 1);
+    transform: scale(1.1);
+}
+
+.multi-preview-item:hover .remove-btn {
+    opacity: 1;
+}
+
+/* 単一プレビュー用の削除ボタン */
+.single-preview-remove {
+    position: absolute;
+    top: 10px;
+    right: 10px;
+    width: 32px;
+    height: 32px;
+    border-radius: 50%;
+    background: rgba(220, 53, 69, 0.9);
+    color: white;
+    border: none;
+    font-size: 16px;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 10;
+    transition: all 0.2s ease;
+}
+
+.single-preview-remove:hover {
+    background: rgba(220, 53, 69, 1);
+    transform: scale(1.1);
+}
+
+.file-count-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+    background: linear-gradient(135deg, #ff7940 0%, #ff6b35 100%);
+    color: white;
+    padding: 0.4rem 1rem;
+    border-radius: 20px;
+    font-weight: 600;
+    font-size: 0.9rem;
+    margin-bottom: 0.5rem;
+}
+
+.custom-request-input {
+    border: 2px solid #e0e0e0;
+    border-radius: 10px;
+    padding: 0.75rem 1rem;
+    font-size: 0.95rem;
+    transition: all 0.2s ease;
+    resize: none;
+}
+
+.custom-request-input:focus {
+    border-color: #ff7940;
+    box-shadow: 0 0 0 3px rgba(255, 121, 64, 0.1);
+    outline: none;
+}
+
+.custom-request-input::placeholder {
+    color: #aaa;
+}
+
+.manual-input-options {
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+    align-items: center;
+}
+
+.manual-input-options .btn-outline-modern {
+    width: 100%;
+    max-width: 300px;
+}
+
+.upload-area-container {
+    margin-bottom: 2rem;
+}
+
+.upload-area {
+    border: 2px dashed #ddd;
+    border-radius: 16px;
+    padding: 3rem 2rem;
+    background: white;
+    transition: all 0.2s ease;
+}
+
+.upload-area:hover {
+    border-color: #ff7940;
+    background: #fff9f7;
+}
+
+.upload-area.drag-over {
+    border-color: #ff7940;
+    background: #fff4f0;
+}
+
+.upload-preview {
+    text-align: center;
+}
+
+.preview-container {
+    position: relative;
+    display: inline-block;
+    border-radius: 12px;
+    overflow: hidden;
+}
+
+.preview-image {
+    max-width: 100%;
+    max-height: 300px;
+    border-radius: 12px;
+}
+
+.preview-overlay {
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: rgba(0, 0, 0, 0.5);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    opacity: 0;
+    transition: opacity 0.2s ease;
+}
+
+.preview-container:hover .preview-overlay {
+    opacity: 1;
+}
+
+/* ボタンスタイル統一 */
+.btn-gradient-primary,
+.btn-gradient-secondary {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.5rem;
+    padding: 0.75rem 1.5rem;
+    border-radius: 10px;
+    font-size: 1rem;
+    font-weight: 600;
+    text-decoration: none;
+    border: none;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    background: linear-gradient(135deg, #ff7940 0%, #ff6b35 100%);
+    color: white;
+}
+
+.btn-gradient-primary:hover,
+.btn-gradient-secondary:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(255, 121, 64, 0.3);
+    color: white;
+}
+
+.btn-gradient-secondary.btn-lg {
+    padding: 1rem 2rem;
+    font-size: 1.1rem;
+}
+
+.btn-outline-modern {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.5rem;
+    padding: 0.75rem 1.5rem;
+    border-radius: 10px;
+    font-size: 1rem;
+    font-weight: 600;
+    text-decoration: none;
+    border: 2px solid #ff7940;
+    background: white;
+    color: #ff7940;
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+
+.btn-outline-modern:hover {
+    background: #ff7940;
+    color: white;
+}
+
+.btn-outline-modern.btn-lg {
+    padding: 1rem 2rem;
+    font-size: 1.1rem;
+}
+
+.btn-outline-modern.btn-sm {
+    padding: 0.5rem 1rem;
+    font-size: 0.9rem;
+}
+
+/* 区切り線 */
+.divider-with-text {
+    position: relative;
+    text-align: center;
+    margin: 2rem 0;
+}
+
+.divider-with-text::before {
+    content: '';
+    position: absolute;
+    top: 50%;
+    left: 0;
+    right: 0;
+    height: 1px;
+    background: rgba(0, 0, 0, 0.1);
+}
+
+.divider-with-text span {
+    position: relative;
+    display: inline-block;
+    padding: 0 1.5rem;
+    background: #ffe8dc;
+    color: #888;
+    font-size: 0.9rem;
+}
+
+.btn-gradient-primary {
+    white-space: nowrap;
+}
+
+/* モバイル専用要素（デスクトップでは非表示） */
+.mobile-only {
+    display: none;
+}
+
+/* レスポンシブ調整 */
+@media (max-width: 768px) {
+    .mobile-only {
+        display: inline-flex;
+    }
+    
+    .upload-area {
+        padding: 2rem 1rem;
+    }
+    
+    .guide-item {
+        flex-direction: column;
+        text-align: center;
+        gap: 0.5rem;
+    }
+    
+    .btn-lg {
+        width: 100%;
+        margin-bottom: 0.5rem !important;
+    }
+    
+    .d-flex.gap-2.justify-content-center {
+        flex-direction: column;
+        width: 100%;
+    }
+    
+    .d-flex.gap-2.justify-content-center .btn-gradient-primary {
+        width: 100%;
+    }
+    
+    .language-options {
+        flex-direction: column;
+    }
+    
+    .language-option {
+        width: 100%;
+    }
+}
+</style>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const uploadArea = document.getElementById('upload-area');
+    const fileInput = document.getElementById('id_images');
+    const cameraBtn = document.getElementById('camera-btn');
+    const fileSelectBtn = document.getElementById('file-select-btn');
+    const changeCameraBtn = document.getElementById('change-camera-btn');
+    const changeFileBtn = document.getElementById('change-file-btn');
+    const singleRemoveBtn = document.getElementById('single-remove-btn');
+    const uploadContent = document.querySelector('.upload-content');
+    const uploadPreview = document.getElementById('upload-preview');
+    const actionButtons = document.getElementById('action-buttons');
+    const previewImage = document.getElementById('preview-image');
+    const singlePreview = document.getElementById('single-preview');
+    const multiPreview = document.getElementById('multi-preview');
+    const fileSize = document.getElementById('file-size');
+
+    // 選択されたファイルを保持
+    let selectedFiles = [];
+
+    // ファイル入力にmultiple属性を追加
+    if (fileInput) {
+        fileInput.setAttribute('multiple', 'multiple');
+    }
+
+    console.log('File input element:', fileInput);
+
+    // 単一ファイル削除ボタン
+    if (singleRemoveBtn) {
+        singleRemoveBtn.addEventListener('click', (e) => {
+            e.preventDefault();
+            e.stopPropagation();
+            selectedFiles = [];
+            updateFileInput();
+            resetToUploadState();
+        });
+    }
+
+    // アップロード状態にリセット
+    function resetToUploadState() {
+        uploadContent.style.display = 'block';
+        uploadPreview.style.display = 'none';
+        actionButtons.style.display = 'none';
+        document.getElementById('custom-request-section').style.display = 'none';
+        previewImage.src = '';
+        multiPreview.innerHTML = '';
+        fileInput.value = '';
+    }
+
+    // カメラボタンクリック（モバイルデバイスでカメラを起動）
+    if (cameraBtn) {
+        cameraBtn.addEventListener('click', () => {
+            fileInput.removeAttribute('multiple');
+            fileInput.setAttribute('capture', 'environment');
+            fileInput.click();
+            setTimeout(() => {
+                fileInput.removeAttribute('capture');
+                fileInput.setAttribute('multiple', 'multiple');
+            }, 100);
+        });
+    }
+
+    // ファイル選択ボタンクリック
+    if (fileSelectBtn) {
+        fileSelectBtn.addEventListener('click', (e) => {
+            e.preventDefault();
+            e.stopPropagation();
+            console.log('File select button clicked');
+            fileInput.removeAttribute('capture');
+            fileInput.click();
+        });
+    }
+
+    // 変更カメラボタンクリック
+    if (changeCameraBtn) {
+        changeCameraBtn.addEventListener('click', () => {
+            fileInput.removeAttribute('multiple');
+            fileInput.setAttribute('capture', 'environment');
+            fileInput.click();
+            setTimeout(() => {
+                fileInput.removeAttribute('capture');
+                fileInput.setAttribute('multiple', 'multiple');
+            }, 100);
+        });
+    }
+
+    // ファイル追加ボタンクリック
+    if (changeFileBtn) {
+        changeFileBtn.addEventListener('click', () => {
+            fileInput.removeAttribute('capture');
+            fileInput.click();
+        });
+    }
+
+    // ドラッグ&ドロップ
+    uploadArea.addEventListener('dragover', (e) => {
+        e.preventDefault();
+        uploadArea.classList.add('drag-over');
+    });
+
+    uploadArea.addEventListener('dragleave', (e) => {
+        e.preventDefault();
+        uploadArea.classList.remove('drag-over');
+    });
+
+    uploadArea.addEventListener('drop', (e) => {
+        e.preventDefault();
+        uploadArea.classList.remove('drag-over');
+        
+        const files = e.dataTransfer.files;
+        if (files.length > 0) {
+            handleFileSelect(files, true);
+        }
+    });
+
+    // ファイル選択
+    fileInput.addEventListener('change', (e) => {
+        console.log('File input change event fired');
+        const files = e.target.files;
+        if (files && files.length > 0) {
+            handleFileSelect(files, true);
+        }
+    });
+
+    // ファイル処理（複数対応）
+    function handleFileSelect(files, addToExisting = false) {
+        console.log('handleFileSelect called with', files.length, 'files');
+        
+        // 新しいファイルを追加
+        const newFiles = Array.from(files);
+        
+        // バリデーション
+        const validFiles = [];
+        for (const file of newFiles) {
+            const isImage = file.type.match('image.*');
+            const isPDF = file.type === 'application/pdf' || file.name.toLowerCase().endsWith('.pdf');
+            
+            if (!isImage && !isPDF) {
+                console.log('File type check failed:', file.type);
+                continue;
+            }
+
+            // ファイルサイズチェック
+            const maxSize = isPDF ? 25 * 1024 * 1024 : 10 * 1024 * 1024;
+            if (file.size > maxSize) {
+                console.log('File size check failed:', file.size);
+                continue;
+            }
+            
+            validFiles.push(file);
+        }
+
+        if (validFiles.length === 0) {
+            {% if is_english %}
+            alert('Please select valid image files or PDFs (max 10MB for images, 25MB for PDFs).');
+            {% elif is_chinese %}
+            alert('请选择有效的图片或PDF文件（图片最大10MB，PDF最大25MB）。');
+            {% else %}
+            alert('有効な画像またはPDFを選択してください（画像: 最大10MB、PDF: 最大25MB）。');
+            {% endif %}
+            return;
+        }
+
+        if (addToExisting && selectedFiles.length > 0) {
+            selectedFiles = [...selectedFiles, ...validFiles];
+        } else {
+            selectedFiles = validFiles;
+        }
+
+        console.log('Total selected files:', selectedFiles.length);
+        updatePreview();
+    }
+
+    // プレビュー更新
+    function updatePreview() {
+        if (selectedFiles.length === 0) {
+            uploadContent.style.display = 'block';
+            uploadPreview.style.display = 'none';
+            actionButtons.style.display = 'none';
+            document.getElementById('custom-request-section').style.display = 'none';
+            return;
+        }
+
+        // UIを表示
+        uploadContent.style.display = 'none';
+        uploadPreview.style.display = 'block';
+        actionButtons.style.display = 'flex';
+        actionButtons.style.justifyContent = 'center';
+        document.getElementById('custom-request-section').style.display = 'block';
+
+        // ファイル数の表示
+        const totalSize = selectedFiles.reduce((sum, f) => sum + f.size, 0);
+        const imageCount = selectedFiles.filter(f => f.type.match('image.*')).length;
+        const pdfCount = selectedFiles.length - imageCount;
+        
+        let fileInfo = '';
+        {% if is_english %}
+        if (imageCount > 0 && pdfCount > 0) {
+            fileInfo = `${imageCount} images + ${pdfCount} PDFs selected (${formatFileSize(totalSize)})`;
+        } else if (imageCount > 0) {
+            fileInfo = `${imageCount} image${imageCount > 1 ? 's' : ''} selected (${formatFileSize(totalSize)})`;
+        } else {
+            fileInfo = `${pdfCount} PDF${pdfCount > 1 ? 's' : ''} selected (${formatFileSize(totalSize)})`;
+        }
+        {% elif is_chinese %}
+        if (imageCount > 0 && pdfCount > 0) {
+            fileInfo = `已选择 ${imageCount} 张图片 + ${pdfCount} 个PDF (${formatFileSize(totalSize)})`;
+        } else if (imageCount > 0) {
+            fileInfo = `已选择 ${imageCount} 张图片 (${formatFileSize(totalSize)})`;
+        } else {
+            fileInfo = `已选择 ${pdfCount} 个PDF (${formatFileSize(totalSize)})`;
+        }
+        {% else %}
+        if (imageCount > 0 && pdfCount > 0) {
+            fileInfo = `${imageCount}枚の画像 + ${pdfCount}件のPDFを選択中 (${formatFileSize(totalSize)})`;
+        } else if (imageCount > 0) {
+            fileInfo = `${imageCount}枚の画像を選択中 (${formatFileSize(totalSize)})`;
+        } else {
+            fileInfo = `${pdfCount}件のPDFを選択中 (${formatFileSize(totalSize)})`;
+        }
+        {% endif %}
+        fileSize.textContent = fileInfo;
+
+        if (selectedFiles.length === 1) {
+            // 単一ファイル：従来のプレビュー
+            singlePreview.style.display = 'flex';
+            multiPreview.style.display = 'none';
+            
+            const file = selectedFiles[0];
+            const isPDF = file.type === 'application/pdf' || file.name.toLowerCase().endsWith('.pdf');
+            
+            if (isPDF) {
+                previewImage.src = 'data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSIxMjgiIGhlaWdodD0iMTI4IiB2aWV3Qm94PSIwIDAgMjQgMjQiIGZpbGw9Im5vbmUiIHN0cm9rZT0iI2RjMzU0NSIgc3Ryb2tlLXdpZHRoPSIyIiBzdHJva2UtbGluZWNhcD0icm91bmQiIHN0cm9rZS1saW5lam9pbj0icm91bmQiPjxwYXRoIGQ9Ik0xNCAySDZhMiAyIDAgMCAwLTIgMnYxNmEyIDIgMCAwIDAgMiAyaDEyYTIgMiAwIDAgMCAyLTJWOHoiPjwvcGF0aD48cG9seWxpbmUgcG9pbnRzPSIxNCAyIDE0IDggMjAgOCI+PC9wb2x5bGluZT48bGluZSB4MT0iMTYiIHkxPSIxMyIgeDI9IjgiIHkyPSIxMyI+PC9saW5lPjxsaW5lIHgxPSIxNiIgeTE9IjE3IiB4Mj0iOCIgeTI9IjE3Ij48L2xpbmU+PC9zdmc+';
+            } else {
+                const reader = new FileReader();
+                reader.onload = (e) => {
+                    previewImage.src = e.target.result;
+                };
+                reader.readAsDataURL(file);
+            }
+        } else {
+            // 複数ファイル：グリッドプレビュー
+            singlePreview.style.display = 'none';
+            multiPreview.style.display = 'grid';
+            multiPreview.innerHTML = '';
+            
+            selectedFiles.forEach((file, index) => {
+                const item = document.createElement('div');
+                item.className = 'multi-preview-item';
+                
+                const isPDF = file.type === 'application/pdf' || file.name.toLowerCase().endsWith('.pdf');
+                
+                if (isPDF) {
+                    item.innerHTML = `
+                        <div class="pdf-icon"><i class="bi bi-file-pdf"></i></div>
+                        <button type="button" class="remove-btn" data-index="${index}"><i class="bi bi-x"></i></button>
+                    `;
+                } else {
+                    const img = document.createElement('img');
+                    const reader = new FileReader();
+                    reader.onload = (e) => {
+                        img.src = e.target.result;
+                    };
+                    reader.readAsDataURL(file);
+                    item.appendChild(img);
+                    
+                    const removeBtn = document.createElement('button');
+                    removeBtn.type = 'button';
+                    removeBtn.className = 'remove-btn';
+                    removeBtn.dataset.index = index;
+                    removeBtn.innerHTML = '<i class="bi bi-x"></i>';
+                    item.appendChild(removeBtn);
+                }
+                
+                multiPreview.appendChild(item);
+            });
+            
+            // 削除ボタンのイベント
+            multiPreview.querySelectorAll('.remove-btn').forEach(btn => {
+                btn.addEventListener('click', (e) => {
+                    e.stopPropagation();
+                    const idx = parseInt(btn.dataset.index);
+                    selectedFiles.splice(idx, 1);
+                    updateFileInput();
+                    if (selectedFiles.length === 0) {
+                        resetToUploadState();
+                    } else {
+                        updatePreview();
+                    }
+                });
+            });
+        }
+
+        // アニメーション
+        uploadPreview.style.opacity = '0';
+        uploadPreview.style.transform = 'translateY(20px)';
+        setTimeout(() => {
+            uploadPreview.style.transition = 'all 0.3s ease';
+            uploadPreview.style.opacity = '1';
+            uploadPreview.style.transform = 'translateY(0)';
+        }, 50);
+    }
+
+    // DataTransferでファイル入力を更新
+    function updateFileInput() {
+        const dt = new DataTransfer();
+        selectedFiles.forEach(file => dt.items.add(file));
+        fileInput.files = dt.files;
+    }
+
+    // ファイルサイズフォーマット
+    function formatFileSize(bytes) {
+        if (bytes === 0) return '0 Bytes';
+        const k = 1024;
+        const sizes = ['Bytes', 'KB', 'MB', 'GB'];
+        const i = Math.floor(Math.log(bytes) / Math.log(k));
+        return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
+    }
+
+    // フォーム送信時のローディング
+    document.getElementById('upload-form').addEventListener('submit', function(e) {
+        console.log('Form submission started');
+        
+        // DataTransferでファイルを設定
+        updateFileInput();
+        
+        if (selectedFiles.length === 0) {
+            e.preventDefault();
+            {% if is_english %}
+            alert('Please select a file.');
+            {% elif is_chinese %}
+            alert('请选择文件。');
+            {% else %}
+            alert('ファイルを選択してください。');
+            {% endif %}
+            return false;
+        }
+        
+        const submitBtn = this.querySelector('button[type="submit"]');
+        if (submitBtn) {
+            {% if is_english %}
+            submitBtn.innerHTML = '<i class="bi bi-hourglass-split"></i> Processing ' + selectedFiles.length + ' file(s)...';
+            {% elif is_chinese %}
+            submitBtn.innerHTML = '<i class="bi bi-hourglass-split"></i> 正在处理 ' + selectedFiles.length + ' 个文件...';
+            {% else %}
+            submitBtn.innerHTML = '<i class="bi bi-hourglass-split"></i> ' + selectedFiles.length + '件のファイルを処理中...';
+            {% endif %}
+            submitBtn.disabled = true;
+        }
+        
+        return true;
+    });
+    
+    console.log('Upload page initialized');
+});
+</script>
+{% endblock %}

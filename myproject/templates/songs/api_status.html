@@ -1,0 +1,225 @@
+{% extends 'base.html' %}
+
+{% block title %}{{ page_title }} - UTAMEMO{% endblock %}
+
+{% block content %}
+<div class="container py-4">
+    <h2 class="mb-4" style="color: #ff7940;">
+        <i class="bi bi-gear-wide-connected"></i> {{ page_title }}
+    </h2>
+    
+    <!-- System Overview -->
+    <div class="row mb-4">
+        <div class="col-md-3 col-6 mb-3">
+            <div class="card text-center h-100">
+                <div class="card-body py-3">
+                    <h3 class="text-warning mb-1">{{ queue_stats.pending }}</h3>
+                    <small class="text-muted">待機中</small>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3 col-6 mb-3">
+            <div class="card text-center h-100">
+                <div class="card-body py-3">
+                    <h3 class="text-primary mb-1">{{ queue_stats.generating }}</h3>
+                    <small class="text-muted">生成中</small>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3 col-6 mb-3">
+            <div class="card text-center h-100">
+                <div class="card-body py-3">
+                    <h3 class="text-success mb-1">{{ queue_stats.completed_24h }}</h3>
+                    <small class="text-muted">完了 (24h)</small>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3 col-6 mb-3">
+            <div class="card text-center h-100">
+                <div class="card-body py-3">
+                    <h3 class="text-danger mb-1">{{ queue_stats.failed_24h }}</h3>
+                    <small class="text-muted">失敗 (24h)</small>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- API Status Cards -->
+    <div class="row mb-4">
+        <!-- Gemini OCR -->
+        <div class="col-md-4 mb-3">
+            <div class="card h-100">
+                <div class="card-header bg-info text-white">
+                    <i class="bi bi-image"></i> Gemini OCR
+                </div>
+                <div class="card-body">
+                    <p>
+                        <strong>ステータス:</strong>
+                        {% if gemini_ocr_status.available %}
+                        <span class="badge bg-success">Active</span>
+                        {% else %}
+                        <span class="badge bg-warning">Not Configured</span>
+                        {% endif %}
+                    </p>
+                    <p>
+                        <strong>APIキー:</strong>
+                        {% if gemini_ocr_status.api_key_set %}
+                        <i class="bi bi-check-circle text-success"></i> 設定済み
+                        {% else %}
+                        <i class="bi bi-x-circle text-danger"></i> 未設定
+                        {% endif %}
+                    </p>
+                    <small class="text-muted">画像からテキストを抽出します</small>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Gemini Lyrics -->
+        <div class="col-md-4 mb-3">
+            <div class="card h-100">
+                <div class="card-header" style="background-color: #ff7940; color: white;">
+                    <i class="bi bi-file-music"></i> Gemini Lyrics
+                </div>
+                <div class="card-body">
+                    <p>
+                        <strong>ステータス:</strong>
+                        {% if gemini_lyrics_status.available %}
+                        <span class="badge bg-success">Active</span>
+                        {% else %}
+                        <span class="badge bg-warning">Not Configured</span>
+                        {% endif %}
+                    </p>
+                    <p>
+                        <strong>APIキー:</strong>
+                        {% if gemini_lyrics_status.api_key_set %}
+                        <i class="bi bi-check-circle text-success"></i> 設定済み
+                        {% else %}
+                        <i class="bi bi-x-circle text-danger"></i> 未設定
+                        {% endif %}
+                    </p>
+                    <small class="text-muted">テキストから歌詞を生成します</small>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Mureka AI -->
+        <div class="col-md-4 mb-3">
+            <div class="card h-100">
+                <div class="card-header text-white" style="background-color: #6f42c1;">
+                    <i class="bi bi-music-note-beamed"></i> Mureka AI
+                </div>
+                <div class="card-body">
+                    <p>
+                        <strong>ステータス:</strong>
+                        {% if mureka_status.available %}
+                        <span class="badge bg-success">Active</span>
+                        {% else %}
+                        <span class="badge bg-warning">Not Configured</span>
+                        {% endif %}
+                    </p>
+                    <p>
+                        <strong>APIキー:</strong>
+                        {% if mureka_status.api_key_set %}
+                        <i class="bi bi-check-circle text-success"></i> 設定済み
+                        {% else %}
+                        <i class="bi bi-x-circle text-danger"></i> 未設定
+                        {% endif %}
+                    </p>
+                    <p><small><strong>URL:</strong> {{ mureka_status.api_url }}</small></p>
+                    <small class="text-muted">歌詞から楽曲を生成します</small>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Stuck Jobs Warning -->
+    {% if stuck_jobs %}
+    <div class="alert alert-warning mb-4">
+        <h5><i class="bi bi-exclamation-triangle"></i> スタックしているジョブ</h5>
+        <p class="mb-2">以下のジョブが30分以上生成中のままです：</p>
+        <ul class="mb-0">
+            {% for job in stuck_jobs %}
+            <li>
+                <strong>ID {{ job.id }}:</strong> {{ job.title }}
+                <small class="text-muted">(開始: {{ job.started_at }})</small>
+            </li>
+            {% endfor %}
+        </ul>
+    </div>
+    {% endif %}
+
+    <!-- Recent Errors -->
+    {% if recent_errors %}
+    <div class="card mb-4">
+        <div class="card-header bg-danger text-white">
+            <i class="bi bi-exclamation-circle"></i> 最近のエラー
+        </div>
+        <div class="card-body p-0">
+            <div class="table-responsive">
+                <table class="table table-sm mb-0">
+                    <thead>
+                        <tr>
+                            <th>ID</th>
+                            <th>タイトル</th>
+                            <th>エラー</th>
+                            <th>リトライ</th>
+                            <th>発生日時</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for error in recent_errors %}
+                        <tr>
+                            <td>{{ error.id }}</td>
+                            <td>{{ error.title|truncatechars:20 }}</td>
+                            <td>
+                                <small class="text-danger">
+                                    {{ error.error_message|truncatechars:50 }}
+                                </small>
+                            </td>
+                            <td>{{ error.retry_count }}</td>
+                            <td><small>{{ error.updated_at|date:"m/d H:i" }}</small></td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+    {% endif %}
+
+    <!-- Queue Statistics -->
+    <div class="card mb-4">
+        <div class="card-header">
+            <i class="bi bi-bar-chart"></i> キュー統計
+        </div>
+        <div class="card-body">
+            <div class="row">
+                <div class="col-md-6">
+                    <h6>全期間</h6>
+                    <ul class="list-unstyled">
+                        <li><i class="bi bi-check-circle text-success"></i> 完了: {{ queue_stats.total_completed }}</li>
+                        <li><i class="bi bi-x-circle text-danger"></i> 失敗: {{ queue_stats.total_failed }}</li>
+                    </ul>
+                </div>
+                <div class="col-md-6">
+                    <h6>過去24時間</h6>
+                    <ul class="list-unstyled">
+                        <li><i class="bi bi-check-circle text-success"></i> 完了: {{ queue_stats.completed_24h }}</li>
+                        <li><i class="bi bi-x-circle text-danger"></i> 失敗: {{ queue_stats.failed_24h }}</li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Actions -->
+    <div class="d-flex gap-2">
+        <a href="{% url 'songs:home' %}" class="btn btn-primary">
+            <i class="bi bi-house"></i> ホームに戻る
+        </a>
+        <a href="{% url 'songs:upload_image' %}" class="btn btn-success">
+            <i class="bi bi-plus-lg"></i> 楽曲を作成
+        </a>
+    </div>
+</div>
+{% endblock %}

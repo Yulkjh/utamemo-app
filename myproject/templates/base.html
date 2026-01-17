@@ -1,0 +1,1022 @@
+<!DOCTYPE html>
+<html lang="{% if is_english %}en{% elif is_chinese %}zh{% else %}ja{% endif %}">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{% block title %}UTAMEMO - {% if is_english %}Revolutionize Your Learning{% elif is_chinese %}革命性学习{% else %}暗記に革命を{% endif %}{% endblock %}</title>
+    
+    <!-- Bootstrap CSS -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <!-- Bootstrap Icons -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.0/font/bootstrap-icons.css" rel="stylesheet">
+    <!-- Google Fonts -->
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+    
+    <style>
+        :root {
+            --primary-gradient: linear-gradient(135deg, #ff7940 0%, #ff6b35 100%);
+            --secondary-gradient: linear-gradient(135deg, #ff9a56 0%, #ff7940 100%);
+            --dark-gradient: linear-gradient(135deg, #d6502d 0%, #b8441f 100%);
+            --accent-gradient: linear-gradient(135deg, #ffb380 0%, #ff9a56 100%);
+            
+            --primary-color: #ff7940;
+            --secondary-color: #ff6b35;
+            --accent-color: #ff9a56;
+            --text-primary: #2d1b13;
+            --text-secondary: #5c3a2a;
+            --text-muted: #8a6b5a;
+            --surface: #ffffff;
+            --surface-elevated: #fef9f7;
+            --border-color: #f0e6e0;
+            
+            --shadow-sm: 0 1px 3px 0 rgba(0, 0, 0, 0.1), 0 1px 2px 0 rgba(0, 0, 0, 0.06);
+            --shadow-md: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+            --shadow-lg: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
+            --shadow-xl: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
+            
+            --radius-sm: 0.375rem;
+            --radius-md: 0.5rem;
+            --radius-lg: 0.75rem;
+            --radius-xl: 1rem;
+        }
+        
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+            background: linear-gradient(135deg, #fff4f0 0%, #ffe6d9 50%, #ffd4c4 100%);
+            color: var(--text-primary);
+            line-height: 1.6;
+            min-height: 100vh;
+        }
+        
+        .glass-effect {
+            background: rgba(255, 255, 255, 0.25);
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(255, 255, 255, 0.18);
+        }
+        
+        .card-modern {
+            background: var(--surface);
+            border: none;
+            border-radius: var(--radius-lg);
+            box-shadow: var(--shadow-md);
+            transition: all 0.3s ease;
+            overflow: hidden;
+        }
+        
+        .card-modern:hover {
+            transform: translateY(-4px);
+            box-shadow: var(--shadow-xl);
+        }
+        
+        .btn-gradient-primary {
+            background: var(--primary-gradient);
+            border: none;
+            color: white;
+            font-weight: 600;
+            border-radius: var(--radius-md);
+            padding: 0.75rem 2rem;
+            transition: all 0.3s ease;
+            box-shadow: var(--shadow-md);
+            text-decoration: none;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            gap: 0.5rem;
+            text-align: center;
+            cursor: pointer;
+        }
+        
+        .btn-gradient-primary:hover {
+            transform: translateY(-2px);
+            box-shadow: var(--shadow-lg);
+            color: white;
+        }
+        
+        .btn-gradient-secondary {
+            background: var(--secondary-gradient);
+            border: none;
+            color: white;
+            font-weight: 600;
+            border-radius: var(--radius-md);
+            padding: 0.75rem 2rem;
+            transition: all 0.3s ease;
+            box-shadow: var(--shadow-md);
+            text-decoration: none;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            gap: 0.5rem;
+            text-align: center;
+            cursor: pointer;
+        }
+        
+        .btn-gradient-secondary:hover {
+            transform: translateY(-2px);
+            box-shadow: var(--shadow-lg);
+            color: white;
+        }
+        
+        .btn-outline-modern {
+            border: 2px solid var(--primary-color);
+            color: var(--primary-color);
+            background: transparent;
+            font-weight: 600;
+            border-radius: var(--radius-md);
+            padding: 0.75rem 2rem;
+            transition: all 0.3s ease;
+            text-decoration: none;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            gap: 0.5rem;
+            text-align: center;
+            cursor: pointer;
+        }
+        
+        .btn-outline-modern:hover {
+            background: var(--primary-color);
+            color: white;
+            transform: translateY(-2px);
+            box-shadow: var(--shadow-md);
+        }
+        
+        .navbar-modern {
+            background: rgba(255, 255, 255, 0.95);
+            backdrop-filter: blur(10px);
+            border-bottom: 1px solid var(--border-color);
+            box-shadow: var(--shadow-sm);
+            padding: 1rem 0;
+        }
+        
+        .navbar-brand-modern {
+            font-weight: 800;
+            font-size: 1.5rem;
+            background: var(--primary-gradient);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+            text-decoration: none;
+            display: flex;
+            align-items: center;
+            transition: all 0.3s ease;
+        }
+        
+        .navbar-brand-modern:hover {
+            transform: scale(1.05);
+        }
+        
+        .navbar-brand-modern svg {
+            transition: all 0.3s ease;
+        }
+        
+        .navbar-brand-modern:hover svg {
+            transform: rotate(5deg);
+        }
+        
+        /* 言語切り替えドロップダウン */
+        .language-switcher {
+            position: relative;
+            display: inline-flex;
+            align-items: center;
+        }
+        
+        .language-dropdown-btn {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            background: var(--surface-elevated);
+            border: 1px solid var(--border-color);
+            border-radius: var(--radius-md);
+            padding: 0.4rem 0.75rem;
+            font-size: 0.9rem;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            color: var(--text-primary);
+            height: 38px;
+        }
+        
+        .language-dropdown-btn:hover {
+            border-color: var(--primary-color);
+            box-shadow: var(--shadow-sm);
+        }
+        
+        .language-dropdown-btn .flag {
+            font-size: 1.1rem;
+        }
+        
+        .language-dropdown-btn .lang-name {
+            font-weight: 500;
+        }
+        
+        .language-dropdown-btn .dropdown-arrow {
+            font-size: 0.7rem;
+            opacity: 0.6;
+            transition: transform 0.2s ease;
+        }
+        
+        .language-switcher.open .dropdown-arrow {
+            transform: rotate(180deg);
+        }
+        
+        .language-dropdown-menu {
+            position: absolute;
+            top: 100%;
+            right: -10px;
+            left: unset;
+            margin-top: 0.5rem;
+            background: var(--surface);
+            border: 1px solid var(--border-color);
+            border-radius: var(--radius-md);
+            box-shadow: var(--shadow-lg);
+            min-width: 160px;
+            opacity: 0;
+            visibility: hidden;
+            transform: translateY(-10px);
+            transition: all 0.2s ease;
+            z-index: 1000;
+            overflow: hidden;
+        }
+        
+        /* モバイル対応：言語メニューが画面外にはみ出さないように */
+        @media (max-width: 991.98px) {
+            .language-dropdown-menu {
+                right: -10px;
+                left: unset;
+                min-width: 140px;
+            }
+            
+            .language-switcher {
+                width: auto;
+                display: inline-block;
+            }
+            
+            .language-dropdown-btn {
+                width: auto;
+                justify-content: flex-start;
+                padding: 0;
+                background: none;
+                border: none;
+                font-size: 1rem;
+                color: var(--text-primary);
+            }
+            
+            .language-dropdown-btn:hover {
+                border: none;
+                box-shadow: none;
+            }
+            
+            .nav-item.me-3 {
+                display: flex;
+                justify-content: flex-start;
+                margin: 0;
+                padding: 0.5rem 0;
+            }
+        }
+        
+        .language-switcher.open .language-dropdown-menu {
+            right: -30px !important;
+            left: auto !important;
+            opacity: 1;
+            visibility: visible;
+            transform: translateY(0);
+        }
+        
+        .language-option {
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+            padding: 0.6rem 1rem;
+            text-decoration: none;
+            color: var(--text-primary);
+            transition: background 0.15s ease;
+        }
+        
+        .language-option:hover {
+            background: rgba(255, 121, 64, 0.1);
+            color: var(--primary-color);
+        }
+        
+        .language-option.active {
+            background: var(--primary-gradient);
+            color: white;
+        }
+        
+        .language-option .flag {
+            font-size: 1.2rem;
+        }
+        
+        .language-option .lang-name {
+            font-size: 0.9rem;
+            font-weight: 500;
+        }
+        
+        /* ユーザードロップダウン */
+        .user-switcher {
+            position: relative;
+            display: inline-flex;
+            align-items: center;
+        }
+        
+        .user-dropdown-btn {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            background: var(--surface-elevated);
+            border: 1px solid var(--border-color);
+            border-radius: var(--radius-md);
+            padding: 0.4rem 0.75rem;
+            font-size: 0.9rem;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            color: var(--text-primary);
+            height: 38px;
+        }
+        
+        .user-dropdown-btn:hover {
+            border-color: var(--primary-color);
+            box-shadow: var(--shadow-sm);
+        }
+        
+        .user-dropdown-btn .user-name {
+            font-weight: 500;
+        }
+        
+        .user-dropdown-btn .dropdown-arrow {
+            font-size: 0.7rem;
+            opacity: 0.6;
+            transition: transform 0.2s ease;
+        }
+        
+        .user-dropdown-menu {
+            position: absolute;
+            top: 100%;
+            right: -30px;
+            margin-top: 0.5rem;
+            background: var(--surface);
+            border: 1px solid var(--border-color);
+            border-radius: var(--radius-md);
+            box-shadow: var(--shadow-lg);
+            min-width: 180px;
+            opacity: 0;
+            visibility: hidden;
+            transform: translateY(-10px);
+            transition: all 0.2s ease;
+            z-index: 1000;
+            overflow: hidden;
+        }
+        
+        .user-switcher.open .user-dropdown-menu {
+            opacity: 1;
+            visibility: visible;
+            transform: translateY(0);
+        }
+        
+        .user-switcher.open .dropdown-arrow {
+            transform: rotate(180deg);
+        }
+        
+        .user-option {
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+            padding: 0.6rem 1rem;
+            text-decoration: none;
+            color: var(--text-primary);
+            transition: background 0.15s ease;
+            border: none;
+            background: none;
+            width: 100%;
+            cursor: pointer;
+            font-size: 0.9rem;
+        }
+        
+        .user-option:hover {
+            background: rgba(255, 121, 64, 0.1);
+            color: var(--primary-color);
+        }
+        
+        .user-option i {
+            font-size: 1rem;
+            opacity: 0.7;
+        }
+        
+        .user-divider {
+            height: 1px;
+            background: var(--border-color);
+            margin: 0.25rem 0;
+        }
+        
+        .logout-btn:hover {
+            color: #dc3545;
+        }
+        
+        .nav-link-modern {
+            color: var(--text-secondary);
+            font-weight: 500;
+            transition: color 0.3s ease;
+            text-decoration: none;
+            padding: 0.5rem 1rem;
+        }
+        
+        .nav-link-modern:hover {
+            color: var(--primary-color);
+        }
+        
+        .nav-profile-img {
+            width: 28px;
+            height: 28px;
+            border-radius: 50%;
+            object-fit: cover;
+            border: 2px solid var(--primary-color);
+        }
+        
+        .nav-default-avatar {
+            width: 28px;
+            height: 28px;
+            border-radius: 50%;
+            background: linear-gradient(135deg, #ff7940 0%, #ff6b35 100%);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-size: 1rem;
+        }
+        
+        .nav-default-avatar i {
+            line-height: 1;
+        }
+        
+        .btn-nav-login {
+            background: transparent;
+            border: 2px solid var(--primary-color);
+            color: var(--primary-color);
+            font-weight: 600;
+            border-radius: var(--radius-md);
+            padding: 0.5rem 1.5rem;
+            transition: all 0.3s ease;
+            text-decoration: none;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            min-width: 90px;
+            font-size: 0.9rem;
+        }
+        
+        .btn-nav-login:hover {
+            background: var(--primary-color);
+            color: white;
+            transform: translateY(-1px);
+            box-shadow: var(--shadow-md);
+            text-decoration: none;
+        }
+        
+        .btn-nav-register {
+            background: var(--primary-gradient);
+            border: 2px solid transparent;
+            color: white;
+            font-weight: 600;
+            border-radius: var(--radius-md);
+            padding: 0.5rem 1.5rem;
+            transition: all 0.3s ease;
+            text-decoration: none;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            min-width: 90px;
+            font-size: 0.9rem;
+            box-shadow: var(--shadow-sm);
+        }
+        
+        .btn-nav-register:hover {
+            transform: translateY(-1px);
+            box-shadow: var(--shadow-md);
+            color: white;
+            text-decoration: none;
+        }
+        
+        .hero-section {
+            background: var(--dark-gradient);
+            color: white;
+            padding: 6rem 0;
+            position: relative;
+            overflow: hidden;
+        }
+        
+        .hero-section::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: -30px;
+            bottom: 0;
+            background: url("data:image/svg+xml,%3Csvg width='60' height='60' viewBox='0 0 60 60' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='none' fill-rule='evenodd'%3E%3Cg fill='%23ffffff' fill-opacity='0.05'%3E%3Ccircle cx='30' cy='30' r='1'/%3E%3C/g%3E%3C/g%3E%3C/svg%3E");
+        }
+        
+        .hero-content {
+            position: relative;
+            z-index: 1;
+        }
+        
+        .text-gradient {
+            background: var(--accent-gradient);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+        
+        .section-padding {
+            padding: 5rem 0;
+        }
+        
+        .fade-in {
+            opacity: 0;
+            transform: translateY(30px);
+            animation: fadeIn 0.8s ease forwards;
+        }
+        
+        .fade-in:nth-child(2) { animation-delay: 0.2s; }
+        .fade-in:nth-child(3) { animation-delay: 0.4s; }
+        .fade-in:nth-child(4) { animation-delay: 0.6s; }
+        
+        @keyframes fadeIn {
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+        
+        .feature-icon {
+            width: 4rem;
+            height: 4rem;
+            border-radius: var(--radius-lg);
+            background: var(--primary-gradient);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-size: 1.5rem;
+            margin: 0 auto 1.5rem;
+        }
+        
+        .feature-icon-custom {
+            width: 5rem;
+            height: 5rem;
+            border-radius: var(--radius-lg);
+            background: linear-gradient(135deg, rgba(102, 126, 234, 0.1) 0%, rgba(118, 75, 162, 0.1) 100%);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin: 0 auto;
+            padding: 0.75rem;
+            box-shadow: var(--shadow-md);
+            transition: all 0.3s ease;
+        }
+        
+        .feature-icon-custom:hover {
+            transform: scale(1.05);
+            box-shadow: var(--shadow-lg);
+        }
+        
+        .feature-icon-custom svg {
+            transition: all 0.3s ease;
+        }
+        
+        .feature-icon-custom:hover svg {
+            transform: scale(1.1);
+        }
+        
+        .step-number {
+            width: 3rem;
+            height: 3rem;
+            border-radius: 50%;
+            background: var(--secondary-gradient);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-weight: 700;
+            font-size: 1.2rem;
+            margin: 0 auto 1rem;
+        }
+        
+        .footer-modern {
+            background: var(--text-primary);
+            color: white;
+            padding: 3rem 0 2rem;
+            margin-top: 5rem;
+        }
+        
+        .footer-description {
+            color: #cccccc !important;
+            font-size: 1rem !important;
+            line-height: 1.6 !important;
+            opacity: 0.9;
+        }
+        
+        .footer-link {
+            color: var(--text-muted);
+            text-decoration: none;
+            transition: color 0.3s ease;
+        }
+        
+        .footer-link:hover {
+            color: white;
+        }
+        
+        /* アラートのスタイル更新 */
+        .alert-modern {
+            border: none;
+            border-radius: var(--radius-md);
+            box-shadow: var(--shadow-sm);
+        }
+        
+        .alert-success {
+            background: linear-gradient(135deg, #d4edda 0%, #c3e6cb 100%);
+            color: #155724;
+        }
+        
+        .alert-danger {
+            background: linear-gradient(135deg, #f8d7da 0%, #f5c6cb 100%);
+            color: #721c24;
+        }
+        
+        .alert-info {
+            background: linear-gradient(135deg, #d1ecf1 0%, #bee5eb 100%);
+            color: #0c5460;
+        }
+        
+        .alert-warning {
+            background: linear-gradient(135deg, #fff3cd 0%, #ffeaa7 100%);
+            color: #856404;
+        }
+        
+        /* レスポンシブ対応 */
+        @media (max-width: 991px) {
+            .navbar-collapse {
+                background: rgba(255, 255, 255, 0.98);
+                border-radius: var(--radius-lg);
+                padding: 1rem;
+                margin-top: 0.5rem;
+                box-shadow: var(--shadow-lg);
+                /* アニメーションを無効化してBootstrapのデフォルトを上書き */
+                transition: none !important;
+            }
+            
+            .navbar-collapse.collapsing {
+                height: auto !important;
+                display: none;
+                transition: none !important;
+            }
+            
+            .navbar-collapse.collapse:not(.show) {
+                display: none;
+            }
+            
+            .navbar-collapse.collapse.show {
+                display: block;
+            }
+            
+            .navbar-nav {
+                gap: 0 !important;
+                align-items: flex-start !important;
+                width: 100%;
+            }
+            
+            .navbar-nav .nav-item {
+                width: 100%;
+                text-align: left !important;
+                display: block !important;
+                padding: 0.75rem 0 !important;
+                margin: 0 !important;
+            }
+            
+            .nav-link-modern {
+                padding: 0 !important;
+                border-radius: var(--radius-md);
+                display: block !important;
+                text-align: left !important;
+                width: auto !important;
+            }
+            
+            .nav-link-modern:hover {
+                background: transparent;
+                color: var(--primary-color);
+            }
+            
+            .navbar-nav .language-switcher {
+                width: auto;
+            }
+            
+            .navbar-nav .language-dropdown-btn {
+                justify-content: flex-start;
+                padding: 0 !important;
+            }
+            
+            .mobile-nav-left {
+                margin-left: 0 !important;
+                width: 100%;
+                padding-left: 0 !important;
+            }
+            
+            .mobile-nav-left .nav-item {
+                display: block !important;
+                text-align: left !important;
+            }
+            
+            .mobile-nav-left .nav-item.me-3 {
+                margin-right: auto;
+            }
+        }
+        
+        @media (min-width: 992px) {
+            .mobile-nav-left.me-auto {
+                margin-left: 50px;
+            }
+        }
+        
+        @media (max-width: 768px) {
+            .btn-nav-login,
+            .btn-nav-register {
+                width: 100%;
+                margin-bottom: 0.5rem;
+                text-align: center;
+                padding: 0.75rem 1.5rem;
+            }
+            
+            .navbar-nav .nav-item {
+                margin-bottom: 0.25rem;
+            }
+            
+            .navbar-brand-modern {
+                font-size: 1.3rem;
+            }
+            
+            main {
+                padding-top: 70px !important;
+            }
+            
+            /* ドロップダウンメニューのモバイル対応 */
+            .user-dropdown-menu {
+                position: absolute;
+                top: 100%;
+                bottom: auto;
+                left: 0;
+                right: auto;
+                margin-top: 0.5rem;
+                border-radius: var(--radius-md);
+                min-width: 180px;
+                max-height: none;
+                overflow-y: visible;
+            }
+            
+            .user-option {
+                padding: 1rem 1.5rem;
+                font-size: 1rem;
+            }
+            
+            .language-dropdown-menu {
+            right: -30px !important;
+            left: auto !important;
+                right: -30px;
+                left: auto;
+                min-width: 120px;
+            }
+        }
+        
+        @media (max-width: 480px) {
+            .container {
+                padding-left: 12px;
+                padding-right: 12px;
+            }
+            
+            .navbar-brand-modern {
+                font-size: 1.2rem;
+            }
+        }
+    </style>
+</head>
+<body>
+    <!-- ナビゲーション -->
+    <nav class="navbar navbar-expand-lg navbar-modern fixed-top">
+        <div class="container">
+            <a class="navbar-brand-modern" href="{% url 'songs:home' %}">
+                UTAMEMO
+            </a>
+            
+            <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav">
+                <span class="navbar-toggler-icon"></span>
+            </button>
+            
+            <div class="collapse navbar-collapse" id="navbarNav">
+                <ul class="navbar-nav me-auto mobile-nav-left">
+                    {% if user.is_authenticated %}
+                    <li class="nav-item">
+                        <a class="nav-link-modern" href="{% url 'songs:upload_image' %}">{% if is_english %}Create{% elif is_chinese %}创作{% else %}楽曲作成{% endif %}</a>
+                    </li>
+                    {% endif %}
+                    <li class="nav-item">
+                        <a class="nav-link-modern" href="{% url 'songs:song_list' %}">{% if is_english %}Songs{% elif is_chinese %}歌曲{% else %}楽曲一覧{% endif %}</a>
+                    </li>
+                </ul>
+                
+                <ul class="navbar-nav mobile-nav-left" style="align-items: center;">
+                    <!-- 言語切り替えドロップダウン -->
+                    <li class="nav-item me-3" style="display: flex; align-items: center;">
+                        <div class="language-switcher">
+                            <div class="language-dropdown-btn">
+                                <span class="lang-name">{% if is_english %}Language{% elif is_chinese %}语言{% else %}言語{% endif %}</span>
+                                <span class="dropdown-arrow">▼</span>
+                            </div>
+                            <div class="language-dropdown-menu">
+                                {% for lang in available_languages %}
+                                <a href="{% url 'songs:set_language' lang.code %}" class="language-option {% if lang.code == app_language %}active{% endif %}">
+                                    <span class="lang-name">{{ lang.name }}</span>
+                                </a>
+                                {% endfor %}
+                            </div>
+                        </div>
+                    </li>
+                    
+                    {% if user.is_authenticated %}
+                    <li class="nav-item">
+                        <div class="user-switcher">
+                            <div class="user-dropdown-btn">
+                                {% if user.profile_image_data %}
+                                <img src="{{ user.profile_image_data }}" alt="{{ user.username }}" class="nav-profile-img">
+                                {% elif user.profile_image and user.profile_image.name %}
+                                <img src="{{ user.profile_image.url }}" alt="{{ user.username }}" class="nav-profile-img" onerror="this.style.display='none'; this.nextElementSibling.style.display='flex';">
+                                <div class="nav-default-avatar" style="display: none;">
+                                    <i class="bi bi-person-circle"></i>
+                                </div>
+                                {% else %}
+                                <div class="nav-default-avatar">
+                                    <i class="bi bi-person-circle"></i>
+                                </div>
+                                {% endif %}
+                                <span class="user-name">{{ user.username }}</span>
+                                <span class="dropdown-arrow">▼</span>
+                            </div>
+                            <div class="user-dropdown-menu">
+                                <a href="{% url 'users:profile' user.username %}" class="user-option">
+                                    <i class="bi bi-person"></i>
+                                    <span>{% if is_english %}Profile{% elif is_chinese %}个人资料{% else %}プロフィール{% endif %}</span>
+                                </a>
+                                <a href="{% url 'songs:my_songs' %}" class="user-option">
+                                    <i class="bi bi-music-note-list"></i>
+                                    <span>{% if is_english %}My Songs{% elif is_chinese %}我的歌曲{% else %}MY楽曲{% endif %}</span>
+                                </a>
+                                <a href="{% url 'users:favorites' %}" class="user-option">
+                                    <i class="bi bi-bookmark"></i>
+                                    <span>{% if is_english %}Favorites{% elif is_chinese %}收藏{% else %}お気に入り{% endif %}</span>
+                                </a>
+                                <div class="user-divider"></div>
+                                <form method="post" action="{% url 'users:logout' %}">
+                                    {% csrf_token %}
+                                    <button type="submit" class="user-option logout-btn">
+                                        <i class="bi bi-box-arrow-right"></i>
+                                        <span>{% if is_english %}Logout{% elif is_chinese %}退出登录{% else %}ログアウト{% endif %}</span>
+                                    </button>
+                                </form>
+                            </div>
+                        </div>
+                    </li>
+                    {% else %}
+                    <li class="nav-item me-2">
+                        <a class="btn-nav-login" href="{% url 'users:login' %}">{% if is_english %}Login{% elif is_chinese %}登录{% else %}ログイン{% endif %}</a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="btn-nav-register" href="{% url 'users:register' %}">{% if is_english %}Sign Up{% elif is_chinese %}注册{% else %}新規登録{% endif %}</a>
+                    </li>
+                    {% endif %}
+                </ul>
+            </div>
+        </div>
+    </nav>
+
+    <!-- メッセージ表示 -->
+    {% if messages %}
+    <div class="container mt-5 pt-4">
+        {% for message in messages %}
+        <div class="alert alert-{{ message.tags }} alert-modern alert-dismissible fade show" role="alert">
+            {{ message }}
+            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+        </div>
+        {% endfor %}
+    </div>
+    {% endif %}
+
+    <!-- メインコンテンツ -->
+    <main style="padding-top: 80px;">
+        {% block content %}
+        {% endblock %}
+    </main>
+
+    <!-- フッター -->
+    <footer class="footer-modern">
+        <div class="container">
+            <div class="row">
+                <div class="col-md-6">
+                    <h5 class="text-gradient">UTAMEMO</h5>
+                    <p class="footer-description">{% if is_english %}Revolutionize your learning.<br>An innovative platform that transforms studying into music with AI technology.{% elif is_chinese %}学习革命。<br>用AI技术将学习转化为音乐的创新平台。{% else %}暗記に革命を。<br>AI技術で学習を音楽に変える革新的なプラットフォーム。{% endif %}</p>
+                </div>
+                <div class="col-md-3">
+                    <h6>{% if is_english %}Services{% elif is_chinese %}服务{% else %}サービス{% endif %}</h6>
+                    <ul class="list-unstyled">
+                        <li><a href="{% url 'songs:song_list' %}" class="footer-link">{% if is_english %}Song List{% elif is_chinese %}歌曲列表{% else %}楽曲一覧{% endif %}</a></li>
+                        <li><a href="{% url 'songs:upload_image' %}" class="footer-link">{% if is_english %}Create Song{% elif is_chinese %}创作歌曲{% else %}楽曲作成{% endif %}</a></li>
+                    </ul>
+                </div>
+                <div class="col-md-3">
+                    <h6>{% if is_english %}Account{% elif is_chinese %}账户{% else %}アカウント{% endif %}</h6>
+                    <ul class="list-unstyled">
+                        {% if user.is_authenticated %}
+                        <li><a href="{% url 'users:profile' user.username %}" class="footer-link">{% if is_english %}Profile{% elif is_chinese %}个人资料{% else %}プロフィール{% endif %}</a></li>
+                        <li><a href="{% url 'users:favorites' %}" class="footer-link">{% if is_english %}Favorites{% elif is_chinese %}收藏{% else %}お気に入り{% endif %}</a></li>
+                        {% else %}
+                        <li><a href="{% url 'users:login' %}" class="footer-link">{% if is_english %}Login{% elif is_chinese %}登录{% else %}ログイン{% endif %}</a></li>
+                        <li><a href="{% url 'users:register' %}" class="footer-link">{% if is_english %}Sign Up{% elif is_chinese %}注册{% else %}新規登録{% endif %}</a></li>
+                        {% endif %}
+                    </ul>
+                </div>
+            </div>
+            <hr class="my-4" style="border-color: var(--text-secondary);">
+            <div class="row align-items-center">
+                <div class="col-md-12 text-center">
+
+                </div>
+            </div>
+        </div>
+    </footer>
+
+    <!-- Bootstrap JS -->
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    
+    <!-- カスタムJS -->
+    <script>
+        // フェードインアニメーション
+        document.addEventListener('DOMContentLoaded', function() {
+            const fadeElements = document.querySelectorAll('.fade-in');
+            
+            const observer = new IntersectionObserver((entries) => {
+                entries.forEach(entry => {
+                    if (entry.isIntersecting) {
+                        entry.target.style.animation = 'fadeIn 0.8s ease forwards';
+                    }
+                });
+            });
+            
+            fadeElements.forEach(element => {
+                observer.observe(element);
+            });
+            
+            // 言語セレクターのクリック処理
+            const languageSwitchers = document.querySelectorAll('.language-switcher');
+            languageSwitchers.forEach(switcher => {
+                const btn = switcher.querySelector('.language-dropdown-btn');
+                if (btn) {
+                    btn.addEventListener('click', function(e) {
+                        e.stopPropagation();
+                        // 他のセレクターを閉じる
+                        languageSwitchers.forEach(s => {
+                            if (s !== switcher) s.classList.remove('open');
+                        });
+                        userSwitchers.forEach(s => s.classList.remove('open'));
+                        // トグル
+                        switcher.classList.toggle('open');
+                    });
+                }
+            });
+            
+            // ユーザードロップダウンのクリック処理
+            const userSwitchers = document.querySelectorAll('.user-switcher');
+            userSwitchers.forEach(switcher => {
+                const btn = switcher.querySelector('.user-dropdown-btn');
+                if (btn) {
+                    btn.addEventListener('click', function(e) {
+                        e.stopPropagation();
+                        // 他のセレクターを閉じる
+                        userSwitchers.forEach(s => {
+                            if (s !== switcher) s.classList.remove('open');
+                        });
+                        languageSwitchers.forEach(s => s.classList.remove('open'));
+                        // トグル
+                        switcher.classList.toggle('open');
+                    });
+                }
+            });
+            
+            // 外側クリックで閉じる
+            document.addEventListener('click', function() {
+                languageSwitchers.forEach(s => s.classList.remove('open'));
+                userSwitchers.forEach(s => s.classList.remove('open'));
+            });
+        });
+    </script>
+</body>
+</html>

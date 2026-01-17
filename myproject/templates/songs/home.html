@@ -1,0 +1,434 @@
+﻿{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}UTAMEMO - {% if is_english %}Learn with Music{% elif is_chinese %}用音乐学习{% else %}学習を音楽に{% endif %}{% endblock %}
+
+{% block content %}
+<div class="hero-section">
+    <div class="container">
+        <div class="row justify-content-center">
+            <div class="col-lg-8 text-center">
+                
+                <!-- タイトル -->
+                <div class="mb-5">
+                    <h1 class="display-2 fw-bold mb-3" style="color: #ff7940;">UTAMEMO</h1>
+                    <p class="lead text-muted">{% if is_english %}Revolutionize your learning.{% elif is_chinese %}学习革命。{% else %}暗記に革命を。{% endif %}</p>
+                </div>
+
+                <!-- 説明 -->
+                <div class="mb-5">
+                    <h2 class="h3 mb-4" style="color: #333;">{% if is_english %}Upload an image and create a song{% elif is_chinese %}上传图片并创作歌曲{% else %}画像をアップロードして楽曲を作成{% endif %}</h2>
+                    <p class="text-muted mb-4">
+                        {% if is_english %}
+                        Upload an image of your study material, and AI will analyze it to generate music.<br>
+                        Create memorable learning experiences through music.
+                        {% elif is_chinese %}
+                        上传学习资料的图片，AI将分析内容并生成音乐。<br>
+                        通过音乐创造难忘的学习体验。
+                        {% else %}
+                        教材の画像をアップロードすると、AIが内容を解析して音楽を生成します。<br>
+                        音楽で記憶に残る学習体験を実現します。
+                        {% endif %}
+                    </p>
+                </div>
+
+                <!-- ボタン -->
+                <div class="mb-5 text-center">
+                    {% if user.is_authenticated %}
+                        <div class="d-flex flex-column flex-md-row gap-3 justify-content-center">
+                            <a href="{% url 'songs:upload_image' %}" class="btn btn-primary btn-lg px-5">
+                                <i class="bi bi-camera-fill me-2"></i>{% if is_english %}Create a Song{% elif is_chinese %}创作歌曲{% else %}楽曲を作成する{% endif %}
+                            </a>
+                            <a href="/songs/" class="btn btn-outline-primary btn-lg px-5">
+                                <i class="bi bi-music-note-list me-2"></i>{% if is_english %}Browse Songs{% elif is_chinese %}浏览歌曲{% else %}楽曲一覧を見る{% endif %}
+                            </a>
+                        </div>
+                    {% else %}
+                        <div class="d-flex flex-column flex-md-row gap-3 justify-content-center">
+                            <a href="/users/register/" class="btn btn-primary btn-lg px-5">
+                                <i class="bi bi-play-circle-fill me-2"></i>{% if is_english %}Get Started (Free){% elif is_chinese %}开始使用（免费）{% else %}始める（無料）{% endif %}
+                            </a>
+                            <a href="/songs/" class="btn btn-outline-primary btn-lg px-5">
+                                <i class="bi bi-headphones me-2"></i>{% if is_english %}Listen to Songs{% elif is_chinese %}试听歌曲{% else %}楽曲を聞いてみる{% endif %}
+                            </a>
+                        </div>
+                    {% endif %}
+                </div>            </div>
+        </div>
+    </div>
+</div>
+
+{% comment %}
+料金プランセクション（一時的に非表示）
+<div class="pricing-section" id="pricing">
+    <div class="container">
+        <div class="text-center mb-5">
+            <h2 class="h2 fw-bold mb-3">{% if is_english %}Pricing Plans{% elif is_chinese %}定价方案{% else %}料金プラン{% endif %}</h2>
+            <p class="text-muted">{% if is_english %}Choose the plan that fits your needs{% elif is_chinese %}选择适合您的方案{% else %}あなたに合ったプランを選択{% endif %}</p>
+        </div>
+        
+        <div class="row justify-content-center g-4">
+            <!-- 無料プラン -->
+            <div class="col-lg-5 col-md-6">
+                <div class="pricing-card">
+                    <div class="pricing-header">
+                        <span class="pricing-badge free">{% if is_english %}FREE{% elif is_chinese %}免费{% else %}無料{% endif %}</span>
+                        <h3 class="pricing-title">Free</h3>
+                        <div class="pricing-price">
+                            <span class="price">¥0</span>
+                            <span class="period">/{% if is_english %}month{% elif is_chinese %}月{% else %}月{% endif %}</span>
+                        </div>
+                    </div>
+                    <div class="pricing-body">
+                        <ul class="pricing-features">
+                            <li><i class="bi bi-check-circle-fill text-success"></i> {% if is_english %}Unlimited song creation{% elif is_chinese %}无限创作歌曲{% else %}楽曲作成無制限{% endif %}</li>
+                            <li><i class="bi bi-check-circle-fill text-success"></i> {% if is_english %}MP3 download{% elif is_chinese %}MP3下载{% else %}MP3ダウンロード{% endif %}</li>
+                            <li class="text-muted"><i class="bi bi-x-circle"></i> {% if is_english %}Standard quality{% elif is_chinese %}标准音质{% else %}標準音質{% endif %}</li>
+                        </ul>
+                        {% if user.is_authenticated %}
+                            {% if user.plan == 'free' %}
+                            <button class="btn-pricing current" disabled>
+                                <i class="bi bi-check-lg"></i> {% if is_english %}Current Plan{% elif is_chinese %}当前方案{% else %}現在のプラン{% endif %}
+                            </button>
+                            {% else %}
+                            <button class="btn-pricing" disabled>Free</button>
+                            {% endif %}
+                        {% else %}
+                        <a href="{% url 'users:register' %}" class="btn-pricing">
+                            {% if is_english %}Get Started{% elif is_chinese %}开始使用{% else %}始める{% endif %}
+                        </a>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Proプラン -->
+            <div class="col-lg-5 col-md-6">
+                <div class="pricing-card featured">
+                    <div class="pricing-header">
+                        <span class="pricing-badge pro">PRO</span>
+                        <h3 class="pricing-title">Pro</h3>
+                        <div class="pricing-price">
+                            <span class="price">¥980</span>
+                            <span class="period">/{% if is_english %}month{% elif is_chinese %}月{% else %}月{% endif %}</span>
+                        </div>
+                    </div>
+                    <div class="pricing-body">
+                        <ul class="pricing-features">
+                            <li><i class="bi bi-check-circle-fill text-success"></i> {% if is_english %}Unlimited song creation{% elif is_chinese %}无限创作歌曲{% else %}楽曲作成無制限{% endif %}</li>
+                            <li><i class="bi bi-check-circle-fill text-success"></i> {% if is_english %}High-quality download{% elif is_chinese %}高音质下载{% else %}高音質ダウンロード{% endif %}</li>
+                            <li><i class="bi bi-check-circle-fill text-success"></i> {% if is_english %}Priority generation{% elif is_chinese %}优先生成{% else %}優先生成{% endif %}</li>
+                        </ul>
+                        {% if user.is_authenticated %}
+                            {% if user.is_pro %}
+                            <button class="btn-pricing-pro current" disabled>
+                                <i class="bi bi-check-lg"></i> {% if is_english %}Current Plan{% elif is_chinese %}当前方案{% else %}現在のプラン{% endif %}
+                            </button>
+                            {% else %}
+                            <a href="{% url 'users:upgrade' %}" class="btn-pricing-pro">
+                                <i class="bi bi-lightning-fill"></i> {% if is_english %}Upgrade{% elif is_chinese %}升级{% else %}アップグレード{% endif %}
+                            </a>
+                            {% endif %}
+                        {% else %}
+                        <a href="{% url 'users:register' %}?plan=pro" class="btn-pricing-pro">
+                            <i class="bi bi-lightning-fill"></i> {% if is_english %}Get Started{% elif is_chinese %}开始使用{% else %}始める{% endif %}
+                        </a>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endcomment %}
+
+<style>
+.hero-section {
+    min-height: 90vh;
+    background: linear-gradient(135deg, #ffffff 0%, #f8f9fa 100%);
+    display: flex;
+    align-items: center;
+    padding: 2rem 0;
+}
+
+/* 料金プランセクション */
+.pricing-section {
+    padding: 5rem 0;
+    background: linear-gradient(180deg, #f8f9fa 0%, #ffffff 100%);
+}
+
+.pricing-card {
+    background: white;
+    border-radius: 20px;
+    padding: 2rem;
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08);
+    transition: all 0.3s ease;
+    position: relative;
+    border: 2px solid #e0e0e0;
+    height: 100%;
+}
+
+.pricing-card:hover {
+    transform: translateY(-5px);
+    box-shadow: 0 12px 40px rgba(0, 0, 0, 0.12);
+}
+
+.pricing-card.featured {
+    border-color: #ff7940;
+    box-shadow: 0 8px 30px rgba(255, 121, 64, 0.2);
+}
+
+.pricing-header {
+    text-align: center;
+    padding-bottom: 1.5rem;
+    border-bottom: 1px solid #eee;
+    margin-bottom: 1.5rem;
+}
+
+.pricing-badge {
+    display: inline-block;
+    padding: 0.3rem 1rem;
+    border-radius: 20px;
+    font-size: 0.8rem;
+    font-weight: 600;
+    margin-bottom: 0.5rem;
+}
+
+.pricing-badge.free {
+    background: #e8f5e9;
+    color: #2e7d32;
+}
+
+.pricing-badge.pro {
+    background: linear-gradient(135deg, #ff7940 0%, #ff6b35 100%);
+    color: white;
+}
+
+.pricing-title {
+    font-size: 1.5rem;
+    font-weight: 700;
+    color: #333;
+    margin: 0.5rem 0;
+}
+
+.pricing-price {
+    margin-top: 1rem;
+}
+
+.pricing-price .price {
+    font-size: 3rem;
+    font-weight: 800;
+    color: #333;
+}
+
+.pricing-price .period {
+    font-size: 1rem;
+    color: #888;
+}
+
+.pricing-features {
+    list-style: none;
+    padding: 0;
+    margin: 0 0 2rem 0;
+}
+
+.pricing-features li {
+    padding: 0.75rem 0;
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    font-size: 0.95rem;
+    color: #555;
+}
+
+.pricing-features li i {
+    font-size: 1.1rem;
+}
+
+.btn-pricing {
+    display: block;
+    width: 100%;
+    padding: 1rem;
+    border-radius: 12px;
+    font-size: 1rem;
+    font-weight: 600;
+    text-align: center;
+    text-decoration: none;
+    border: 2px solid #333;
+    background: white;
+    color: #333;
+    transition: all 0.3s ease;
+    cursor: pointer;
+}
+
+.btn-pricing:hover {
+    background: #333;
+    color: white;
+}
+
+.btn-pricing.current {
+    background: #e8f5e9;
+    border-color: #2e7d32;
+    color: #2e7d32;
+    cursor: default;
+}
+
+.btn-pricing-pro {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.5rem;
+    width: 100%;
+    padding: 1rem;
+    border-radius: 12px;
+    font-size: 1rem;
+    font-weight: 600;
+    text-align: center;
+    text-decoration: none;
+    border: none;
+    background: linear-gradient(135deg, #ff7940 0%, #ff6b35 100%);
+    color: white;
+    transition: all 0.3s ease;
+    cursor: pointer;
+}
+
+.btn-pricing-pro:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 8px 25px rgba(255, 121, 64, 0.4);
+    color: white;
+}
+
+.btn-pricing-pro.current {
+    background: linear-gradient(135deg, #4caf50 0%, #43a047 100%);
+    cursor: default;
+}
+
+.btn-pricing-pro.current:hover {
+    transform: none;
+    box-shadow: none;
+}
+
+.btn-primary {
+    background: linear-gradient(135deg, #ff7940 0%, #ff6b35 100%);
+    border: 2px solid #ff7940;
+    border-radius: 12px;
+    padding: 15px 30px;
+    font-size: 18px;
+    font-weight: 600;
+    color: white;
+    transition: all 0.3s ease;
+    text-transform: none;
+    box-shadow: 0 4px 15px rgba(255, 121, 64, 0.3);
+}
+
+.btn-primary:hover {
+    background: white;
+    border-color: #ff7940;
+    color: #ff7940;
+    transform: translateY(-2px);
+    box-shadow: 0 8px 25px rgba(255, 121, 64, 0.4);
+}
+
+.btn-outline-primary {
+    color: #ff7940;
+    border: 2px solid #ff7940;
+    border-radius: 12px;
+    padding: 13px 30px;
+    font-size: 18px;
+    font-weight: 600;
+    background: white;
+    transition: all 0.3s ease;
+    text-transform: none;
+}
+
+.btn-outline-primary:hover {
+    background: linear-gradient(135deg, #ff7940 0%, #ff6b35 100%);
+    border-color: #ff7940;
+    color: white;
+    transform: translateY(-2px);
+    box-shadow: 0 8px 25px rgba(255, 121, 64, 0.3);
+}
+
+/* ボタンクリック効果 */
+.btn:active {
+    transform: translateY(0px) scale(0.98);
+}
+
+/* モバイル対応 */
+@media (max-width: 768px) {
+    .btn-lg {
+        width: 100%;
+        margin-bottom: 1rem;
+    }
+    
+    .hero-section {
+        min-height: 80vh;
+        padding: 1rem 0;
+    }
+    
+    .display-2 {
+        font-size: 3rem;
+    }
+}
+
+/* アニメーション効果 */
+.btn {
+    position: relative;
+    overflow: hidden;
+}
+
+.btn:before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: -100%;
+    width: 100%;
+    height: 100%;
+    background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.2), transparent);
+    transition: left 0.5s;
+}
+
+.btn:hover:before {
+    left: 100%;
+}
+</style>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // すべてのボタンにクリックエフェクトを追加
+    const buttons = document.querySelectorAll('.btn');
+    
+    buttons.forEach(button => {
+        button.addEventListener('click', function(e) {
+            console.log('Button clicked:', this.textContent.trim());
+            console.log('Navigating to:', this.href);
+            
+            // ボタンクリック視覚効果
+            this.style.transform = 'translateY(0px) scale(0.95)';
+            setTimeout(() => {
+                this.style.transform = '';
+            }, 150);
+            
+            // リンクが正しく設定されているか確認
+            if (!this.href || this.href === window.location.href + '#') {
+                e.preventDefault();
+                alert('リンクエラー: ' + this.textContent.trim());
+                return false;
+            }
+        });
+
+        // ホバー効果の強化
+        button.addEventListener('mouseenter', function() {
+            this.style.transform = 'translateY(-3px)';
+        });
+
+        button.addEventListener('mouseleave', function() {
+            this.style.transform = 'translateY(0px)';
+        });
+    });
+    
+    console.log('UTAMEMO Home page loaded successfully');
+    console.log('Interactive buttons found:', buttons.length);
+});
+</script>
+{% endblock %}

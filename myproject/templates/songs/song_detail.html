@@ -1,0 +1,2268 @@
+{% extends 'base.html' %}
+{% load lyrics_filters %}
+
+{% block title %}{{ song.title }} - UTAMEMO{% endblock %}
+
+{% block content %}
+{% csrf_token %}
+<div class="container py-5">
+    <div class="row g-4">
+        <!-- メインコンテンツ -->
+        <div class="col-lg-8">
+            <!-- 楽曲ヘッダー -->
+            <div class="song-header-card fade-in">
+                <div class="song-info-section">
+                    <div class="d-flex justify-content-between align-items-start mb-3">
+                        <div class="flex-grow-1">
+                            <div class="title-edit-container">
+                                <h1 class="song-main-title" id="song-title-display">{{ song.title }}</h1>
+                                {% if user == song.created_by %}
+                                <button class="btn-edit-title" onclick="startTitleEdit()" title="{% if is_english %}Edit Title{% elif is_chinese %}编辑标题{% else %}タイトルを編集{% endif %}">
+                                    <i class="bi bi-pencil"></i>
+                                </button>
+                                {% endif %}
+                            </div>
+                            <div class="title-edit-form" id="title-edit-form" style="display: none;">
+                                <input type="text" id="title-input" class="title-input" value="{{ song.title }}" maxlength="200">
+                                <button class="btn-save-title" onclick="saveTitleEdit()">
+                                    <i class="bi bi-check"></i> {% if is_english %}Save{% elif is_chinese %}保存{% else %}保存{% endif %}
+                                </button>
+                                <button class="btn-cancel-title" onclick="cancelTitleEdit()">
+                                    <i class="bi bi-x"></i> {% if is_english %}Cancel{% elif is_chinese %}取消{% else %}キャンセル{% endif %}
+                                </button>
+                            </div>
+                        </div>
+                        {% if song.genre and user == song.created_by %}
+                        <span class="main-genre-badge">{{ song.genre }}</span>
+                        {% endif %}
+                    </div>
+                    
+                    <!-- クリエイター情報 -->
+                    <div class="creator-section">
+                        <div class="creator-avatar-large">
+                            {% if song.created_by.profile_image_data %}
+                            <img src="{{ song.created_by.profile_image_data }}" alt="{{ song.created_by.username }}" class="creator-avatar-img">
+                            {% elif song.created_by.profile_image and song.created_by.profile_image.name %}
+                            <img src="{{ song.created_by.profile_image.url }}" alt="{{ song.created_by.username }}" class="creator-avatar-img" onerror="this.style.display='none'; this.nextElementSibling.style.display='flex';">
+                            <i class="bi bi-person" style="display: none;"></i>
+                            {% else %}
+                            <i class="bi bi-person"></i>
+                            {% endif %}
+                        </div>
+                        <div class="creator-details">
+                            <div class="creator-name-large">{{ song.created_by.username }}</div>
+                        </div>
+                    </div>
+                    
+                    <!-- タグ表示 -->
+                    <div class="tags-section mt-3">
+                        <div class="tags-header">
+                            <span class="tags-title">{% if is_english %}Tags{% elif is_chinese %}标签{% else %}タグ{% endif %}</span>
+                            {% if user == song.created_by %}
+                            <button class="btn-edit-tags" onclick="openTagEditor()">
+                                <i class="bi bi-pencil"></i> {% if is_english %}Edit{% elif is_chinese %}编辑{% else %}編集{% endif %}
+                            </button>
+                            {% endif %}
+                        </div>
+                        <div class="tags-container" id="tags-display">
+                            {% for tag in song.tags.all %}
+                            <span class="tag-badge">#{{ tag.name }}</span>
+                            {% empty %}
+                            <span class="text-muted">{% if is_english %}No tags yet{% elif is_chinese %}暂无标签{% else %}タグがまだありません{% endif %}</span>
+                            {% endfor %}
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 音楽プレイヤー -->
+            <div class="music-player-card fade-in">
+                <div class="player-header">
+                    <div>
+                        <h3>{% if is_english %}Play Song{% elif is_chinese %}播放歌曲{% else %}楽曲を再生{% endif %}</h3>
+                    </div>
+                </div>
+                
+                <div class="player-body">
+                    {% if song.audio_file %}
+                    <!-- ローカル音声ファイル -->
+                    <div class="audio-controls">
+                        <audio controls class="custom-audio-player">
+                            <source src="{{ song.audio_file.url }}" type="audio/mpeg">
+                            {% if is_english %}Your browser does not support audio playback.{% elif is_chinese %}您的浏览器不支持音频播放。{% else %}お使いのブラウザは音声の再生をサポートしていません。{% endif %}
+                        </audio>
+                    </div>
+                    {% elif song.audio_url %}
+                    <!-- 外部音声URL (Mureka等) -->
+                    <div class="audio-controls">
+                        <audio controls class="custom-audio-player" preload="none">
+                            <source src="{{ song.audio_url }}" type="audio/mpeg">
+                            {% if is_english %}Your browser does not support audio playback.{% elif is_chinese %}您的浏览器不支持音频播放。{% else %}お使いのブラウザは音声の再生をサポートしていません。{% endif %}
+                        </audio>
+                    </div>
+                    {% else %}
+                    <div class="audio-placeholder" id="generation-status-container">
+                        <i class="bi bi-hourglass-split spinning-icon" id="status-icon"></i>
+                        
+                        <div id="status-message">
+                        {% if song.generation_status == 'pending' %}
+                            <p><strong>{% if is_english %}⏳ Waiting in queue...{% elif is_chinese %}⏳ 排队等候中...{% else %}⏳ キューで待機中...{% endif %}</strong></p>
+                            {% if song.queue_position %}
+                                <div class="queue-info">
+                                    <div class="queue-number">{{ song.queue_position }}</div>
+                                    <p>{% if is_english %}<strong>{{ song.queue_position|add:"-1" }} people</strong> ahead of you{% elif is_chinese %}前面有<strong>{{ song.queue_position|add:"-1" }}人</strong>在等待{% else %}現在<strong>{{ song.queue_position|add:"-1" }}人</strong>待っています{% endif %}</p>
+                                </div>
+                            {% endif %}
+                        {% elif song.generation_status == 'generating' %}
+                            <p><strong>{% if is_english %}Generating your song...{% elif is_chinese %}正在生成歌曲...{% else %}楽曲を生成中です...{% endif %}</strong><br>{% if is_english %}Usually takes 1-2 minutes.{% elif is_chinese %}通常需要1-2分钟。{% else %}通常1〜2分で完成します。{% endif %}</p>
+                        {% elif song.generation_status == 'failed' %}
+                            <p><strong>{% if is_english %}❌ Generation failed{% elif is_chinese %}❌ 生成失败{% else %}❌ 生成に失敗しました{% endif %}</strong></p>
+                            {% if user == song.created_by %}
+                                {% if song.retry_count < 1 %}
+                                <form method="post" action="{% url 'songs:retry_song' song.pk %}" style="margin-top: 1rem;">
+                                    {% csrf_token %}
+                                    <button type="submit" class="btn-download" style="background: linear-gradient(135deg, #ff7940 0%, #ff6b35 100%);">
+                                        <i class="bi bi-arrow-clockwise"></i> {% if is_english %}Retry{% elif is_chinese %}重试{% else %}再生成する{% endif %}
+                                    </button>
+                                </form>
+                                {% else %}
+                                <p style="margin-top: 1rem; color: #666;">{% if is_english %}Retry limit (1) reached{% elif is_chinese %}重试次数（1次）已达上限{% else %}再生成の上限（1回）に達しました{% endif %}</p>
+                                {% endif %}
+                            {% else %}
+                            <p>{% if is_english %}Only the creator can retry.{% elif is_chinese %}只有创作者可以重试。{% else %}作成者のみが再生成できます。{% endif %}</p>
+                            {% endif %}
+                        {% else %}
+                            <p><strong>{% if is_english %}Generating your song...{% elif is_chinese %}正在生成歌曲...{% else %}楽曲を生成中です...{% endif %}</strong><br>{% if is_english %}Usually takes 1-2 minutes.{% elif is_chinese %}通常需要1-2分钟。{% else %}通常1〜2分で完成します。{% endif %}</p>
+                        {% endif %}
+                        </div>
+                        
+                        <p class="auto-refresh-note" id="connection-status">{% if is_english %}Connecting to real-time updates...{% elif is_chinese %}正在连接实时更新...{% else %}リアルタイム更新に接続中...{% endif %}</p>
+                        <div class="progress mt-3">
+                            <div class="progress-bar progress-bar-striped progress-bar-animated" role="progressbar" id="progress-bar" style="width: 10%"></div>
+                        </div>
+                    </div>
+                    <script>
+                        // Auto-refresh polling for song generation progress
+                        const songId = {{ song.pk }};
+                        let checkCount = 0;
+                        const maxChecks = 18; // 最大3分間チェック
+                        
+                        document.getElementById('connection-status').textContent = '{% if is_english %}Auto-refresh active{% elif is_chinese %}自动更新中{% else %}自動更新中{% endif %}';
+                        
+                        async function checkSongStatus() {
+                            try {
+                                const response = await fetch(`/songs/${songId}/status/`);
+                                const data = await response.json();
+                                
+                                if (data.success) {
+                                    if (data.completed || data.failed) {
+                                        // 完了または失敗時のみリロード
+                                        clearInterval(checkInterval);
+                                        document.getElementById('connection-status').textContent = '{% if is_english %}Reloading...{% elif is_chinese %}正在刷新...{% else %}リロード中...{% endif %}';
+                                        location.reload();
+                                    } else {
+                                        // 進捗バーの更新
+                                        const progress = Math.min(10 + (checkCount * 5), 90);
+                                        document.getElementById('progress-bar').style.width = progress + '%';
+                                    }
+                                }
+                            } catch (error) {
+                                console.error('Status check error:', error);
+                            }
+                        }
+                        
+                        const checkInterval = setInterval(() => {
+                            checkCount++;
+                            if (checkCount >= maxChecks) {
+                                clearInterval(checkInterval);
+                                document.getElementById('connection-status').textContent = '{% if is_english %}Check complete{% elif is_chinese %}检查完成{% else %}チェック完了{% endif %}';
+                                return;
+                            }
+                            console.log('楽曲生成状況をチェック中...', checkCount, '/', maxChecks);
+                            checkSongStatus();
+                        }, 10000); // 10秒ごと
+                        
+                        // 初回チェック
+                        checkSongStatus();
+                    </script>
+                    {% endif %}
+                </div>
+            </div>
+
+            <!-- 公開設定（所有者のみ） -->
+            {% if user == song.created_by %}
+            <div class="privacy-settings-card fade-in">
+                <div class="privacy-header">
+                    <div>
+                        <h3>{% if is_english %}Privacy Settings{% elif is_chinese %}隐私设置{% else %}公開設定{% endif %}</h3>
+                    </div>
+                </div>
+                
+                <div class="privacy-body">
+                    <div class="current-status">
+                        {% if song.is_public %}
+                        <div class="status-public">
+                            <i class="bi bi-globe"></i>
+                            <span>{% if is_english %}This song is <strong>Public</strong>{% elif is_chinese %}这首歌曲<strong>公开</strong>{% else %}この楽曲は<strong>公開中</strong>です{% endif %}</span>
+                        </div>
+                        <p class="status-description">{% if is_english %}Other users can discover and listen to this song in the song list.{% elif is_chinese %}其他用户可以在歌曲列表中发现并收听这首歌曲。{% else %}他のユーザーも楽曲一覧でこの楽曲を発見して聴くことができます。{% endif %}</p>
+                        {% else %}
+                        <div class="status-private">
+                            <i class="bi bi-lock"></i>
+                            <span>{% if is_english %}This song is <strong>Private</strong>{% elif is_chinese %}这首歌曲<strong>私密</strong>{% else %}この楽曲は<strong>プライベート</strong>です{% endif %}</span>
+                        </div>
+                        <p class="status-description">{% if is_english %}Only you can listen to this song. Make it public to let others listen too.{% elif is_chinese %}只有您可以收听这首歌曲。公开后其他用户也可以收听。{% else %}この楽曲はあなただけが聴くことができます。公開すると他のユーザーも聴けるようになります。{% endif %}</p>
+                        {% endif %}
+                    </div>
+                    
+                    <div class="privacy-actions">
+                        {% if song.is_public %}
+                        <button class="btn-privacy-action btn-make-private" onclick="togglePrivacy({{ song.pk }}, false)">
+                            <i class="bi bi-lock"></i>
+                            {% if is_english %}Make Private{% elif is_chinese %}设为私密{% else %}プライベートに変更{% endif %}
+                        </button>
+                        {% else %}
+                        <button class="btn-privacy-action btn-make-public" onclick="confirmAndPublish({{ song.pk }})">
+                            <i class="bi bi-globe"></i>
+                            {% if is_english %}Make Public{% elif is_chinese %}公开{% else %}公開する{% endif %}
+                        </button>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+            {% endif %}
+
+            <!-- 歌詞セクション -->
+            {% if song.lyrics %}
+            <div class="lyrics-card fade-in">
+                <div class="lyrics-header">
+                    <h3>{% if is_english %}Lyrics{% elif is_chinese %}歌词{% else %}歌詞{% endif %}</h3>
+                </div>
+                <div class="lyrics-content">
+                    {{ lyrics_content|remove_asterisks|linebreaks }}
+                </div>
+            </div>
+            {% endif %}
+
+            <!-- コメントセクション -->
+            <div class="comments-card fade-in">
+                <div class="comments-header">
+                    <h3><i class="bi bi-chat-dots"></i> {% if is_english %}Comments{% elif is_chinese %}评论{% else %}コメント{% endif %} ({{ comments.count }})</h3>
+                </div>
+                
+                {% if user.is_authenticated %}
+                <div class="comment-form-section">
+                    <form method="post" action="{% url 'songs:add_comment' song.pk %}" class="comment-form">
+                        {% csrf_token %}
+                        <div class="d-flex gap-3">
+                            <div class="comment-avatar">
+                                <i class="bi bi-person"></i>
+                            </div>
+                            <div class="flex-grow-1">
+                                {{ comment_form.content }}
+                                <div class="comment-actions mt-2">
+                                    <button type="submit" class="btn-gradient-primary">
+                                        <i class="bi bi-send"></i> {% if is_english %}Post{% elif is_chinese %}发布{% else %}投稿{% endif %}
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    </form>
+                </div>
+                {% endif %}
+                
+                <div class="comments-list">
+                    {% for comment in comments %}
+                    <div class="comment-item">
+                        <div class="comment-avatar">
+                            <i class="bi bi-person"></i>
+                        </div>
+                        <div class="comment-content">
+                            <div class="comment-header">
+                                <span class="comment-author">{{ comment.user.username }}</span>
+                                <span class="comment-date">{{ comment.created_at|date:"m/d H:i" }}</span>
+                            </div>
+                            <div class="comment-text">
+                                {{ comment.content|linebreaks }}
+                            </div>
+                        </div>
+                    </div>
+                    {% empty %}
+                    <div class="no-comments">
+                        <i class="bi bi-chat"></i>
+                        <p>{% if is_english %}No comments yet.<br>Be the first to comment!{% elif is_chinese %}还没有评论。<br>来发表第一条评论吧！{% else %}まだコメントがありません。<br>最初のコメントを投稿してみませんか？{% endif %}</p>
+                    </div>
+                    {% endfor %}
+                </div>
+            </div>
+        </div>
+
+        <!-- サイドバー -->
+        <div class="col-lg-4">
+            <!-- アクションパネル -->
+            <div class="action-panel fade-in">
+                <h4>{% if is_english %}About This Song{% elif is_chinese %}关于这首歌{% else %}この楽曲について{% endif %}</h4>
+                
+                <!-- 統計情報 -->
+                <div class="stats-grid">
+                    <div class="stat-box">
+                        <div class="stat-icon">
+                            <i class="bi bi-heart-fill"></i>
+                        </div>
+                        <div class="stat-value">{{ song.likes_count }}</div>
+                        <div class="stat-label">{% if is_english %}Likes{% elif is_chinese %}喜欢{% else %}いいね{% endif %}</div>
+                    </div>
+                    <div class="stat-box">
+                        <div class="stat-icon">
+                            <i class="bi bi-chat-dots"></i>
+                        </div>
+                        <div class="stat-value">{{ comments.count }}</div>
+                        <div class="stat-label">{% if is_english %}Comments{% elif is_chinese %}评论{% else %}コメント{% endif %}</div>
+                    </div>
+                    <div class="stat-box">
+                        <div class="stat-icon">
+                            <i class="bi bi-play-circle-fill"></i>
+                        </div>
+                        <div class="stat-value" id="total-plays">{{ song.total_plays|default:0 }}</div>
+                        <div class="stat-label">{% if is_english %}Plays{% elif is_chinese %}播放{% else %}再生回数{% endif %}</div>
+                    </div>
+                </div>
+
+                <!-- アクションボタン -->
+                {% if user.is_authenticated %}
+                <div class="action-buttons">
+                    <button class="action-button like-button" onclick="toggleLike({{ song.pk }})" id="like-btn-{{ song.pk }}">
+                        <i class="bi bi-heart{% if is_liked %}-fill{% endif %}"></i>
+                        <span>{% if is_liked %}{% if is_english %}Liked{% elif is_chinese %}已喜欢{% else %}いいね済み{% endif %}{% else %}{% if is_english %}Like{% elif is_chinese %}喜欢{% else %}いいね{% endif %}{% endif %}</span>
+                    </button>
+                    <button class="action-button favorite-button" onclick="toggleFavorite({{ song.pk }})" id="fav-btn-{{ song.pk }}">
+                        <i class="bi bi-bookmark{% if is_favorited %}-fill{% endif %}"></i>
+                        <span>{% if is_favorited %}{% if is_english %}Saved{% elif is_chinese %}已收藏{% else %}お気に入り済み{% endif %}{% else %}{% if is_english %}Save{% elif is_chinese %}收藏{% else %}お気に入り{% endif %}{% endif %}</span>
+                    </button>
+                </div>
+                {% else %}
+                <div class="auth-prompt">
+                    <p>{% if is_english %}Please log in to<br>like or comment{% elif is_chinese %}请登录后<br>点赞或评论{% else %}いいねやコメントをするには<br>ログインが必要です{% endif %}</p>
+                    <a href="{% url 'users:login' %}" class="btn-gradient-primary">
+                        <i class="bi bi-box-arrow-in-right"></i> {% if is_english %}Login{% elif is_chinese %}登录{% else %}ログイン{% endif %}
+                    </a>
+                </div>
+                {% endif %}
+            </div>
+
+            <!-- 関連楽曲 -->
+            <div class="related-songs fade-in">
+                <h4>{% if is_english %}Related Songs{% elif is_chinese %}相关歌曲{% else %}関連楽曲{% endif %}</h4>
+                <div class="related-list">
+                    {% for related in related_songs %}
+                    <a href="{% url 'songs:song_detail' related.pk %}" class="related-song-item">
+                        <div class="related-song-info">
+                            <div class="related-song-title">{{ related.title|truncatechars:25 }}</div>
+                            <div class="related-song-artist">{{ related.created_by.username }}</div>
+                        </div>
+                        <div class="related-song-likes">
+                            <i class="bi bi-heart-fill"></i> {{ related.likes_count }}
+                        </div>
+                    </a>
+                    {% empty %}
+                    <div class="related-placeholder">
+                        <i class="bi bi-music-note-list"></i>
+                        <p>{% if is_english %}No related songs yet{% elif is_chinese %}暂无相关歌曲{% else %}関連楽曲がまだありません{% endif %}</p>
+                    </div>
+                    {% endfor %}
+                </div>
+            </div>
+
+            <!-- ダウンロードセクション -->
+            {% if song.audio_file or song.audio_url %}
+            <div class="download-section fade-in">
+                <h4>{% if is_english %}Download{% elif is_chinese %}下载{% else %}ダウンロード{% endif %}</h4>
+                <div class="download-buttons">
+                    {% if song.audio_file %}
+                    <a href="{{ song.audio_file.url }}" download="{{ song.title }}.mp3" class="btn-download">
+                        <i class="bi bi-download"></i> {% if is_english %}Download MP3{% elif is_chinese %}下载MP3{% else %}MP3ダウンロード{% endif %}
+                    </a>
+                    {% elif song.audio_url %}
+                    <a href="{{ song.audio_url }}" download="{{ song.title }}.mp3" class="btn-download" target="_blank">
+                        <i class="bi bi-download"></i> {% if is_english %}Download MP3{% elif is_chinese %}下载MP3{% else %}MP3ダウンロード{% endif %}
+                    </a>
+                    {% if song.api_provider == 'mureka' %}
+                    <button type="button" class="btn-download-advanced" onclick="downloadMurekaAudio('{{ song.audio_url }}', '{{ song.title }}')">
+                        <i class="bi bi-cloud-download"></i> {% if is_english %}HD Download{% elif is_chinese %}高清下载{% else %}高音質ダウンロード{% endif %}
+                    </button>
+                    {% endif %}
+                    {% endif %}
+                </div>
+            </div>
+            {% endif %}
+        </div>
+    </div>
+</div>
+        </div>
+    </div>
+</div>
+
+<style>
+/* ダウンロードセクション */
+.download-section {
+    background: var(--surface);
+    border-radius: var(--radius-xl);
+    padding: 2rem;
+    box-shadow: var(--shadow-md);
+    border: 1px solid rgba(255, 121, 64, 0.1);
+    margin-top: 1.5rem;
+}
+
+.download-section h4 {
+    margin: 0 0 1rem 0;
+    color: var(--text-primary);
+    font-size: 1rem;
+    font-weight: 600;
+}
+
+.download-buttons {
+    display: flex;
+    flex-direction: column;
+    gap: 0.75rem;
+}
+
+.download-buttons .btn-download,
+.download-buttons .btn-download-advanced {
+    width: 100%;
+    justify-content: center;
+}
+
+/* 関連楽曲リスト */
+.related-song-item {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    padding: 0.75rem;
+    border-radius: var(--radius-md);
+    text-decoration: none;
+    color: var(--text-primary);
+    transition: all 0.2s ease;
+    border: 1px solid transparent;
+}
+
+.related-song-item:hover {
+    background: var(--surface-elevated);
+    border-color: var(--border-color);
+    text-decoration: none;
+    color: var(--text-primary);
+}
+
+.related-song-icon {
+    width: 40px;
+    height: 40px;
+    border-radius: var(--radius-md);
+    background: var(--accent-gradient);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: white;
+    flex-shrink: 0;
+}
+
+.related-song-info {
+    flex: 1;
+    min-width: 0;
+}
+
+.related-song-title {
+    font-weight: 600;
+    font-size: 0.95rem;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.related-song-artist {
+    font-size: 0.8rem;
+    color: var(--text-muted);
+}
+
+.related-song-likes {
+    font-size: 0.8rem;
+    color: var(--text-muted);
+    display: flex;
+    align-items: center;
+    gap: 0.25rem;
+}
+
+.related-song-likes i {
+    color: #e74c3c;
+    font-size: 0.7rem;
+}
+
+/* 楽曲ヘッダーカード */
+.song-header-card {
+    background: var(--surface);
+    border-radius: var(--radius-xl);
+    overflow: hidden;
+    box-shadow: var(--shadow-lg);
+    margin-bottom: 2rem;
+    border: 1px solid rgba(255, 121, 64, 0.1);
+}
+
+.song-cover-section {
+    height: 300px;
+    position: relative;
+    overflow: hidden;
+}
+
+.song-main-cover {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+}
+
+.song-main-placeholder {
+    width: 100%;
+    height: 100%;
+    background: linear-gradient(135deg, rgba(255, 121, 64, 0.1) 0%, rgba(255, 107, 53, 0.2) 100%);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.song-info-section {
+    padding: 2rem;
+}
+
+.song-main-title {
+    font-size: 2.5rem;
+    font-weight: 800;
+    color: var(--text-primary);
+    margin-bottom: 0.5rem;
+    line-height: 1.2;
+}
+
+.main-genre-badge {
+    background: var(--primary-gradient);
+    color: white;
+    padding: 0.5rem 1rem;
+    border-radius: var(--radius-lg);
+    font-weight: 600;
+    font-size: 0.9rem;
+}
+
+.creator-section {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+    padding: 1rem;
+    background: var(--surface-elevated);
+    border-radius: var(--radius-lg);
+    border: 1px solid var(--border-color);
+}
+
+.creator-avatar-large {
+    width: 3rem;
+    height: 3rem;
+    border-radius: 50%;
+    background: var(--accent-gradient);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: white;
+    font-size: 1.2rem;
+    overflow: hidden;
+}
+
+.creator-avatar-large .creator-avatar-img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+}
+
+.creator-name-large {
+    font-weight: 700;
+    font-size: 1.1rem;
+    color: var(--text-primary);
+}
+
+.creation-date-large {
+    color: var(--text-muted);
+    font-size: 0.9rem;
+}
+
+.tags-section {
+    padding: 0.75rem 1rem;
+    background: var(--surface-elevated);
+    border-radius: var(--radius-lg);
+    border: 1px solid var(--border-color);
+}
+
+.tags-container {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+}
+
+.tag-badge {
+    background: linear-gradient(135deg, #ff7940 0%, #ff6b35 100%);
+    color: white;
+    padding: 0.4rem 0.8rem;
+    border-radius: var(--radius-md);
+    font-size: 0.85rem;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    display: inline-block;
+}
+
+.tag-badge:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(102, 126, 234, 0.4);
+}
+
+/* 音楽プレイヤーカード */
+.music-player-card {
+    background: var(--surface);
+    border-radius: var(--radius-xl);
+    box-shadow: var(--shadow-md);
+    margin-bottom: 2rem;
+    border: 1px solid rgba(255, 121, 64, 0.1);
+    overflow: hidden;
+}
+
+.player-header {
+    background: var(--primary-gradient);
+    color: white;
+    padding: 1.5rem;
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+}
+
+.player-icon {
+    font-size: 2rem;
+}
+
+.player-body {
+    padding: 2rem;
+}
+
+.custom-audio-player {
+    width: 100%;
+    max-width: 100%;
+    border-radius: var(--radius-md);
+    background: var(--surface-elevated);
+}
+
+.audio-note {
+    margin-top: 1rem;
+    padding: 1rem;
+    background: rgba(255, 193, 7, 0.1);
+    border: 1px solid rgba(255, 193, 7, 0.3);
+    border-radius: var(--radius-md);
+    color: #856404;
+    font-size: 0.9rem;
+}
+
+.audio-placeholder {
+    text-align: center;
+    padding: 3rem 1rem;
+    color: var(--text-muted);
+}
+
+.audio-placeholder i {
+    font-size: 3rem;
+    margin-bottom: 1rem;
+    color: var(--primary-color);
+}
+
+.spinning-icon {
+    animation: spin 2s linear infinite;
+}
+
+@keyframes spin {
+    from {
+        transform: rotate(0deg);
+    }
+    to {
+        transform: rotate(360deg);
+    }
+}
+
+.queue-info {
+    margin: 1.5rem 0;
+    padding: 1.5rem;
+    background: linear-gradient(135deg, rgba(255, 193, 7, 0.1) 0%, rgba(255, 152, 0, 0.1) 100%);
+    border: 2px solid rgba(255, 193, 7, 0.3);
+    border-radius: var(--radius-lg);
+}
+
+.queue-number {
+    font-size: 3rem;
+    font-weight: 800;
+    color: var(--primary-color);
+    margin-bottom: 0.5rem;
+}
+
+.queue-info p {
+    font-size: 1.1rem;
+    color: var(--text-primary);
+    margin: 0;
+}
+
+.auto-refresh-note {
+    font-size: 0.9rem;
+    color: var(--text-muted);
+    margin-top: 1rem;
+}
+
+/* 歌詞カード */
+.lyrics-card {
+    background: var(--surface);
+    border-radius: var(--radius-xl);
+    box-shadow: var(--shadow-md);
+    margin-bottom: 2rem;
+    border: 1px solid rgba(255, 121, 64, 0.1);
+}
+
+.lyrics-header {
+    padding: 1.5rem 2rem;
+    border-bottom: 1px solid var(--border-color);
+    display: flex;
+    justify-content: between;
+    align-items: center;
+}
+
+.lyrics-header h3 {
+    margin: 0;
+    color: var(--text-primary);
+}
+
+.lyrics-badge {
+    background: var(--secondary-gradient);
+    color: white;
+    padding: 0.25rem 0.75rem;
+    border-radius: var(--radius-md);
+    font-size: 0.8rem;
+    font-weight: 600;
+}
+
+.lyrics-content {
+    padding: 2rem;
+    font-size: 1.1rem;
+    line-height: 1.8;
+    color: var(--text-primary);
+    white-space: pre-line;
+    background: linear-gradient(135deg, rgba(255, 255, 255, 0.8) 0%, rgba(255, 244, 240, 0.5) 100%);
+}
+
+.original-text-section {
+    padding: 1.5rem 2rem;
+    border-top: 1px solid var(--border-color);
+    background: var(--surface-elevated);
+}
+
+.original-text-section h4 {
+    color: var(--text-secondary);
+    margin-bottom: 1rem;
+    font-size: 1rem;
+}
+
+.original-text {
+    color: var(--text-muted);
+    font-size: 0.9rem;
+    line-height: 1.6;
+    padding: 1rem;
+    background: var(--surface);
+    border-radius: var(--radius-md);
+    border: 1px solid var(--border-color);
+}
+
+/* コメントカード */
+.comments-card {
+    background: var(--surface);
+    border-radius: var(--radius-xl);
+    box-shadow: var(--shadow-md);
+    margin-bottom: 2rem;
+    border: 1px solid rgba(255, 121, 64, 0.1);
+}
+
+.comments-header {
+    padding: 1.5rem 2rem;
+    border-bottom: 1px solid var(--border-color);
+}
+
+.comments-header h3 {
+    margin: 0;
+    color: var(--text-primary);
+}
+
+.comment-form-section {
+    padding: 1.5rem 2rem;
+    border-bottom: 1px solid var(--border-color);
+    background: var(--surface-elevated);
+}
+
+.comment-avatar {
+    width: 2.5rem;
+    height: 2.5rem;
+    border-radius: 50%;
+    background: var(--accent-gradient);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: white;
+    flex-shrink: 0;
+}
+
+.comment-form textarea {
+    border: 1px solid var(--border-color);
+    border-radius: var(--radius-md);
+    padding: 1rem;
+    resize: vertical;
+    min-height: 100px;
+}
+
+.comment-actions {
+    display: flex;
+    justify-content: flex-end;
+}
+
+.comments-list {
+    padding: 1.5rem 2rem;
+}
+
+.comment-item {
+    display: flex;
+    gap: 1rem;
+    margin-bottom: 1.5rem;
+    padding-bottom: 1.5rem;
+    border-bottom: 1px solid var(--border-color);
+}
+
+.comment-item:last-child {
+    margin-bottom: 0;
+    padding-bottom: 0;
+    border-bottom: none;
+}
+
+.comment-content {
+    flex-grow: 1;
+}
+
+.comment-header {
+    display: flex;
+    justify-content: between;
+    align-items: center;
+    margin-bottom: 0.5rem;
+}
+
+.comment-author {
+    font-weight: 700;
+    color: var(--text-primary);
+}
+
+.comment-date {
+    color: var(--text-muted);
+    font-size: 0.9rem;
+}
+
+.comment-text {
+    color: var(--text-secondary);
+    line-height: 1.6;
+}
+
+.no-comments {
+    text-align: center;
+    padding: 3rem 1rem;
+    color: var(--text-muted);
+}
+
+.no-comments i {
+    font-size: 3rem;
+    margin-bottom: 1rem;
+    color: var(--primary-color);
+}
+
+/* サイドバー */
+.action-panel {
+    background: var(--surface);
+    border-radius: var(--radius-xl);
+    padding: 2rem;
+    box-shadow: var(--shadow-md);
+    margin-bottom: 2rem;
+    border: 1px solid rgba(255, 121, 64, 0.1);
+}
+
+.action-panel h4 {
+    margin-bottom: 1.5rem;
+    color: var(--text-primary);
+}
+
+.stats-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 1rem;
+    margin-bottom: 2rem;
+}
+
+.stat-box {
+    text-align: center;
+    padding: 1rem;
+    background: var(--surface-elevated);
+    border-radius: var(--radius-md);
+    border: 1px solid var(--border-color);
+}
+
+.stat-icon {
+    font-size: 1.5rem;
+    color: var(--primary-color);
+    margin-bottom: 0.5rem;
+}
+
+.stat-value {
+    font-size: 1.2rem;
+    font-weight: 700;
+    color: var(--text-primary);
+}
+
+.stat-label {
+    font-size: 0.8rem;
+    color: var(--text-muted);
+}
+
+.action-buttons {
+    display: flex;
+    flex-direction: column;
+    gap: 0.75rem;
+}
+
+.action-button {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.5rem;
+    padding: 0.75rem 1rem;
+    border: 2px solid var(--border-color);
+    border-radius: var(--radius-md);
+    background: var(--surface);
+    color: var(--text-primary);
+    font-weight: 600;
+    transition: all 0.3s ease;
+    cursor: pointer;
+}
+
+.action-button:hover {
+    border-color: var(--primary-color);
+    background: var(--primary-color);
+    color: white;
+    transform: translateY(-2px);
+}
+
+.action-button.active {
+    background: var(--primary-gradient);
+    border-color: var(--primary-color);
+    color: white;
+}
+
+.auth-prompt {
+    text-align: center;
+    padding: 2rem 1rem;
+    color: var(--text-muted);
+}
+
+.related-songs {
+    background: var(--surface);
+    border-radius: var(--radius-xl);
+    padding: 2rem;
+    box-shadow: var(--shadow-md);
+    border: 1px solid rgba(255, 121, 64, 0.1);
+}
+
+.related-songs h4 {
+    margin-bottom: 1.5rem;
+    color: var(--text-primary);
+}
+
+.related-placeholder {
+    text-align: center;
+    padding: 2rem 1rem;
+    color: var(--text-muted);
+}
+
+.related-placeholder i {
+    font-size: 2rem;
+    margin-bottom: 1rem;
+    color: var(--primary-color);
+}
+
+/* アニメーション */
+.fade-in {
+    animation: fadeInUp 0.6s ease forwards;
+}
+
+.fade-in:nth-child(2) { animation-delay: 0.2s; }
+.fade-in:nth-child(3) { animation-delay: 0.4s; }
+.fade-in:nth-child(4) { animation-delay: 0.6s; }
+
+@keyframes fadeInUp {
+    from {
+        opacity: 0;
+        transform: translateY(30px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+/* レスポンシブ調整 */
+@media (max-width: 768px) {
+    .song-main-title {
+        font-size: 2rem;
+    }
+    
+    .song-info-section {
+        padding: 1.5rem;
+    }
+    
+    .stats-grid {
+        grid-template-columns: 1fr;
+    }
+    
+    .creator-section {
+        flex-direction: column;
+        text-align: center;
+    }
+}
+</style>
+
+<script>
+// コメントプレースホルダーを言語に応じて設定
+document.addEventListener('DOMContentLoaded', function() {
+    const commentTextarea = document.querySelector('#id_content');
+    if (commentTextarea) {
+        {% if is_english %}
+        commentTextarea.placeholder = 'Write a comment...';
+        {% elif is_chinese %}
+        commentTextarea.placeholder = '输入评论...';
+        {% else %}
+        commentTextarea.placeholder = 'コメントを入力してください...';
+        {% endif %}
+    }
+});
+
+// 再生回数を記録
+let playRecorded = false;
+document.addEventListener('DOMContentLoaded', function() {
+    const audioPlayer = document.querySelector('.custom-audio-player');
+    if (audioPlayer) {
+        audioPlayer.addEventListener('play', function() {
+            if (!playRecorded) {
+                playRecorded = true;
+                recordPlay({{ song.pk }});
+            }
+        });
+    }
+});
+
+function recordPlay(songId) {
+    fetch(`/songs/${songId}/play/`, {
+        method: 'POST',
+        headers: {
+            'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]')?.value || '',
+            'X-Requested-With': 'XMLHttpRequest'
+        }
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            const totalPlaysEl = document.getElementById('total-plays');
+            if (totalPlaysEl) {
+                totalPlaysEl.textContent = data.total_plays;
+            }
+        }
+    })
+    .catch(error => console.error('Play record error:', error));
+}
+
+function toggleLike(songId) {
+    const csrfToken = document.querySelector('[name=csrfmiddlewaretoken]');
+    if (!csrfToken) {
+        alert('{% if is_english %}Please login to like{% elif is_chinese %}请登录后点赞{% else %}いいねするにはログインが必要です{% endif %}');
+        return;
+    }
+    
+    fetch(`/songs/${songId}/like/`, {
+        method: 'POST',
+        headers: {
+            'X-CSRFToken': csrfToken.value,
+            'X-Requested-With': 'XMLHttpRequest'
+        }
+    })
+    .then(response => {
+        if (!response.ok) {
+            throw new Error('Network response was not ok');
+        }
+        return response.json();
+    })
+    .then(data => {
+        const likeBtn = document.getElementById(`like-btn-${songId}`);
+        const likeBtnIcon = likeBtn.querySelector('i');
+        const likeBtnText = likeBtn.querySelector('span');
+        
+        if (data.liked) {
+            likeBtn.classList.add('active');
+            likeBtnIcon.className = 'bi bi-heart-fill';
+            likeBtnText.textContent = '{% if is_english %}Liked{% elif is_chinese %}已喜欢{% else %}いいね済み{% endif %}';
+        } else {
+            likeBtn.classList.remove('active');
+            likeBtnIcon.className = 'bi bi-heart';
+            likeBtnText.textContent = '{% if is_english %}Like{% elif is_chinese %}喜欢{% else %}いいね{% endif %}';
+        }
+        
+        // 統計も更新
+        const statValue = document.querySelector('.stat-box .stat-value');
+        if (statValue) {
+            statValue.textContent = data.likes_count;
+        }
+    })
+    .catch(error => {
+        console.error('Error:', error);
+        alert('{% if is_english %}An error occurred{% elif is_chinese %}发生错误{% else %}エラーが発生しました{% endif %}');
+    });
+}
+
+function toggleFavorite(songId) {
+    const csrfToken = document.querySelector('[name=csrfmiddlewaretoken]');
+    if (!csrfToken) {
+        alert('{% if is_english %}Please login{% elif is_chinese %}请登录{% else %}ログインが必要です{% endif %}');
+        return;
+    }
+    
+    fetch(`/songs/${songId}/favorite/`, {
+        method: 'POST',
+        headers: {
+            'X-CSRFToken': csrfToken.value,
+            'X-Requested-With': 'XMLHttpRequest'
+        }
+    })
+    .then(response => {
+        if (!response.ok) {
+            throw new Error('Network response was not ok');
+        }
+        return response.json();
+    })
+    .then(data => {
+        const favBtn = document.getElementById(`fav-btn-${songId}`);
+        const favBtnIcon = favBtn.querySelector('i');
+        const favBtnText = favBtn.querySelector('span');
+        
+        if (data.favorited) {
+            favBtn.classList.add('active');
+            favBtnIcon.className = 'bi bi-bookmark-fill';
+            favBtnText.textContent = '{% if is_english %}Saved{% elif is_chinese %}已收藏{% else %}お気に入り済み{% endif %}';
+        } else {
+            favBtn.classList.remove('active');
+            favBtnIcon.className = 'bi bi-bookmark';
+            favBtnText.textContent = '{% if is_english %}Save{% elif is_chinese %}收藏{% else %}お気に入り{% endif %}';
+        }
+    })
+    .catch(error => console.error('Error:', error));
+}
+</script>
+
+                </div>
+            </div>
+        </div>
+        
+        <!-- サイドバー（下部重複セクション - 非表示） -->
+        <div class="col-lg-4" style="display: none;">
+            <!-- 歌詞表示 -->
+            {% if song.lyrics %}
+            <div class="card-modern mb-4">
+                <div class="card-header" style="background: var(--primary-color); color: white;">
+                    <h5 class="mb-0">
+                        <i class="bi bi-file-text"></i> {% if is_english %}Lyrics{% elif is_chinese %}歌词{% else %}歌詞{% endif %}
+                    </h5>
+                </div>
+                <div class="card-body">
+                    {% if decrypted_lyrics %}
+                    <div style="white-space: pre-line; font-size: 0.95rem; line-height: 1.6;">
+                        {{ lyrics_content|remove_asterisks }}
+                    </div>
+                    {% else %}
+                    <div class="text-muted">
+                        <i class="bi bi-lock"></i> {% if is_english %}This song is private.{% elif is_chinese %}这首歌曲是私密的。{% else %}この楽曲は非公開です。{% endif %}
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+            {% endif %}
+            
+            <!-- 作成者情報 -->
+            <div class="card-modern mb-4">
+                <div class="card-header" style="background: var(--secondary-color); color: white;">
+                    <h5 class="mb-0">
+                        <i class="bi bi-person"></i> {% if is_english %}Creator{% elif is_chinese %}创作者{% else %}作成者{% endif %}
+                    </h5>
+                </div>
+                <div class="card-body text-center">
+                    {% if song.created_by.profile_image_data %}
+                    <img src="{{ song.created_by.profile_image_data }}" class="rounded-circle mb-3" 
+                         style="width: 80px; height: 80px; object-fit: cover;" alt="{{ song.created_by.username }}">
+                    {% elif song.created_by.profile_image and song.created_by.profile_image.name %}
+                    <img src="{{ song.created_by.profile_image.url }}" class="rounded-circle mb-3" 
+                         style="width: 80px; height: 80px; object-fit: cover;" alt="{{ song.created_by.username }}"
+                         onerror="this.style.display='none'; this.nextElementSibling.style.display='flex';">
+                    <div class="bg-secondary rounded-circle mx-auto mb-3 d-flex align-items-center justify-content-center" 
+                         style="width: 80px; height: 80px; display: none;">
+                        <i class="bi bi-person text-white" style="font-size: 2rem;"></i>
+                    </div>
+                    {% else %}
+                    <div class="bg-secondary rounded-circle mx-auto mb-3 d-flex align-items-center justify-content-center" 
+                         style="width: 80px; height: 80px;">
+                        <i class="bi bi-person text-white" style="font-size: 2rem;"></i>
+                    </div>
+                    {% endif %}
+                    
+                    <h6 class="card-title">{{ song.created_by.username }}</h6>
+                    {% if song.created_by.bio %}
+                    <p class="card-text small text-muted">{{ song.created_by.bio|truncatewords:20 }}</p>
+                    {% endif %}
+                    <a href="{% url 'users:profile' song.created_by.username %}" class="btn btn-outline-primary btn-sm">
+                        <i class="bi bi-person-lines-fill"></i> {% if is_english %}View Profile{% elif is_chinese %}查看资料{% else %}プロフィールを見る{% endif %}
+                    </a>
+                </div>
+            </div>
+            
+            <!-- おすすめ楽曲 -->
+            <div class="card-modern">
+                <div class="card-header" style="background: var(--accent-color); color: white;">
+                    <h5 class="mb-0">
+                        <i class="bi bi-music-note-list"></i> {% if is_english %}Other Songs{% elif is_chinese %}其他歌曲{% else %}他の楽曲{% endif %}
+                    </h5>
+                </div>
+                <div class="card-body p-0">
+                    {% for related_song in song.created_by.songs.all|slice:":3" %}
+                        {% if related_song.pk != song.pk %}
+                        <a href="{% url 'songs:song_detail' related_song.pk %}" class="list-group-item list-group-item-action border-0">
+                            <div class="d-flex align-items-center">
+                                <div class="bg-primary rounded me-3 d-flex align-items-center justify-content-center" 
+                                     style="width: 40px; height: 40px; min-width: 40px;">
+                                    <i class="bi bi-music-note text-white"></i>
+                                </div>
+                                <div class="flex-grow-1">
+                                    <h6 class="mb-1 text-truncate">{{ related_song.title }}</h6>
+                                    <small class="text-muted">
+                                        <i class="bi bi-heart-fill text-danger"></i> {{ related_song.likes_count }}
+                                    </small>
+                                </div>
+                            </div>
+                        </a>
+                        {% endif %}
+                    {% empty %}
+                    <div class="p-3 text-center text-muted">
+                        <p class="mb-0">{% if is_english %}No other songs from this creator yet{% elif is_chinese %}该创作者暂无其他歌曲{% else %}この作成者の他の楽曲はまだありません{% endif %}</p>
+                    </div>
+                    {% endfor %}
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- コメントセクション（下部重複 - 非表示） -->
+    {% if user.is_authenticated %}
+    <div class="row mt-5" style="display: none;">
+        <div class="col-12">
+            <div class="card-modern">
+                <div class="card-header" style="background: linear-gradient(135deg, #ffeaa7 0%, #fab1a0 100%); color: #2d3436;">
+                    <h5 class="mb-0">
+                        <i class="bi bi-chat-dots"></i> {% if is_english %}Comments{% elif is_chinese %}评论{% else %}コメント{% endif %} ({{ comments.count }})
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <!-- コメント投稿フォーム -->
+                    <form method="post" action="{% url 'songs:add_comment' song.pk %}" class="mb-4">
+                        {% csrf_token %}
+                        <div class="mb-3">
+                            {{ comment_form.content }}
+                        </div>
+                        <button type="submit" class="btn-gradient-primary">
+                            <i class="bi bi-send"></i> {% if is_english %}Post Comment{% elif is_chinese %}发表评论{% else %}コメントする{% endif %}
+                        </button>
+                    </form>
+                    
+                    <!-- コメント一覧 -->
+                    {% for comment in comments %}
+                    <div class="border-bottom pb-3 mb-3">
+                        <div class="d-flex align-items-start">
+                            <div class="bg-secondary rounded-circle me-3 d-flex align-items-center justify-content-center" 
+                                 style="width: 40px; height: 40px; min-width: 40px;">
+                                <i class="bi bi-person text-white"></i>
+                            </div>
+                            <div class="flex-grow-1">
+                                <div class="d-flex align-items-center mb-1">
+                                    <strong class="me-2">{{ comment.user.username }}</strong>
+                                    <small class="text-muted">{{ comment.created_at|timesince }}{% if is_english %} ago{% elif is_chinese %}前{% else %}前{% endif %}</small>
+                                </div>
+                                <p class="mb-0" style="white-space: pre-line;">{{ comment.content }}</p>
+                            </div>
+                        </div>
+                    </div>
+                    {% empty %}
+                    <div class="text-center text-muted py-4">
+                        <i class="bi bi-chat" style="font-size: 3rem;"></i>
+                        <p class="mt-2">{% if is_english %}No comments yet.<br>Be the first to comment!{% elif is_chinese %}还没有评论。<br>来发表第一条评论吧！{% else %}まだコメントがありません。<br>最初のコメントを投稿しませんか？{% endif %}</p>
+                    </div>
+                    {% endfor %}
+                </div>
+            </div>
+        </div>
+    </div>
+    {% endif %}
+</div>
+
+<style>
+.card-modern {
+    border-radius: var(--radius-lg);
+    overflow: hidden;
+    transition: all 0.3s ease;
+}
+
+.card-modern:hover {
+    transform: translateY(-2px);
+    box-shadow: var(--shadow-lg);
+}
+
+.list-group-item {
+    transition: background-color 0.2s ease;
+    border: none;
+}
+
+.list-group-item:hover {
+    background-color: var(--surface-elevated);
+}
+
+audio {
+    border-radius: var(--radius-md);
+}
+
+/* 音楽プレーヤー関連 */
+.audio-controls {
+    width: 100%;
+}
+
+.custom-audio-player {
+    width: 100%;
+    height: 50px;
+    border-radius: var(--radius-lg);
+    outline: none;
+}
+
+.audio-actions {
+    display: flex;
+    gap: 1rem;
+    flex-wrap: wrap;
+    justify-content: center;
+}
+
+.btn-download {
+    background: var(--primary-gradient);
+    color: white;
+    padding: 0.75rem 1.5rem;
+    border-radius: var(--radius-md);
+    text-decoration: none;
+    font-weight: 600;
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+    transition: all 0.3s ease;
+    border: none;
+    cursor: pointer;
+}
+
+.btn-download:hover {
+    color: white;
+    text-decoration: none;
+    transform: translateY(-2px);
+    box-shadow: var(--shadow-md);
+}
+
+.btn-download-advanced {
+    background: linear-gradient(135deg, #28a745 0%, #20c997 100%);
+    color: white;
+    padding: 0.75rem 1.5rem;
+    border-radius: var(--radius-md);
+    font-weight: 600;
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+    transition: all 0.3s ease;
+    border: none;
+    cursor: pointer;
+}
+
+.btn-download-advanced:hover {
+    transform: translateY(-2px);
+    box-shadow: var(--shadow-md);
+}
+
+.audio-note {
+    font-size: 0.9rem;
+    color: var(--text-secondary);
+    text-align: center;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.5rem;
+}
+
+@media (max-width: 768px) {
+    .d-flex.gap-2 {
+        flex-direction: column;
+    }
+    
+    .d-flex.gap-2 > * {
+        margin-bottom: 0.5rem;
+    }
+}
+</style>
+
+<script>
+// 共有機能
+function shareVia(method) {
+    const url = window.location.href;
+    const title = '{{ song.title }} - UTAMEMO';
+    
+    if (method === 'copy') {
+        navigator.clipboard.writeText(url).then(() => {
+            alert('{% if is_english %}URL copied to clipboard!{% elif is_chinese %}链接已复制到剪贴板！{% else %}URLがクリップボードにコピーされました！{% endif %}');
+        });
+    }
+}
+
+// Mureka音声ダウンロード機能
+function downloadMurekaAudio(audioUrl, songTitle) {
+    // ダウンロードボタンを無効化
+    const button = event.target.closest('button');
+    const originalText = button.innerHTML;
+    button.disabled = true;
+    button.innerHTML = '<i class="bi bi-hourglass-split"></i> {% if is_english %}Downloading...{% elif is_chinese %}下载中...{% else %}ダウンロード中...{% endif %}';
+    
+    try {
+        // 新しいwindowでダウンロード開始
+        const link = document.createElement('a');
+        link.href = audioUrl;
+        link.download = `${songTitle}.mp3`;
+        link.target = '_blank';
+        link.rel = 'noopener noreferrer';
+        
+        // 一時的にbodyに追加してクリック
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+        
+        // 成功メッセージ
+        setTimeout(() => {
+            button.disabled = false;
+            button.innerHTML = '<i class="bi bi-check"></i> {% if is_english %}Download started!{% elif is_chinese %}下载已开始！{% else %}ダウンロード開始！{% endif %}';
+            
+            setTimeout(() => {
+                button.innerHTML = originalText;
+            }, 2000);
+        }, 1000);
+        
+    } catch (error) {
+        console.error('Download error:', error);
+        button.disabled = false;
+        button.innerHTML = '<i class="bi bi-x"></i> {% if is_english %}Error{% elif is_chinese %}错误{% else %}エラー{% endif %}';
+        
+        setTimeout(() => {
+            button.innerHTML = originalText;
+        }, 2000);
+    }
+}
+
+// オーディオプレーヤー制御
+document.addEventListener('DOMContentLoaded', function() {
+    const audioPlayer = document.querySelector('.custom-audio-player');
+    
+    if (audioPlayer) {
+        // 読み込み完了時
+        audioPlayer.addEventListener('loadedmetadata', function() {
+            console.log('Audio loaded, duration:', audioPlayer.duration);
+        });
+        
+        // エラーハンドリング
+        audioPlayer.addEventListener('error', function(e) {
+            console.error('Audio playback error:', e);
+            const errorDiv = document.createElement('div');
+            errorDiv.className = 'alert alert-warning mt-3';
+            errorDiv.innerHTML = '<i class="bi bi-exclamation-triangle"></i> {% if is_english %}Failed to load audio. Please check the URL directly.{% elif is_chinese %}音频加载失败，请直接检查链接。{% else %}音声の読み込みに失敗しました。URLを直接確認してください。{% endif %}';
+            audioPlayer.parentNode.appendChild(errorDiv);
+        });
+    }
+});
+
+// CSRFトークンを取得
+function getCSRFToken() {
+    const token = document.querySelector('[name=csrfmiddlewaretoken]');
+    return token ? token.value : null;
+}
+
+// いいね機能
+function toggleLike(songId) {
+    const csrfToken = getCSRFToken();
+    if (!csrfToken) {
+        alert('{% if is_english %}Please login to like{% elif is_chinese %}请登录后点赞{% else %}いいねするにはログインが必要です{% endif %}');
+        return;
+    }
+    
+    fetch(`/songs/${songId}/like/`, {
+        method: 'POST',
+        headers: {
+            'X-Requested-With': 'XMLHttpRequest',
+            'X-CSRFToken': csrfToken,
+            'Content-Type': 'application/json',
+        },
+    })
+    .then(response => {
+        if (!response.ok) {
+            throw new Error('Network response was not ok');
+        }
+        return response.json();
+    })
+    .then(data => {
+        const likeBtn = document.getElementById(`like-btn-${songId}`);
+        const likeCount = document.getElementById(`like-count-${songId}`);
+        
+        if (data.liked) {
+            likeBtn.innerHTML = '<i class="bi bi-heart-fill"></i> {% if is_english %}Liked{% elif is_chinese %}已喜欢{% else %}いいね済み{% endif %}';
+            likeBtn.classList.remove('btn-outline-danger');
+            likeBtn.classList.add('btn-danger');
+        } else {
+            likeBtn.innerHTML = '<i class="bi bi-heart"></i> {% if is_english %}Like{% elif is_chinese %}喜欢{% else %}いいね{% endif %}';
+            likeBtn.classList.remove('btn-danger');
+            likeBtn.classList.add('btn-outline-danger');
+        }
+        
+        if (likeCount) {
+            likeCount.textContent = data.likes_count;
+        }
+    })
+    .catch(error => {
+        console.error('Error:', error);
+        alert('{% if is_english %}An error occurred.{% elif is_chinese %}发生错误。{% else %}エラーが発生しました。{% endif %}');
+    });
+}
+
+// お気に入り機能
+function toggleFavorite(songId) {
+    const csrfToken = getCSRFToken();
+    if (!csrfToken) {
+        alert('{% if is_english %}Please login{% elif is_chinese %}请登录{% else %}ログインが必要です{% endif %}');
+        return;
+    }
+    
+    fetch(`/songs/${songId}/favorite/`, {
+        method: 'POST',
+        headers: {
+            'X-Requested-With': 'XMLHttpRequest',
+            'X-CSRFToken': csrfToken,
+            'Content-Type': 'application/json',
+        },
+    })
+    .then(response => {
+        if (!response.ok) {
+            throw new Error('Network response was not ok');
+        }
+        return response.json();
+    })
+    .then(data => {
+        const favBtn = document.getElementById(`fav-btn-${songId}`);
+        
+        if (data.favorited) {
+            favBtn.innerHTML = '<i class="bi bi-star-fill"></i> {% if is_english %}Saved{% elif is_chinese %}已收藏{% else %}お気に入り済み{% endif %}';
+            favBtn.classList.remove('btn-outline-warning');
+            favBtn.classList.add('btn-warning');
+        } else {
+            favBtn.innerHTML = '<i class="bi bi-star"></i> {% if is_english %}Save{% elif is_chinese %}收藏{% else %}お気に入り{% endif %}';
+            favBtn.classList.remove('btn-warning');
+            favBtn.classList.add('btn-outline-warning');
+        }
+    })
+    .catch(error => {
+        console.error('Error:', error);
+        alert('{% if is_english %}An error occurred.{% elif is_chinese %}发生错误。{% else %}エラーが発生しました。{% endif %}');
+    });
+}
+
+// ページ読み込み時に正しいボタンスタイルを適用
+document.addEventListener('DOMContentLoaded', function() {
+    const songId = {{ song.pk }};
+    const likeBtn = document.getElementById(`like-btn-${songId}`);
+    const favBtn = document.getElementById(`fav-btn-${songId}`);
+    
+    {% if user.is_authenticated %}
+    // いいねボタンの初期状態
+    {% if is_liked %}
+    if (likeBtn) {
+        likeBtn.classList.remove('btn-outline-danger');
+        likeBtn.classList.add('btn-danger');
+    }
+    {% endif %}
+    
+    // お気に入りボタンの初期状態
+    {% if is_favorited %}
+    if (favBtn) {
+        favBtn.classList.remove('btn-outline-warning');
+        favBtn.classList.add('btn-warning');
+    }
+    {% endif %}
+    {% endif %}
+});
+
+// 公開設定機能
+function confirmAndPublish(songId) {
+    if (confirm('{% if is_english %}Make this song public?\n\nOnce public, other users can discover and listen to this song. Please make sure it does not contain personal study content.{% elif is_chinese %}公开这首歌曲？\n\n公开后，其他用户可以在歌曲列表中发现并收听这首歌曲。请确保不包含个人学习内容。{% else %}この楽曲を公開しますか？\n\n公開すると、他のユーザーも楽曲一覧でこの楽曲を発見して聴くことができるようになります。個人的な学習内容が含まれていないか確認してください。{% endif %}')) {
+        togglePrivacy(songId, true);
+    }
+}
+
+function togglePrivacy(songId, makePublic) {
+    console.log('Toggle privacy called with:', songId, makePublic);
+    
+    // CSRFトークンの確認
+    const csrfToken = document.querySelector('[name=csrfmiddlewaretoken]');
+    if (!csrfToken) {
+        console.error('CSRF token not found');
+        alert('{% if is_english %}Error: CSRF token not found. Please reload the page.{% elif is_chinese %}错误：找不到CSRF令牌。请刷新页面。{% else %}エラー: CSRFトークンが見つかりません。ページを再読み込みしてください。{% endif %}');
+        return;
+    }
+
+    fetch(`/songs/${songId}/toggle-privacy/`, {
+        method: 'POST',
+        headers: {
+            'X-Requested-With': 'XMLHttpRequest',
+            'X-CSRFToken': csrfToken.value,
+            'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+            'is_public': makePublic
+        })
+    })
+    .then(response => {
+        console.log('Response status:', response.status);
+        if (!response.ok) {
+            throw new Error(`HTTP error! status: ${response.status}`);
+        }
+        return response.json();
+    })
+    .then(data => {
+        console.log('Response data:', data);
+        if (data.success) {
+            // ページを再読み込みして状態を更新
+            location.reload();
+        } else {
+            alert('{% if is_english %}An error occurred: {% elif is_chinese %}发生错误：{% else %}エラーが発生しました: {% endif %}' + (data.error || '{% if is_english %}Unknown error{% elif is_chinese %}未知错误{% else %}不明なエラー{% endif %}'));
+        }
+    })
+    .catch(error => {
+        console.error('Error:', error);
+        alert('{% if is_english %}An error occurred: {% elif is_chinese %}发生错误：{% else %}エラーが発生しました: {% endif %}' + error.message);
+    });
+}
+</script>
+
+<!-- 公開設定用CSS -->
+<style>
+.privacy-settings-card {
+    background: var(--surface);
+    border-radius: var(--radius-xl);
+    box-shadow: var(--shadow-md);
+    overflow: hidden;
+    margin-bottom: 2rem;
+    border: 1px solid rgba(255, 121, 64, 0.1);
+}
+
+.privacy-header {
+    background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
+    padding: 1.5rem;
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+    border-bottom: 1px solid var(--border-color);
+}
+
+.privacy-icon {
+    width: 50px;
+    height: 50px;
+    border-radius: 50%;
+    background: var(--primary-gradient);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: white;
+    font-size: 1.5rem;
+}
+
+.privacy-header h3 {
+    margin: 0;
+    color: var(--text-primary);
+    font-weight: 700;
+}
+
+.privacy-header p {
+    margin: 0;
+    color: var(--text-secondary);
+    font-size: 0.9rem;
+}
+
+.privacy-body {
+    padding: 2rem;
+}
+
+.current-status {
+    margin-bottom: 2rem;
+}
+
+.status-public {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    color: #28a745;
+    font-size: 1.1rem;
+    margin-bottom: 0.5rem;
+}
+
+.status-private {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    color: #6c757d;
+    font-size: 1.1rem;
+    margin-bottom: 0.5rem;
+}
+
+.status-description {
+    color: var(--text-secondary);
+    font-size: 0.95rem;
+    line-height: 1.5;
+    margin: 0;
+    padding-left: 2rem;
+}
+
+.privacy-actions {
+    display: flex;
+    justify-content: center;
+}
+
+.btn-privacy-action {
+    padding: 1rem 2rem;
+    border: none;
+    border-radius: var(--radius-lg);
+    font-size: 1rem;
+    font-weight: 600;
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    transition: all 0.3s ease;
+    cursor: pointer;
+    box-shadow: var(--shadow-sm);
+}
+
+.btn-make-public {
+    background: var(--primary-gradient);
+    color: white;
+}
+
+.btn-make-public:hover {
+    transform: translateY(-2px);
+    box-shadow: var(--shadow-md);
+}
+
+.btn-make-private {
+    background: #6c757d;
+    color: white;
+}
+
+.btn-make-private:hover {
+    background: #545b62;
+    transform: translateY(-2px);
+    box-shadow: var(--shadow-md);
+}
+
+@media (max-width: 768px) {
+    .privacy-header {
+        padding: 1rem;
+        flex-direction: column;
+        text-align: center;
+    }
+    
+    .privacy-body {
+        padding: 1.5rem;
+    }
+    
+    .status-description {
+        padding-left: 0;
+        margin-top: 0.5rem;
+    }
+}
+
+/* タイトル編集 */
+.title-edit-container {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+}
+
+.btn-edit-title {
+    background: transparent;
+    border: 1px solid #ff7940;
+    color: #ff7940;
+    padding: 0.3rem 0.6rem;
+    border-radius: 8px;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    font-size: 0.9rem;
+}
+
+.btn-edit-title:hover {
+    background: #ff7940;
+    color: white;
+}
+
+.title-edit-form {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    margin-bottom: 0.5rem;
+}
+
+.title-input {
+    flex: 1;
+    padding: 0.75rem;
+    border: 2px solid #ff7940;
+    border-radius: 8px;
+    font-size: 1.5rem;
+    font-weight: 700;
+}
+
+.title-input:focus {
+    outline: none;
+    border-color: #ff6b35;
+}
+
+.btn-save-title {
+    background: linear-gradient(135deg, #ff7940 0%, #ff6b35 100%);
+    color: white;
+    border: none;
+    padding: 0.75rem 1.25rem;
+    border-radius: 8px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.3s ease;
+}
+
+.btn-save-title:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(102, 126, 234, 0.4);
+}
+
+.btn-cancel-title {
+    background: #6c757d;
+    color: white;
+    border: none;
+    padding: 0.75rem 1.25rem;
+    border-radius: 8px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.3s ease;
+}
+
+.btn-cancel-title:hover {
+    background: #545b62;
+}
+
+/* タグ編集モーダル */
+.tag-modal {
+    display: none;
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(0, 0, 0, 0.5);
+    z-index: 1000;
+    align-items: center;
+    justify-content: center;
+}
+
+.tag-modal.active {
+    display: flex;
+}
+
+.tag-modal-content {
+    background: white;
+    border-radius: 16px;
+    padding: 2rem;
+    max-width: 500px;
+    width: 90%;
+    max-height: 80vh;
+    overflow-y: auto;
+}
+
+.tag-modal-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 1.5rem;
+}
+
+.tag-modal-title {
+    font-size: 1.5rem;
+    font-weight: 700;
+}
+
+.btn-close-modal {
+    background: none;
+    border: none;
+    font-size: 1.5rem;
+    cursor: pointer;
+    color: #666;
+}
+
+.tag-input-group {
+    display: flex;
+    gap: 0.5rem;
+    margin-bottom: 1rem;
+}
+
+.tag-input {
+    flex: 1;
+    padding: 0.75rem;
+    border: 2px solid #e0e0e0;
+    border-radius: 8px;
+    font-size: 1rem;
+}
+
+.tag-input:focus {
+    outline: none;
+    border-color: #ff7940;
+}
+
+.btn-add-tag {
+    background: linear-gradient(135deg, #ff7940 0%, #ff6b35 100%);
+    color: white;
+    border: none;
+    padding: 0.75rem 1.5rem;
+    border-radius: 8px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.3s ease;
+}
+
+.btn-add-tag:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(102, 126, 234, 0.4);
+}
+
+.tags-list {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+    margin-top: 1rem;
+}
+
+.tag-item {
+    background: linear-gradient(135deg, #ff7940 0%, #ff6b35 100%);
+    color: white;
+    padding: 0.5rem 1rem;
+    border-radius: 20px;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+}
+
+.btn-remove-tag {
+    background: rgba(255, 255, 255, 0.3);
+    border: none;
+    border-radius: 50%;
+    width: 20px;
+    height: 20px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    color: white;
+    font-size: 0.8rem;
+}
+
+.btn-remove-tag:hover {
+    background: rgba(255, 255, 255, 0.5);
+}
+
+.tags-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 0.75rem;
+}
+
+.tags-title {
+    font-weight: 600;
+    color: #666;
+    font-size: 0.9rem;
+}
+
+.btn-edit-tags {
+    background: transparent;
+    border: 1px solid #ff7940;
+    color: #ff7940;
+    padding: 0.3rem 0.8rem;
+    border-radius: 12px;
+    font-size: 0.85rem;
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+
+.btn-edit-tags:hover {
+    background: #ff7940;
+    color: white;
+}
+</style>
+
+<script>
+// タイトル編集機能
+function startTitleEdit() {
+    document.getElementById('song-title-display').style.display = 'none';
+    document.querySelector('.btn-edit-title').style.display = 'none';
+    document.getElementById('title-edit-form').style.display = 'flex';
+    document.getElementById('title-input').focus();
+}
+
+function cancelTitleEdit() {
+    document.getElementById('song-title-display').style.display = 'block';
+    document.querySelector('.btn-edit-title').style.display = 'inline-block';
+    document.getElementById('title-edit-form').style.display = 'none';
+    document.getElementById('title-input').value = '{{ song.title }}';
+}
+
+function saveTitleEdit() {
+    const newTitle = document.getElementById('title-input').value.trim();
+    
+    if (!newTitle) {
+        alert('{% if is_english %}Please enter a title{% elif is_chinese %}请输入标题{% else %}タイトルを入力してください{% endif %}');
+        return;
+    }
+    
+    if (newTitle.length > 200) {
+        alert('{% if is_english %}Title is too long (max 200 characters){% elif is_chinese %}标题过长（最多200字）{% else %}タイトルが長すぎます（最大200文字）{% endif %}');
+        return;
+    }
+    
+    fetch(`/songs/{{ song.pk }}/update-title/`, {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+            'X-CSRFToken': '{{ csrf_token }}'
+        },
+        body: JSON.stringify({ title: newTitle })
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            document.getElementById('song-title-display').textContent = data.title;
+            document.getElementById('song-title-display').style.display = 'block';
+            document.querySelector('.btn-edit-title').style.display = 'inline-block';
+            document.getElementById('title-edit-form').style.display = 'none';
+            
+            // ページタイトルも更新
+            document.title = data.title + ' - UTAMEMO';
+        } else {
+            alert('{% if is_english %}Failed to update title: {% elif is_chinese %}更新标题失败：{% else %}タイトルの更新に失敗しました: {% endif %}' + data.error);
+        }
+    })
+    .catch(error => {
+        console.error('Error:', error);
+        alert('{% if is_english %}An error occurred{% elif is_chinese %}发生错误{% else %}エラーが発生しました{% endif %}');
+    });
+}
+
+// Enterキーでタイトル保存
+document.addEventListener('DOMContentLoaded', function() {
+    const titleInput = document.getElementById('title-input');
+    if (titleInput) {
+        titleInput.addEventListener('keypress', function(e) {
+            if (e.key === 'Enter') {
+                saveTitleEdit();
+            } else if (e.key === 'Escape') {
+                cancelTitleEdit();
+            }
+        });
+    }
+});
+</script>
+
+<!-- タグ編集モーダル -->
+<div class="tag-modal" id="tagModal">
+    <div class="tag-modal-content">
+        <div class="tag-modal-header">
+            <h3 class="tag-modal-title">{% if is_english %}Edit Tags{% elif is_chinese %}编辑标签{% else %}タグを編集{% endif %}</h3>
+            <button class="btn-close-modal" onclick="closeTagEditor()">
+                <i class="bi bi-x"></i>
+            </button>
+        </div>
+        
+        <div class="tag-input-group">
+            <input type="text" id="tagInput" class="tag-input" placeholder="{% if is_english %}Enter new tag (e.g. History){% elif is_chinese %}输入新标签（如：历史）{% else %}新しいタグを入力（例: 歴史）{% endif %}" maxlength="50">
+            <button class="btn-add-tag" onclick="addTag()">
+                <i class="bi bi-plus"></i> {% if is_english %}Add{% elif is_chinese %}添加{% else %}追加{% endif %}
+            </button>
+        </div>
+        
+        <div class="tags-list" id="tagsListEditor">
+            {% for tag in song.tags.all %}
+            <div class="tag-item" data-tag-id="{{ tag.id }}" data-tag-name="{{ tag.name }}">
+                <span>#{{ tag.name }}</span>
+                <button class="btn-remove-tag" onclick="removeTag({{ tag.id }}, '{{ tag.name }}')">
+                    <i class="bi bi-x"></i>
+                </button>
+            </div>
+            {% endfor %}
+        </div>
+    </div>
+</div>
+
+<script>
+function openTagEditor() {
+    document.getElementById('tagModal').classList.add('active');
+}
+
+function closeTagEditor() {
+    document.getElementById('tagModal').classList.remove('active');
+}
+
+function addTag() {
+    const input = document.getElementById('tagInput');
+    const tagName = input.value.trim();
+    
+    if (!tagName) {
+        alert('{% if is_english %}Please enter a tag name{% elif is_chinese %}请输入标签名{% else %}タグ名を入力してください{% endif %}');
+        return;
+    }
+    
+    // 既存のタグをチェック
+    const existingTags = document.querySelectorAll('#tagsListEditor .tag-item');
+    for (let tagItem of existingTags) {
+        if (tagItem.dataset.tagName === tagName) {
+            alert('{% if is_english %}This tag already exists{% elif is_chinese %}该标签已存在{% else %}このタグは既に追加されています{% endif %}');
+            return;
+        }
+    }
+    
+    fetch(`/songs/{{ song.pk }}/tags/add/`, {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+            'X-CSRFToken': '{{ csrf_token }}'
+        },
+        body: JSON.stringify({ tag_name: tagName })
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            // タグリストに追加
+            const tagItem = document.createElement('div');
+            tagItem.className = 'tag-item';
+            tagItem.dataset.tagId = data.tag_id;
+            tagItem.dataset.tagName = tagName;
+            tagItem.innerHTML = `
+                <span>#${tagName}</span>
+                <button class="btn-remove-tag" onclick="removeTag(${data.tag_id}, '${tagName}')">
+                    <i class="bi bi-x"></i>
+                </button>
+            `;
+            document.getElementById('tagsListEditor').appendChild(tagItem);
+            
+            // 表示エリアも更新
+            updateTagsDisplay();
+            
+            input.value = '';
+        } else {
+            alert('{% if is_english %}Failed to add tag: {% elif is_chinese %}添加标签失败：{% else %}タグの追加に失敗しました: {% endif %}' + data.error);
+        }
+    })
+    .catch(error => {
+        console.error('Error:', error);
+        alert('{% if is_english %}An error occurred{% elif is_chinese %}发生错误{% else %}エラーが発生しました{% endif %}');
+    });
+}
+
+function removeTag(tagId, tagName) {
+    if (!confirm('{% if is_english %}Delete tag #{% elif is_chinese %}删除标签 #{% else %}タグ「#{% endif %}' + tagName + '{% if is_english %}?{% elif is_chinese %}？{% else %}」を削除しますか?{% endif %}')) {
+        return;
+    }
+    
+    fetch(`/songs/{{ song.pk }}/tags/remove/`, {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+            'X-CSRFToken': '{{ csrf_token }}'
+        },
+        body: JSON.stringify({ tag_id: tagId })
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            // リストから削除
+            const tagItem = document.querySelector(`#tagsListEditor .tag-item[data-tag-id="${tagId}"]`);
+            if (tagItem) {
+                tagItem.remove();
+            }
+            
+            // 表示エリアも更新
+            updateTagsDisplay();
+        } else {
+            alert('{% if is_english %}Failed to delete tag: {% elif is_chinese %}删除标签失败：{% else %}タグの削除に失敗しました: {% endif %}' + data.error);
+        }
+    })
+    .catch(error => {
+        console.error('Error:', error);
+        alert('{% if is_english %}An error occurred{% elif is_chinese %}发生错误{% else %}エラーが発生しました{% endif %}');
+    });
+}
+
+function updateTagsDisplay() {
+    const tagsListEditor = document.getElementById('tagsListEditor');
+    const tagsDisplay = document.getElementById('tags-display');
+    
+    const tagItems = tagsListEditor.querySelectorAll('.tag-item');
+    
+    if (tagItems.length === 0) {
+        tagsDisplay.innerHTML = '<span class="text-muted">{% if is_english %}No tags yet{% elif is_chinese %}暂无标签{% else %}タグがまだありません{% endif %}</span>';
+    } else {
+        tagsDisplay.innerHTML = '';
+        tagItems.forEach(item => {
+            const badge = document.createElement('span');
+            badge.className = 'tag-badge';
+            badge.textContent = '#' + item.dataset.tagName;
+            tagsDisplay.appendChild(badge);
+        });
+    }
+}
+
+// Enterキーでタグ追加
+document.getElementById('tagInput').addEventListener('keypress', function(e) {
+    if (e.key === 'Enter') {
+        addTag();
+    }
+});
+
+// モーダル外クリックで閉じる
+document.getElementById('tagModal').addEventListener('click', function(e) {
+    if (e.target === this) {
+        closeTagEditor();
+    }
+});
+</script>
+
+{% endblock %}
