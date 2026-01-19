@@ -25,4 +25,13 @@ urlpatterns = [
     path('songs/<int:pk>/status/', views.check_song_status, name='check_song_status'),
     path('admin/api-status/', views.api_status_view, name='api_status'),
     path('set-language/<str:lang>/', views.set_language, name='set_language'),
+    
+    # クラス機能
+    path('classroom/', views.classroom_list, name='classroom_list'),
+    path('classroom/join/', views.classroom_join, name='classroom_join'),
+    path('classroom/create/', views.classroom_create, name='classroom_create'),
+    path('classroom/<int:pk>/', views.classroom_detail, name='classroom_detail'),
+    path('classroom/<int:pk>/share/', views.classroom_share_song, name='classroom_share_song'),
+    path('classroom/<int:pk>/leave/', views.classroom_leave, name='classroom_leave'),
+    path('classroom/<int:pk>/delete/', views.classroom_delete, name='classroom_delete'),
 ]

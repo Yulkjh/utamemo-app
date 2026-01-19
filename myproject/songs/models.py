@@ -392,3 +392,118 @@ class PlayHistory(models.Model):
 
     def __str__(self):
         return f"{self.user.username} - {self.song.title} ({self.play_count}回)"
+
+
+class Classroom(models.Model):
+    """クラス（教室）モデル"""
+    name = models.CharField(
+        max_length=100,
+        verbose_name='クラス名'
+    )
+    code = models.CharField(
+        max_length=8,
+        unique=True,
+        verbose_name='参加コード',
+        help_text='生徒が参加するためのコード'
+    )
+    description = models.TextField(
+        blank=True,
+        verbose_name='説明'
+    )
+    host = models.ForeignKey(
+        User,
+        on_delete=models.CASCADE,
+        related_name='hosted_classrooms',
+        verbose_name='ホスト（先生）'
+    )
+    members = models.ManyToManyField(
+        User,
+        through='ClassroomMembership',
+        related_name='joined_classrooms',
+        verbose_name='メンバー'
+    )
+    is_active = models.BooleanField(
+        default=True,
+        verbose_name='アクティブ'
+    )
+    created_at = models.DateTimeField(
+        auto_now_add=True,
+        verbose_name='作成日時'
+    )
+
+    class Meta:
+        verbose_name = 'クラス'
+        verbose_name_plural = 'クラス'
+        ordering = ['-created_at']
+
+    def __str__(self):
+        return f"{self.name} ({self.code})"
+
+    def generate_code():
+        """ユニークな参加コードを生成"""
+        import random
+        import string
+        while True:
+            code = ''.join(random.choices(string.ascii_uppercase + string.digits, k=6))
+            if not Classroom.objects.filter(code=code).exists():
+                return code
+
+
+class ClassroomMembership(models.Model):
+    """クラスメンバーシップ（中間テーブル）"""
+    user = models.ForeignKey(
+        User,
+        on_delete=models.CASCADE,
+        verbose_name='ユーザー'
+    )
+    classroom = models.ForeignKey(
+        Classroom,
+        on_delete=models.CASCADE,
+        verbose_name='クラス'
+    )
+    joined_at = models.DateTimeField(
+        auto_now_add=True,
+        verbose_name='参加日時'
+    )
+
+    class Meta:
+        verbose_name = 'クラスメンバーシップ'
+        verbose_name_plural = 'クラスメンバーシップ'
+        unique_together = ('user', 'classroom')
+
+    def __str__(self):
+        return f"{self.user.username} - {self.classroom.name}"
+
+
+class ClassroomSong(models.Model):
+    """クラス内共有楽曲"""
+    classroom = models.ForeignKey(
+        Classroom,
+        on_delete=models.CASCADE,
+        related_name='shared_songs',
+        verbose_name='クラス'
+    )
+    song = models.ForeignKey(
+        Song,
+        on_delete=models.CASCADE,
+        related_name='classroom_shares',
+        verbose_name='楽曲'
+    )
+    shared_by = models.ForeignKey(
+        User,
+        on_delete=models.CASCADE,
+        verbose_name='共有者'
+    )
+    shared_at = models.DateTimeField(
+        auto_now_add=True,
+        verbose_name='共有日時'
+    )
+
+    class Meta:
+        verbose_name = 'クラス共有楽曲'
+        verbose_name_plural = 'クラス共有楽曲'
+        unique_together = ('classroom', 'song')
+        ordering = ['-shared_at']
+
+    def __str__(self):
+        return f"{self.song.title} in {self.classroom.name}"

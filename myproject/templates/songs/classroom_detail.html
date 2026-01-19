@@ -1,0 +1,182 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}{{ classroom.name }} - UTAMEMO{% endblock %}
+
+{% block content %}
+<div class="container py-5">
+    <!-- クラス情報 -->
+    <div class="row mb-4">
+        <div class="col-12">
+            <div class="d-flex justify-content-between align-items-start flex-wrap gap-3">
+                <div>
+                    <h2 class="text-gradient mb-2">
+                        <i class="fas fa-chalkboard-teacher me-2"></i>
+                        {{ classroom.name }}
+                    </h2>
+                    {% if classroom.description %}
+                    <p class="text-muted mb-2">{{ classroom.description }}</p>
+                    {% endif %}
+                    <div class="d-flex gap-3 flex-wrap text-muted small">
+                        <span>
+                            <i class="fas fa-user-tie me-1"></i>
+                            {% if is_english %}Host:{% elif is_chinese %}主持人:{% else %}先生:{% endif %}
+                            {{ classroom.host.username }}
+                        </span>
+                        <span>
+                            <i class="fas fa-users me-1"></i>
+                            {{ members.count }} {% if is_english %}members{% elif is_chinese %}成员{% else %}人{% endif %}
+                        </span>
+                        <span>
+                            <i class="fas fa-music me-1"></i>
+                            {{ shared_songs.count }} {% if is_english %}songs{% elif is_chinese %}首歌曲{% else %}曲{% endif %}
+                        </span>
+                    </div>
+                </div>
+                <div class="d-flex gap-2 flex-wrap">
+                    {% if is_host %}
+                    <div class="bg-light rounded p-2 text-center">
+                        <small class="text-muted d-block">{% if is_english %}Share Code{% elif is_chinese %}分享代码{% else %}参加コード{% endif %}</small>
+                        <code class="fs-4 text-primary fw-bold">{{ classroom.code }}</code>
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- アクションボタン -->
+    <div class="row mb-4">
+        <div class="col-12">
+            <div class="d-flex gap-2 flex-wrap">
+                <a href="{% url 'songs:classroom_share_song' classroom.pk %}" class="btn btn-primary">
+                    <i class="fas fa-share me-1"></i>
+                    {% if is_english %}Share Song{% elif is_chinese %}分享歌曲{% else %}楽曲を共有{% endif %}
+                </a>
+                {% if not is_host %}
+                <form method="post" action="{% url 'songs:classroom_leave' classroom.pk %}" class="d-inline" 
+                      onsubmit="return confirm('{% if is_english %}Are you sure you want to leave this class?{% elif is_chinese %}确定要退出这个班级吗？{% else %}このクラスから退出しますか？{% endif %}');">
+                    {% csrf_token %}
+                    <button type="submit" class="btn btn-outline-danger">
+                        <i class="fas fa-sign-out-alt me-1"></i>
+                        {% if is_english %}Leave{% elif is_chinese %}退出{% else %}退出{% endif %}
+                    </button>
+                </form>
+                {% else %}
+                <form method="post" action="{% url 'songs:classroom_delete' classroom.pk %}" class="d-inline"
+                      onsubmit="return confirm('{% if is_english %}Are you sure you want to delete this class? This cannot be undone.{% elif is_chinese %}确定要删除这个班级吗？此操作无法撤销。{% else %}このクラスを削除しますか？この操作は取り消せません。{% endif %}');">
+                    {% csrf_token %}
+                    <button type="submit" class="btn btn-outline-danger">
+                        <i class="fas fa-trash me-1"></i>
+                        {% if is_english %}Delete Class{% elif is_chinese %}删除班级{% else %}クラスを削除{% endif %}
+                    </button>
+                </form>
+                {% endif %}
+                <a href="{% url 'songs:classroom_list' %}" class="btn btn-outline-secondary">
+                    <i class="fas fa-arrow-left me-1"></i>
+                    {% if is_english %}Back{% elif is_chinese %}返回{% else %}戻る{% endif %}
+                </a>
+            </div>
+        </div>
+    </div>
+
+    <!-- 共有楽曲一覧 -->
+    <div class="row">
+        <div class="col-12">
+            <h4 class="mb-3">
+                <i class="fas fa-music me-2"></i>
+                {% if is_english %}Shared Songs{% elif is_chinese %}共享歌曲{% else %}共有された楽曲{% endif %}
+            </h4>
+            
+            {% if shared_songs %}
+            <div class="row g-4">
+                {% for cs in shared_songs %}
+                <div class="col-md-6 col-lg-4">
+                    <div class="card glass-card h-100">
+                        <div class="card-body">
+                            <h5 class="card-title">{{ cs.song.title }}</h5>
+                            <p class="text-muted small mb-2">
+                                <i class="fas fa-user me-1"></i>{{ cs.song.artist }}
+                            </p>
+                            <p class="text-muted small mb-2">
+                                <i class="fas fa-share me-1"></i>
+                                {% if is_english %}Shared by{% elif is_chinese %}分享者{% else %}共有者{% endif %}: {{ cs.shared_by.username }}
+                            </p>
+                            {% if cs.song.genre %}
+                            <span class="badge bg-primary">{{ cs.song.genre }}</span>
+                            {% endif %}
+                        </div>
+                        <div class="card-footer bg-transparent">
+                            {% if cs.song.audio_url %}
+                            <audio controls class="w-100 mb-2" style="height: 40px;">
+                                <source src="{{ cs.song.audio_url }}" type="audio/mpeg">
+                            </audio>
+                            {% endif %}
+                            <a href="{% url 'songs:song_detail' cs.song.pk %}" class="btn btn-outline-primary btn-sm w-100">
+                                {% if is_english %}View Details{% elif is_chinese %}查看详情{% else %}詳細を見る{% endif %}
+                            </a>
+                        </div>
+                    </div>
+                </div>
+                {% endfor %}
+            </div>
+            {% else %}
+            <div class="text-center py-5">
+                <i class="fas fa-music fa-4x text-muted mb-3"></i>
+                <h5 class="text-muted">
+                    {% if is_english %}No songs shared yet{% elif is_chinese %}还没有分享的歌曲{% else %}まだ共有された楽曲がありません{% endif %}
+                </h5>
+                <p class="text-muted">
+                    {% if is_english %}Be the first to share a song!{% elif is_chinese %}成为第一个分享歌曲的人！{% else %}最初の楽曲を共有しましょう！{% endif %}
+                </p>
+                <a href="{% url 'songs:classroom_share_song' classroom.pk %}" class="btn btn-primary">
+                    <i class="fas fa-share me-1"></i>
+                    {% if is_english %}Share Song{% elif is_chinese %}分享歌曲{% else %}楽曲を共有{% endif %}
+                </a>
+            </div>
+            {% endif %}
+        </div>
+    </div>
+
+    {% if is_host %}
+    <!-- メンバー一覧（ホストのみ表示） -->
+    <div class="row mt-5">
+        <div class="col-12">
+            <h4 class="mb-3">
+                <i class="fas fa-users me-2"></i>
+                {% if is_english %}Members{% elif is_chinese %}成员{% else %}メンバー{% endif %}
+            </h4>
+            <div class="card glass-card">
+                <div class="card-body">
+                    <div class="table-responsive">
+                        <table class="table table-hover mb-0">
+                            <thead>
+                                <tr>
+                                    <th>{% if is_english %}Username{% elif is_chinese %}用户名{% else %}ユーザー名{% endif %}</th>
+                                    <th>{% if is_english %}Joined{% elif is_chinese %}加入时间{% else %}参加日{% endif %}</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for membership in members %}
+                                <tr>
+                                    <td>
+                                        {{ membership.user.username }}
+                                        {% if membership.user == classroom.host %}
+                                        <span class="badge bg-warning text-dark ms-1">
+                                            <i class="fas fa-crown"></i> {% if is_english %}Host{% elif is_chinese %}主持人{% else %}ホスト{% endif %}
+                                        </span>
+                                        {% endif %}
+                                    </td>
+                                    <td>{{ membership.joined_at|date:"Y/m/d" }}</td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    {% endif %}
+</div>
+{% endblock %}

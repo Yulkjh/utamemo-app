@@ -1,0 +1,66 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}{% if is_english %}Join Class{% elif is_chinese %}加入班级{% else %}クラスに参加{% endif %} - UTAMEMO{% endblock %}
+
+{% block content %}
+<div class="container py-5">
+    <div class="row justify-content-center">
+        <div class="col-md-6 col-lg-5">
+            <div class="card glass-card">
+                <div class="card-body p-4">
+                    <h2 class="text-center text-gradient mb-4">
+                        <i class="fas fa-sign-in-alt me-2"></i>
+                        {% if is_english %}Join Class{% elif is_chinese %}加入班级{% else %}クラスに参加{% endif %}
+                    </h2>
+                    
+                    <p class="text-muted text-center mb-4">
+                        {% if is_english %}Enter the class code shared by your teacher.{% elif is_chinese %}输入老师分享的班级代码。{% else %}先生から共有されたクラスコードを入力してください。{% endif %}
+                    </p>
+                    
+                    <form method="post">
+                        {% csrf_token %}
+                        <div class="mb-4">
+                            <label for="code" class="form-label">
+                                {% if is_english %}Class Code{% elif is_chinese %}班级代码{% else %}クラスコード{% endif %}
+                            </label>
+                            <input type="text" 
+                                   class="form-control form-control-lg text-center" 
+                                   id="code" 
+                                   name="code" 
+                                   placeholder="{% if is_english %}e.g. ABC123{% elif is_chinese %}例如 ABC123{% else %}例: ABC123{% endif %}"
+                                   maxlength="6"
+                                   style="text-transform: uppercase; letter-spacing: 0.3em; font-weight: bold;"
+                                   required>
+                        </div>
+                        
+                        <button type="submit" class="btn btn-primary w-100 btn-lg">
+                            <i class="fas fa-door-open me-2"></i>
+                            {% if is_english %}Join{% elif is_chinese %}加入{% else %}参加する{% endif %}
+                        </button>
+                    </form>
+                    
+                    <hr class="my-4">
+                    
+                    <div class="text-center">
+                        <p class="text-muted mb-2">
+                            {% if is_english %}Want to create your own class?{% elif is_chinese %}想创建自己的班级？{% else %}自分でクラスを作成したい場合{% endif %}
+                        </p>
+                        <a href="{% url 'songs:classroom_create' %}" class="btn btn-outline-primary">
+                            <i class="fas fa-plus me-1"></i>
+                            {% if is_english %}Create Class{% elif is_chinese %}创建班级{% else %}クラスを作成{% endif %}
+                        </a>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="text-center mt-3">
+                <a href="{% url 'songs:classroom_list' %}" class="text-muted">
+                    <i class="fas fa-arrow-left me-1"></i>
+                    {% if is_english %}Back to My Classes{% elif is_chinese %}返回我的班级{% else %}マイクラスに戻る{% endif %}
+                </a>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

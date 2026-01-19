@@ -1,0 +1,69 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}{% if is_english %}Create Class{% elif is_chinese %}创建班级{% else %}クラスを作成{% endif %} - UTAMEMO{% endblock %}
+
+{% block content %}
+<div class="container py-5">
+    <div class="row justify-content-center">
+        <div class="col-md-6 col-lg-5">
+            <div class="card glass-card">
+                <div class="card-body p-4">
+                    <h2 class="text-center text-gradient mb-4">
+                        <i class="fas fa-chalkboard me-2"></i>
+                        {% if is_english %}Create Class{% elif is_chinese %}创建班级{% else %}クラスを作成{% endif %}
+                    </h2>
+                    
+                    <p class="text-muted text-center mb-4">
+                        {% if is_english %}Create a class and share the code with your students.{% elif is_chinese %}创建班级并与学生分享代码。{% else %}クラスを作成して、生徒にコードを共有しましょう。{% endif %}
+                    </p>
+                    
+                    <form method="post">
+                        {% csrf_token %}
+                        <div class="mb-3">
+                            <label for="name" class="form-label">
+                                {% if is_english %}Class Name{% elif is_chinese %}班级名称{% else %}クラス名{% endif %} <span class="text-danger">*</span>
+                            </label>
+                            <input type="text" 
+                                   class="form-control" 
+                                   id="name" 
+                                   name="name" 
+                                   placeholder="{% if is_english %}e.g. English Class 3-A{% elif is_chinese %}例如 英语3-A班{% else %}例: 英語3年A組{% endif %}"
+                                   maxlength="100"
+                                   required>
+                        </div>
+                        
+                        <div class="mb-4">
+                            <label for="description" class="form-label">
+                                {% if is_english %}Description (optional){% elif is_chinese %}描述（可选）{% else %}説明（任意）{% endif %}
+                            </label>
+                            <textarea class="form-control" 
+                                      id="description" 
+                                      name="description" 
+                                      rows="3"
+                                      placeholder="{% if is_english %}e.g. Songs for learning English vocabulary{% elif is_chinese %}例如 用于学习英语词汇的歌曲{% else %}例: 英単語学習用の楽曲を共有するクラス{% endif %}"></textarea>
+                        </div>
+                        
+                        <div class="alert alert-info small">
+                            <i class="fas fa-info-circle me-1"></i>
+                            {% if is_english %}A unique class code will be generated automatically. Share this code with your students so they can join.{% elif is_chinese %}将自动生成唯一的班级代码。与学生分享此代码以便他们加入。{% else %}クラスコードは自動で生成されます。生徒にこのコードを共有して参加してもらいましょう。{% endif %}
+                        </div>
+                        
+                        <button type="submit" class="btn btn-primary w-100 btn-lg">
+                            <i class="fas fa-plus-circle me-2"></i>
+                            {% if is_english %}Create{% elif is_chinese %}创建{% else %}作成する{% endif %}
+                        </button>
+                    </form>
+                </div>
+            </div>
+            
+            <div class="text-center mt-3">
+                <a href="{% url 'songs:classroom_list' %}" class="text-muted">
+                    <i class="fas fa-arrow-left me-1"></i>
+                    {% if is_english %}Back to My Classes{% elif is_chinese %}返回我的班级{% else %}マイクラスに戻る{% endif %}
+                </a>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

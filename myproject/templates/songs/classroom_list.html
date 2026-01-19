@@ -1,0 +1,113 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}{% if is_english %}My Classes{% elif is_chinese %}我的班级{% else %}マイクラス{% endif %} - UTAMEMO{% endblock %}
+
+{% block content %}
+<div class="container py-5">
+    <div class="row mb-4">
+        <div class="col-12">
+            <h2 class="text-gradient mb-3">
+                <i class="fas fa-chalkboard-teacher me-2"></i>
+                {% if is_english %}My Classes{% elif is_chinese %}我的班级{% else %}マイクラス{% endif %}
+            </h2>
+            <div class="d-flex gap-2 flex-wrap">
+                <a href="{% url 'songs:classroom_join' %}" class="btn btn-primary">
+                    <i class="fas fa-sign-in-alt me-1"></i>
+                    {% if is_english %}Join Class{% elif is_chinese %}加入班级{% else %}クラスに参加{% endif %}
+                </a>
+                <a href="{% url 'songs:classroom_create' %}" class="btn btn-outline-primary">
+                    <i class="fas fa-plus me-1"></i>
+                    {% if is_english %}Create Class{% elif is_chinese %}创建班级{% else %}クラスを作成{% endif %}
+                </a>
+            </div>
+        </div>
+    </div>
+
+    {% if hosted_classrooms %}
+    <div class="mb-5">
+        <h4 class="mb-3">
+            <i class="fas fa-crown text-warning me-2"></i>
+            {% if is_english %}Classes I Host{% elif is_chinese %}我主持的班级{% else %}ホストしているクラス{% endif %}
+        </h4>
+        <div class="row g-4">
+            {% for classroom in hosted_classrooms %}
+            <div class="col-md-6 col-lg-4">
+                <div class="card glass-card h-100">
+                    <div class="card-body">
+                        <h5 class="card-title">{{ classroom.name }}</h5>
+                        <p class="text-muted small mb-2">
+                            <i class="fas fa-key me-1"></i>
+                            {% if is_english %}Code:{% elif is_chinese %}代码:{% else %}コード:{% endif %}
+                            <code class="text-primary">{{ classroom.code }}</code>
+                        </p>
+                        {% if classroom.description %}
+                        <p class="card-text small">{{ classroom.description|truncatewords:20 }}</p>
+                        {% endif %}
+                        <p class="text-muted small mb-0">
+                            <i class="fas fa-users me-1"></i>
+                            {{ classroom.members.count }} {% if is_english %}members{% elif is_chinese %}成员{% else %}人{% endif %}
+                        </p>
+                    </div>
+                    <div class="card-footer bg-transparent">
+                        <a href="{% url 'songs:classroom_detail' classroom.pk %}" class="btn btn-primary btn-sm w-100">
+                            {% if is_english %}View{% elif is_chinese %}查看{% else %}詳細を見る{% endif %}
+                        </a>
+                    </div>
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+    </div>
+    {% endif %}
+
+    {% if joined_classrooms %}
+    <div class="mb-5">
+        <h4 class="mb-3">
+            <i class="fas fa-users text-info me-2"></i>
+            {% if is_english %}Classes I Joined{% elif is_chinese %}我加入的班级{% else %}参加しているクラス{% endif %}
+        </h4>
+        <div class="row g-4">
+            {% for classroom in joined_classrooms %}
+            <div class="col-md-6 col-lg-4">
+                <div class="card glass-card h-100">
+                    <div class="card-body">
+                        <h5 class="card-title">{{ classroom.name }}</h5>
+                        <p class="text-muted small mb-2">
+                            <i class="fas fa-user-tie me-1"></i>
+                            {% if is_english %}Host:{% elif is_chinese %}主持人:{% else %}先生:{% endif %}
+                            {{ classroom.host.username }}
+                        </p>
+                        {% if classroom.description %}
+                        <p class="card-text small">{{ classroom.description|truncatewords:20 }}</p>
+                        {% endif %}
+                        <p class="text-muted small mb-0">
+                            <i class="fas fa-music me-1"></i>
+                            {{ classroom.shared_songs.count }} {% if is_english %}songs{% elif is_chinese %}首歌曲{% else %}曲{% endif %}
+                        </p>
+                    </div>
+                    <div class="card-footer bg-transparent">
+                        <a href="{% url 'songs:classroom_detail' classroom.pk %}" class="btn btn-primary btn-sm w-100">
+                            {% if is_english %}View{% elif is_chinese %}查看{% else %}詳細を見る{% endif %}
+                        </a>
+                    </div>
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+    </div>
+    {% endif %}
+
+    {% if not hosted_classrooms and not joined_classrooms %}
+    <div class="text-center py-5">
+        <i class="fas fa-chalkboard fa-4x text-muted mb-3"></i>
+        <h4 class="text-muted">
+            {% if is_english %}No classes yet{% elif is_chinese %}还没有班级{% else %}クラスがありません{% endif %}
+        </h4>
+        <p class="text-muted">
+            {% if is_english %}Join a class with a code or create your own!{% elif is_chinese %}使用代码加入班级或创建自己的班级！{% else %}コードでクラスに参加するか、新しいクラスを作成しましょう！{% endif %}
+        </p>
+    </div>
+    {% endif %}
+</div>
+{% endblock %}
