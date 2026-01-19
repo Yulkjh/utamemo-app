@@ -257,58 +257,6 @@
         </div>
     </div>
 
-    {% if hosted_classrooms %}
-    <!-- ホストしているクラス -->
-    <div class="mb-5">
-        <h3 class="section-title">
-            <i class="fas fa-crown text-warning"></i>
-            {% if is_english %}Classes I Host{% elif is_chinese %}我主持的班级{% else %}ホストしているクラス{% endif %}
-            <span class="badge bg-warning text-dark">{{ hosted_classrooms|length }}</span>
-        </h3>
-        <div class="row g-4">
-            {% for classroom in hosted_classrooms %}
-            <div class="col-md-6 col-lg-4">
-                <div class="classroom-card">
-                    <div class="classroom-card-header">
-                        <div class="classroom-name">
-                            {{ classroom.name }}
-                            <span class="host-badge">
-                                <i class="fas fa-crown"></i> HOST
-                            </span>
-                        </div>
-                        <div class="classroom-code">
-                            <i class="fas fa-key"></i>
-                            {{ classroom.code }}
-                        </div>
-                    </div>
-                    <div class="classroom-card-body">
-                        {% if classroom.description %}
-                        <p class="classroom-description">{{ classroom.description|truncatewords:15 }}</p>
-                        {% endif %}
-                        <div class="classroom-stats">
-                            <span class="stat-item">
-                                <i class="fas fa-users"></i>
-                                {{ classroom.members.count }} {% if is_english %}members{% elif is_chinese %}成员{% else %}人{% endif %}
-                            </span>
-                            <span class="stat-item">
-                                <i class="fas fa-music"></i>
-                                {{ classroom.shared_songs.count }} {% if is_english %}songs{% elif is_chinese %}首{% else %}曲{% endif %}
-                            </span>
-                        </div>
-                    </div>
-                    <div class="classroom-card-footer">
-                        <a href="{% url 'songs:classroom_detail' classroom.pk %}" class="view-btn">
-                            <i class="fas fa-arrow-right"></i>
-                            {% if is_english %}Manage{% elif is_chinese %}管理{% else %}管理する{% endif %}
-                        </a>
-                    </div>
-                </div>
-            </div>
-            {% endfor %}
-        </div>
-    </div>
-    {% endif %}
-
     {% if joined_classrooms %}
     <!-- 参加しているクラス -->
     <div class="mb-5">
