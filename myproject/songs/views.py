@@ -247,6 +247,7 @@ class CreateSongView(LoginRequiredMixin, CreateView):
     
     def form_valid(self, form):
         form.instance.created_by = self.request.user
+        form.instance.artist = self.request.user.username  # アーティスト名をユーザー名に設定
         form.instance.is_public = False
         form.instance.is_encrypted = False
         form.instance.generation_status = 'pending'
