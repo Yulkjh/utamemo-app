@@ -3,64 +3,243 @@
 
 {% block title %}{% if is_english %}Join Class{% elif is_chinese %}加入班级{% else %}クラスに参加{% endif %} - UTAMEMO{% endblock %}
 
+{% block extra_css %}
+<style>
+    .join-container {
+        min-height: 70vh;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        padding: 2rem 0;
+    }
+    
+    .join-card {
+        background: var(--bg-secondary);
+        border-radius: 24px;
+        border: 1px solid var(--border-color);
+        overflow: hidden;
+        max-width: 440px;
+        width: 100%;
+        box-shadow: 0 20px 60px rgba(0,0,0,0.1);
+    }
+    
+    .join-header {
+        background: linear-gradient(135deg, var(--accent-primary) 0%, #ff8a50 100%);
+        padding: 2.5rem 2rem;
+        text-align: center;
+        color: white;
+        position: relative;
+        overflow: hidden;
+    }
+    .join-header::before {
+        content: '';
+        position: absolute;
+        top: -50%;
+        right: -30%;
+        width: 200px;
+        height: 200px;
+        background: rgba(255,255,255,0.1);
+        border-radius: 50%;
+    }
+    .join-header-icon {
+        width: 80px;
+        height: 80px;
+        background: rgba(255,255,255,0.2);
+        border-radius: 50%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        margin: 0 auto 1rem;
+    }
+    .join-header-icon i {
+        font-size: 2rem;
+    }
+    .join-header h2 {
+        font-size: 1.5rem;
+        font-weight: 700;
+        margin-bottom: 0.5rem;
+    }
+    .join-header p {
+        opacity: 0.9;
+        margin: 0;
+        font-size: 0.95rem;
+    }
+    
+    .join-body {
+        padding: 2rem;
+    }
+    
+    .code-input-wrapper {
+        position: relative;
+        margin-bottom: 1.5rem;
+    }
+    .code-input-wrapper label {
+        display: block;
+        font-weight: 600;
+        margin-bottom: 0.75rem;
+        color: var(--text-primary);
+    }
+    .code-input {
+        width: 100%;
+        padding: 1.25rem;
+        font-size: 1.75rem;
+        font-weight: 700;
+        text-align: center;
+        letter-spacing: 0.4em;
+        text-transform: uppercase;
+        border: 2px solid var(--border-color);
+        border-radius: 16px;
+        background: var(--bg-primary);
+        color: var(--text-primary);
+        transition: all 0.3s ease;
+    }
+    .code-input:focus {
+        outline: none;
+        border-color: var(--accent-primary);
+        box-shadow: 0 0 0 4px rgba(255, 107, 53, 0.15);
+    }
+    .code-input::placeholder {
+        color: var(--text-muted);
+        letter-spacing: 0.2em;
+        font-weight: 400;
+    }
+    
+    .join-btn {
+        width: 100%;
+        padding: 1rem;
+        font-size: 1.1rem;
+        font-weight: 600;
+        background: linear-gradient(135deg, var(--accent-primary) 0%, #ff8a50 100%);
+        color: white;
+        border: none;
+        border-radius: 14px;
+        cursor: pointer;
+        transition: all 0.3s ease;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        gap: 0.5rem;
+    }
+    .join-btn:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 10px 30px rgba(255, 107, 53, 0.4);
+    }
+    
+    .divider {
+        display: flex;
+        align-items: center;
+        margin: 2rem 0;
+        color: var(--text-muted);
+    }
+    .divider::before,
+    .divider::after {
+        content: '';
+        flex: 1;
+        height: 1px;
+        background: var(--border-color);
+    }
+    .divider span {
+        padding: 0 1rem;
+        font-size: 0.85rem;
+    }
+    
+    .create-link {
+        text-align: center;
+    }
+    .create-link p {
+        color: var(--text-secondary);
+        margin-bottom: 0.75rem;
+        font-size: 0.9rem;
+    }
+    .create-link a {
+        display: inline-flex;
+        align-items: center;
+        gap: 0.5rem;
+        padding: 0.75rem 1.5rem;
+        border: 2px solid var(--accent-primary);
+        color: var(--accent-primary);
+        border-radius: 12px;
+        text-decoration: none;
+        font-weight: 600;
+        transition: all 0.3s ease;
+    }
+    .create-link a:hover {
+        background: var(--accent-primary);
+        color: white;
+    }
+    
+    .back-link {
+        text-align: center;
+        margin-top: 1.5rem;
+    }
+    .back-link a {
+        color: var(--text-secondary);
+        text-decoration: none;
+        font-size: 0.9rem;
+        transition: color 0.3s ease;
+    }
+    .back-link a:hover {
+        color: var(--accent-primary);
+    }
+</style>
+{% endblock %}
+
 {% block content %}
-<div class="container py-5">
-    <div class="row justify-content-center">
-        <div class="col-md-6 col-lg-5">
-            <div class="card glass-card">
-                <div class="card-body p-4">
-                    <h2 class="text-center text-gradient mb-4">
-                        <i class="fas fa-sign-in-alt me-2"></i>
-                        {% if is_english %}Join Class{% elif is_chinese %}加入班级{% else %}クラスに参加{% endif %}
-                    </h2>
-                    
-                    <p class="text-muted text-center mb-4">
-                        {% if is_english %}Enter the class code shared by your teacher.{% elif is_chinese %}输入老师分享的班级代码。{% else %}先生から共有されたクラスコードを入力してください。{% endif %}
-                    </p>
-                    
-                    <form method="post">
-                        {% csrf_token %}
-                        <div class="mb-4">
-                            <label for="code" class="form-label">
-                                {% if is_english %}Class Code{% elif is_chinese %}班级代码{% else %}クラスコード{% endif %}
-                            </label>
-                            <input type="text" 
-                                   class="form-control form-control-lg text-center" 
-                                   id="code" 
-                                   name="code" 
-                                   placeholder="{% if is_english %}e.g. ABC123{% elif is_chinese %}例如 ABC123{% else %}例: ABC123{% endif %}"
-                                   maxlength="6"
-                                   style="text-transform: uppercase; letter-spacing: 0.3em; font-weight: bold;"
-                                   required>
-                        </div>
-                        
-                        <button type="submit" class="btn btn-primary w-100 btn-lg">
-                            <i class="fas fa-door-open me-2"></i>
-                            {% if is_english %}Join{% elif is_chinese %}加入{% else %}参加する{% endif %}
-                        </button>
-                    </form>
-                    
-                    <hr class="my-4">
-                    
-                    <div class="text-center">
-                        <p class="text-muted mb-2">
-                            {% if is_english %}Want to create your own class?{% elif is_chinese %}想创建自己的班级？{% else %}自分でクラスを作成したい場合{% endif %}
-                        </p>
-                        <a href="{% url 'songs:classroom_create' %}" class="btn btn-outline-primary">
-                            <i class="fas fa-plus me-1"></i>
-                            {% if is_english %}Create Class{% elif is_chinese %}创建班级{% else %}クラスを作成{% endif %}
-                        </a>
-                    </div>
+<div class="container">
+    <div class="join-container">
+        <div class="join-card">
+            <div class="join-header">
+                <div class="join-header-icon">
+                    <i class="fas fa-door-open"></i>
                 </div>
+                <h2>{% if is_english %}Join a Class{% elif is_chinese %}加入班级{% else %}クラスに参加{% endif %}</h2>
+                <p>{% if is_english %}Enter the code shared by your teacher{% elif is_chinese %}输入老师分享的代码{% else %}先生から共有されたコードを入力{% endif %}</p>
             </div>
             
-            <div class="text-center mt-3">
-                <a href="{% url 'songs:classroom_list' %}" class="text-muted">
-                    <i class="fas fa-arrow-left me-1"></i>
-                    {% if is_english %}Back to My Classes{% elif is_chinese %}返回我的班级{% else %}マイクラスに戻る{% endif %}
-                </a>
+            <div class="join-body">
+                <form method="post">
+                    {% csrf_token %}
+                    <div class="code-input-wrapper">
+                        <label for="code">
+                            <i class="fas fa-key me-2"></i>
+                            {% if is_english %}Class Code{% elif is_chinese %}班级代码{% else %}参加コード{% endif %}
+                        </label>
+                        <input type="text" 
+                               class="code-input" 
+                               id="code" 
+                               name="code" 
+                               placeholder="ABC123"
+                               maxlength="6"
+                               autocomplete="off"
+                               required>
+                    </div>
+                    
+                    <button type="submit" class="join-btn">
+                        <i class="fas fa-sign-in-alt"></i>
+                        {% if is_english %}Join Class{% elif is_chinese %}加入班级{% else %}参加する{% endif %}
+                    </button>
+                </form>
+                
+                <div class="divider">
+                    <span>{% if is_english %}or{% elif is_chinese %}或{% else %}または{% endif %}</span>
+                </div>
+                
+                <div class="create-link">
+                    <p>{% if is_english %}Want to create your own class?{% elif is_chinese %}想创建自己的班级？{% else %}自分でクラスを作りたい場合{% endif %}</p>
+                    <a href="{% url 'songs:classroom_create' %}">
+                        <i class="fas fa-plus"></i>
+                        {% if is_english %}Create Class{% elif is_chinese %}创建班级{% else %}クラスを作成{% endif %}
+                    </a>
+                </div>
             </div>
         </div>
+    </div>
+    
+    <div class="back-link">
+        <a href="{% url 'songs:classroom_list' %}">
+            <i class="fas fa-arrow-left me-1"></i>
+            {% if is_english %}Back to My Classes{% elif is_chinese %}返回我的班级{% else %}マイクラスに戻る{% endif %}
+        </a>
     </div>
 </div>
 {% endblock %}

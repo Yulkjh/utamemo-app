@@ -3,72 +3,224 @@
 
 {% block title %}{% if is_english %}Share Song{% elif is_chinese %}分享歌曲{% else %}楽曲を共有{% endif %} - {{ classroom.name }} - UTAMEMO{% endblock %}
 
+{% block extra_css %}
+<style>
+    .share-header {
+        background: linear-gradient(135deg, var(--accent-primary) 0%, #ff8a50 100%);
+        border-radius: 20px;
+        padding: 2rem;
+        color: white;
+        margin-bottom: 2rem;
+        position: relative;
+        overflow: hidden;
+    }
+    .share-header::before {
+        content: '';
+        position: absolute;
+        top: -50%;
+        right: -10%;
+        width: 200px;
+        height: 200px;
+        background: rgba(255,255,255,0.1);
+        border-radius: 50%;
+    }
+    .share-header h1 {
+        font-size: 1.5rem;
+        font-weight: 700;
+        margin-bottom: 0.5rem;
+    }
+    .share-header p {
+        opacity: 0.9;
+        margin: 0;
+    }
+    .share-header .classroom-tag {
+        display: inline-flex;
+        align-items: center;
+        gap: 0.5rem;
+        background: rgba(255,255,255,0.2);
+        padding: 0.5rem 1rem;
+        border-radius: 20px;
+        margin-top: 1rem;
+        font-size: 0.9rem;
+    }
+    
+    .songs-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+        gap: 1.5rem;
+    }
+    
+    .share-song-card {
+        background: var(--bg-secondary);
+        border-radius: 16px;
+        border: 2px solid var(--border-color);
+        overflow: hidden;
+        transition: all 0.3s ease;
+    }
+    .share-song-card:hover {
+        border-color: var(--accent-primary);
+        box-shadow: 0 8px 30px rgba(0,0,0,0.1);
+    }
+    .share-song-card-body {
+        padding: 1.25rem;
+    }
+    .share-song-title {
+        font-size: 1.1rem;
+        font-weight: 600;
+        color: var(--text-primary);
+        margin-bottom: 0.5rem;
+    }
+    .share-song-artist {
+        color: var(--text-secondary);
+        font-size: 0.9rem;
+        margin-bottom: 0.5rem;
+    }
+    .share-song-genre {
+        display: inline-block;
+        background: linear-gradient(135deg, var(--accent-primary) 0%, #ff8a50 100%);
+        color: white;
+        font-size: 0.75rem;
+        padding: 0.25em 0.75em;
+        border-radius: 20px;
+        margin-bottom: 0.75rem;
+    }
+    .share-song-audio {
+        width: 100%;
+        height: 45px;
+        border-radius: 8px;
+        margin-bottom: 1rem;
+    }
+    .share-btn {
+        width: 100%;
+        padding: 0.75rem;
+        background: linear-gradient(135deg, var(--accent-primary) 0%, #ff8a50 100%);
+        color: white;
+        border: none;
+        border-radius: 12px;
+        font-weight: 600;
+        cursor: pointer;
+        transition: all 0.3s ease;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        gap: 0.5rem;
+    }
+    .share-btn:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 8px 25px rgba(255, 107, 53, 0.4);
+    }
+    
+    .empty-state {
+        text-align: center;
+        padding: 4rem 2rem;
+        background: var(--bg-secondary);
+        border-radius: 20px;
+        border: 2px dashed var(--border-color);
+    }
+    .empty-state-icon {
+        width: 80px;
+        height: 80px;
+        background: linear-gradient(135deg, var(--accent-primary) 0%, #ff8a50 100%);
+        border-radius: 50%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        margin: 0 auto 1rem;
+    }
+    .empty-state-icon i {
+        font-size: 2rem;
+        color: white;
+    }
+    .empty-state h4 {
+        color: var(--text-primary);
+        margin-bottom: 0.5rem;
+    }
+    .empty-state p {
+        color: var(--text-secondary);
+        margin-bottom: 1.5rem;
+    }
+    
+    .back-link {
+        text-align: center;
+        margin-top: 2rem;
+    }
+    .back-link a {
+        display: inline-flex;
+        align-items: center;
+        gap: 0.5rem;
+        color: var(--text-secondary);
+        text-decoration: none;
+        padding: 0.75rem 1.5rem;
+        border: 2px solid var(--border-color);
+        border-radius: 12px;
+        transition: all 0.3s ease;
+    }
+    .back-link a:hover {
+        border-color: var(--accent-primary);
+        color: var(--accent-primary);
+    }
+</style>
+{% endblock %}
+
 {% block content %}
-<div class="container py-5">
-    <div class="row mb-4">
-        <div class="col-12">
-            <h2 class="text-gradient mb-2">
-                <i class="fas fa-share me-2"></i>
-                {% if is_english %}Share Song to Class{% elif is_chinese %}分享歌曲到班级{% else %}クラスに楽曲を共有{% endif %}
-            </h2>
-            <p class="text-muted">
-                {% if is_english %}Select a song to share with "{{ classroom.name }}"{% elif is_chinese %}选择要分享到「{{ classroom.name }}」的歌曲{% else %}「{{ classroom.name }}」に共有する楽曲を選択{% endif %}
-            </p>
+<div class="container py-4">
+    <!-- ヘッダー -->
+    <div class="share-header">
+        <h1>
+            <i class="fas fa-share-alt me-2"></i>
+            {% if is_english %}Share a Song{% elif is_chinese %}分享歌曲{% else %}楽曲を共有{% endif %}
+        </h1>
+        <p>{% if is_english %}Select a song to share with your class{% elif is_chinese %}选择要分享到班级的歌曲{% else %}クラスに共有する楽曲を選択してください{% endif %}</p>
+        <div class="classroom-tag">
+            <i class="fas fa-chalkboard"></i>
+            {{ classroom.name }}
         </div>
     </div>
-
+    
     {% if my_songs %}
-    <div class="row g-4">
+    <div class="songs-grid">
         {% for song in my_songs %}
-        <div class="col-md-6 col-lg-4">
-            <div class="card glass-card h-100">
-                <div class="card-body">
-                    <h5 class="card-title">{{ song.title }}</h5>
-                    <p class="text-muted small mb-2">
-                        <i class="fas fa-user me-1"></i>{{ song.artist }}
-                    </p>
-                    {% if song.genre %}
-                    <span class="badge bg-primary">{{ song.genre }}</span>
-                    {% endif %}
-                    {% if song.audio_url %}
-                    <audio controls class="w-100 mt-2" style="height: 40px;">
-                        <source src="{{ song.audio_url }}" type="audio/mpeg">
-                    </audio>
-                    {% endif %}
-                </div>
-                <div class="card-footer bg-transparent">
-                    <form method="post">
-                        {% csrf_token %}
-                        <input type="hidden" name="song_id" value="{{ song.pk }}">
-                        <button type="submit" class="btn btn-primary w-100">
-                            <i class="fas fa-share me-1"></i>
-                            {% if is_english %}Share{% elif is_chinese %}分享{% else %}共有する{% endif %}
-                        </button>
-                    </form>
-                </div>
+        <div class="share-song-card">
+            <div class="share-song-card-body">
+                <div class="share-song-title">{{ song.title }}</div>
+                <div class="share-song-artist"><i class="fas fa-user me-1"></i>{{ song.artist }}</div>
+                {% if song.genre %}
+                <span class="share-song-genre">{{ song.genre }}</span>
+                {% endif %}
+                {% if song.audio_url %}
+                <audio controls class="share-song-audio">
+                    <source src="{{ song.audio_url }}" type="audio/mpeg">
+                </audio>
+                {% endif %}
+                <form method="post">
+                    {% csrf_token %}
+                    <input type="hidden" name="song_id" value="{{ song.pk }}">
+                    <button type="submit" class="share-btn">
+                        <i class="fas fa-share"></i>
+                        {% if is_english %}Share to Class{% elif is_chinese %}分享到班级{% else %}クラスに共有{% endif %}
+                    </button>
+                </form>
             </div>
         </div>
         {% endfor %}
     </div>
     {% else %}
-    <div class="text-center py-5">
-        <i class="fas fa-music fa-4x text-muted mb-3"></i>
-        <h5 class="text-muted">
-            {% if is_english %}No songs available to share{% elif is_chinese %}没有可分享的歌曲{% else %}共有できる楽曲がありません{% endif %}
-        </h5>
-        <p class="text-muted">
-            {% if is_english %}Create a song first, or all your songs are already shared.{% elif is_chinese %}请先创建歌曲，或者所有歌曲已被分享。{% else %}まず楽曲を作成するか、全ての楽曲が既に共有されています。{% endif %}
-        </p>
-        <a href="{% url 'songs:upload_image' %}" class="btn btn-primary">
-            <i class="fas fa-plus me-1"></i>
+    <div class="empty-state">
+        <div class="empty-state-icon">
+            <i class="fas fa-music"></i>
+        </div>
+        <h4>{% if is_english %}No songs to share{% elif is_chinese %}没有可分享的歌曲{% else %}共有できる楽曲がありません{% endif %}</h4>
+        <p>{% if is_english %}Create a song first or all your songs are already shared{% elif is_chinese %}请先创建歌曲或所有歌曲已被分享{% else %}まず楽曲を作成するか、全ての楽曲が既に共有されています{% endif %}</p>
+        <a href="{% url 'songs:upload_image' %}" class="share-btn" style="display: inline-flex; width: auto; padding: 0.75rem 1.5rem;">
+            <i class="fas fa-plus"></i>
             {% if is_english %}Create Song{% elif is_chinese %}创建歌曲{% else %}楽曲を作成{% endif %}
         </a>
     </div>
     {% endif %}
-
-    <div class="text-center mt-4">
-        <a href="{% url 'songs:classroom_detail' classroom.pk %}" class="btn btn-outline-secondary">
-            <i class="fas fa-arrow-left me-1"></i>
+    
+    <div class="back-link">
+        <a href="{% url 'songs:classroom_detail' classroom.pk %}">
+            <i class="fas fa-arrow-left"></i>
             {% if is_english %}Back to Class{% elif is_chinese %}返回班级{% else %}クラスに戻る{% endif %}
         </a>
     </div>

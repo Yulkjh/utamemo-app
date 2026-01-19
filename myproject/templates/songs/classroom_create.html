@@ -3,67 +3,228 @@
 
 {% block title %}{% if is_english %}Create Class{% elif is_chinese %}创建班级{% else %}クラスを作成{% endif %} - UTAMEMO{% endblock %}
 
+{% block extra_css %}
+<style>
+    .create-container {
+        min-height: 70vh;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        padding: 2rem 0;
+    }
+    
+    .create-card {
+        background: var(--bg-secondary);
+        border-radius: 24px;
+        border: 1px solid var(--border-color);
+        overflow: hidden;
+        max-width: 500px;
+        width: 100%;
+        box-shadow: 0 20px 60px rgba(0,0,0,0.1);
+    }
+    
+    .create-header {
+        background: linear-gradient(135deg, #4CAF50 0%, #8BC34A 100%);
+        padding: 2.5rem 2rem;
+        text-align: center;
+        color: white;
+        position: relative;
+        overflow: hidden;
+    }
+    .create-header::before {
+        content: '';
+        position: absolute;
+        top: -50%;
+        right: -30%;
+        width: 200px;
+        height: 200px;
+        background: rgba(255,255,255,0.1);
+        border-radius: 50%;
+    }
+    .create-header-icon {
+        width: 80px;
+        height: 80px;
+        background: rgba(255,255,255,0.2);
+        border-radius: 50%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        margin: 0 auto 1rem;
+    }
+    .create-header-icon i {
+        font-size: 2rem;
+    }
+    .create-header h2 {
+        font-size: 1.5rem;
+        font-weight: 700;
+        margin-bottom: 0.5rem;
+    }
+    .create-header p {
+        opacity: 0.9;
+        margin: 0;
+        font-size: 0.95rem;
+    }
+    
+    .create-body {
+        padding: 2rem;
+    }
+    
+    .form-group {
+        margin-bottom: 1.5rem;
+    }
+    .form-group label {
+        display: block;
+        font-weight: 600;
+        margin-bottom: 0.5rem;
+        color: var(--text-primary);
+    }
+    .form-group label .required {
+        color: #f44336;
+        margin-left: 0.25rem;
+    }
+    .form-input {
+        width: 100%;
+        padding: 0.875rem 1rem;
+        font-size: 1rem;
+        border: 2px solid var(--border-color);
+        border-radius: 12px;
+        background: var(--bg-primary);
+        color: var(--text-primary);
+        transition: all 0.3s ease;
+    }
+    .form-input:focus {
+        outline: none;
+        border-color: #4CAF50;
+        box-shadow: 0 0 0 4px rgba(76, 175, 80, 0.15);
+    }
+    .form-input::placeholder {
+        color: var(--text-muted);
+    }
+    textarea.form-input {
+        resize: vertical;
+        min-height: 100px;
+    }
+    
+    .info-box {
+        background: linear-gradient(135deg, rgba(76, 175, 80, 0.1) 0%, rgba(139, 195, 74, 0.1) 100%);
+        border: 1px solid rgba(76, 175, 80, 0.3);
+        border-radius: 12px;
+        padding: 1rem;
+        margin-bottom: 1.5rem;
+    }
+    .info-box p {
+        margin: 0;
+        color: var(--text-secondary);
+        font-size: 0.9rem;
+        line-height: 1.5;
+    }
+    .info-box i {
+        color: #4CAF50;
+        margin-right: 0.5rem;
+    }
+    
+    .create-btn {
+        width: 100%;
+        padding: 1rem;
+        font-size: 1.1rem;
+        font-weight: 600;
+        background: linear-gradient(135deg, #4CAF50 0%, #8BC34A 100%);
+        color: white;
+        border: none;
+        border-radius: 14px;
+        cursor: pointer;
+        transition: all 0.3s ease;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        gap: 0.5rem;
+    }
+    .create-btn:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 10px 30px rgba(76, 175, 80, 0.4);
+    }
+    
+    .back-link {
+        text-align: center;
+        margin-top: 1.5rem;
+    }
+    .back-link a {
+        color: var(--text-secondary);
+        text-decoration: none;
+        font-size: 0.9rem;
+        transition: color 0.3s ease;
+    }
+    .back-link a:hover {
+        color: var(--accent-primary);
+    }
+</style>
+{% endblock %}
+
 {% block content %}
-<div class="container py-5">
-    <div class="row justify-content-center">
-        <div class="col-md-6 col-lg-5">
-            <div class="card glass-card">
-                <div class="card-body p-4">
-                    <h2 class="text-center text-gradient mb-4">
-                        <i class="fas fa-chalkboard me-2"></i>
-                        {% if is_english %}Create Class{% elif is_chinese %}创建班级{% else %}クラスを作成{% endif %}
-                    </h2>
-                    
-                    <p class="text-muted text-center mb-4">
-                        {% if is_english %}Create a class and share the code with your students.{% elif is_chinese %}创建班级并与学生分享代码。{% else %}クラスを作成して、生徒にコードを共有しましょう。{% endif %}
-                    </p>
-                    
-                    <form method="post">
-                        {% csrf_token %}
-                        <div class="mb-3">
-                            <label for="name" class="form-label">
-                                {% if is_english %}Class Name{% elif is_chinese %}班级名称{% else %}クラス名{% endif %} <span class="text-danger">*</span>
-                            </label>
-                            <input type="text" 
-                                   class="form-control" 
-                                   id="name" 
-                                   name="name" 
-                                   placeholder="{% if is_english %}e.g. English Class 3-A{% elif is_chinese %}例如 英语3-A班{% else %}例: 英語3年A組{% endif %}"
-                                   maxlength="100"
-                                   required>
-                        </div>
-                        
-                        <div class="mb-4">
-                            <label for="description" class="form-label">
-                                {% if is_english %}Description (optional){% elif is_chinese %}描述（可选）{% else %}説明（任意）{% endif %}
-                            </label>
-                            <textarea class="form-control" 
-                                      id="description" 
-                                      name="description" 
-                                      rows="3"
-                                      placeholder="{% if is_english %}e.g. Songs for learning English vocabulary{% elif is_chinese %}例如 用于学习英语词汇的歌曲{% else %}例: 英単語学習用の楽曲を共有するクラス{% endif %}"></textarea>
-                        </div>
-                        
-                        <div class="alert alert-info small">
-                            <i class="fas fa-info-circle me-1"></i>
-                            {% if is_english %}A unique class code will be generated automatically. Share this code with your students so they can join.{% elif is_chinese %}将自动生成唯一的班级代码。与学生分享此代码以便他们加入。{% else %}クラスコードは自動で生成されます。生徒にこのコードを共有して参加してもらいましょう。{% endif %}
-                        </div>
-                        
-                        <button type="submit" class="btn btn-primary w-100 btn-lg">
-                            <i class="fas fa-plus-circle me-2"></i>
-                            {% if is_english %}Create{% elif is_chinese %}创建{% else %}作成する{% endif %}
-                        </button>
-                    </form>
+<div class="container">
+    <div class="create-container">
+        <div class="create-card">
+            <div class="create-header">
+                <div class="create-header-icon">
+                    <i class="fas fa-chalkboard"></i>
                 </div>
+                <h2>{% if is_english %}Create a Class{% elif is_chinese %}创建班级{% else %}クラスを作成{% endif %}</h2>
+                <p>{% if is_english %}Create a class and share the code with your students{% elif is_chinese %}创建班级并与学生分享代码{% else %}クラスを作成して生徒とコードを共有{% endif %}</p>
             </div>
             
-            <div class="text-center mt-3">
-                <a href="{% url 'songs:classroom_list' %}" class="text-muted">
-                    <i class="fas fa-arrow-left me-1"></i>
-                    {% if is_english %}Back to My Classes{% elif is_chinese %}返回我的班级{% else %}マイクラスに戻る{% endif %}
-                </a>
+            <div class="create-body">
+                <form method="post">
+                    {% csrf_token %}
+                    
+                    <div class="form-group">
+                        <label for="name">
+                            <i class="fas fa-tag me-2"></i>
+                            {% if is_english %}Class Name{% elif is_chinese %}班级名称{% else %}クラス名{% endif %}
+                            <span class="required">*</span>
+                        </label>
+                        <input type="text" 
+                               class="form-input" 
+                               id="name" 
+                               name="name" 
+                               placeholder="{% if is_english %}e.g. English Class 3-A{% elif is_chinese %}例如：英语3-A班{% else %}例：英語3年A組{% endif %}"
+                               maxlength="100"
+                               required>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label for="description">
+                            <i class="fas fa-align-left me-2"></i>
+                            {% if is_english %}Description{% elif is_chinese %}描述{% else %}説明{% endif %}
+                            <span class="text-muted">({% if is_english %}optional{% elif is_chinese %}可选{% else %}任意{% endif %})</span>
+                        </label>
+                        <textarea class="form-input" 
+                                  id="description" 
+                                  name="description" 
+                                  rows="3"
+                                  placeholder="{% if is_english %}e.g. Songs for learning English vocabulary{% elif is_chinese %}例如：用于学习英语词汇的歌曲{% else %}例：英単語学習用の楽曲を共有するクラス{% endif %}"></textarea>
+                    </div>
+                    
+                    <div class="info-box">
+                        <p>
+                            <i class="fas fa-magic"></i>
+                            {% if is_english %}A unique 6-character code will be automatically generated. Share this code with your students so they can join your class.{% elif is_chinese %}将自动生成唯一的6位代码。与学生分享此代码以便他们加入您的班级。{% else %}6文字のユニークなコードが自動生成されます。生徒にこのコードを共有してクラスに参加してもらいましょう。{% endif %}
+                        </p>
+                    </div>
+                    
+                    <button type="submit" class="create-btn">
+                        <i class="fas fa-plus-circle"></i>
+                        {% if is_english %}Create Class{% elif is_chinese %}创建班级{% else %}クラスを作成{% endif %}
+                    </button>
+                </form>
             </div>
         </div>
+    </div>
+    
+    <div class="back-link">
+        <a href="{% url 'songs:classroom_list' %}">
+            <i class="fas fa-arrow-left me-1"></i>
+            {% if is_english %}Back to My Classes{% elif is_chinese %}返回我的班级{% else %}マイクラスに戻る{% endif %}
+        </a>
     </div>
 </div>
 {% endblock %}
