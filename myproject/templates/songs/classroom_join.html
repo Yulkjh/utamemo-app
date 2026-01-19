@@ -28,13 +28,7 @@
         font-size: 2.5rem;
         font-weight: 800;
         color: #2d1b13;
-        margin-bottom: 0.75rem;
-    }
-    
-    .join-subtitle {
-        font-size: 1.1rem;
-        color: #8a6b5a;
-        margin-bottom: 2.5rem;
+        margin-bottom: 2rem;
     }
     
     .code-form {
@@ -96,59 +90,6 @@
         font-size: 1.3rem;
     }
     
-    .divider {
-        display: flex;
-        align-items: center;
-        margin: 2.5rem 0;
-    }
-    .divider::before,
-    .divider::after {
-        content: '';
-        flex: 1;
-        height: 2px;
-        background: linear-gradient(90deg, transparent, #e0d6d0, transparent);
-    }
-    .divider-text {
-        padding: 0 1.5rem;
-        color: #8a6b5a;
-        font-size: 1rem;
-        font-weight: 600;
-    }
-    
-    .create-section {
-        text-align: center;
-    }
-    
-    .create-text {
-        color: #5c3a2a;
-        font-size: 1.05rem;
-        margin-bottom: 1rem;
-    }
-    
-    .create-btn {
-        display: inline-flex;
-        align-items: center;
-        gap: 0.75rem;
-        padding: 1rem 2rem;
-        background: white;
-        border: 3px solid #2d1b13;
-        color: #2d1b13;
-        border-radius: 14px;
-        text-decoration: none;
-        font-weight: 700;
-        font-size: 1.1rem;
-        transition: all 0.3s ease;
-    }
-    .create-btn:hover {
-        background: #2d1b13;
-        color: white;
-        transform: translateY(-2px);
-        box-shadow: 0 8px 25px rgba(45, 27, 19, 0.25);
-    }
-    .create-btn i {
-        font-size: 1.2rem;
-    }
-    
     .back-link {
         margin-top: 2.5rem;
     }
@@ -189,7 +130,6 @@
 <div class="join-page">
     <div class="join-main-card">
         <h1 class="join-title">{% if is_english %}Join Class{% elif is_chinese %}加入班级{% else %}クラスに参加{% endif %}</h1>
-        <p class="join-subtitle">{% if is_english %}Enter the code shared by your teacher{% elif is_chinese %}输入老师分享的代码{% else %}先生から共有されたコードを入力{% endif %}</p>
         
         <form method="post" class="code-form">
             {% csrf_token %}
@@ -209,18 +149,6 @@
                 {% if is_english %}Join{% elif is_chinese %}加入{% else %}参加する{% endif %}
             </button>
         </form>
-        
-        <div class="divider">
-            <span class="divider-text">{% if is_english %}or{% elif is_chinese %}或{% else %}または{% endif %}</span>
-        </div>
-        
-        <div class="create-section">
-            <p class="create-text">{% if is_english %}Want to create your own class?{% elif is_chinese %}想创建自己的班级？{% else %}自分でクラスを作りたい場合{% endif %}</p>
-            <a href="{% url 'songs:classroom_create' %}" class="create-btn">
-                <i class="bi bi-plus-lg"></i>
-                {% if is_english %}Create Class{% elif is_chinese %}创建班级{% else %}クラスを作成{% endif %}
-            </a>
-        </div>
     </div>
     
     <div class="back-link">
