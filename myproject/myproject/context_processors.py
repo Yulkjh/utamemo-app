@@ -2,17 +2,11 @@
 カスタムコンテキストプロセッサ - 全テンプレートで使用可能な変数を提供
 """
 
-# 対応言語リスト - 新しい言語を追加する場合はここに追加
+# 対応言語リスト
 AVAILABLE_LANGUAGES = [
     {'code': 'ja', 'name': '日本語'},
     {'code': 'en', 'name': 'English'},
     {'code': 'zh', 'name': '中文'},
-    # 将来の言語追加例:
-    # {'code': 'ko', 'name': '한국어'},
-    # {'code': 'es', 'name': 'Español'},
-    # {'code': 'fr', 'name': 'Français'},
-    # {'code': 'de', 'name': 'Deutsch'},
-    # {'code': 'pt', 'name': 'Português'},
 ]
 
 VALID_LANG_CODES = {'ja', 'en', 'zh'}
@@ -22,7 +16,7 @@ def language_context(request):
     # セッションから言語を取得
     app_language = request.session.get('app_language', 'ja')
     
-    # URLパラメータで言語が指定されている場合はそれを優先（セッション同期問題のフォールバック）
+    # URLパラメータで言語が指定されている場合はそれを優先
     url_lang = request.GET.get('_lang', '')
     if url_lang in VALID_LANG_CODES:
         app_language = url_lang

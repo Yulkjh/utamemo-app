@@ -1,0 +1,126 @@
+{% extends 'base.html' %}
+{% load i18n %}
+
+{% block title %}{% if app_language == 'en' %}Terms of Service{% else %}利用規約{% endif %} - UTAMEMO{% endblock %}
+
+{% block content %}
+<div class="container py-5">
+    <div class="row justify-content-center">
+        <div class="col-lg-8">
+            <div class="card shadow-sm">
+                <div class="card-body p-4 p-md-5">
+                    {% if app_language == 'en' %}
+                    <h1 class="mb-4">Terms of Service</h1>
+                    <p class="text-muted mb-4">Last updated: January 19, 2026</p>
+                    
+                    <h2 class="h5 mt-4">1. Acceptance of Terms</h2>
+                    <p>By using UTAMEMO (hereinafter "the Service"), you agree to these Terms of Service. If you do not agree, please do not use the Service.</p>
+                    
+                    <h2 class="h5 mt-4">2. Service Description</h2>
+                    <p>UTAMEMO is a service that uses AI to generate songs from lyrics. Users can:</p>
+                    <ul>
+                        <li>Input lyrics and generate songs</li>
+                        <li>Save and manage created songs</li>
+                        <li>Share songs publicly or keep them private</li>
+                    </ul>
+                    
+                    <h2 class="h5 mt-4">3. User Responsibilities</h2>
+                    <p>Users must not:</p>
+                    <ul>
+                        <li>Use copyrighted lyrics without permission</li>
+                        <li>Generate content that is illegal, harmful, or violates others' rights</li>
+                        <li>Attempt to disrupt or hack the Service</li>
+                        <li>Use the Service for commercial purposes without permission</li>
+                    </ul>
+                    
+                    <h2 class="h5 mt-4">4. Intellectual Property</h2>
+                    <p>Songs generated through the Service are created using AI technology. Users retain rights to their original lyrics, but AI-generated music is subject to the following:</p>
+                    <ul>
+                        <li>Users may use generated songs for personal, non-commercial purposes</li>
+                        <li>Commercial use may require additional licensing</li>
+                    </ul>
+                    
+                    <h2 class="h5 mt-4">5. Account Management</h2>
+                    <p>Users are responsible for maintaining the security of their accounts. We are not liable for any loss resulting from unauthorized access to your account.</p>
+                    
+                    <h2 class="h5 mt-4">6. Service Changes and Termination</h2>
+                    <p>We reserve the right to modify, suspend, or terminate the Service at any time without notice.</p>
+                    
+                    <h2 class="h5 mt-4">7. Disclaimer</h2>
+                    <p>The Service is provided "as is" without any warranties. We are not responsible for:</p>
+                    <ul>
+                        <li>Service interruptions or errors</li>
+                        <li>Loss of data</li>
+                        <li>Any damages resulting from use of the Service</li>
+                    </ul>
+                    
+                    <h2 class="h5 mt-4">8. Changes to Terms</h2>
+                    <p>We may update these Terms at any time. Continued use of the Service after changes constitutes acceptance of the new Terms.</p>
+                    
+                    <h2 class="h5 mt-4">9. Contact</h2>
+                    <p>For questions about these Terms, please contact us through our <a href="{% url 'contact' %}">Contact Page</a>.</p>
+                    
+                    {% else %}
+                    <h1 class="mb-4">利用規約</h1>
+                    <p class="text-muted mb-4">最終更新日：2026年1月19日</p>
+                    
+                    <h2 class="h5 mt-4">第1条（規約の同意）</h2>
+                    <p>UTAMEMO（以下「本サービス」）をご利用いただくことで、本利用規約に同意したものとみなします。同意いただけない場合は、本サービスのご利用をお控えください。</p>
+                    
+                    <h2 class="h5 mt-4">第2条（サービス内容）</h2>
+                    <p>本サービスは、AIを活用して歌詞から楽曲を生成するサービスです。ユーザーは以下のことができます：</p>
+                    <ul>
+                        <li>歌詞を入力して楽曲を生成する</li>
+                        <li>作成した楽曲を保存・管理する</li>
+                        <li>楽曲を公開または非公開に設定する</li>
+                    </ul>
+                    
+                    <h2 class="h5 mt-4">第3条（禁止事項）</h2>
+                    <p>ユーザーは以下の行為を行ってはなりません：</p>
+                    <ul>
+                        <li>著作権で保護された歌詞を無断で使用すること</li>
+                        <li>違法、有害、または他者の権利を侵害するコンテンツを生成すること</li>
+                        <li>本サービスの妨害やハッキングを試みること</li>
+                        <li>許可なく商用目的で本サービスを利用すること</li>
+                    </ul>
+                    
+                    <h2 class="h5 mt-4">第4条（知的財産権）</h2>
+                    <p>本サービスを通じて生成された楽曲はAI技術を使用して作成されます。ユーザーは元の歌詞に対する権利を保持しますが、AI生成の音楽には以下が適用されます：</p>
+                    <ul>
+                        <li>生成された楽曲は個人的な非商用目的で使用できます</li>
+                        <li>商用利用には追加のライセンスが必要な場合があります</li>
+                    </ul>
+                    
+                    <h2 class="h5 mt-4">第5条（アカウント管理）</h2>
+                    <p>ユーザーは自身のアカウントのセキュリティを維持する責任があります。不正アクセスによる損害について、当方は責任を負いません。</p>
+                    
+                    <h2 class="h5 mt-4">第6条（サービスの変更・終了）</h2>
+                    <p>当方は、予告なく本サービスを変更、一時停止、または終了する権利を有します。</p>
+                    
+                    <h2 class="h5 mt-4">第7条（免責事項）</h2>
+                    <p>本サービスは「現状のまま」提供され、いかなる保証もありません。以下について当方は責任を負いません：</p>
+                    <ul>
+                        <li>サービスの中断やエラー</li>
+                        <li>データの損失</li>
+                        <li>本サービスの利用に起因する損害</li>
+                    </ul>
+                    
+                    <h2 class="h5 mt-4">第8条（規約の変更）</h2>
+                    <p>当方は、本規約をいつでも更新することができます。変更後も本サービスを継続して利用することで、新しい規約に同意したものとみなします。</p>
+                    
+                    <h2 class="h5 mt-4">第9条（お問い合わせ）</h2>
+                    <p>本規約に関するご質問は、<a href="{% url 'contact' %}">お問い合わせページ</a>よりご連絡ください。</p>
+                    {% endif %}
+                    
+                    <div class="mt-5 pt-4 border-top">
+                        <a href="{% url 'home' %}" class="btn btn-outline-primary">
+                            <i class="bi bi-arrow-left me-2"></i>
+                            {% if app_language == 'en' %}Back to Home{% else %}ホームに戻る{% endif %}
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

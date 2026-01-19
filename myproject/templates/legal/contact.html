@@ -1,0 +1,100 @@
+{% extends 'base.html' %}
+{% load i18n %}
+
+{% block title %}{% if app_language == 'en' %}Contact{% else %}お問い合わせ{% endif %} - UTAMEMO{% endblock %}
+
+{% block content %}
+<div class="container py-5">
+    <div class="row justify-content-center">
+        <div class="col-lg-6">
+            <div class="card shadow-sm">
+                <div class="card-body p-4 p-md-5">
+                    {% if app_language == 'en' %}
+                    <h1 class="mb-4">Contact Us</h1>
+                    <p class="text-muted mb-4">Have questions or feedback? We'd love to hear from you.</p>
+                    {% else %}
+                    <h1 class="mb-4">お問い合わせ</h1>
+                    <p class="text-muted mb-4">ご質問やご意見がございましたら、お気軽にお問い合わせください。</p>
+                    {% endif %}
+                    
+                    {% if messages %}
+                    {% for message in messages %}
+                    <div class="alert alert-{{ message.tags }} alert-dismissible fade show" role="alert">
+                        {{ message }}
+                        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+                    </div>
+                    {% endfor %}
+                    {% endif %}
+                    
+                    <form method="post">
+                        {% csrf_token %}
+                        
+                        <div class="mb-3">
+                            <label for="name" class="form-label">
+                                {% if app_language == 'en' %}Name{% else %}お名前{% endif %}
+                            </label>
+                            <input type="text" class="form-control" id="name" name="name" required
+                                   value="{{ user.username }}" {% if user.is_authenticated %}readonly{% endif %}>
+                        </div>
+                        
+                        <div class="mb-3">
+                            <label for="email" class="form-label">
+                                {% if app_language == 'en' %}Email{% else %}メールアドレス{% endif %}
+                            </label>
+                            <input type="email" class="form-control" id="email" name="email" required
+                                   value="{% if user.is_authenticated %}{{ user.email }}{% endif %}"
+                                   placeholder="{% if app_language == 'en' %}your@email.com{% else %}example@email.com{% endif %}">
+                        </div>
+                        
+                        <div class="mb-3">
+                            <label for="subject" class="form-label">
+                                {% if app_language == 'en' %}Subject{% else %}件名{% endif %}
+                            </label>
+                            <select class="form-select" id="subject" name="subject" required>
+                                <option value="">{% if app_language == 'en' %}Select a subject{% else %}件名を選択してください{% endif %}</option>
+                                <option value="general">{% if app_language == 'en' %}General Inquiry{% else %}一般的なお問い合わせ{% endif %}</option>
+                                <option value="bug">{% if app_language == 'en' %}Bug Report{% else %}バグ報告{% endif %}</option>
+                                <option value="feature">{% if app_language == 'en' %}Feature Request{% else %}機能リクエスト{% endif %}</option>
+                                <option value="account">{% if app_language == 'en' %}Account Issue{% else %}アカウントに関する問題{% endif %}</option>
+                                <option value="billing">{% if app_language == 'en' %}Billing Question{% else %}お支払いに関するご質問{% endif %}</option>
+                                <option value="other">{% if app_language == 'en' %}Other{% else %}その他{% endif %}</option>
+                            </select>
+                        </div>
+                        
+                        <div class="mb-4">
+                            <label for="message" class="form-label">
+                                {% if app_language == 'en' %}Message{% else %}メッセージ{% endif %}
+                            </label>
+                            <textarea class="form-control" id="message" name="message" rows="5" required
+                                      placeholder="{% if app_language == 'en' %}Please describe your inquiry in detail...{% else %}お問い合わせ内容を詳しくご記入ください...{% endif %}"></textarea>
+                        </div>
+                        
+                        <button type="submit" class="btn btn-primary w-100">
+                            <i class="bi bi-send me-2"></i>
+                            {% if app_language == 'en' %}Send Message{% else %}送信する{% endif %}
+                        </button>
+                    </form>
+                    
+                    <hr class="my-4">
+                    
+                    <div class="text-center">
+                        <p class="mb-2">
+                            {% if app_language == 'en' %}Or email us directly:{% else %}または、直接メールでお問い合わせ:{% endif %}
+                        </p>
+                        <a href="mailto:support@utamemo.com" class="text-decoration-none">
+                            <i class="bi bi-envelope me-2"></i>support@utamemo.com
+                        </a>
+                    </div>
+                    
+                    <div class="mt-4 pt-4 border-top text-center">
+                        <a href="{% url 'home' %}" class="btn btn-outline-secondary">
+                            <i class="bi bi-arrow-left me-2"></i>
+                            {% if app_language == 'en' %}Back to Home{% else %}ホームに戻る{% endif %}
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

@@ -1,0 +1,146 @@
+{% extends 'base.html' %}
+{% load i18n %}
+
+{% block title %}{% if app_language == 'en' %}Privacy Policy{% else %}プライバシーポリシー{% endif %} - UTAMEMO{% endblock %}
+
+{% block content %}
+<div class="container py-5">
+    <div class="row justify-content-center">
+        <div class="col-lg-8">
+            <div class="card shadow-sm">
+                <div class="card-body p-4 p-md-5">
+                    {% if app_language == 'en' %}
+                    <h1 class="mb-4">Privacy Policy</h1>
+                    <p class="text-muted mb-4">Last updated: January 19, 2026</p>
+                    
+                    <h2 class="h5 mt-4">1. Information We Collect</h2>
+                    <p>We collect the following information:</p>
+                    <ul>
+                        <li><strong>Account Information:</strong> Username, email address (optional), password (encrypted)</li>
+                        <li><strong>Content:</strong> Lyrics you input, songs you create</li>
+                        <li><strong>Usage Data:</strong> Access logs, device information</li>
+                    </ul>
+                    
+                    <h2 class="h5 mt-4">2. How We Use Your Information</h2>
+                    <p>We use your information to:</p>
+                    <ul>
+                        <li>Provide and improve the Service</li>
+                        <li>Process your song generation requests</li>
+                        <li>Communicate with you about the Service</li>
+                        <li>Ensure security and prevent fraud</li>
+                    </ul>
+                    
+                    <h2 class="h5 mt-4">3. Information Sharing</h2>
+                    <p>We do not sell your personal information. We may share information with:</p>
+                    <ul>
+                        <li><strong>AI Service Providers:</strong> To generate songs (lyrics are sent to AI APIs)</li>
+                        <li><strong>Payment Processors:</strong> For Pro plan subscriptions (Stripe)</li>
+                        <li><strong>Legal Requirements:</strong> When required by law</li>
+                    </ul>
+                    
+                    <h2 class="h5 mt-4">4. Data Security</h2>
+                    <p>We implement security measures including:</p>
+                    <ul>
+                        <li>HTTPS encryption for all communications</li>
+                        <li>Password hashing</li>
+                        <li>Secure data storage</li>
+                    </ul>
+                    
+                    <h2 class="h5 mt-4">5. Your Rights</h2>
+                    <p>You have the right to:</p>
+                    <ul>
+                        <li>Access your personal data</li>
+                        <li>Delete your account and data</li>
+                        <li>Export your data</li>
+                    </ul>
+                    
+                    <h2 class="h5 mt-4">6. Cookies</h2>
+                    <p>We use cookies for:</p>
+                    <ul>
+                        <li>Session management (keeping you logged in)</li>
+                        <li>Language preferences</li>
+                    </ul>
+                    
+                    <h2 class="h5 mt-4">7. Children's Privacy</h2>
+                    <p>The Service is not intended for users under 13 years of age. We do not knowingly collect information from children.</p>
+                    
+                    <h2 class="h5 mt-4">8. Changes to This Policy</h2>
+                    <p>We may update this Privacy Policy. We will notify you of significant changes by posting a notice on the Service.</p>
+                    
+                    <h2 class="h5 mt-4">9. Contact Us</h2>
+                    <p>For privacy-related questions, please contact us through our <a href="{% url 'contact' %}">Contact Page</a>.</p>
+                    
+                    {% else %}
+                    <h1 class="mb-4">プライバシーポリシー</h1>
+                    <p class="text-muted mb-4">最終更新日：2026年1月19日</p>
+                    
+                    <h2 class="h5 mt-4">1. 収集する情報</h2>
+                    <p>当方は以下の情報を収集します：</p>
+                    <ul>
+                        <li><strong>アカウント情報：</strong>ユーザー名、メールアドレス（任意）、パスワード（暗号化）</li>
+                        <li><strong>コンテンツ：</strong>入力した歌詞、作成した楽曲</li>
+                        <li><strong>利用データ：</strong>アクセスログ、デバイス情報</li>
+                    </ul>
+                    
+                    <h2 class="h5 mt-4">2. 情報の利用目的</h2>
+                    <p>収集した情報は以下の目的で利用します：</p>
+                    <ul>
+                        <li>本サービスの提供および改善</li>
+                        <li>楽曲生成リクエストの処理</li>
+                        <li>本サービスに関するご連絡</li>
+                        <li>セキュリティの確保および不正防止</li>
+                    </ul>
+                    
+                    <h2 class="h5 mt-4">3. 情報の共有</h2>
+                    <p>当方はお客様の個人情報を販売しません。以下の場合に情報を共有することがあります：</p>
+                    <ul>
+                        <li><strong>AIサービスプロバイダー：</strong>楽曲生成のため（歌詞がAI APIに送信されます）</li>
+                        <li><strong>決済処理業者：</strong>Proプランのサブスクリプション用（Stripe）</li>
+                        <li><strong>法的要件：</strong>法律で求められる場合</li>
+                    </ul>
+                    
+                    <h2 class="h5 mt-4">4. データセキュリティ</h2>
+                    <p>以下のセキュリティ対策を実施しています：</p>
+                    <ul>
+                        <li>すべての通信にHTTPS暗号化を使用</li>
+                        <li>パスワードのハッシュ化</li>
+                        <li>安全なデータ保存</li>
+                    </ul>
+                    
+                    <h2 class="h5 mt-4">5. お客様の権利</h2>
+                    <p>お客様には以下の権利があります：</p>
+                    <ul>
+                        <li>個人データへのアクセス</li>
+                        <li>アカウントとデータの削除</li>
+                        <li>データのエクスポート</li>
+                    </ul>
+                    
+                    <h2 class="h5 mt-4">6. Cookie（クッキー）</h2>
+                    <p>以下の目的でCookieを使用しています：</p>
+                    <ul>
+                        <li>セッション管理（ログイン状態の維持）</li>
+                        <li>言語設定の保存</li>
+                    </ul>
+                    
+                    <h2 class="h5 mt-4">7. 未成年者のプライバシー</h2>
+                    <p>本サービスは13歳未満のユーザーを対象としていません。13歳未満の方からの情報を意図的に収集することはありません。</p>
+                    
+                    <h2 class="h5 mt-4">8. ポリシーの変更</h2>
+                    <p>本プライバシーポリシーを更新する場合があります。重要な変更がある場合は、本サービス上で通知します。</p>
+                    
+                    <h2 class="h5 mt-4">9. お問い合わせ</h2>
+                    <p>プライバシーに関するご質問は、<a href="{% url 'contact' %}">お問い合わせページ</a>よりご連絡ください。</p>
+                    {% endif %}
+                    
+                    <div class="mt-5 pt-4 border-top">
+                        <a href="{% url 'home' %}" class="btn btn-outline-primary">
+                            <i class="bi bi-arrow-left me-2"></i>
+                            {% if app_language == 'en' %}Back to Home{% else %}ホームに戻る{% endif %}
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

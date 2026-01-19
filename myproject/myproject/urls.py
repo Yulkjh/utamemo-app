@@ -19,11 +19,15 @@ from django.urls import path, include, re_path
 from django.conf import settings
 from django.conf.urls.static import static
 from .media_views import serve_protected_media
+from .legal_views import terms, privacy, contact
 
 urlpatterns = [
     path('admin/', admin.site.urls),
     path('', include('songs.urls')),
     path('users/', include('users.urls')),
+    path('terms/', terms, name='terms'),
+    path('privacy/', privacy, name='privacy'),
+    path('contact/', contact, name='contact'),
     re_path(r'^media/(?P<path>.*)$', serve_protected_media, name='protected_media'),
 ]
 
