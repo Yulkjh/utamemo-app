@@ -1,1723 +1,226 @@
-{% extends 'base.html' %}{% extends 'base.html' %}{% extends 'base.html' %}
-
+{% extends 'base.html' %}
 {% load static %}
-
-{% load static %}{% load static %}
 
 {% block title %}{{ classroom.name }} - UTAMEMO{% endblock %}
 
-
-
 {% block content %}
-
-<style>{% block title %}{{ classroom.name }} - UTAMEMO{% endblock %}{% block title %}{{ classroom.name }} - UTAMEMO{% endblock %}
-
-    .classroom-page {
-
-        max-width: 900px;
-
-        margin: 0 auto;
-
-        padding: 2rem 1rem;{% block content %}{% block content %}
-
-    }
-
-    <style><style>
-
+<style>
     .classroom-header {
-
-        margin-bottom: 2rem;    .classroom-page {    .classroom-detail-page {
-
-    }
-
-            max-width: 900px;        padding: 2rem 0;
-
-    .header-top {
-
-        display: flex;        margin: 0 auto;        min-height: calc(100vh - 200px);
-
-        align-items: center;
-
-        justify-content: space-between;        padding: 2rem 1rem;    }
-
-        margin-bottom: 1.5rem;
-
-        flex-wrap: wrap;    }    
-
-        gap: 1rem;
-
-    }        /* ヘッダーカード */
-
-    
-
-    .classroom-title-group {    /* ヘッダー - Linear/Notion風のシンプルなデザイン */    .classroom-header {
-
-        display: flex;
-
-        align-items: center;    .classroom-header {        background: white;
-
-        gap: 0.75rem;
-
-    }        margin-bottom: 2rem;        border-radius: 28px;
-
-    
-
-    .classroom-name {    }        box-shadow: 0 20px 50px rgba(45, 27, 19, 0.12);
-
-        font-size: 2rem;
-
-        font-weight: 700;            padding: 2.5rem 3rem;
-
-        color: #1a1a1a;
-
-        margin: 0;    .header-top {        margin-bottom: 2.5rem;
-
-        letter-spacing: -0.02em;
-
-    }        display: flex;        text-align: center;
-
-    
-
-    .host-badge {        align-items: center;    }
-
-        background: #ff7940;
-
-        color: white;        justify-content: space-between;    
-
-        font-size: 0.7rem;
-
-        padding: 0.3rem 0.6rem;        margin-bottom: 1.5rem;    .classroom-name {
-
-        border-radius: 4px;
-
-        font-weight: 600;        flex-wrap: wrap;        font-size: 2.5rem;
-
-        text-transform: uppercase;
-
-        letter-spacing: 0.05em;        gap: 1rem;        font-weight: 800;
-
-    }
-
-        }        color: #2d1b13;
-
-    .header-actions {
-
-        display: flex;            margin-bottom: 0.5rem;
-
-        gap: 0.5rem;
-
-    }    .classroom-title-group {        display: flex;
-
-    
-
-    .btn-action {        display: flex;        align-items: center;
-
-        display: inline-flex;
-
-        align-items: center;        align-items: center;        justify-content: center;
-
-        gap: 0.4rem;
-
-        padding: 0.5rem 0.9rem;        gap: 0.75rem;        gap: 1rem;
-
-        border-radius: 6px;
-
-        font-weight: 500;    }        flex-wrap: wrap;
-
-        font-size: 0.875rem;
-
-        text-decoration: none;        }
-
-        transition: all 0.15s ease;
-
-        border: none;    .classroom-name {    
-
-        cursor: pointer;
-
-    }        font-size: 2rem;    .host-badge {
-
-    
-
-    .btn-primary {        font-weight: 700;        background: linear-gradient(135deg, #ff7940 0%, #ff6b35 100%);
-
-        background: #ff7940;
-
-        color: white;        color: #1a1a1a;        color: white;
-
-    }
-
-    .btn-primary:hover {        margin: 0;        font-size: 0.75rem;
-
-        background: #e86a35;
-
-        color: white;        letter-spacing: -0.02em;        padding: 0.4rem 0.8rem;
-
-    }
-
-        }        border-radius: 8px;
-
-    .btn-secondary {
-
-        background: #f5f5f5;            font-weight: 700;
-
-        color: #333;
-
-    }    .host-badge {        letter-spacing: 0.05em;
-
-    .btn-secondary:hover {
-
-        background: #e8e8e8;        background: #ff7940;    }
-
-        color: #333;
-
-    }        color: white;    
-
-    
-
-    .btn-danger {        font-size: 0.7rem;    .classroom-description {
-
-        background: transparent;
-
-        color: #dc3545;        padding: 0.3rem 0.6rem;        font-size: 1.1rem;
-
-        border: 1px solid #dc3545;
-
-    }        border-radius: 4px;        color: #5c3a2a;
-
-    .btn-danger:hover {
-
-        background: #dc3545;        font-weight: 600;        margin-bottom: 1.5rem;
-
+        background: linear-gradient(135deg, #ff7940 0%, #ff6b35 100%);
+        border-radius: 16px;
+        padding: 2rem;
+        margin-bottom: 2rem;
         color: white;
-
-    }        text-transform: uppercase;        max-width: 600px;
-
-    
-
-    .classroom-description {        letter-spacing: 0.05em;        margin-left: auto;
-
-        color: #666;
-
-        font-size: 0.95rem;    }        margin-right: auto;
-
-        margin-bottom: 1.5rem;
-
-        line-height: 1.6;        }
-
     }
-
-        .header-actions {    
-
-    .stats-row {
-
-        display: flex;        display: flex;    .classroom-stats {
-
-        gap: 1rem;
-
-        margin-bottom: 1.5rem;        gap: 0.5rem;        display: flex;
-
-    }
-
-        }        justify-content: center;
-
-    .stat-card {
-
-        flex: 1;            gap: 3rem;
-
-        background: #fafafa;
-
-        border: 1px solid #eee;    .btn-action {        margin-bottom: 2rem;
-
+    .classroom-code {
+        background: rgba(255,255,255,0.2);
+        padding: 0.5rem 1rem;
         border-radius: 8px;
-
-        padding: 1rem 1.25rem;        display: inline-flex;        flex-wrap: wrap;
-
-        min-width: 100px;
-
-    }        align-items: center;    }
-
-    
-
-    .stat-value {        gap: 0.4rem;    .stat-box {
-
-        font-size: 1.75rem;
-
-        font-weight: 700;        padding: 0.5rem 0.9rem;        text-align: center;
-
-        color: #1a1a1a;
-
-        line-height: 1;        border-radius: 6px;    }
-
-        margin-bottom: 0.25rem;
-
-    }        font-weight: 500;    .stat-number {
-
-    
-
-    .stat-label {        font-size: 0.875rem;        font-size: 2rem;
-
-        font-size: 0.8rem;
-
-        color: #888;        text-decoration: none;        font-weight: 800;
-
-        font-weight: 500;
-
-    }        transition: all 0.15s ease;        color: #ff7940;
-
-    
-
-    .invite-section {        border: none;    }
-
-        background: linear-gradient(135deg, #1a1a1a 0%, #2d2d2d 100%);
-
-        border-radius: 10px;        cursor: pointer;    .stat-label {
-
-        padding: 1rem 1.25rem;
-
-        display: flex;    }        font-size: 0.9rem;
-
-        align-items: center;
-
-        justify-content: space-between;            color: #8a6b5a;
-
-        margin-bottom: 2rem;
-
-    }    .btn-primary {        font-weight: 600;
-
-    
-
-    .invite-info {        background: #ff7940;    }
-
-        display: flex;
-
-        align-items: center;        color: white;    
-
-        gap: 1rem;
-
-    }    }    /* 参加コード */
-
-    
-
-    .invite-label {    .btn-primary:hover {    .code-display {
-
-        font-size: 0.75rem;
-
-        color: rgba(255,255,255,0.6);        background: #e86a35;        background: #2d1b13;
-
-        font-weight: 500;
-
-        text-transform: uppercase;        color: white;        border-radius: 16px;
-
-        letter-spacing: 0.05em;
-
-    }    }        padding: 1.5rem 2rem;
-
-    
-
-    .invite-code {            display: inline-flex;
-
-        font-family: 'SF Mono', 'Monaco', 'Consolas', monospace;
-
-        font-size: 1.5rem;    .btn-secondary {        align-items: center;
-
-        font-weight: 700;
-
-        color: white;        background: #f5f5f5;        gap: 1.5rem;
-
-        letter-spacing: 0.15em;
-
-    }        color: #333;        margin-bottom: 2rem;
-
-    
-
-    .copy-btn {    }    }
-
-        background: #ff7940;
-
-        border: none;    .btn-secondary:hover {    .code-label {
-
-        color: white;
-
-        padding: 0.5rem 1rem;        background: #e8e8e8;        color: rgba(255,255,255,0.7);
-
-        border-radius: 6px;
-
-        cursor: pointer;        color: #333;        font-size: 0.85rem;
-
-        font-weight: 600;
-
-        font-size: 0.8rem;    }        font-weight: 600;
-
-        display: flex;
-
-        align-items: center;        }
-
-        gap: 0.4rem;
-
-        transition: all 0.15s ease;    .btn-danger {    .code-value {
-
+        font-family: monospace;
+        font-size: 1.25rem;
+        letter-spacing: 0.1em;
+        display: inline-block;
     }
-
-    .copy-btn:hover {        background: transparent;        color: white;
-
-        background: #e86a35;
-
-    }        color: #dc3545;        font-family: 'SF Mono', 'Monaco', monospace;
-
-    
-
-    .section {        border: 1px solid #dc3545;        font-size: 2rem;
-
-        margin-bottom: 2rem;
-
-    }    }        font-weight: 800;
-
-    
-
-    .section-header {    .btn-danger:hover {        letter-spacing: 0.2em;
-
-        display: flex;
-
-        align-items: center;        background: #dc3545;    }
-
-        justify-content: space-between;
-
-        margin-bottom: 1rem;        color: white;    .code-copy-btn {
-
-        padding-bottom: 0.75rem;
-
-        border-bottom: 1px solid #eee;    }        background: linear-gradient(135deg, #ff7940 0%, #ff6b35 100%);
-
-    }
-
-                border: none;
-
     .section-title {
-
-        font-size: 0.9rem;    /* 説明 */        color: white;
-
+        font-size: 0.875rem;
         font-weight: 600;
-
-        color: #666;    .classroom-description {        padding: 0.7rem 1.25rem;
-
+        color: #666;
         text-transform: uppercase;
-
-        letter-spacing: 0.05em;        color: #666;        border-radius: 10px;
-
-        display: flex;
-
-        align-items: center;        font-size: 0.95rem;        cursor: pointer;
-
-        gap: 0.5rem;
-
-        margin: 0;        margin-bottom: 1.5rem;        font-weight: 700;
-
-    }
-
-            line-height: 1.6;        font-size: 0.9rem;
-
-    .section-count {
-
-        background: #f0f0f0;    }        transition: all 0.3s ease;
-
-        color: #666;
-
-        font-size: 0.75rem;            display: flex;
-
-        font-weight: 600;
-
-        padding: 0.2rem 0.5rem;    /* 統計カード - Linear風の横並びデザイン */        align-items: center;
-
-        border-radius: 10px;
-
-    }    .stats-row {        gap: 0.5rem;
-
-    
-
-    .song-list {        display: flex;    }
-
-        display: flex;
-
-        flex-direction: column;        gap: 1rem;    .code-copy-btn:hover {
-
-        gap: 0.5rem;
-
-    }        margin-bottom: 1.5rem;        transform: scale(1.05);
-
-    
-
-    .song-item {    }        box-shadow: 0 8px 20px rgba(255, 107, 53, 0.4);
-
-        display: flex;
-
-        align-items: center;        }
-
-        gap: 1rem;
-
-        padding: 0.75rem 1rem;    .stat-card {    
-
-        background: #fafafa;
-
-        border: 1px solid #eee;        flex: 1;    /* アクションボタン */
-
-        border-radius: 8px;
-
-        transition: all 0.15s ease;        background: #fafafa;    .header-actions {
-
-    }
-
-    .song-item:hover {        border: 1px solid #eee;        display: flex;
-
-        background: #f5f5f5;
-
-        border-color: #ddd;        border-radius: 8px;        justify-content: center;
-
-    }
-
-            padding: 1rem 1.25rem;        gap: 1rem;
-
-    .song-icon {
-
-        width: 36px;        min-width: 100px;        flex-wrap: wrap;
-
-        height: 36px;
-
-        background: linear-gradient(135deg, #ff7940 0%, #ff6b35 100%);    }    }
-
-        border-radius: 6px;
-
-        display: flex;        .action-btn {
-
-        align-items: center;
-
-        justify-content: center;    .stat-value {        display: inline-flex;
-
-        color: white;
-
-        font-size: 1rem;        font-size: 1.75rem;        align-items: center;
-
-        flex-shrink: 0;
-
-    }        font-weight: 700;        gap: 0.5rem;
-
-    
-
-    .song-info {        color: #1a1a1a;        padding: 0.85rem 1.5rem;
-
-        flex: 1;
-
-        min-width: 0;        line-height: 1;        border-radius: 12px;
-
-    }
-
-            margin-bottom: 0.25rem;        font-weight: 700;
-
-    .song-title {
-
-        font-weight: 600;    }        font-size: 0.95rem;
-
-        color: #1a1a1a;
-
-        font-size: 0.95rem;            text-decoration: none;
-
-        white-space: nowrap;
-
-        overflow: hidden;    .stat-label {        transition: all 0.3s ease;
-
-        text-overflow: ellipsis;
-
-    }        font-size: 0.8rem;        border: none;
-
-    
-
-    .song-meta {        color: #888;        cursor: pointer;
-
-        font-size: 0.8rem;
-
-        color: #888;        font-weight: 500;    }
-
-        display: flex;
-
-        align-items: center;    }    .btn-primary-action {
-
-        gap: 0.75rem;
-
-    }            background: linear-gradient(135deg, #ff7940 0%, #ff6b35 100%);
-
-    
-
-    .song-audio {    /* 招待コード - コンパクトで目立つデザイン */        color: white;
-
-        height: 32px;
-
-        width: 200px;    .invite-section {        box-shadow: 0 6px 20px rgba(255, 107, 53, 0.3);
-
-        flex-shrink: 0;
-
-    }        background: linear-gradient(135deg, #1a1a1a 0%, #2d2d2d 100%);    }
-
-    
-
-    .song-link {        border-radius: 10px;    .btn-primary-action:hover {
-
-        color: #888;
-
-        font-size: 0.85rem;        padding: 1rem 1.25rem;        transform: translateY(-2px);
-
-        text-decoration: none;
-
-        padding: 0.3rem 0.6rem;        display: flex;        box-shadow: 0 10px 30px rgba(255, 107, 53, 0.4);
-
-        border-radius: 4px;
-
-        transition: all 0.15s ease;        align-items: center;        color: white;
-
-        flex-shrink: 0;
-
-    }        justify-content: space-between;    }
-
-    .song-link:hover {
-
-        background: #e8e8e8;        margin-bottom: 2rem;    .btn-outline-action {
-
-        color: #333;
-
-    }    }        background: white;
-
-    
-
-    .member-list {            color: #2d1b13;
-
-        display: grid;
-
-        grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));    .invite-info {        border: 2px solid #e0d6d0;
-
-        gap: 0.75rem;
-
-    }        display: flex;    }
-
-    
-
-    .member-item {        align-items: center;    .btn-outline-action:hover {
-
-        display: flex;
-
-        align-items: center;        gap: 1rem;        border-color: #2d1b13;
-
-        gap: 0.75rem;
-
-        padding: 0.6rem 0.75rem;    }        color: #2d1b13;
-
-        background: #fafafa;
-
-        border: 1px solid #eee;        }
-
-        border-radius: 8px;
-
-    }    .invite-label {    .btn-danger-action {
-
-    
-
-    .member-avatar {        font-size: 0.75rem;        background: white;
-
-        width: 32px;
-
-        height: 32px;        color: rgba(255,255,255,0.6);        color: #dc3545;
-
-        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-
-        border-radius: 50%;        font-weight: 500;        border: 2px solid #dc3545;
-
-        display: flex;
-
-        align-items: center;        text-transform: uppercase;    }
-
-        justify-content: center;
-
-        color: white;        letter-spacing: 0.05em;    .btn-danger-action:hover {
-
-        font-weight: 600;
-
-        font-size: 0.85rem;    }        background: #dc3545;
-
-    }
-
-                color: white;
-
-    .member-info {
-
-        flex: 1;    .invite-code {    }
-
-        min-width: 0;
-
-    }        font-family: 'SF Mono', 'Monaco', 'Consolas', monospace;    
-
-    
-
-    .member-name {        font-size: 1.5rem;    /* セクション */
-
-        font-weight: 500;
-
-        color: #1a1a1a;        font-weight: 700;    .content-section {
-
-        font-size: 0.9rem;
-
-        display: flex;        color: white;        background: white;
-
-        align-items: center;
-
-        gap: 0.4rem;        letter-spacing: 0.15em;        border-radius: 24px;
-
-    }
-
-        }        box-shadow: 0 15px 40px rgba(45, 27, 19, 0.08);
-
-    .member-host-tag {
-
-        background: #ff7940;            padding: 2rem;
-
-        color: white;
-
-        font-size: 0.6rem;    .copy-btn {        margin-bottom: 2rem;
-
-        padding: 0.1rem 0.3rem;
-
-        border-radius: 3px;        background: #ff7940;    }
-
-        font-weight: 600;
-
-    }        border: none;    
-
-    
-
-    .member-date {        color: white;    .section-header {
-
-        font-size: 0.75rem;
-
-        color: #888;        padding: 0.5rem 1rem;        display: flex;
-
-    }
-
-            border-radius: 6px;        align-items: center;
-
-    .empty-state {
-
-        text-align: center;        cursor: pointer;        justify-content: space-between;
-
-        padding: 3rem 1rem;
-
-        color: #888;        font-weight: 600;        margin-bottom: 1.5rem;
-
-    }
-
-            font-size: 0.8rem;        flex-wrap: wrap;
-
-    .empty-icon {
-
-        width: 48px;        display: flex;        gap: 1rem;
-
-        height: 48px;
-
-        background: #f0f0f0;        align-items: center;    }
-
-        border-radius: 12px;
-
-        display: flex;        gap: 0.4rem;    .section-title {
-
-        align-items: center;
-
-        justify-content: center;        transition: all 0.15s ease;        font-size: 1.5rem;
-
-        margin: 0 auto 1rem;
-
-        font-size: 1.25rem;    }        font-weight: 800;
-
-        color: #aaa;
-
-    }    .copy-btn:hover {        color: #2d1b13;
-
-    
-
-    .empty-state h4 {        background: #e86a35;        display: flex;
-
-        font-size: 1rem;
-
-        font-weight: 600;    }        align-items: center;
-
-        color: #666;
-
-        margin-bottom: 0.5rem;            gap: 0.75rem;
-
-    }
-
-        /* セクション */        margin: 0;
-
-    .empty-state p {
-
-        font-size: 0.9rem;    .section {    }
-
+        letter-spacing: 0.05em;
         margin-bottom: 1rem;
-
-    }        margin-bottom: 2rem;    .section-title i {
-
-    
-
-    @media (max-width: 768px) {    }        color: #ff7940;
-
-        .header-top {
-
-            flex-direction: column;        }
-
-            align-items: flex-start;
-
-        }    .section-header {    .section-count {
-
-        .classroom-name {
-
-            font-size: 1.5rem;        display: flex;        background: linear-gradient(135deg, #ff7940 0%, #ff6b35 100%);
-
-        }
-
-        .stats-row {        align-items: center;        color: white;
-
-            flex-wrap: wrap;
-
-        }        justify-content: space-between;        font-size: 0.85rem;
-
-        .stat-card {
-
-            min-width: calc(50% - 0.5rem);        margin-bottom: 1rem;        font-weight: 700;
-
-        }
-
-        .invite-section {        padding-bottom: 0.75rem;        padding: 0.35rem 0.85rem;
-
-            flex-direction: column;
-
-            gap: 1rem;        border-bottom: 1px solid #eee;        border-radius: 20px;
-
-            align-items: flex-start;
-
-        }    }    }
-
-        .song-item {
-
-            flex-wrap: wrap;        
-
-        }
-
-        .song-audio {    .section-title {    /* 楽曲グリッド */
-
-            width: 100%;
-
-            order: 10;        font-size: 0.9rem;    .songs-grid {
-
-        }
-
-    }        font-weight: 600;        display: grid;
-
+        padding-bottom: 0.5rem;
+        border-bottom: 1px solid #eee;
+    }
+    .song-card {
+        background: white;
+        border: 1px solid #e5e5e5;
+        border-radius: 12px;
+        padding: 1rem;
+        margin-bottom: 0.75rem;
+        transition: all 0.2s ease;
+    }
+    .song-card:hover {
+        border-color: #ff7940;
+        box-shadow: 0 4px 12px rgba(255, 121, 64, 0.1);
+    }
+    .song-title {
+        font-weight: 600;
+        color: #2d1b13;
+        margin-bottom: 0.25rem;
+    }
+    .song-meta {
+        font-size: 0.875rem;
+        color: #888;
+    }
+    .member-item {
+        display: flex;
+        align-items: center;
+        padding: 0.75rem 0;
+        border-bottom: 1px solid #f0f0f0;
+    }
+    .member-item:last-child {
+        border-bottom: none;
+    }
+    .member-avatar {
+        width: 36px;
+        height: 36px;
+        border-radius: 50%;
+        background: linear-gradient(135deg, #ff7940 0%, #ff6b35 100%);
+        color: white;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-weight: 600;
+        margin-right: 0.75rem;
+    }
+    .member-name {
+        font-weight: 500;
+        color: #2d1b13;
+    }
+    .member-role {
+        font-size: 0.75rem;
+        color: #ff7940;
+        background: #fff5f0;
+        padding: 0.125rem 0.5rem;
+        border-radius: 4px;
+        margin-left: 0.5rem;
+    }
+    .empty-state {
+        text-align: center;
+        padding: 2rem;
+        color: #888;
+    }
+    .action-btn {
+        background: #ff7940;
+        color: white;
+        border: none;
+        padding: 0.75rem 1.5rem;
+        border-radius: 8px;
+        font-weight: 500;
+        text-decoration: none;
+        display: inline-flex;
+        align-items: center;
+        gap: 0.5rem;
+        transition: all 0.2s ease;
+    }
+    .action-btn:hover {
+        background: #e56830;
+        color: white;
+    }
+    .danger-btn {
+        background: #dc3545;
+    }
+    .danger-btn:hover {
+        background: #c82333;
+    }
+    .back-link {
+        color: #666;
+        text-decoration: none;
+        display: inline-flex;
+        align-items: center;
+        gap: 0.5rem;
+        margin-bottom: 1rem;
+    }
+    .back-link:hover {
+        color: #ff7940;
+    }
 </style>
 
-        color: #666;        grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
-
-<div class="container classroom-page">
-
-    <div class="classroom-header">        text-transform: uppercase;        gap: 1.5rem;
-
-        <div class="header-top">
-
-            <div class="classroom-title-group">        letter-spacing: 0.05em;    }
-
-                <h1 class="classroom-name">{{ classroom.name }}</h1>
-
-                {% if is_host %}        display: flex;    
-
-                <span class="host-badge">Host</span>
-
-                {% endif %}        align-items: center;    .song-card {
-
-            </div>
-
-                    gap: 0.5rem;        background: #fef9f7;
-
-            <div class="header-actions">
-
-                <a href="{% url 'songs:classroom_share_song' classroom.pk %}" class="btn-action btn-primary">        margin: 0;        border: 2px solid #f0e6e0;
-
-                    <i class="bi bi-plus"></i>
-
-                    {% if is_english %}Share{% elif is_chinese %}分享{% else %}共有{% endif %}    }        border-radius: 18px;
-
-                </a>
-
-                <a href="{% url 'songs:classroom_list' %}" class="btn-action btn-secondary">            padding: 1.5rem;
-
-                    <i class="bi bi-arrow-left"></i>
-
-                    {% if is_english %}Back{% elif is_chinese %}返回{% else %}戻る{% endif %}    .section-count {        transition: all 0.3s ease;
-
-                </a>
-
-                {% if is_host %}        background: #f0f0f0;    }
-
-                <form method="post" action="{% url 'songs:classroom_delete' classroom.pk %}" style="display: inline;">
-
-                    {% csrf_token %}        color: #666;    .song-card:hover {
-
-                    <button type="submit" class="btn-action btn-danger" onclick="return confirm('{% if is_english %}Delete this class?{% elif is_chinese %}确定删除？{% else %}このクラスを削除しますか？{% endif %}');">
-
-                        <i class="bi bi-trash3"></i>        font-size: 0.75rem;        border-color: #ff7940;
-
-                    </button>
-
-                </form>        font-weight: 600;        transform: translateY(-4px);
-
+<div class="container" style="max-width: 900px; margin: 0 auto; padding: 2rem 1rem;">
+    <a href="{% url 'songs:classroom_list' %}" class="back-link">
+        <i class="bi bi-arrow-left"></i>
+        {% if is_english %}Back to classrooms{% elif is_chinese %}返回班级列表{% else %}クラス一覧に戻る{% endif %}
+    </a>
+    
+    <div class="classroom-header">
+        <h1 style="margin: 0 0 0.5rem 0; font-size: 1.75rem;">{{ classroom.name }}</h1>
+        <p style="margin: 0 0 1rem 0; opacity: 0.9;">
+            {% if is_english %}Host: {% elif is_chinese %}主持人: {% else %}ホスト: {% endif %}{{ classroom.host.username }}
+        </p>
+        <div>
+            <span style="font-size: 0.875rem; opacity: 0.8;">
+                {% if is_english %}Class Code:{% elif is_chinese %}班级代码:{% else %}クラスコード:{% endif %}
+            </span>
+            <span class="classroom-code">{{ classroom.code }}</span>
+        </div>
+    </div>
+    
+    <div class="row">
+        <div class="col-lg-8">
+            <div style="background: white; border-radius: 12px; padding: 1.5rem; margin-bottom: 1.5rem; border: 1px solid #e5e5e5;">
+                <div class="d-flex justify-content-between align-items-center mb-3">
+                    <h3 class="section-title" style="margin: 0; border: none; padding: 0;">
+                        <i class="bi bi-music-note-list" style="color: #ff7940;"></i>
+                        {% if is_english %}Shared Songs{% elif is_chinese %}共享歌曲{% else %}共有された楽曲{% endif %}
+                    </h3>
+                    {% if is_host %}
+                    <a href="{% url 'songs:classroom_share_song' classroom.id %}" class="action-btn" style="padding: 0.5rem 1rem; font-size: 0.875rem;">
+                        <i class="bi bi-plus-lg"></i>
+                        {% if is_english %}Add{% elif is_chinese %}添加{% else %}追加{% endif %}
+                    </a>
+                    {% endif %}
+                </div>
+                
+                {% if shared_songs %}
+                    {% for shared in shared_songs %}
+                    <a href="{% url 'songs:song_detail' shared.song.id %}" class="song-card d-block text-decoration-none">
+                        <div class="song-title">{{ shared.song.title }}</div>
+                        <div class="song-meta">
+                            <i class="bi bi-person"></i> {{ shared.song.user.username }}
+                            <span style="margin: 0 0.5rem;">|</span>
+                            <i class="bi bi-calendar"></i> {{ shared.shared_at|date:"Y/m/d" }}
+                        </div>
+                    </a>
+                    {% endfor %}
                 {% else %}
-
-                <form method="post" action="{% url 'songs:classroom_leave' classroom.pk %}" style="display: inline;">        padding: 0.2rem 0.5rem;        box-shadow: 0 15px 35px rgba(0,0,0,0.1);
-
-                    {% csrf_token %}
-
-                    <button type="submit" class="btn-action btn-danger" onclick="return confirm('{% if is_english %}Leave this class?{% elif is_chinese %}确定退出？{% else %}退出しますか？{% endif %}');">        border-radius: 10px;    }
-
-                        <i class="bi bi-box-arrow-right"></i>
-
-                    </button>    }    
-
-                </form>
-
-                {% endif %}        .song-title {
-
-            </div>
-
-        </div>    /* 楽曲リスト - Notion風のシンプルなリストデザイン */        font-size: 1.2rem;
-
-        
-
-        {% if classroom.description %}    .song-list {        font-weight: 700;
-
-        <p class="classroom-description">{{ classroom.description }}</p>
-
-        {% endif %}        display: flex;        color: #2d1b13;
-
-        
-
-        <div class="stats-row">        flex-direction: column;        margin-bottom: 0.5rem;
-
-            <div class="stat-card">
-
-                <div class="stat-value">{{ members.count }}</div>        gap: 0.5rem;    }
-
-                <div class="stat-label">{% if is_english %}Members{% elif is_chinese %}成员{% else %}メンバー{% endif %}</div>
-
-            </div>    }    .song-meta {
-
-            <div class="stat-card">
-
-                <div class="stat-value">{{ shared_songs.count }}</div>            display: flex;
-
-                <div class="stat-label">{% if is_english %}Songs{% elif is_chinese %}歌曲{% else %}楽曲{% endif %}</div>
-
-            </div>    .song-item {        flex-direction: column;
-
-        </div>
-
-                display: flex;        gap: 0.3rem;
-
-        {% if is_host %}
-
-        <div class="invite-section">        align-items: center;        margin-bottom: 1rem;
-
-            <div class="invite-info">
-
-                <span class="invite-label">{% if is_english %}Invite Code{% elif is_chinese %}邀请码{% else %}招待コード{% endif %}</span>        gap: 1rem;    }
-
-                <span class="invite-code" id="classCode">{{ classroom.code }}</span>
-
-            </div>        padding: 0.75rem 1rem;    .song-artist {
-
-            <button class="copy-btn" onclick="copyCode()">
-
-                <i class="bi bi-clipboard"></i>        background: #fafafa;        color: #5c3a2a;
-
-                {% if is_english %}Copy{% elif is_chinese %}复制{% else %}コピー{% endif %}
-
-            </button>        border: 1px solid #eee;        font-size: 0.95rem;
-
-        </div>
-
-        {% endif %}        border-radius: 8px;        display: flex;
-
-    </div>
-
-            transition: all 0.15s ease;        align-items: center;
-
-    <div class="section">
-
-        <div class="section-header">    }        gap: 0.4rem;
-
-            <h2 class="section-title">
-
-                <i class="bi bi-music-note-beamed"></i>    .song-item:hover {    }
-
-                {% if is_english %}Songs{% elif is_chinese %}歌曲{% else %}楽曲{% endif %}
-
-                <span class="section-count">{{ shared_songs.count }}</span>        background: #f5f5f5;    .song-artist i {
-
-            </h2>
-
-        </div>        border-color: #ddd;        color: #ff7940;
-
-        
-
-        {% if shared_songs %}    }    }
-
-        <div class="song-list">
-
-            {% for cs in shared_songs %}        .song-shared-by {
-
-            <div class="song-item">
-
-                <div class="song-icon">    .song-icon {        font-size: 0.85rem;
-
-                    <i class="bi bi-music-note"></i>
-
-                </div>        width: 36px;        color: #8a6b5a;
-
-                <div class="song-info">
-
-                    <div class="song-title">{{ cs.song.title }}</div>        height: 36px;    }
-
-                    <div class="song-meta">
-
-                        <span>{{ cs.song.artist }}</span>        background: linear-gradient(135deg, #ff7940 0%, #ff6b35 100%);    
-
-                        <span>by {{ cs.shared_by.username }}</span>
-
-                    </div>        border-radius: 6px;    .song-audio {
-
-                </div>
-
-                {% if cs.song.audio_url %}        display: flex;        width: 100%;
-
-                <audio controls class="song-audio" preload="none">
-
-                    <source src="{{ cs.song.audio_url }}" type="audio/mpeg">        align-items: center;        height: 50px;
-
-                </audio>
-
-                {% elif cs.song.audio_file %}        justify-content: center;        border-radius: 12px;
-
-                <audio controls class="song-audio" preload="none">
-
-                    <source src="{{ cs.song.audio_file.url }}" type="audio/mpeg">        color: white;        margin-bottom: 1rem;
-
-                </audio>
-
-                {% endif %}        font-size: 1rem;    }
-
-                <a href="{% url 'songs:song_detail' cs.song.pk %}" class="song-link">
-
-                    <i class="bi bi-arrow-up-right"></i>        flex-shrink: 0;    
-
-                </a>
-
-            </div>    }    .song-detail-link {
-
-            {% endfor %}
-
-        </div>            display: block;
-
-        {% else %}
-
-        <div class="empty-state">    .song-info {        background: linear-gradient(135deg, #ff7940 0%, #ff6b35 100%);
-
-            <div class="empty-icon">
-
-                <i class="bi bi-music-note-beamed"></i>        flex: 1;        color: white;
-
-            </div>
-
-            <h4>{% if is_english %}No songs yet{% elif is_chinese %}还没有歌曲{% else %}まだ楽曲がありません{% endif %}</h4>        min-width: 0;        padding: 0.85rem;
-
-            <p>{% if is_english %}Be the first to share a song!{% elif is_chinese %}成为第一个分享歌曲的人！{% else %}最初の楽曲を共有しましょう{% endif %}</p>
-
-            <a href="{% url 'songs:classroom_share_song' classroom.pk %}" class="btn-action btn-primary">    }        border-radius: 12px;
-
-                <i class="bi bi-plus"></i>
-
-                {% if is_english %}Share Song{% elif is_chinese %}分享歌曲{% else %}楽曲を共有{% endif %}            text-align: center;
-
-            </a>
-
-        </div>    .song-title {        text-decoration: none;
-
-        {% endif %}
-
-    </div>        font-weight: 600;        font-weight: 700;
-
-    
-
-    {% if is_host %}        color: #1a1a1a;        transition: all 0.3s ease;
-
-    <div class="section">
-
-        <div class="section-header">        font-size: 0.95rem;    }
-
-            <h2 class="section-title">
-
-                <i class="bi bi-people"></i>        white-space: nowrap;    .song-detail-link:hover {
-
-                {% if is_english %}Members{% elif is_chinese %}成员{% else %}メンバー{% endif %}
-
-                <span class="section-count">{{ members.count }}</span>        overflow: hidden;        box-shadow: 0 8px 20px rgba(255, 107, 53, 0.4);
-
-            </h2>
-
-        </div>        text-overflow: ellipsis;        color: white;
-
-        
-
-        <div class="member-list">    }        transform: translateY(-2px);
-
-            {% for membership in members %}
-
-            <div class="member-item">        }
-
-                <div class="member-avatar">
-
-                    {{ membership.user.username|slice:":1"|upper }}    .song-meta {    
-
-                </div>
-
-                <div class="member-info">        font-size: 0.8rem;    /* 空状態 */
-
-                    <div class="member-name">
-
-                        {{ membership.user.username }}        color: #888;    .empty-state {
-
-                        {% if membership.user == classroom.host %}
-
-                        <span class="member-host-tag">HOST</span>        display: flex;        text-align: center;
-
-                        {% endif %}
-
-                    </div>        align-items: center;        padding: 3rem 2rem;
-
-                    <div class="member-date">{{ membership.joined_at|date:"Y/m/d" }}</div>
-
-                </div>        gap: 0.75rem;    }
-
-            </div>
-
-            {% endfor %}    }    .empty-icon {
-
-        </div>
-
-    </div>            width: 80px;
-
-    {% endif %}
-
-</div>    .song-audio {        height: 80px;
-
-
-
-<script>        height: 32px;        background: linear-gradient(135deg, #ff7940 0%, #ff6b35 100%);
-
-function copyCode() {
-
-    const code = document.getElementById('classCode').textContent;        width: 200px;        border-radius: 50%;
-
-    navigator.clipboard.writeText(code).then(function() {
-
-        const btn = event.target.closest('.copy-btn');        flex-shrink: 0;        display: flex;
-
-        const originalHTML = btn.innerHTML;
-
-        btn.innerHTML = '<i class="bi bi-check-lg"></i> Copied!';    }        align-items: center;
-
-        setTimeout(() => {
-
-            btn.innerHTML = originalHTML;            justify-content: center;
-
-        }, 2000);
-
-    });    .song-link {        margin: 0 auto 1.5rem;
-
-}
-
-</script>        color: #888;    }
-
-{% endblock %}
-
-        font-size: 0.85rem;    .empty-icon i {
-
-        text-decoration: none;        font-size: 2rem;
-
-        padding: 0.3rem 0.6rem;        color: white;
-
-        border-radius: 4px;    }
-
-        transition: all 0.15s ease;    .empty-state h4 {
-
-        flex-shrink: 0;        color: #2d1b13;
-
-    }        font-weight: 700;
-
-    .song-link:hover {        margin-bottom: 0.5rem;
-
-        background: #e8e8e8;    }
-
-        color: #333;    .empty-state p {
-
-    }        color: #5c3a2a;
-
-            margin-bottom: 1.5rem;
-
-    /* メンバーリスト */    }
-
-    .member-list {    
-
-        display: grid;    /* メンバー */
-
-        grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));    .members-grid {
-
-        gap: 0.75rem;        display: grid;
-
-    }        grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
-
-            gap: 1rem;
-
-    .member-item {    }
-
-        display: flex;    .member-card {
-
-        align-items: center;        background: #fef9f7;
-
-        gap: 0.75rem;        border: 2px solid #f0e6e0;
-
-        padding: 0.6rem 0.75rem;        border-radius: 14px;
-
-        background: #fafafa;        padding: 1rem 1.25rem;
-
-        border: 1px solid #eee;        display: flex;
-
-        border-radius: 8px;        align-items: center;
-
-    }        gap: 1rem;
-
-            transition: all 0.3s ease;
-
-    .member-avatar {    }
-
-        width: 32px;    .member-card:hover {
-
-        height: 32px;        border-color: #ff7940;
-
-        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);    }
-
-        border-radius: 50%;    .member-avatar {
-
-        display: flex;        width: 50px;
-
-        align-items: center;        height: 50px;
-
-        justify-content: center;        background: linear-gradient(135deg, #ff7940 0%, #ff6b35 100%);
-
-        color: white;        border-radius: 14px;
-
-        font-weight: 600;        display: flex;
-
-        font-size: 0.85rem;        align-items: center;
-
-    }        justify-content: center;
-
-            color: white;
-
-    .member-info {        font-weight: 700;
-
-        flex: 1;        font-size: 1.25rem;
-
-        min-width: 0;    }
-
-    }    .member-name {
-
-            font-weight: 700;
-
-    .member-name {        color: #2d1b13;
-
-        font-weight: 500;        display: flex;
-
-        color: #1a1a1a;        align-items: center;
-
-        font-size: 0.9rem;        gap: 0.5rem;
-
-        display: flex;    }
-
-        align-items: center;    .member-host-tag {
-
-        gap: 0.4rem;        background: linear-gradient(135deg, #ff7940 0%, #ff6b35 100%);
-
-    }        color: white;
-
-            font-size: 0.6rem;
-
-    .member-host-tag {        padding: 0.2rem 0.4rem;
-
-        background: #ff7940;        border-radius: 4px;
-
-        color: white;        font-weight: 700;
-
-        font-size: 0.6rem;    }
-
-        padding: 0.1rem 0.3rem;    .member-date {
-
-        border-radius: 3px;        font-size: 0.8rem;
-
-        font-weight: 600;        color: #8a6b5a;
-
-    }    }
-
-        
-
-    .member-date {    @media (max-width: 768px) {
-
-        font-size: 0.75rem;        .classroom-header {
-
-        color: #888;            padding: 2rem 1.5rem;
-
-    }        }
-
-            .classroom-name {
-
-    /* 空状態 */            font-size: 1.75rem;
-
-    .empty-state {        }
-
-        text-align: center;        .code-display {
-
-        padding: 3rem 1rem;            flex-direction: column;
-
-        color: #888;            gap: 1rem;
-
-    }            padding: 1.25rem;
-
-            }
-
-    .empty-icon {        .code-value {
-
-        width: 48px;            font-size: 1.5rem;
-
-        height: 48px;        }
-
-        background: #f0f0f0;        .classroom-stats {
-
-        border-radius: 12px;            gap: 1.5rem;
-
-        display: flex;        }
-
-        align-items: center;        .stat-number {
-
-        justify-content: center;            font-size: 1.5rem;
-
-        margin: 0 auto 1rem;        }
-
-        font-size: 1.25rem;        .header-actions {
-
-        color: #aaa;            flex-direction: column;
-
-    }        }
-
-            .action-btn {
-
-    .empty-state h4 {            justify-content: center;
-
-        font-size: 1rem;        }
-
-        font-weight: 600;        .songs-grid {
-
-        color: #666;            grid-template-columns: 1fr;
-
-        margin-bottom: 0.5rem;        }
-
-    }    }
-
-    </style>
-
-    .empty-state p {
-
-        font-size: 0.9rem;<div class="container classroom-detail-page">
-
-        margin-bottom: 1rem;    <!-- ヘッダー -->
-
-    }    <div class="classroom-header">
-
-            <h1 class="classroom-name">
-
-    /* レスポンシブ */            {{ classroom.name }}
-
-    @media (max-width: 768px) {            {% if is_host %}
-
-        .header-top {            <span class="host-badge">
-
-            flex-direction: column;                <i class="bi bi-star-fill me-1"></i>HOST
-
-            align-items: flex-start;            </span>
-
-        }            {% endif %}
-
-        .classroom-name {        </h1>
-
-            font-size: 1.5rem;        
-
-        }        {% if classroom.description %}
-
-        .stats-row {        <p class="classroom-description">{{ classroom.description }}</p>
-
-            flex-wrap: wrap;        {% endif %}
-
-        }        
-
-        .stat-card {        <div class="classroom-stats">
-
-            min-width: calc(50% - 0.5rem);            <div class="stat-box">
-
-        }                <div class="stat-number">{{ members.count }}</div>
-
-        .invite-section {                <div class="stat-label">{% if is_english %}Members{% elif is_chinese %}成员{% else %}メンバー{% endif %}</div>
-
-            flex-direction: column;            </div>
-
-            gap: 1rem;            <div class="stat-box">
-
-            align-items: flex-start;                <div class="stat-number">{{ shared_songs.count }}</div>
-
-        }                <div class="stat-label">{% if is_english %}Songs{% elif is_chinese %}歌曲{% else %}楽曲{% endif %}</div>
-
-        .song-item {            </div>
-
-            flex-wrap: wrap;        </div>
-
-        }        
-
-        .song-audio {        {% if is_host %}
-
-            width: 100%;        <div class="code-display">
-
-            order: 10;            <div>
-
-        }                <div class="code-label">{% if is_english %}Invite Code{% elif is_chinese %}邀请码{% else %}参加コード{% endif %}</div>
-
-    }                <div class="code-value" id="classCode">{{ classroom.code }}</div>
-
-</style>            </div>
-
-            <button class="code-copy-btn" onclick="copyCode()">
-
-<div class="container classroom-page">                <i class="bi bi-clipboard"></i>
-
-    <!-- ヘッダー -->                {% if is_english %}Copy{% elif is_chinese %}复制{% else %}コピー{% endif %}
-
-    <div class="classroom-header">            </button>
-
-        <div class="header-top">        </div>
-
-            <div class="classroom-title-group">        {% endif %}
-
-                <h1 class="classroom-name">{{ classroom.name }}</h1>        
-
-                {% if is_host %}        <div class="header-actions">
-
-                <span class="host-badge">Host</span>            <a href="{% url 'songs:classroom_share_song' classroom.pk %}" class="action-btn btn-primary-action">
-
-                {% endif %}                <i class="bi bi-share-fill"></i>
-
-            </div>                {% if is_english %}Share Song{% elif is_chinese %}分享歌曲{% else %}楽曲を共有{% endif %}
-
-                        </a>
-
-            <div class="header-actions">            <a href="{% url 'songs:classroom_list' %}" class="action-btn btn-outline-action">
-
-                <a href="{% url 'songs:classroom_share_song' classroom.pk %}" class="btn-action btn-primary">                <i class="bi bi-arrow-left"></i>
-
-                    <i class="bi bi-plus"></i>                {% if is_english %}Back{% elif is_chinese %}返回{% else %}戻る{% endif %}
-
-                    {% if is_english %}Share{% elif is_chinese %}分享{% else %}共有{% endif %}            </a>
-
-                </a>            {% if not is_host %}
-
-                <a href="{% url 'songs:classroom_list' %}" class="btn-action btn-secondary">            <form method="post" action="{% url 'songs:classroom_leave' classroom.pk %}" style="display: inline;">
-
-                    <i class="bi bi-arrow-left"></i>                {% csrf_token %}
-
-                    {% if is_english %}Back{% elif is_chinese %}返回{% else %}戻る{% endif %}                <button type="submit" class="action-btn btn-danger-action" onclick="return confirm('{% if is_english %}Leave this class?{% elif is_chinese %}确定退出？{% else %}このクラスから退出しますか？{% endif %}');">
-
-                </a>                    <i class="bi bi-box-arrow-right"></i>
-
-                {% if is_host %}                    {% if is_english %}Leave{% elif is_chinese %}退出{% else %}退出{% endif %}
-
-                <form method="post" action="{% url 'songs:classroom_delete' classroom.pk %}" style="display: inline;">                </button>
-
-                    {% csrf_token %}            </form>
-
-                    <button type="submit" class="btn-action btn-danger" onclick="return confirm('{% if is_english %}Delete this class?{% elif is_chinese %}确定删除？{% else %}このクラスを削除しますか？{% endif %}');">            {% else %}
-
-                        <i class="bi bi-trash3"></i>            <form method="post" action="{% url 'songs:classroom_delete' classroom.pk %}" style="display: inline;">
-
-                    </button>                {% csrf_token %}
-
-                </form>                <button type="submit" class="action-btn btn-danger-action" onclick="return confirm('{% if is_english %}Delete this class?{% elif is_chinese %}确定删除？{% else %}このクラスを削除しますか？{% endif %}');">
-
-                {% else %}                    <i class="bi bi-trash3"></i>
-
-                <form method="post" action="{% url 'songs:classroom_leave' classroom.pk %}" style="display: inline;">                    {% if is_english %}Delete{% elif is_chinese %}删除{% else %}削除{% endif %}
-
-                    {% csrf_token %}                </button>
-
-                    <button type="submit" class="btn-action btn-danger" onclick="return confirm('{% if is_english %}Leave this class?{% elif is_chinese %}确定退出？{% else %}退出しますか？{% endif %}');">            </form>
-
-                        <i class="bi bi-box-arrow-right"></i>            {% endif %}
-
-                    </button>        </div>
-
-                </form>    </div>
-
-                {% endif %}    
-
-            </div>    <!-- 共有楽曲 -->
-
-        </div>    <div class="content-section">
-
-                <div class="section-header">
-
-        {% if classroom.description %}            <h2 class="section-title">
-
-        <p class="classroom-description">{{ classroom.description }}</p>                <i class="bi bi-music-note-list"></i>
-
-        {% endif %}                {% if is_english %}Shared Songs{% elif is_chinese %}共享歌曲{% else %}共有された楽曲{% endif %}
-
-                        <span class="section-count">{{ shared_songs.count }}</span>
-
-        <!-- 統計 -->            </h2>
-
-        <div class="stats-row">        </div>
-
-            <div class="stat-card">        
-
-                <div class="stat-value">{{ members.count }}</div>        {% if shared_songs %}
-
-                <div class="stat-label">{% if is_english %}Members{% elif is_chinese %}成员{% else %}メンバー{% endif %}</div>        <div class="songs-grid">
-
-            </div>            {% for cs in shared_songs %}
-
-            <div class="stat-card">            <div class="song-card">
-
-                <div class="stat-value">{{ shared_songs.count }}</div>                <div class="song-title">{{ cs.song.title }}</div>
-
-                <div class="stat-label">{% if is_english %}Songs{% elif is_chinese %}歌曲{% else %}楽曲{% endif %}</div>                <div class="song-meta">
-
-            </div>                    <span class="song-artist">
-
-        </div>                        <i class="bi bi-mic-fill"></i>
-
-                                {{ cs.song.artist }}
-
-        <!-- 招待コード（ホストのみ） -->                    </span>
-
-        {% if is_host %}                    <span class="song-shared-by">
-
-        <div class="invite-section">                        {% if is_english %}Shared by{% elif is_chinese %}分享者{% else %}共有{% endif %}: {{ cs.shared_by.username }}
-
-            <div class="invite-info">                    </span>
-
-                <span class="invite-label">{% if is_english %}Invite Code{% elif is_chinese %}邀请码{% else %}招待コード{% endif %}</span>                </div>
-
-                <span class="invite-code" id="classCode">{{ classroom.code }}</span>                {% if cs.song.audio_url %}
-
-            </div>                <audio controls class="song-audio" preload="none">
-
-            <button class="copy-btn" onclick="copyCode()">                    <source src="{{ cs.song.audio_url }}" type="audio/mpeg">
-
-                <i class="bi bi-clipboard"></i>                </audio>
-
-                {% if is_english %}Copy{% elif is_chinese %}复制{% else %}コピー{% endif %}                {% elif cs.song.audio_file %}
-
-            </button>                <audio controls class="song-audio" preload="none">
-
-        </div>                    <source src="{{ cs.song.audio_file.url }}" type="audio/mpeg">
-
-        {% endif %}                </audio>
-
-    </div>                {% endif %}
-
-                    <a href="{% url 'songs:song_detail' cs.song.pk %}" class="song-detail-link">
-
-    <!-- 楽曲セクション -->                    <i class="bi bi-arrow-up-right-square me-1"></i>
-
-    <div class="section">                    {% if is_english %}View Details{% elif is_chinese %}查看详情{% else %}詳細を見る{% endif %}
-
-        <div class="section-header">                </a>
-
-            <h2 class="section-title">            </div>
-
-                <i class="bi bi-music-note-beamed"></i>            {% endfor %}
-
-                {% if is_english %}Songs{% elif is_chinese %}歌曲{% else %}楽曲{% endif %}        </div>
-
-                <span class="section-count">{{ shared_songs.count }}</span>        {% else %}
-
-            </h2>        <div class="empty-state">
-
-        </div>            <div class="empty-icon">
-
-                        <i class="bi bi-music-note-beamed"></i>
-
-        {% if shared_songs %}            </div>
-
-        <div class="song-list">            <h4>{% if is_english %}No songs yet{% elif is_chinese %}还没有歌曲{% else %}まだ楽曲がありません{% endif %}</h4>
-
-            {% for cs in shared_songs %}            <p>{% if is_english %}Be the first to share a song!{% elif is_chinese %}成为第一个分享歌曲的人！{% else %}最初の楽曲を共有しましょう！{% endif %}</p>
-
-            <div class="song-item">            <a href="{% url 'songs:classroom_share_song' classroom.pk %}" class="action-btn btn-primary-action">
-
-                <div class="song-icon">                <i class="bi bi-share-fill"></i>
-
-                    <i class="bi bi-music-note"></i>                {% if is_english %}Share Song{% elif is_chinese %}分享歌曲{% else %}楽曲を共有{% endif %}
-
-                </div>            </a>
-
-                <div class="song-info">        </div>
-
-                    <div class="song-title">{{ cs.song.title }}</div>        {% endif %}
-
-                    <div class="song-meta">    </div>
-
-                        <span>{{ cs.song.artist }}</span>    
-
-                        <span>by {{ cs.shared_by.username }}</span>    {% if is_host %}
-
-                    </div>    <!-- メンバー -->
-
-                </div>    <div class="content-section">
-
-                {% if cs.song.audio_url %}        <div class="section-header">
-
-                <audio controls class="song-audio" preload="none">            <h2 class="section-title">
-
-                    <source src="{{ cs.song.audio_url }}" type="audio/mpeg">                <i class="bi bi-people-fill"></i>
-
-                </audio>                {% if is_english %}Members{% elif is_chinese %}成员{% else %}メンバー{% endif %}
-
-                {% elif cs.song.audio_file %}                <span class="section-count">{{ members.count }}</span>
-
-                <audio controls class="song-audio" preload="none">            </h2>
-
-                    <source src="{{ cs.song.audio_file.url }}" type="audio/mpeg">        </div>
-
-                </audio>        
-
-                {% endif %}        <div class="members-grid">
-
-                <a href="{% url 'songs:song_detail' cs.song.pk %}" class="song-link">            {% for membership in members %}
-
-                    <i class="bi bi-arrow-up-right"></i>            <div class="member-card">
-
-                </a>                <div class="member-avatar">
-
-            </div>                    {{ membership.user.username|slice:":1"|upper }}
-
-            {% endfor %}                </div>
-
-        </div>                <div>
-
-        {% else %}                    <div class="member-name">
-
-        <div class="empty-state">                        {{ membership.user.username }}
-
-            <div class="empty-icon">                        {% if membership.user == classroom.host %}
-
-                <i class="bi bi-music-note-beamed"></i>                        <span class="member-host-tag">HOST</span>
-
-            </div>                        {% endif %}
-
-            <h4>{% if is_english %}No songs yet{% elif is_chinese %}还没有歌曲{% else %}まだ楽曲がありません{% endif %}</h4>                    </div>
-
-            <p>{% if is_english %}Be the first to share a song!{% elif is_chinese %}成为第一个分享歌曲的人！{% else %}最初の楽曲を共有しましょう{% endif %}</p>                    <div class="member-date">{{ membership.joined_at|date:"Y/m/d" }}</div>
-
-            <a href="{% url 'songs:classroom_share_song' classroom.pk %}" class="btn-action btn-primary">                </div>
-
-                <i class="bi bi-plus"></i>            </div>
-
-                {% if is_english %}Share Song{% elif is_chinese %}分享歌曲{% else %}楽曲を共有{% endif %}            {% endfor %}
-
-            </a>        </div>
-
-        </div>    </div>
-
-        {% endif %}    {% endif %}
-
-    </div></div>
-
-    
-
-    <!-- メンバーセクション（ホストのみ表示） --><script>
-
-    {% if is_host %}function copyCode() {
-
-    <div class="section">    const code = document.getElementById('classCode').textContent;
-
-        <div class="section-header">    navigator.clipboard.writeText(code).then(function() {
-
-            <h2 class="section-title">        const btn = event.target.closest('.code-copy-btn');
-
-                <i class="bi bi-people"></i>        const originalHTML = btn.innerHTML;
-
-                {% if is_english %}Members{% elif is_chinese %}成员{% else %}メンバー{% endif %}        btn.innerHTML = '<i class="bi bi-check-lg"></i> {% if is_english %}Copied!{% elif is_chinese %}已复制！{% else %}コピーしました！{% endif %}';
-
-                <span class="section-count">{{ members.count }}</span>        setTimeout(() => {
-
-            </h2>            btn.innerHTML = originalHTML;
-
-        </div>        }, 2000);
-
-            });
-
-        <div class="member-list">}
-
-            {% for membership in members %}</script>
-
-            <div class="member-item">{% endblock %}
-
-                <div class="member-avatar">
-                    {{ membership.user.username|slice:":1"|upper }}
-                </div>
-                <div class="member-info">
-                    <div class="member-name">
-                        {{ membership.user.username }}
-                        {% if membership.user == classroom.host %}
-                        <span class="member-host-tag">HOST</span>
-                        {% endif %}
+                    <div class="empty-state">
+                        <i class="bi bi-music-note" style="font-size: 2rem; opacity: 0.3;"></i>
+                        <p style="margin: 0.5rem 0 0 0;">
+                            {% if is_english %}No songs shared yet{% elif is_chinese %}还没有共享的歌曲{% else %}まだ楽曲が共有されていません{% endif %}
+                        </p>
                     </div>
-                    <div class="member-date">{{ membership.joined_at|date:"Y/m/d" }}</div>
-                </div>
+                {% endif %}
             </div>
-            {% endfor %}
+        </div>
+        
+        <div class="col-lg-4">
+            <div style="background: white; border-radius: 12px; padding: 1.5rem; border: 1px solid #e5e5e5;">
+                <h3 class="section-title">
+                    <i class="bi bi-people" style="color: #ff7940;"></i>
+                    {% if is_english %}Members{% elif is_chinese %}成员{% else %}メンバー{% endif %}
+                    <span style="color: #888; font-weight: normal;">({{ members.count }})</span>
+                </h3>
+                
+                <div class="member-item">
+                    <div class="member-avatar">{{ classroom.host.username|slice:":1"|upper }}</div>
+                    <span class="member-name">{{ classroom.host.username }}</span>
+                    <span class="member-role">
+                        {% if is_english %}Host{% elif is_chinese %}主持人{% else %}ホスト{% endif %}
+                    </span>
+                </div>
+                
+                {% for member in members %}
+                    {% if member.user != classroom.host %}
+                    <div class="member-item">
+                        <div class="member-avatar">{{ member.user.username|slice:":1"|upper }}</div>
+                        <span class="member-name">{{ member.user.username }}</span>
+                    </div>
+                    {% endif %}
+                {% endfor %}
+            </div>
+            
+            {% if is_host %}
+            <div style="margin-top: 1.5rem;">
+                <form action="{% url 'songs:classroom_delete' classroom.id %}" method="post" onsubmit="return confirm('{% if is_english %}Are you sure you want to delete this classroom?{% elif is_chinese %}确定要删除这个班级吗？{% else %}このクラスを削除してもよろしいですか？{% endif %}');">
+                    {% csrf_token %}
+                    <button type="submit" class="action-btn danger-btn w-100">
+                        <i class="bi bi-trash"></i>
+                        {% if is_english %}Delete Classroom{% elif is_chinese %}删除班级{% else %}クラスを削除{% endif %}
+                    </button>
+                </form>
+            </div>
+            {% endif %}
         </div>
     </div>
-    {% endif %}
 </div>
-
-<script>
-function copyCode() {
-    const code = document.getElementById('classCode').textContent;
-    navigator.clipboard.writeText(code).then(function() {
-        const btn = event.target.closest('.copy-btn');
-        const originalHTML = btn.innerHTML;
-        btn.innerHTML = '<i class="bi bi-check-lg"></i> {% if is_english %}Copied!{% elif is_chinese %}已复制！{% else %}コピー済み{% endif %}';
-        setTimeout(() => {
-            btn.innerHTML = originalHTML;
-        }, 2000);
-    });
-}
-</script>
 {% endblock %}
