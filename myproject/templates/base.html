@@ -823,6 +823,11 @@
                     <li class="nav-item">
                         <a class="nav-link-modern" href="{% url 'songs:song_list' %}">{% if is_english %}Songs{% elif is_chinese %}歌曲{% else %}楽曲一覧{% endif %}</a>
                     </li>
+                    {% if user.is_authenticated %}
+                    <li class="nav-item">
+                        <a class="nav-link-modern" href="{% url 'songs:classroom_list' %}">{% if is_english %}Class{% elif is_chinese %}班级{% else %}クラス{% endif %}</a>
+                    </li>
+                    {% endif %}
                 </ul>
                 
                 <ul class="navbar-nav mobile-nav-left" style="align-items: center;">
@@ -930,6 +935,7 @@
                     <ul class="list-unstyled">
                         <li><a href="{% url 'songs:song_list' %}" class="footer-link">{% if is_english %}Song List{% elif is_chinese %}歌曲列表{% else %}楽曲一覧{% endif %}</a></li>
                         <li><a href="{% url 'songs:upload_image' %}" class="footer-link">{% if is_english %}Create Song{% elif is_chinese %}创作歌曲{% else %}楽曲作成{% endif %}</a></li>
+                        <li><a href="{% url 'songs:classroom_list' %}" class="footer-link">{% if is_english %}Class{% elif is_chinese %}班级{% else %}クラス{% endif %}</a></li>
                     </ul>
                 </div>
                 <div class="col-md-3">
