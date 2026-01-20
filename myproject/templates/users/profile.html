@@ -98,9 +98,6 @@
                 {% for classroom in hosted_classrooms %}
                 <a href="{% url 'songs:classroom_detail' classroom.pk %}" class="classroom-card hosted">
                     <div class="classroom-card-header">
-                        <div class="classroom-icon">
-                            <i class="bi bi-mortarboard-fill"></i>
-                        </div>
                         <span class="host-badge">{% if is_english %}Host{% elif is_chinese %}主持人{% else %}ホスト{% endif %}</span>
                     </div>
                     <div class="classroom-card-body">
@@ -115,11 +112,6 @@
                 
                 {% for classroom in joined_classrooms %}
                 <a href="{% url 'songs:classroom_detail' classroom.pk %}" class="classroom-card">
-                    <div class="classroom-card-header">
-                        <div class="classroom-icon">
-                            <i class="bi bi-mortarboard-fill"></i>
-                        </div>
-                    </div>
                     <div class="classroom-card-body">
                         <h4 class="classroom-name">{{ classroom.name }}</h4>
                         <div class="classroom-meta">
