@@ -184,6 +184,26 @@
         transform: translateX(5px);
     }
     
+    .classroom-item.hosted {
+        background: linear-gradient(135deg, #fff9f5 0%, #fff5f0 100%);
+        border-color: #ffcdb8;
+    }
+    .classroom-item.hosted:hover {
+        border-color: #ff7940;
+    }
+    
+    .host-badge {
+        display: inline-block;
+        background: linear-gradient(135deg, #ff7940 0%, #ff6b35 100%);
+        color: white;
+        font-size: 0.7rem;
+        font-weight: 700;
+        padding: 0.2rem 0.6rem;
+        border-radius: 20px;
+        margin-left: 0.5rem;
+        vertical-align: middle;
+    }
+    
     /* 空の状態 */
     .empty-hint {
         color: #8a6b5a;
@@ -248,10 +268,48 @@
             </a>
         </div>
         
-        {% if joined_classrooms %}
+        {% if hosted_classrooms %}
         <div class="joined-section">
             <div class="section-label">
-                {% if is_english %}My Classes{% elif is_chinese %}我加入的班级{% else %}参加中のクラス{% endif %}
+                <i class="bi bi-star-fill" style="color: #ff7940;"></i>
+                {% if is_english %}Classes I Created{% elif is_chinese %}我创建的班级{% else %}自分が作成したクラス{% endif %}
+            </div>
+            <div class="classroom-list">
+                {% for classroom in hosted_classrooms %}
+                <a href="{% url 'songs:classroom_detail' classroom.pk %}" class="classroom-item hosted">
+                    <div class="classroom-item-info">
+                        <div class="classroom-item-name">
+                            {{ classroom.name }}
+                            <span class="host-badge">{% if is_english %}Host{% elif is_chinese %}主持人{% else %}ホスト{% endif %}</span>
+                        </div>
+                        <div class="classroom-item-meta">
+                            <span>
+                                <i class="bi bi-key-fill"></i>
+                                {{ classroom.code }}
+                            </span>
+                            <span>
+                                <i class="bi bi-people-fill"></i>
+                                {{ classroom.members.count }} {% if is_english %}members{% elif is_chinese %}人{% else %}人{% endif %}
+                            </span>
+                            <span>
+                                <i class="bi bi-music-note-beamed"></i>
+                                {{ classroom.shared_songs.count }} {% if is_english %}songs{% elif is_chinese %}曲{% else %}曲{% endif %}
+                            </span>
+                        </div>
+                    </div>
+                    <div class="classroom-item-arrow">
+                        <i class="bi bi-arrow-right"></i>
+                    </div>
+                </a>
+                {% endfor %}
+            </div>
+        </div>
+        {% endif %}
+        
+        {% if joined_classrooms %}
+        <div class="joined-section" {% if hosted_classrooms %}style="margin-top: 1.5rem; padding-top: 1.5rem;"{% endif %}>
+            <div class="section-label">
+                {% if is_english %}Classes I Joined{% elif is_chinese %}我加入的班级{% else %}参加中のクラス{% endif %}
             </div>
             <div class="classroom-list">
                 {% for classroom in joined_classrooms %}
@@ -280,7 +338,9 @@
                 {% endfor %}
             </div>
         </div>
-        {% elif not hosted_classrooms %}
+        {% endif %}
+        
+        {% if not hosted_classrooms and not joined_classrooms %}
         <p class="empty-hint">
             {% if is_english %}
             Join a class with a code from your teacher or create your own!
