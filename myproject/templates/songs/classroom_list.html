@@ -271,7 +271,6 @@
         {% if hosted_classrooms %}
         <div class="joined-section">
             <div class="section-label">
-                <i class="bi bi-star-fill" style="color: #ff7940;"></i>
                 {% if is_english %}Classes I Created{% elif is_chinese %}我创建的班级{% else %}自分が作成したクラス{% endif %}
             </div>
             <div class="classroom-list">
@@ -283,10 +282,6 @@
                             <span class="host-badge">{% if is_english %}Host{% elif is_chinese %}主持人{% else %}ホスト{% endif %}</span>
                         </div>
                         <div class="classroom-item-meta">
-                            <span>
-                                <i class="bi bi-key-fill"></i>
-                                {{ classroom.code }}
-                            </span>
                             <span>
                                 <i class="bi bi-people-fill"></i>
                                 {{ classroom.members.count }} {% if is_english %}members{% elif is_chinese %}人{% else %}人{% endif %}
