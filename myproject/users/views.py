@@ -13,7 +13,7 @@ from django.utils import timezone
 from datetime import timedelta
 from .forms import UserRegistrationForm, ProfileEditForm
 from .models import User
-from songs.models import Song, Favorite, Like
+from songs.models import Song, Favorite, Like, Classroom
 import json
 import base64
 from io import BytesIO
@@ -113,6 +113,13 @@ class ProfileView(TemplateView):
             context['user_liked_songs'] = user_liked_songs
         else:
             context['user_liked_songs'] = set()
+        
+        # 自分のプロフィールの場合、参加中のクラスを表示
+        if self.request.user.is_authenticated and self.request.user == user:
+            # ホストしているクラス
+            context['hosted_classrooms'] = Classroom.objects.filter(host=user, is_active=True)
+            # 参加しているクラス（ホストを除く）
+            context['joined_classrooms'] = user.joined_classrooms.filter(is_active=True).exclude(host=user)
         
         return context
 

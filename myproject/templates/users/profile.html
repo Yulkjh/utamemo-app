@@ -146,6 +146,58 @@
             </div>
             {% endif %}
         </div>
+
+        <!-- Classrooms Section (自分のプロフィールのみ) -->
+        {% if user == profile_user and hosted_classrooms or joined_classrooms %}
+        <div class="classrooms-section fade-in">
+            <div class="section-header">
+                <div class="section-title">
+                    <h3>{% if is_english %}My Classes{% elif is_chinese %}我的班级{% else %}参加中のクラス{% endif %}</h3>
+                </div>
+                <a href="{% url 'songs:classroom_list' %}" class="view-all-link">
+                    {% if is_english %}View All{% elif is_chinese %}查看全部{% else %}すべて見る{% endif %}
+                    <i class="bi bi-arrow-right"></i>
+                </a>
+            </div>
+
+            <div class="classrooms-grid">
+                {% for classroom in hosted_classrooms %}
+                <a href="{% url 'songs:classroom_detail' classroom.pk %}" class="classroom-card hosted">
+                    <div class="classroom-card-header">
+                        <div class="classroom-icon">
+                            <i class="bi bi-mortarboard-fill"></i>
+                        </div>
+                        <span class="host-badge">{% if is_english %}Host{% elif is_chinese %}主持人{% else %}ホスト{% endif %}</span>
+                    </div>
+                    <div class="classroom-card-body">
+                        <h4 class="classroom-name">{{ classroom.name }}</h4>
+                        <div class="classroom-meta">
+                            <span><i class="bi bi-people-fill"></i> {{ classroom.members.count }}{% if is_english %} members{% elif is_chinese %}人{% else %}人{% endif %}</span>
+                            <span><i class="bi bi-music-note-beamed"></i> {{ classroom.shared_songs.count }}{% if is_english %} songs{% elif is_chinese %}曲{% else %}曲{% endif %}</span>
+                        </div>
+                    </div>
+                </a>
+                {% endfor %}
+                
+                {% for classroom in joined_classrooms %}
+                <a href="{% url 'songs:classroom_detail' classroom.pk %}" class="classroom-card">
+                    <div class="classroom-card-header">
+                        <div class="classroom-icon">
+                            <i class="bi bi-mortarboard-fill"></i>
+                        </div>
+                    </div>
+                    <div class="classroom-card-body">
+                        <h4 class="classroom-name">{{ classroom.name }}</h4>
+                        <div class="classroom-meta">
+                            <span><i class="bi bi-person-fill"></i> {{ classroom.host.username }}</span>
+                            <span><i class="bi bi-music-note-beamed"></i> {{ classroom.shared_songs.count }}{% if is_english %} songs{% elif is_chinese %}曲{% else %}曲{% endif %}</span>
+                        </div>
+                    </div>
+                </a>
+                {% endfor %}
+            </div>
+        </div>
+        {% endif %}
     </div>
 </div>
 
@@ -724,6 +776,130 @@
     
     .song-card-content {
         padding: 1rem;
+    }
+}
+
+/* Classrooms Section */
+.classrooms-section {
+    margin-top: 3rem;
+}
+
+.classrooms-section .section-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 1.5rem;
+}
+
+.classrooms-section .section-title h3 {
+    font-size: 1.5rem;
+    font-weight: 700;
+    color: var(--text-primary);
+    margin: 0;
+}
+
+.view-all-link {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+    color: var(--primary-color);
+    text-decoration: none;
+    font-weight: 600;
+    font-size: 0.95rem;
+    transition: all 0.2s ease;
+}
+
+.view-all-link:hover {
+    color: var(--secondary-color);
+    gap: 0.75rem;
+}
+
+.classrooms-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+    gap: 1.25rem;
+}
+
+.classroom-card {
+    background: var(--surface);
+    border-radius: var(--radius-lg);
+    box-shadow: var(--shadow-md);
+    padding: 1.25rem;
+    text-decoration: none;
+    color: inherit;
+    transition: all 0.3s ease;
+    border: 2px solid transparent;
+}
+
+.classroom-card:hover {
+    transform: translateY(-4px);
+    box-shadow: var(--shadow-lg);
+    border-color: var(--primary-color);
+}
+
+.classroom-card.hosted {
+    background: linear-gradient(135deg, #fff9f5 0%, #fff5f0 100%);
+    border-color: rgba(255, 121, 64, 0.2);
+}
+
+.classroom-card-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 1rem;
+}
+
+.classroom-icon {
+    width: 48px;
+    height: 48px;
+    border-radius: 12px;
+    background: var(--primary-gradient);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: white;
+    font-size: 1.5rem;
+}
+
+.host-badge {
+    background: var(--primary-gradient);
+    color: white;
+    font-size: 0.75rem;
+    font-weight: 700;
+    padding: 0.25rem 0.75rem;
+    border-radius: 20px;
+}
+
+.classroom-card-body {
+}
+
+.classroom-name {
+    font-size: 1.1rem;
+    font-weight: 700;
+    color: var(--text-primary);
+    margin: 0 0 0.5rem 0;
+}
+
+.classroom-meta {
+    display: flex;
+    gap: 1rem;
+    font-size: 0.875rem;
+    color: var(--text-muted);
+}
+
+.classroom-meta span {
+    display: flex;
+    align-items: center;
+    gap: 0.35rem;
+}
+
+.classroom-meta i {
+    color: var(--primary-color);
+}
+
+@media (max-width: 576px) {
+    .classrooms-grid {
+        grid-template-columns: 1fr;
     }
 }
 </style>
