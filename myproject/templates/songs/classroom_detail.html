@@ -227,12 +227,10 @@
                         <i class="bi bi-music-note-list" style="color: #ff7940;"></i>
                         {% if is_english %}Shared Songs{% elif is_chinese %}共享歌曲{% else %}共有された楽曲{% endif %}
                     </h3>
-                    {% if is_host %}
                     <a href="{% url 'songs:classroom_share_song' classroom.id %}" class="action-btn" style="padding: 0.5rem 1rem; font-size: 0.875rem;">
                         <i class="bi bi-plus-lg"></i>
                         {% if is_english %}Add{% elif is_chinese %}添加{% else %}追加{% endif %}
                     </a>
-                    {% endif %}
                 </div>
                 
                 {% if shared_songs %}

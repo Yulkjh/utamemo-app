@@ -196,7 +196,7 @@
             padding: 0.4rem 0.75rem;
             font-size: 0.9rem;
             cursor: pointer;
-            transition: opacity 0.15s ease-in-out, visibility 0.15s ease-in-out;
+            transition: all 0.2s ease;
             color: var(--text-primary);
             height: 38px;
         }
@@ -226,29 +226,39 @@
         
         .language-dropdown-menu {
             position: absolute;
-            top: 100%;
+            top: calc(100% + 0.5rem);
             right: 0;
             left: auto !important;
-            margin-top: 0.5rem;
+            margin: 0;
             background: var(--surface);
             border: 1px solid var(--border-color);
             border-radius: var(--radius-md);
             box-shadow: var(--shadow-lg);
-            min-width: 160px;
+            min-width: 120px;
             opacity: 0;
             visibility: hidden;
-            transform: none !important;
             transition: opacity 0.15s ease-in-out, visibility 0.15s ease-in-out;
             z-index: 1000;
             overflow: hidden;
+            transform: none !important;
+        }
+        
+        .language-switcher.open .language-dropdown-menu {
+            opacity: 1;
+            visibility: visible;
+            transform: none !important;
         }
         
         /* モバイル対応：言語メニューが画面外にはみ出さないように */
         @media (max-width: 991.98px) {
             .language-dropdown-menu {
-                right: 0;
+                right: 0 !important;
                 left: auto !important;
                 min-width: 140px;
+            }
+            
+            .language-switcher.open .language-dropdown-menu {
+                transform: none !important;
             }
             
             .language-switcher {
@@ -279,12 +289,37 @@
             }
         }
         
-        .language-switcher.open .language-dropdown-menu {
+        /* モバイル用言語スイッチャー（ナビバー右側固定） */
+        .mobile-right-controls {
+            margin-left: auto;
+        }
+        
+        .mobile-language-switcher {
+            position: relative;
+        }
+        
+        .mobile-language-switcher .language-dropdown-btn {
+            background: var(--surface-elevated);
+            border: 1px solid var(--border-color);
+            border-radius: var(--radius-md);
+            padding: 0.35rem 0.6rem;
+            font-size: 0.85rem;
+        }
+        
+        .mobile-language-switcher .language-dropdown-menu {
+            position: absolute;
+            top: calc(100% + 0.5rem);
             right: 0 !important;
             left: auto !important;
+            margin: 0;
+            min-width: 120px;
+            transform: none !important;
+        }
+        
+        .mobile-language-switcher.open .language-dropdown-menu {
+            transform: none !important;
             opacity: 1;
             visibility: visible;
-            transform: none !important;
         }
         
         .language-option {
@@ -333,7 +368,7 @@
             padding: 0.4rem 0.75rem;
             font-size: 0.9rem;
             cursor: pointer;
-            transition: opacity 0.15s ease-in-out, visibility 0.15s ease-in-out;
+            transition: all 0.2s ease;
             color: var(--text-primary);
             height: 38px;
         }
@@ -356,7 +391,7 @@
         .user-dropdown-menu {
             position: absolute;
             top: 100%;
-            right: -30px;
+            right: 0;
             margin-top: 0.5rem;
             background: var(--surface);
             border: 1px solid var(--border-color);
@@ -365,8 +400,8 @@
             min-width: 180px;
             opacity: 0;
             visibility: hidden;
-            transform: none !important;
-            transition: opacity 0.15s ease-in-out, visibility 0.15s ease-in-out;
+            transform: translateY(-10px);
+            transition: all 0.2s ease;
             z-index: 1000;
             overflow: hidden;
         }
@@ -374,7 +409,7 @@
         .user-switcher.open .user-dropdown-menu {
             opacity: 1;
             visibility: visible;
-            transform: none !important;
+            transform: translateY(0);
         }
         
         .user-switcher.open .dropdown-arrow {
@@ -513,7 +548,7 @@
             position: absolute;
             top: 0;
             left: 0;
-            right: -30px;
+            right: 0;
             bottom: 0;
             background: url("data:image/svg+xml,%3Csvg width='60' height='60' viewBox='0 0 60 60' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='none' fill-rule='evenodd'%3E%3Cg fill='%23ffffff' fill-opacity='0.05'%3E%3Ccircle cx='30' cy='30' r='1'/%3E%3C/g%3E%3C/g%3E%3C/svg%3E");
         }
@@ -547,7 +582,7 @@
         @keyframes fadeIn {
             to {
                 opacity: 1;
-                transform: none !important;
+                transform: translateY(0);
             }
         }
         
@@ -730,7 +765,7 @@
             }
             
             .mobile-nav-left .nav-item.me-3 {
-                margin-right: auto;
+                margin-right: 0 !important;
             }
         }
         
@@ -781,10 +816,8 @@
             }
             
             .language-dropdown-menu {
-            right: 0 !important;
-            left: auto !important;
-                right: -30px;
-                left: auto;
+                right: auto !important;
+                left: 0 !important;
                 min-width: 120px;
             }
         }
@@ -809,9 +842,25 @@
                 UTAMEMO
             </a>
             
-            <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav">
-                <span class="navbar-toggler-icon"></span>
-            </button>
+            <!-- モバイル用：右側に言語スイッチャーとトグラー -->
+            <div class="d-flex align-items-center d-lg-none mobile-right-controls">
+                <div class="language-switcher mobile-language-switcher">
+                    <div class="language-dropdown-btn">
+                        <span class="lang-name">{% if is_english %}Language{% elif is_chinese %}语言{% else %}言語{% endif %}</span>
+                        <span class="dropdown-arrow">▼</span>
+                    </div>
+                    <div class="language-dropdown-menu">
+                        {% for lang in available_languages %}
+                        <a href="{% url 'songs:set_language' lang.code %}" class="language-option {% if lang.code == app_language %}active{% endif %}">
+                            <span class="lang-name">{{ lang.name }}</span>
+                        </a>
+                        {% endfor %}
+                    </div>
+                </div>
+                <button class="navbar-toggler ms-2" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav">
+                    <span class="navbar-toggler-icon"></span>
+                </button>
+            </div>
             
             <div class="collapse navbar-collapse" id="navbarNav">
                 <ul class="navbar-nav me-auto mobile-nav-left">
@@ -831,25 +880,8 @@
                 </ul>
                 
                 <ul class="navbar-nav mobile-nav-left" style="align-items: center;">
-                    <!-- 言語切り替えドロップダウン -->
-                    <li class="nav-item me-3" style="display: flex; align-items: center;">
-                        <div class="language-switcher">
-                            <div class="language-dropdown-btn">
-                                <span class="lang-name">{% if is_english %}Language{% elif is_chinese %}语言{% else %}言語{% endif %}</span>
-                                <span class="dropdown-arrow">▼</span>
-                            </div>
-                            <div class="language-dropdown-menu">
-                                {% for lang in available_languages %}
-                                <a href="{% url 'songs:set_language' lang.code %}" class="language-option {% if lang.code == app_language %}active{% endif %}">
-                                    <span class="lang-name">{{ lang.name }}</span>
-                                </a>
-                                {% endfor %}
-                            </div>
-                        </div>
-                    </li>
-                    
                     {% if user.is_authenticated %}
-                    <li class="nav-item">
+                    <li class="nav-item me-3">
                         <div class="user-switcher">
                             <div class="user-dropdown-btn">
                                 {% if user.profile_image_data %}
@@ -895,10 +927,27 @@
                     <li class="nav-item me-2">
                         <a class="btn-nav-login" href="{% url 'users:login' %}">{% if is_english %}Login{% elif is_chinese %}登录{% else %}ログイン{% endif %}</a>
                     </li>
-                    <li class="nav-item">
+                    <li class="nav-item me-3">
                         <a class="btn-nav-register" href="{% url 'users:register' %}">{% if is_english %}Sign Up{% elif is_chinese %}注册{% else %}新規登録{% endif %}</a>
                     </li>
                     {% endif %}
+                    
+                    <!-- 言語切り替えドロップダウン（デスクトップ用） -->
+                    <li class="nav-item d-none d-lg-flex" style="display: flex; align-items: center;">
+                        <div class="language-switcher desktop-language-switcher">
+                            <div class="language-dropdown-btn">
+                                <span class="lang-name">{% if is_english %}Language{% elif is_chinese %}语言{% else %}言語{% endif %}</span>
+                                <span class="dropdown-arrow">▼</span>
+                            </div>
+                            <div class="language-dropdown-menu">
+                                {% for lang in available_languages %}
+                                <a href="{% url 'songs:set_language' lang.code %}" class="language-option {% if lang.code == app_language %}active{% endif %}">
+                                    <span class="lang-name">{{ lang.name }}</span>
+                                </a>
+                                {% endfor %}
+                            </div>
+                        </div>
+                    </li>
                 </ul>
             </div>
         </div>
@@ -936,6 +985,9 @@
                         <li><a href="{% url 'songs:song_list' %}" class="footer-link">{% if is_english %}Song List{% elif is_chinese %}歌曲列表{% else %}楽曲一覧{% endif %}</a></li>
                         <li><a href="{% url 'songs:upload_image' %}" class="footer-link">{% if is_english %}Create Song{% elif is_chinese %}创作歌曲{% else %}楽曲作成{% endif %}</a></li>
                         <li><a href="{% url 'songs:classroom_list' %}" class="footer-link">{% if is_english %}Class{% elif is_chinese %}班级{% else %}クラス{% endif %}</a></li>
+                        <li><a href="{% url 'terms' %}" class="footer-link">{% if is_english %}Terms of Service{% elif is_chinese %}服务条款{% else %}利用規約{% endif %}</a></li>
+                        <li><a href="{% url 'privacy' %}" class="footer-link">{% if is_english %}Privacy Policy{% elif is_chinese %}隐私政策{% else %}プライバシーポリシー{% endif %}</a></li>
+                        <li><a href="{% url 'contact' %}" class="footer-link">{% if is_english %}Contact{% elif is_chinese %}联系我们{% else %}お問い合わせ{% endif %}</a></li>
                     </ul>
                 </div>
                 <div class="col-md-3">
@@ -954,7 +1006,12 @@
             <hr class="my-4" style="border-color: var(--text-secondary);">
             <div class="row align-items-center">
                 <div class="col-md-12 text-center">
-
+                    <div class="mb-2">
+                        <a href="{% url 'terms' %}" class="footer-link me-3">{% if is_english %}Terms of Service{% elif is_chinese %}服务条款{% else %}利用規約{% endif %}</a>
+                        <a href="{% url 'privacy' %}" class="footer-link me-3">{% if is_english %}Privacy Policy{% elif is_chinese %}隐私政策{% else %}プライバシーポリシー{% endif %}</a>
+                        <a href="{% url 'contact' %}" class="footer-link">{% if is_english %}Contact{% elif is_chinese %}联系我们{% else %}お問い合わせ{% endif %}</a>
+                    </div>
+                    <p class="text-muted small mb-0">&copy; 2026 UTAMEMO. All rights reserved.</p>
                 </div>
             </div>
         </div>
