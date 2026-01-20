@@ -1,578 +1,1154 @@
-{% extends 'base.html' %}{% extends 'base.html' %}
+{% extends 'base.html' %}{% extends 'base.html' %}{% extends 'base.html' %}
+
+{% load static %}
 
 {% load static %}{% load static %}
 
-
-
-{% block title %}{{ classroom.name }} - UTAMEMO{% endblock %}{% block title %}{{ classroom.name }} - UTAMEMO{% endblock %}
+{% block title %}{{ classroom.name }} - UTAMEMO{% endblock %}
 
 
 
-{% block content %}{% block content %}
+{% block content %}
 
-<style><style>
+<style>{% block title %}{{ classroom.name }} - UTAMEMO{% endblock %}{% block title %}{{ classroom.name }} - UTAMEMO{% endblock %}
 
-    .classroom-page {    .classroom-detail-page {
+    .classroom-page {
 
-        max-width: 900px;        padding: 2rem 0;
+        max-width: 900px;
 
-        margin: 0 auto;        min-height: calc(100vh - 200px);
+        margin: 0 auto;
 
-        padding: 2rem 1rem;    }
+        padding: 2rem 1rem;{% block content %}{% block content %}
 
-    }    
+    }
 
-        /* ヘッダーカード */
+    <style><style>
 
-    /* ヘッダー - Linear/Notion風のシンプルなデザイン */    .classroom-header {
+    .classroom-header {
 
-    .classroom-header {        background: white;
+        margin-bottom: 2rem;    .classroom-page {    .classroom-detail-page {
 
-        margin-bottom: 2rem;        border-radius: 28px;
+    }
 
-    }        box-shadow: 0 20px 50px rgba(45, 27, 19, 0.12);
+            max-width: 900px;        padding: 2rem 0;
 
-            padding: 2.5rem 3rem;
+    .header-top {
 
-    .header-top {        margin-bottom: 2.5rem;
+        display: flex;        margin: 0 auto;        min-height: calc(100vh - 200px);
 
-        display: flex;        text-align: center;
+        align-items: center;
 
-        align-items: center;    }
+        justify-content: space-between;        padding: 2rem 1rem;    }
 
-        justify-content: space-between;    
+        margin-bottom: 1.5rem;
 
-        margin-bottom: 1.5rem;    .classroom-name {
+        flex-wrap: wrap;    }    
 
-        flex-wrap: wrap;        font-size: 2.5rem;
+        gap: 1rem;
 
-        gap: 1rem;        font-weight: 800;
+    }        /* ヘッダーカード */
 
-    }        color: #2d1b13;
+    
 
-            margin-bottom: 0.5rem;
+    .classroom-title-group {    /* ヘッダー - Linear/Notion風のシンプルなデザイン */    .classroom-header {
 
-    .classroom-title-group {        display: flex;
+        display: flex;
 
-        display: flex;        align-items: center;
+        align-items: center;    .classroom-header {        background: white;
 
-        align-items: center;        justify-content: center;
+        gap: 0.75rem;
 
-        gap: 0.75rem;        gap: 1rem;
+    }        margin-bottom: 2rem;        border-radius: 28px;
 
-    }        flex-wrap: wrap;
+    
+
+    .classroom-name {    }        box-shadow: 0 20px 50px rgba(45, 27, 19, 0.12);
+
+        font-size: 2rem;
+
+        font-weight: 700;            padding: 2.5rem 3rem;
+
+        color: #1a1a1a;
+
+        margin: 0;    .header-top {        margin-bottom: 2.5rem;
+
+        letter-spacing: -0.02em;
+
+    }        display: flex;        text-align: center;
+
+    
+
+    .host-badge {        align-items: center;    }
+
+        background: #ff7940;
+
+        color: white;        justify-content: space-between;    
+
+        font-size: 0.7rem;
+
+        padding: 0.3rem 0.6rem;        margin-bottom: 1.5rem;    .classroom-name {
+
+        border-radius: 4px;
+
+        font-weight: 600;        flex-wrap: wrap;        font-size: 2.5rem;
+
+        text-transform: uppercase;
+
+        letter-spacing: 0.05em;        gap: 1rem;        font-weight: 800;
+
+    }
+
+        }        color: #2d1b13;
+
+    .header-actions {
+
+        display: flex;            margin-bottom: 0.5rem;
+
+        gap: 0.5rem;
+
+    }    .classroom-title-group {        display: flex;
+
+    
+
+    .btn-action {        display: flex;        align-items: center;
+
+        display: inline-flex;
+
+        align-items: center;        align-items: center;        justify-content: center;
+
+        gap: 0.4rem;
+
+        padding: 0.5rem 0.9rem;        gap: 0.75rem;        gap: 1rem;
+
+        border-radius: 6px;
+
+        font-weight: 500;    }        flex-wrap: wrap;
+
+        font-size: 0.875rem;
+
+        text-decoration: none;        }
+
+        transition: all 0.15s ease;
+
+        border: none;    .classroom-name {    
+
+        cursor: pointer;
+
+    }        font-size: 2rem;    .host-badge {
+
+    
+
+    .btn-primary {        font-weight: 700;        background: linear-gradient(135deg, #ff7940 0%, #ff6b35 100%);
+
+        background: #ff7940;
+
+        color: white;        color: #1a1a1a;        color: white;
+
+    }
+
+    .btn-primary:hover {        margin: 0;        font-size: 0.75rem;
+
+        background: #e86a35;
+
+        color: white;        letter-spacing: -0.02em;        padding: 0.4rem 0.8rem;
+
+    }
+
+        }        border-radius: 8px;
+
+    .btn-secondary {
+
+        background: #f5f5f5;            font-weight: 700;
+
+        color: #333;
+
+    }    .host-badge {        letter-spacing: 0.05em;
+
+    .btn-secondary:hover {
+
+        background: #e8e8e8;        background: #ff7940;    }
+
+        color: #333;
+
+    }        color: white;    
+
+    
+
+    .btn-danger {        font-size: 0.7rem;    .classroom-description {
+
+        background: transparent;
+
+        color: #dc3545;        padding: 0.3rem 0.6rem;        font-size: 1.1rem;
+
+        border: 1px solid #dc3545;
+
+    }        border-radius: 4px;        color: #5c3a2a;
+
+    .btn-danger:hover {
+
+        background: #dc3545;        font-weight: 600;        margin-bottom: 1.5rem;
+
+        color: white;
+
+    }        text-transform: uppercase;        max-width: 600px;
+
+    
+
+    .classroom-description {        letter-spacing: 0.05em;        margin-left: auto;
+
+        color: #666;
+
+        font-size: 0.95rem;    }        margin-right: auto;
+
+        margin-bottom: 1.5rem;
+
+        line-height: 1.6;        }
+
+    }
+
+        .header-actions {    
+
+    .stats-row {
+
+        display: flex;        display: flex;    .classroom-stats {
+
+        gap: 1rem;
+
+        margin-bottom: 1.5rem;        gap: 0.5rem;        display: flex;
+
+    }
+
+        }        justify-content: center;
+
+    .stat-card {
+
+        flex: 1;            gap: 3rem;
+
+        background: #fafafa;
+
+        border: 1px solid #eee;    .btn-action {        margin-bottom: 2rem;
+
+        border-radius: 8px;
+
+        padding: 1rem 1.25rem;        display: inline-flex;        flex-wrap: wrap;
+
+        min-width: 100px;
+
+    }        align-items: center;    }
+
+    
+
+    .stat-value {        gap: 0.4rem;    .stat-box {
+
+        font-size: 1.75rem;
+
+        font-weight: 700;        padding: 0.5rem 0.9rem;        text-align: center;
+
+        color: #1a1a1a;
+
+        line-height: 1;        border-radius: 6px;    }
+
+        margin-bottom: 0.25rem;
+
+    }        font-weight: 500;    .stat-number {
+
+    
+
+    .stat-label {        font-size: 0.875rem;        font-size: 2rem;
+
+        font-size: 0.8rem;
+
+        color: #888;        text-decoration: none;        font-weight: 800;
+
+        font-weight: 500;
+
+    }        transition: all 0.15s ease;        color: #ff7940;
+
+    
+
+    .invite-section {        border: none;    }
+
+        background: linear-gradient(135deg, #1a1a1a 0%, #2d2d2d 100%);
+
+        border-radius: 10px;        cursor: pointer;    .stat-label {
+
+        padding: 1rem 1.25rem;
+
+        display: flex;    }        font-size: 0.9rem;
+
+        align-items: center;
+
+        justify-content: space-between;            color: #8a6b5a;
+
+        margin-bottom: 2rem;
+
+    }    .btn-primary {        font-weight: 600;
+
+    
+
+    .invite-info {        background: #ff7940;    }
+
+        display: flex;
+
+        align-items: center;        color: white;    
+
+        gap: 1rem;
+
+    }    }    /* 参加コード */
+
+    
+
+    .invite-label {    .btn-primary:hover {    .code-display {
+
+        font-size: 0.75rem;
+
+        color: rgba(255,255,255,0.6);        background: #e86a35;        background: #2d1b13;
+
+        font-weight: 500;
+
+        text-transform: uppercase;        color: white;        border-radius: 16px;
+
+        letter-spacing: 0.05em;
+
+    }    }        padding: 1.5rem 2rem;
+
+    
+
+    .invite-code {            display: inline-flex;
+
+        font-family: 'SF Mono', 'Monaco', 'Consolas', monospace;
+
+        font-size: 1.5rem;    .btn-secondary {        align-items: center;
+
+        font-weight: 700;
+
+        color: white;        background: #f5f5f5;        gap: 1.5rem;
+
+        letter-spacing: 0.15em;
+
+    }        color: #333;        margin-bottom: 2rem;
+
+    
+
+    .copy-btn {    }    }
+
+        background: #ff7940;
+
+        border: none;    .btn-secondary:hover {    .code-label {
+
+        color: white;
+
+        padding: 0.5rem 1rem;        background: #e8e8e8;        color: rgba(255,255,255,0.7);
+
+        border-radius: 6px;
+
+        cursor: pointer;        color: #333;        font-size: 0.85rem;
+
+        font-weight: 600;
+
+        font-size: 0.8rem;    }        font-weight: 600;
+
+        display: flex;
+
+        align-items: center;        }
+
+        gap: 0.4rem;
+
+        transition: all 0.15s ease;    .btn-danger {    .code-value {
+
+    }
+
+    .copy-btn:hover {        background: transparent;        color: white;
+
+        background: #e86a35;
+
+    }        color: #dc3545;        font-family: 'SF Mono', 'Monaco', monospace;
+
+    
+
+    .section {        border: 1px solid #dc3545;        font-size: 2rem;
+
+        margin-bottom: 2rem;
+
+    }    }        font-weight: 800;
+
+    
+
+    .section-header {    .btn-danger:hover {        letter-spacing: 0.2em;
+
+        display: flex;
+
+        align-items: center;        background: #dc3545;    }
+
+        justify-content: space-between;
+
+        margin-bottom: 1rem;        color: white;    .code-copy-btn {
+
+        padding-bottom: 0.75rem;
+
+        border-bottom: 1px solid #eee;    }        background: linear-gradient(135deg, #ff7940 0%, #ff6b35 100%);
+
+    }
+
+                border: none;
+
+    .section-title {
+
+        font-size: 0.9rem;    /* 説明 */        color: white;
+
+        font-weight: 600;
+
+        color: #666;    .classroom-description {        padding: 0.7rem 1.25rem;
+
+        text-transform: uppercase;
+
+        letter-spacing: 0.05em;        color: #666;        border-radius: 10px;
+
+        display: flex;
+
+        align-items: center;        font-size: 0.95rem;        cursor: pointer;
+
+        gap: 0.5rem;
+
+        margin: 0;        margin-bottom: 1.5rem;        font-weight: 700;
+
+    }
+
+            line-height: 1.6;        font-size: 0.9rem;
+
+    .section-count {
+
+        background: #f0f0f0;    }        transition: all 0.3s ease;
+
+        color: #666;
+
+        font-size: 0.75rem;            display: flex;
+
+        font-weight: 600;
+
+        padding: 0.2rem 0.5rem;    /* 統計カード - Linear風の横並びデザイン */        align-items: center;
+
+        border-radius: 10px;
+
+    }    .stats-row {        gap: 0.5rem;
+
+    
+
+    .song-list {        display: flex;    }
+
+        display: flex;
+
+        flex-direction: column;        gap: 1rem;    .code-copy-btn:hover {
+
+        gap: 0.5rem;
+
+    }        margin-bottom: 1.5rem;        transform: scale(1.05);
+
+    
+
+    .song-item {    }        box-shadow: 0 8px 20px rgba(255, 107, 53, 0.4);
+
+        display: flex;
+
+        align-items: center;        }
+
+        gap: 1rem;
+
+        padding: 0.75rem 1rem;    .stat-card {    
+
+        background: #fafafa;
+
+        border: 1px solid #eee;        flex: 1;    /* アクションボタン */
+
+        border-radius: 8px;
+
+        transition: all 0.15s ease;        background: #fafafa;    .header-actions {
+
+    }
+
+    .song-item:hover {        border: 1px solid #eee;        display: flex;
+
+        background: #f5f5f5;
+
+        border-color: #ddd;        border-radius: 8px;        justify-content: center;
+
+    }
+
+            padding: 1rem 1.25rem;        gap: 1rem;
+
+    .song-icon {
+
+        width: 36px;        min-width: 100px;        flex-wrap: wrap;
+
+        height: 36px;
+
+        background: linear-gradient(135deg, #ff7940 0%, #ff6b35 100%);    }    }
+
+        border-radius: 6px;
+
+        display: flex;        .action-btn {
+
+        align-items: center;
+
+        justify-content: center;    .stat-value {        display: inline-flex;
+
+        color: white;
+
+        font-size: 1rem;        font-size: 1.75rem;        align-items: center;
+
+        flex-shrink: 0;
+
+    }        font-weight: 700;        gap: 0.5rem;
+
+    
+
+    .song-info {        color: #1a1a1a;        padding: 0.85rem 1.5rem;
+
+        flex: 1;
+
+        min-width: 0;        line-height: 1;        border-radius: 12px;
+
+    }
+
+            margin-bottom: 0.25rem;        font-weight: 700;
+
+    .song-title {
+
+        font-weight: 600;    }        font-size: 0.95rem;
+
+        color: #1a1a1a;
+
+        font-size: 0.95rem;            text-decoration: none;
+
+        white-space: nowrap;
+
+        overflow: hidden;    .stat-label {        transition: all 0.3s ease;
+
+        text-overflow: ellipsis;
+
+    }        font-size: 0.8rem;        border: none;
+
+    
+
+    .song-meta {        color: #888;        cursor: pointer;
+
+        font-size: 0.8rem;
+
+        color: #888;        font-weight: 500;    }
+
+        display: flex;
+
+        align-items: center;    }    .btn-primary-action {
+
+        gap: 0.75rem;
+
+    }            background: linear-gradient(135deg, #ff7940 0%, #ff6b35 100%);
+
+    
+
+    .song-audio {    /* 招待コード - コンパクトで目立つデザイン */        color: white;
+
+        height: 32px;
+
+        width: 200px;    .invite-section {        box-shadow: 0 6px 20px rgba(255, 107, 53, 0.3);
+
+        flex-shrink: 0;
+
+    }        background: linear-gradient(135deg, #1a1a1a 0%, #2d2d2d 100%);    }
+
+    
+
+    .song-link {        border-radius: 10px;    .btn-primary-action:hover {
+
+        color: #888;
+
+        font-size: 0.85rem;        padding: 1rem 1.25rem;        transform: translateY(-2px);
+
+        text-decoration: none;
+
+        padding: 0.3rem 0.6rem;        display: flex;        box-shadow: 0 10px 30px rgba(255, 107, 53, 0.4);
+
+        border-radius: 4px;
+
+        transition: all 0.15s ease;        align-items: center;        color: white;
+
+        flex-shrink: 0;
+
+    }        justify-content: space-between;    }
+
+    .song-link:hover {
+
+        background: #e8e8e8;        margin-bottom: 2rem;    .btn-outline-action {
+
+        color: #333;
+
+    }    }        background: white;
+
+    
+
+    .member-list {            color: #2d1b13;
+
+        display: grid;
+
+        grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));    .invite-info {        border: 2px solid #e0d6d0;
+
+        gap: 0.75rem;
+
+    }        display: flex;    }
+
+    
+
+    .member-item {        align-items: center;    .btn-outline-action:hover {
+
+        display: flex;
+
+        align-items: center;        gap: 1rem;        border-color: #2d1b13;
+
+        gap: 0.75rem;
+
+        padding: 0.6rem 0.75rem;    }        color: #2d1b13;
+
+        background: #fafafa;
+
+        border: 1px solid #eee;        }
+
+        border-radius: 8px;
+
+    }    .invite-label {    .btn-danger-action {
+
+    
+
+    .member-avatar {        font-size: 0.75rem;        background: white;
+
+        width: 32px;
+
+        height: 32px;        color: rgba(255,255,255,0.6);        color: #dc3545;
+
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+
+        border-radius: 50%;        font-weight: 500;        border: 2px solid #dc3545;
+
+        display: flex;
+
+        align-items: center;        text-transform: uppercase;    }
+
+        justify-content: center;
+
+        color: white;        letter-spacing: 0.05em;    .btn-danger-action:hover {
+
+        font-weight: 600;
+
+        font-size: 0.85rem;    }        background: #dc3545;
+
+    }
+
+                color: white;
+
+    .member-info {
+
+        flex: 1;    .invite-code {    }
+
+        min-width: 0;
+
+    }        font-family: 'SF Mono', 'Monaco', 'Consolas', monospace;    
+
+    
+
+    .member-name {        font-size: 1.5rem;    /* セクション */
+
+        font-weight: 500;
+
+        color: #1a1a1a;        font-weight: 700;    .content-section {
+
+        font-size: 0.9rem;
+
+        display: flex;        color: white;        background: white;
+
+        align-items: center;
+
+        gap: 0.4rem;        letter-spacing: 0.15em;        border-radius: 24px;
+
+    }
+
+        }        box-shadow: 0 15px 40px rgba(45, 27, 19, 0.08);
+
+    .member-host-tag {
+
+        background: #ff7940;            padding: 2rem;
+
+        color: white;
+
+        font-size: 0.6rem;    .copy-btn {        margin-bottom: 2rem;
+
+        padding: 0.1rem 0.3rem;
+
+        border-radius: 3px;        background: #ff7940;    }
+
+        font-weight: 600;
+
+    }        border: none;    
+
+    
+
+    .member-date {        color: white;    .section-header {
+
+        font-size: 0.75rem;
+
+        color: #888;        padding: 0.5rem 1rem;        display: flex;
+
+    }
+
+            border-radius: 6px;        align-items: center;
+
+    .empty-state {
+
+        text-align: center;        cursor: pointer;        justify-content: space-between;
+
+        padding: 3rem 1rem;
+
+        color: #888;        font-weight: 600;        margin-bottom: 1.5rem;
+
+    }
+
+            font-size: 0.8rem;        flex-wrap: wrap;
+
+    .empty-icon {
+
+        width: 48px;        display: flex;        gap: 1rem;
+
+        height: 48px;
+
+        background: #f0f0f0;        align-items: center;    }
+
+        border-radius: 12px;
+
+        display: flex;        gap: 0.4rem;    .section-title {
+
+        align-items: center;
+
+        justify-content: center;        transition: all 0.15s ease;        font-size: 1.5rem;
+
+        margin: 0 auto 1rem;
+
+        font-size: 1.25rem;    }        font-weight: 800;
+
+        color: #aaa;
+
+    }    .copy-btn:hover {        color: #2d1b13;
+
+    
+
+    .empty-state h4 {        background: #e86a35;        display: flex;
+
+        font-size: 1rem;
+
+        font-weight: 600;    }        align-items: center;
+
+        color: #666;
+
+        margin-bottom: 0.5rem;            gap: 0.75rem;
+
+    }
+
+        /* セクション */        margin: 0;
+
+    .empty-state p {
+
+        font-size: 0.9rem;    .section {    }
+
+        margin-bottom: 1rem;
+
+    }        margin-bottom: 2rem;    .section-title i {
+
+    
+
+    @media (max-width: 768px) {    }        color: #ff7940;
+
+        .header-top {
+
+            flex-direction: column;        }
+
+            align-items: flex-start;
+
+        }    .section-header {    .section-count {
+
+        .classroom-name {
+
+            font-size: 1.5rem;        display: flex;        background: linear-gradient(135deg, #ff7940 0%, #ff6b35 100%);
 
         }
 
-    .classroom-name {    
+        .stats-row {        align-items: center;        color: white;
 
-        font-size: 2rem;    .host-badge {
+            flex-wrap: wrap;
 
-        font-weight: 700;        background: linear-gradient(135deg, #ff7940 0%, #ff6b35 100%);
+        }        justify-content: space-between;        font-size: 0.85rem;
 
-        color: #1a1a1a;        color: white;
+        .stat-card {
 
-        margin: 0;        font-size: 0.75rem;
-
-        letter-spacing: -0.02em;        padding: 0.4rem 0.8rem;
-
-    }        border-radius: 8px;
-
-            font-weight: 700;
-
-    .host-badge {        letter-spacing: 0.05em;
-
-        background: #ff7940;    }
-
-        color: white;    
-
-        font-size: 0.7rem;    .classroom-description {
-
-        padding: 0.3rem 0.6rem;        font-size: 1.1rem;
-
-        border-radius: 4px;        color: #5c3a2a;
-
-        font-weight: 600;        margin-bottom: 1.5rem;
-
-        text-transform: uppercase;        max-width: 600px;
-
-        letter-spacing: 0.05em;        margin-left: auto;
-
-    }        margin-right: auto;
+            min-width: calc(50% - 0.5rem);        margin-bottom: 1rem;        font-weight: 700;
 
         }
 
-    .header-actions {    
+        .invite-section {        padding-bottom: 0.75rem;        padding: 0.35rem 0.85rem;
 
-        display: flex;    .classroom-stats {
+            flex-direction: column;
 
-        gap: 0.5rem;        display: flex;
+            gap: 1rem;        border-bottom: 1px solid #eee;        border-radius: 20px;
 
-    }        justify-content: center;
+            align-items: flex-start;
 
-            gap: 3rem;
+        }    }    }
 
-    .btn-action {        margin-bottom: 2rem;
+        .song-item {
 
-        display: inline-flex;        flex-wrap: wrap;
-
-        align-items: center;    }
-
-        gap: 0.4rem;    .stat-box {
-
-        padding: 0.5rem 0.9rem;        text-align: center;
-
-        border-radius: 6px;    }
-
-        font-weight: 500;    .stat-number {
-
-        font-size: 0.875rem;        font-size: 2rem;
-
-        text-decoration: none;        font-weight: 800;
-
-        transition: all 0.15s ease;        color: #ff7940;
-
-        border: none;    }
-
-        cursor: pointer;    .stat-label {
-
-    }        font-size: 0.9rem;
-
-            color: #8a6b5a;
-
-    .btn-primary {        font-weight: 600;
-
-        background: #ff7940;    }
-
-        color: white;    
-
-    }    /* 参加コード */
-
-    .btn-primary:hover {    .code-display {
-
-        background: #e86a35;        background: #2d1b13;
-
-        color: white;        border-radius: 16px;
-
-    }        padding: 1.5rem 2rem;
-
-            display: inline-flex;
-
-    .btn-secondary {        align-items: center;
-
-        background: #f5f5f5;        gap: 1.5rem;
-
-        color: #333;        margin-bottom: 2rem;
-
-    }    }
-
-    .btn-secondary:hover {    .code-label {
-
-        background: #e8e8e8;        color: rgba(255,255,255,0.7);
-
-        color: #333;        font-size: 0.85rem;
-
-    }        font-weight: 600;
+            flex-wrap: wrap;        
 
         }
 
-    .btn-danger {    .code-value {
+        .song-audio {    .section-title {    /* 楽曲グリッド */
 
-        background: transparent;        color: white;
+            width: 100%;
 
-        color: #dc3545;        font-family: 'SF Mono', 'Monaco', monospace;
-
-        border: 1px solid #dc3545;        font-size: 2rem;
-
-    }        font-weight: 800;
-
-    .btn-danger:hover {        letter-spacing: 0.2em;
-
-        background: #dc3545;    }
-
-        color: white;    .code-copy-btn {
-
-    }        background: linear-gradient(135deg, #ff7940 0%, #ff6b35 100%);
-
-            border: none;
-
-    /* 説明 */        color: white;
-
-    .classroom-description {        padding: 0.7rem 1.25rem;
-
-        color: #666;        border-radius: 10px;
-
-        font-size: 0.95rem;        cursor: pointer;
-
-        margin-bottom: 1.5rem;        font-weight: 700;
-
-        line-height: 1.6;        font-size: 0.9rem;
-
-    }        transition: all 0.3s ease;
-
-            display: flex;
-
-    /* 統計カード - Linear風の横並びデザイン */        align-items: center;
-
-    .stats-row {        gap: 0.5rem;
-
-        display: flex;    }
-
-        gap: 1rem;    .code-copy-btn:hover {
-
-        margin-bottom: 1.5rem;        transform: scale(1.05);
-
-    }        box-shadow: 0 8px 20px rgba(255, 107, 53, 0.4);
+            order: 10;        font-size: 0.9rem;    .songs-grid {
 
         }
 
-    .stat-card {    
+    }        font-weight: 600;        display: grid;
 
-        flex: 1;    /* アクションボタン */
-
-        background: #fafafa;    .header-actions {
-
-        border: 1px solid #eee;        display: flex;
-
-        border-radius: 8px;        justify-content: center;
-
-        padding: 1rem 1.25rem;        gap: 1rem;
-
-        min-width: 100px;        flex-wrap: wrap;
-
-    }    }
-
-        .action-btn {
-
-    .stat-value {        display: inline-flex;
-
-        font-size: 1.75rem;        align-items: center;
-
-        font-weight: 700;        gap: 0.5rem;
-
-        color: #1a1a1a;        padding: 0.85rem 1.5rem;
-
-        line-height: 1;        border-radius: 12px;
-
-        margin-bottom: 0.25rem;        font-weight: 700;
-
-    }        font-size: 0.95rem;
-
-            text-decoration: none;
-
-    .stat-label {        transition: all 0.3s ease;
-
-        font-size: 0.8rem;        border: none;
-
-        color: #888;        cursor: pointer;
-
-        font-weight: 500;    }
-
-    }    .btn-primary-action {
-
-            background: linear-gradient(135deg, #ff7940 0%, #ff6b35 100%);
-
-    /* 招待コード - コンパクトで目立つデザイン */        color: white;
-
-    .invite-section {        box-shadow: 0 6px 20px rgba(255, 107, 53, 0.3);
-
-        background: linear-gradient(135deg, #1a1a1a 0%, #2d2d2d 100%);    }
-
-        border-radius: 10px;    .btn-primary-action:hover {
-
-        padding: 1rem 1.25rem;        transform: translateY(-2px);
-
-        display: flex;        box-shadow: 0 10px 30px rgba(255, 107, 53, 0.4);
-
-        align-items: center;        color: white;
-
-        justify-content: space-between;    }
-
-        margin-bottom: 2rem;    .btn-outline-action {
-
-    }        background: white;
-
-            color: #2d1b13;
-
-    .invite-info {        border: 2px solid #e0d6d0;
-
-        display: flex;    }
-
-        align-items: center;    .btn-outline-action:hover {
-
-        gap: 1rem;        border-color: #2d1b13;
-
-    }        color: #2d1b13;
-
-        }
-
-    .invite-label {    .btn-danger-action {
-
-        font-size: 0.75rem;        background: white;
-
-        color: rgba(255,255,255,0.6);        color: #dc3545;
-
-        font-weight: 500;        border: 2px solid #dc3545;
-
-        text-transform: uppercase;    }
-
-        letter-spacing: 0.05em;    .btn-danger-action:hover {
-
-    }        background: #dc3545;
-
-            color: white;
-
-    .invite-code {    }
-
-        font-family: 'SF Mono', 'Monaco', 'Consolas', monospace;    
-
-        font-size: 1.5rem;    /* セクション */
-
-        font-weight: 700;    .content-section {
-
-        color: white;        background: white;
-
-        letter-spacing: 0.15em;        border-radius: 24px;
-
-    }        box-shadow: 0 15px 40px rgba(45, 27, 19, 0.08);
-
-            padding: 2rem;
-
-    .copy-btn {        margin-bottom: 2rem;
-
-        background: #ff7940;    }
-
-        border: none;    
-
-        color: white;    .section-header {
-
-        padding: 0.5rem 1rem;        display: flex;
-
-        border-radius: 6px;        align-items: center;
-
-        cursor: pointer;        justify-content: space-between;
-
-        font-weight: 600;        margin-bottom: 1.5rem;
-
-        font-size: 0.8rem;        flex-wrap: wrap;
-
-        display: flex;        gap: 1rem;
-
-        align-items: center;    }
-
-        gap: 0.4rem;    .section-title {
-
-        transition: all 0.15s ease;        font-size: 1.5rem;
-
-    }        font-weight: 800;
-
-    .copy-btn:hover {        color: #2d1b13;
-
-        background: #e86a35;        display: flex;
-
-    }        align-items: center;
-
-            gap: 0.75rem;
-
-    /* セクション */        margin: 0;
-
-    .section {    }
-
-        margin-bottom: 2rem;    .section-title i {
-
-    }        color: #ff7940;
-
-        }
-
-    .section-header {    .section-count {
-
-        display: flex;        background: linear-gradient(135deg, #ff7940 0%, #ff6b35 100%);
-
-        align-items: center;        color: white;
-
-        justify-content: space-between;        font-size: 0.85rem;
-
-        margin-bottom: 1rem;        font-weight: 700;
-
-        padding-bottom: 0.75rem;        padding: 0.35rem 0.85rem;
-
-        border-bottom: 1px solid #eee;        border-radius: 20px;
-
-    }    }
-
-        
-
-    .section-title {    /* 楽曲グリッド */
-
-        font-size: 0.9rem;    .songs-grid {
-
-        font-weight: 600;        display: grid;
+</style>
 
         color: #666;        grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
 
-        text-transform: uppercase;        gap: 1.5rem;
+<div class="container classroom-page">
 
-        letter-spacing: 0.05em;    }
+    <div class="classroom-header">        text-transform: uppercase;        gap: 1.5rem;
 
-        display: flex;    
+        <div class="header-top">
 
-        align-items: center;    .song-card {
+            <div class="classroom-title-group">        letter-spacing: 0.05em;    }
 
-        gap: 0.5rem;        background: #fef9f7;
+                <h1 class="classroom-name">{{ classroom.name }}</h1>
 
-        margin: 0;        border: 2px solid #f0e6e0;
+                {% if is_host %}        display: flex;    
 
-    }        border-radius: 18px;
+                <span class="host-badge">Host</span>
 
-            padding: 1.5rem;
+                {% endif %}        align-items: center;    .song-card {
 
-    .section-count {        transition: all 0.3s ease;
+            </div>
 
-        background: #f0f0f0;    }
+                    gap: 0.5rem;        background: #fef9f7;
 
-        color: #666;    .song-card:hover {
+            <div class="header-actions">
 
-        font-size: 0.75rem;        border-color: #ff7940;
+                <a href="{% url 'songs:classroom_share_song' classroom.pk %}" class="btn-action btn-primary">        margin: 0;        border: 2px solid #f0e6e0;
 
-        font-weight: 600;        transform: translateY(-4px);
+                    <i class="bi bi-plus"></i>
 
-        padding: 0.2rem 0.5rem;        box-shadow: 0 15px 35px rgba(0,0,0,0.1);
+                    {% if is_english %}Share{% elif is_chinese %}分享{% else %}共有{% endif %}    }        border-radius: 18px;
 
-        border-radius: 10px;    }
+                </a>
 
-    }    
+                <a href="{% url 'songs:classroom_list' %}" class="btn-action btn-secondary">            padding: 1.5rem;
 
-        .song-title {
+                    <i class="bi bi-arrow-left"></i>
 
-    /* 楽曲リスト - Notion風のシンプルなリストデザイン */        font-size: 1.2rem;
+                    {% if is_english %}Back{% elif is_chinese %}返回{% else %}戻る{% endif %}    .section-count {        transition: all 0.3s ease;
 
-    .song-list {        font-weight: 700;
+                </a>
 
-        display: flex;        color: #2d1b13;
+                {% if is_host %}        background: #f0f0f0;    }
 
-        flex-direction: column;        margin-bottom: 0.5rem;
+                <form method="post" action="{% url 'songs:classroom_delete' classroom.pk %}" style="display: inline;">
 
-        gap: 0.5rem;    }
+                    {% csrf_token %}        color: #666;    .song-card:hover {
 
-    }    .song-meta {
+                    <button type="submit" class="btn-action btn-danger" onclick="return confirm('{% if is_english %}Delete this class?{% elif is_chinese %}确定删除？{% else %}このクラスを削除しますか？{% endif %}');">
 
-            display: flex;
+                        <i class="bi bi-trash3"></i>        font-size: 0.75rem;        border-color: #ff7940;
 
-    .song-item {        flex-direction: column;
+                    </button>
 
-        display: flex;        gap: 0.3rem;
+                </form>        font-weight: 600;        transform: translateY(-4px);
 
-        align-items: center;        margin-bottom: 1rem;
+                {% else %}
 
-        gap: 1rem;    }
+                <form method="post" action="{% url 'songs:classroom_leave' classroom.pk %}" style="display: inline;">        padding: 0.2rem 0.5rem;        box-shadow: 0 15px 35px rgba(0,0,0,0.1);
 
-        padding: 0.75rem 1rem;    .song-artist {
+                    {% csrf_token %}
 
-        background: #fafafa;        color: #5c3a2a;
+                    <button type="submit" class="btn-action btn-danger" onclick="return confirm('{% if is_english %}Leave this class?{% elif is_chinese %}确定退出？{% else %}退出しますか？{% endif %}');">        border-radius: 10px;    }
 
-        border: 1px solid #eee;        font-size: 0.95rem;
+                        <i class="bi bi-box-arrow-right"></i>
 
-        border-radius: 8px;        display: flex;
+                    </button>    }    
 
-        transition: all 0.15s ease;        align-items: center;
+                </form>
 
-    }        gap: 0.4rem;
+                {% endif %}        .song-title {
 
-    .song-item:hover {    }
+            </div>
 
-        background: #f5f5f5;    .song-artist i {
+        </div>    /* 楽曲リスト - Notion風のシンプルなリストデザイン */        font-size: 1.2rem;
 
-        border-color: #ddd;        color: #ff7940;
+        
 
-    }    }
+        {% if classroom.description %}    .song-list {        font-weight: 700;
 
-        .song-shared-by {
+        <p class="classroom-description">{{ classroom.description }}</p>
 
-    .song-icon {        font-size: 0.85rem;
+        {% endif %}        display: flex;        color: #2d1b13;
 
-        width: 36px;        color: #8a6b5a;
+        
 
-        height: 36px;    }
+        <div class="stats-row">        flex-direction: column;        margin-bottom: 0.5rem;
 
-        background: linear-gradient(135deg, #ff7940 0%, #ff6b35 100%);    
+            <div class="stat-card">
 
-        border-radius: 6px;    .song-audio {
+                <div class="stat-value">{{ members.count }}</div>        gap: 0.5rem;    }
 
-        display: flex;        width: 100%;
+                <div class="stat-label">{% if is_english %}Members{% elif is_chinese %}成员{% else %}メンバー{% endif %}</div>
 
-        align-items: center;        height: 50px;
+            </div>    }    .song-meta {
 
-        justify-content: center;        border-radius: 12px;
+            <div class="stat-card">
 
-        color: white;        margin-bottom: 1rem;
+                <div class="stat-value">{{ shared_songs.count }}</div>            display: flex;
 
-        font-size: 1rem;    }
+                <div class="stat-label">{% if is_english %}Songs{% elif is_chinese %}歌曲{% else %}楽曲{% endif %}</div>
 
-        flex-shrink: 0;    
+            </div>    .song-item {        flex-direction: column;
 
-    }    .song-detail-link {
+        </div>
 
-            display: block;
+                display: flex;        gap: 0.3rem;
 
-    .song-info {        background: linear-gradient(135deg, #ff7940 0%, #ff6b35 100%);
+        {% if is_host %}
 
-        flex: 1;        color: white;
+        <div class="invite-section">        align-items: center;        margin-bottom: 1rem;
 
-        min-width: 0;        padding: 0.85rem;
+            <div class="invite-info">
 
-    }        border-radius: 12px;
+                <span class="invite-label">{% if is_english %}Invite Code{% elif is_chinese %}邀请码{% else %}招待コード{% endif %}</span>        gap: 1rem;    }
 
-            text-align: center;
+                <span class="invite-code" id="classCode">{{ classroom.code }}</span>
 
-    .song-title {        text-decoration: none;
+            </div>        padding: 0.75rem 1rem;    .song-artist {
 
-        font-weight: 600;        font-weight: 700;
+            <button class="copy-btn" onclick="copyCode()">
 
-        color: #1a1a1a;        transition: all 0.3s ease;
+                <i class="bi bi-clipboard"></i>        background: #fafafa;        color: #5c3a2a;
 
-        font-size: 0.95rem;    }
+                {% if is_english %}Copy{% elif is_chinese %}复制{% else %}コピー{% endif %}
 
-        white-space: nowrap;    .song-detail-link:hover {
+            </button>        border: 1px solid #eee;        font-size: 0.95rem;
 
-        overflow: hidden;        box-shadow: 0 8px 20px rgba(255, 107, 53, 0.4);
+        </div>
 
-        text-overflow: ellipsis;        color: white;
+        {% endif %}        border-radius: 8px;        display: flex;
 
-    }        transform: translateY(-2px);
+    </div>
 
-        }
+            transition: all 0.15s ease;        align-items: center;
 
-    .song-meta {    
+    <div class="section">
 
-        font-size: 0.8rem;    /* 空状態 */
+        <div class="section-header">    }        gap: 0.4rem;
 
-        color: #888;    .empty-state {
+            <h2 class="section-title">
 
-        display: flex;        text-align: center;
+                <i class="bi bi-music-note-beamed"></i>    .song-item:hover {    }
 
-        align-items: center;        padding: 3rem 2rem;
+                {% if is_english %}Songs{% elif is_chinese %}歌曲{% else %}楽曲{% endif %}
 
-        gap: 0.75rem;    }
+                <span class="section-count">{{ shared_songs.count }}</span>        background: #f5f5f5;    .song-artist i {
 
-    }    .empty-icon {
+            </h2>
 
-            width: 80px;
+        </div>        border-color: #ddd;        color: #ff7940;
 
-    .song-audio {        height: 80px;
+        
 
-        height: 32px;        background: linear-gradient(135deg, #ff7940 0%, #ff6b35 100%);
+        {% if shared_songs %}    }    }
 
-        width: 200px;        border-radius: 50%;
+        <div class="song-list">
 
-        flex-shrink: 0;        display: flex;
+            {% for cs in shared_songs %}        .song-shared-by {
 
-    }        align-items: center;
+            <div class="song-item">
 
-            justify-content: center;
+                <div class="song-icon">    .song-icon {        font-size: 0.85rem;
 
-    .song-link {        margin: 0 auto 1.5rem;
+                    <i class="bi bi-music-note"></i>
 
-        color: #888;    }
+                </div>        width: 36px;        color: #8a6b5a;
+
+                <div class="song-info">
+
+                    <div class="song-title">{{ cs.song.title }}</div>        height: 36px;    }
+
+                    <div class="song-meta">
+
+                        <span>{{ cs.song.artist }}</span>        background: linear-gradient(135deg, #ff7940 0%, #ff6b35 100%);    
+
+                        <span>by {{ cs.shared_by.username }}</span>
+
+                    </div>        border-radius: 6px;    .song-audio {
+
+                </div>
+
+                {% if cs.song.audio_url %}        display: flex;        width: 100%;
+
+                <audio controls class="song-audio" preload="none">
+
+                    <source src="{{ cs.song.audio_url }}" type="audio/mpeg">        align-items: center;        height: 50px;
+
+                </audio>
+
+                {% elif cs.song.audio_file %}        justify-content: center;        border-radius: 12px;
+
+                <audio controls class="song-audio" preload="none">
+
+                    <source src="{{ cs.song.audio_file.url }}" type="audio/mpeg">        color: white;        margin-bottom: 1rem;
+
+                </audio>
+
+                {% endif %}        font-size: 1rem;    }
+
+                <a href="{% url 'songs:song_detail' cs.song.pk %}" class="song-link">
+
+                    <i class="bi bi-arrow-up-right"></i>        flex-shrink: 0;    
+
+                </a>
+
+            </div>    }    .song-detail-link {
+
+            {% endfor %}
+
+        </div>            display: block;
+
+        {% else %}
+
+        <div class="empty-state">    .song-info {        background: linear-gradient(135deg, #ff7940 0%, #ff6b35 100%);
+
+            <div class="empty-icon">
+
+                <i class="bi bi-music-note-beamed"></i>        flex: 1;        color: white;
+
+            </div>
+
+            <h4>{% if is_english %}No songs yet{% elif is_chinese %}还没有歌曲{% else %}まだ楽曲がありません{% endif %}</h4>        min-width: 0;        padding: 0.85rem;
+
+            <p>{% if is_english %}Be the first to share a song!{% elif is_chinese %}成为第一个分享歌曲的人！{% else %}最初の楽曲を共有しましょう{% endif %}</p>
+
+            <a href="{% url 'songs:classroom_share_song' classroom.pk %}" class="btn-action btn-primary">    }        border-radius: 12px;
+
+                <i class="bi bi-plus"></i>
+
+                {% if is_english %}Share Song{% elif is_chinese %}分享歌曲{% else %}楽曲を共有{% endif %}            text-align: center;
+
+            </a>
+
+        </div>    .song-title {        text-decoration: none;
+
+        {% endif %}
+
+    </div>        font-weight: 600;        font-weight: 700;
+
+    
+
+    {% if is_host %}        color: #1a1a1a;        transition: all 0.3s ease;
+
+    <div class="section">
+
+        <div class="section-header">        font-size: 0.95rem;    }
+
+            <h2 class="section-title">
+
+                <i class="bi bi-people"></i>        white-space: nowrap;    .song-detail-link:hover {
+
+                {% if is_english %}Members{% elif is_chinese %}成员{% else %}メンバー{% endif %}
+
+                <span class="section-count">{{ members.count }}</span>        overflow: hidden;        box-shadow: 0 8px 20px rgba(255, 107, 53, 0.4);
+
+            </h2>
+
+        </div>        text-overflow: ellipsis;        color: white;
+
+        
+
+        <div class="member-list">    }        transform: translateY(-2px);
+
+            {% for membership in members %}
+
+            <div class="member-item">        }
+
+                <div class="member-avatar">
+
+                    {{ membership.user.username|slice:":1"|upper }}    .song-meta {    
+
+                </div>
+
+                <div class="member-info">        font-size: 0.8rem;    /* 空状態 */
+
+                    <div class="member-name">
+
+                        {{ membership.user.username }}        color: #888;    .empty-state {
+
+                        {% if membership.user == classroom.host %}
+
+                        <span class="member-host-tag">HOST</span>        display: flex;        text-align: center;
+
+                        {% endif %}
+
+                    </div>        align-items: center;        padding: 3rem 2rem;
+
+                    <div class="member-date">{{ membership.joined_at|date:"Y/m/d" }}</div>
+
+                </div>        gap: 0.75rem;    }
+
+            </div>
+
+            {% endfor %}    }    .empty-icon {
+
+        </div>
+
+    </div>            width: 80px;
+
+    {% endif %}
+
+</div>    .song-audio {        height: 80px;
+
+
+
+<script>        height: 32px;        background: linear-gradient(135deg, #ff7940 0%, #ff6b35 100%);
+
+function copyCode() {
+
+    const code = document.getElementById('classCode').textContent;        width: 200px;        border-radius: 50%;
+
+    navigator.clipboard.writeText(code).then(function() {
+
+        const btn = event.target.closest('.copy-btn');        flex-shrink: 0;        display: flex;
+
+        const originalHTML = btn.innerHTML;
+
+        btn.innerHTML = '<i class="bi bi-check-lg"></i> Copied!';    }        align-items: center;
+
+        setTimeout(() => {
+
+            btn.innerHTML = originalHTML;            justify-content: center;
+
+        }, 2000);
+
+    });    .song-link {        margin: 0 auto 1.5rem;
+
+}
+
+</script>        color: #888;    }
+
+{% endblock %}
 
         font-size: 0.85rem;    .empty-icon i {
 
