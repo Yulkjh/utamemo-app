@@ -414,7 +414,7 @@ class Classroom(models.Model):
         User,
         on_delete=models.CASCADE,
         related_name='hosted_classrooms',
-        verbose_name='ホスト（先生）'
+        verbose_name='ホスト'
     )
     members = models.ManyToManyField(
         User,
