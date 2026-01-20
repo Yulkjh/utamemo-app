@@ -81,6 +81,58 @@
             </div>
         </div>
 
+        <!-- Classrooms Section (自分のプロフィールのみ) -->
+        {% if user == profile_user and hosted_classrooms or joined_classrooms %}
+        <div class="classrooms-section fade-in">
+            <div class="section-header">
+                <div class="section-title">
+                    <h3>{% if is_english %}My Classes{% elif is_chinese %}我的班级{% else %}参加中のクラス{% endif %}</h3>
+                </div>
+                <a href="{% url 'songs:classroom_list' %}" class="view-all-link">
+                    {% if is_english %}View All{% elif is_chinese %}查看全部{% else %}すべて見る{% endif %}
+                    <i class="bi bi-arrow-right"></i>
+                </a>
+            </div>
+
+            <div class="classrooms-grid">
+                {% for classroom in hosted_classrooms %}
+                <a href="{% url 'songs:classroom_detail' classroom.pk %}" class="classroom-card hosted">
+                    <div class="classroom-card-header">
+                        <div class="classroom-icon">
+                            <i class="bi bi-mortarboard-fill"></i>
+                        </div>
+                        <span class="host-badge">{% if is_english %}Host{% elif is_chinese %}主持人{% else %}ホスト{% endif %}</span>
+                    </div>
+                    <div class="classroom-card-body">
+                        <h4 class="classroom-name">{{ classroom.name }}</h4>
+                        <div class="classroom-meta">
+                            <span><i class="bi bi-people-fill"></i> {{ classroom.members.count }}{% if is_english %} members{% elif is_chinese %}人{% else %}人{% endif %}</span>
+                            <span><i class="bi bi-music-note-beamed"></i> {{ classroom.shared_songs.count }}{% if is_english %} songs{% elif is_chinese %}曲{% else %}曲{% endif %}</span>
+                        </div>
+                    </div>
+                </a>
+                {% endfor %}
+                
+                {% for classroom in joined_classrooms %}
+                <a href="{% url 'songs:classroom_detail' classroom.pk %}" class="classroom-card">
+                    <div class="classroom-card-header">
+                        <div class="classroom-icon">
+                            <i class="bi bi-mortarboard-fill"></i>
+                        </div>
+                    </div>
+                    <div class="classroom-card-body">
+                        <h4 class="classroom-name">{{ classroom.name }}</h4>
+                        <div class="classroom-meta">
+                            <span><i class="bi bi-person-fill"></i> {{ classroom.host.username }}</span>
+                            <span><i class="bi bi-music-note-beamed"></i> {{ classroom.shared_songs.count }}{% if is_english %} songs{% elif is_chinese %}曲{% else %}曲{% endif %}</span>
+                        </div>
+                    </div>
+                </a>
+                {% endfor %}
+            </div>
+        </div>
+        {% endif %}
+
         <!-- Songs Section -->
         <div class="songs-section fade-in">
             <div class="section-header">
@@ -146,58 +198,6 @@
             </div>
             {% endif %}
         </div>
-
-        <!-- Classrooms Section (自分のプロフィールのみ) -->
-        {% if user == profile_user and hosted_classrooms or joined_classrooms %}
-        <div class="classrooms-section fade-in">
-            <div class="section-header">
-                <div class="section-title">
-                    <h3>{% if is_english %}My Classes{% elif is_chinese %}我的班级{% else %}参加中のクラス{% endif %}</h3>
-                </div>
-                <a href="{% url 'songs:classroom_list' %}" class="view-all-link">
-                    {% if is_english %}View All{% elif is_chinese %}查看全部{% else %}すべて見る{% endif %}
-                    <i class="bi bi-arrow-right"></i>
-                </a>
-            </div>
-
-            <div class="classrooms-grid">
-                {% for classroom in hosted_classrooms %}
-                <a href="{% url 'songs:classroom_detail' classroom.pk %}" class="classroom-card hosted">
-                    <div class="classroom-card-header">
-                        <div class="classroom-icon">
-                            <i class="bi bi-mortarboard-fill"></i>
-                        </div>
-                        <span class="host-badge">{% if is_english %}Host{% elif is_chinese %}主持人{% else %}ホスト{% endif %}</span>
-                    </div>
-                    <div class="classroom-card-body">
-                        <h4 class="classroom-name">{{ classroom.name }}</h4>
-                        <div class="classroom-meta">
-                            <span><i class="bi bi-people-fill"></i> {{ classroom.members.count }}{% if is_english %} members{% elif is_chinese %}人{% else %}人{% endif %}</span>
-                            <span><i class="bi bi-music-note-beamed"></i> {{ classroom.shared_songs.count }}{% if is_english %} songs{% elif is_chinese %}曲{% else %}曲{% endif %}</span>
-                        </div>
-                    </div>
-                </a>
-                {% endfor %}
-                
-                {% for classroom in joined_classrooms %}
-                <a href="{% url 'songs:classroom_detail' classroom.pk %}" class="classroom-card">
-                    <div class="classroom-card-header">
-                        <div class="classroom-icon">
-                            <i class="bi bi-mortarboard-fill"></i>
-                        </div>
-                    </div>
-                    <div class="classroom-card-body">
-                        <h4 class="classroom-name">{{ classroom.name }}</h4>
-                        <div class="classroom-meta">
-                            <span><i class="bi bi-person-fill"></i> {{ classroom.host.username }}</span>
-                            <span><i class="bi bi-music-note-beamed"></i> {{ classroom.shared_songs.count }}{% if is_english %} songs{% elif is_chinese %}曲{% else %}曲{% endif %}</span>
-                        </div>
-                    </div>
-                </a>
-                {% endfor %}
-            </div>
-        </div>
-        {% endif %}
     </div>
 </div>
 
