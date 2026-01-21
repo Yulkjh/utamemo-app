@@ -87,18 +87,40 @@
                     {% if song.audio_file %}
                     <!-- ローカル音声ファイル -->
                     <div class="audio-controls">
-                        <audio controls class="custom-audio-player">
+                        <audio controls class="custom-audio-player" id="main-audio-player">
                             <source src="{{ song.audio_file.url }}" type="audio/mpeg">
                             {% if is_english %}Your browser does not support audio playback.{% elif is_chinese %}您的浏览器不支持音频播放。{% else %}お使いのブラウザは音声の再生をサポートしていません。{% endif %}
                         </audio>
+                        <!-- カラオケモードボタン -->
+                        <div class="karaoke-mode-section">
+                            <button class="btn-karaoke-mode" onclick="startKaraokeMode('{{ song.audio_file.url }}')" id="karaoke-btn">
+                                <i class="bi bi-mic"></i>
+                                <span>{% if is_english %}Karaoke Mode{% elif is_chinese %}卡拉OK模式{% else %}カラオケモード{% endif %}</span>
+                            </button>
+                            <button class="btn-normal-mode" onclick="switchToNormalMode()" id="normal-mode-btn" style="display: none;">
+                                <i class="bi bi-music-note-beamed"></i>
+                                <span>{% if is_english %}Normal Mode{% elif is_chinese %}普通模式{% else %}通常モード{% endif %}</span>
+                            </button>
+                        </div>
                     </div>
                     {% elif song.audio_url %}
                     <!-- 外部音声URL (Mureka等) -->
                     <div class="audio-controls">
-                        <audio controls class="custom-audio-player" preload="none">
+                        <audio controls class="custom-audio-player" id="main-audio-player" preload="none">
                             <source src="{{ song.audio_url }}" type="audio/mpeg">
                             {% if is_english %}Your browser does not support audio playback.{% elif is_chinese %}您的浏览器不支持音频播放。{% else %}お使いのブラウザは音声の再生をサポートしていません。{% endif %}
                         </audio>
+                        <!-- カラオケモードボタン -->
+                        <div class="karaoke-mode-section">
+                            <button class="btn-karaoke-mode" onclick="startKaraokeMode('{{ song.audio_url }}')" id="karaoke-btn">
+                                <i class="bi bi-mic"></i>
+                                <span>{% if is_english %}Karaoke Mode{% elif is_chinese %}卡拉OK模式{% else %}カラオケモード{% endif %}</span>
+                            </button>
+                            <button class="btn-normal-mode" onclick="switchToNormalMode()" id="normal-mode-btn" style="display: none;">
+                                <i class="bi bi-music-note-beamed"></i>
+                                <span>{% if is_english %}Normal Mode{% elif is_chinese %}普通模式{% else %}通常モード{% endif %}</span>
+                            </button>
+                        </div>
                     </div>
                     {% else %}
                     <div class="audio-placeholder" id="generation-status-container">
@@ -2261,6 +2283,527 @@ document.getElementById('tagInput').addEventListener('keypress', function(e) {
 document.getElementById('tagModal').addEventListener('click', function(e) {
     if (e.target === this) {
         closeTagEditor();
+    }
+});
+</script>
+
+<!-- カラオケモード処理中モーダル -->
+<div class="karaoke-modal" id="karaokeModal">
+    <div class="karaoke-modal-content">
+        <div class="karaoke-modal-header">
+            <h3><i class="bi bi-mic"></i> {% if is_english %}Karaoke Mode{% elif is_chinese %}卡拉OK模式{% else %}カラオケモード{% endif %}</h3>
+        </div>
+        <div class="karaoke-modal-body">
+            <div class="karaoke-processing" id="karaoke-processing">
+                <div class="karaoke-spinner"></div>
+                <p class="karaoke-status" id="karaoke-status">{% if is_english %}Loading audio processing engine...{% elif is_chinese %}正在加载音频处理引擎...{% else %}音声処理エンジンを読み込み中...{% endif %}</p>
+                <div class="karaoke-progress-bar">
+                    <div class="karaoke-progress" id="karaoke-progress"></div>
+                </div>
+                <p class="karaoke-progress-text" id="karaoke-progress-text">0%</p>
+                <p class="karaoke-note">{% if is_english %}This process runs entirely in your browser.<br>No data is sent to servers.{% elif is_chinese %}此过程完全在您的浏览器中运行。<br>不会向服务器发送任何数据。{% else %}この処理はブラウザ内で完結します。<br>サーバーにデータは送信されません。{% endif %}</p>
+            </div>
+            <div class="karaoke-error" id="karaoke-error" style="display: none;">
+                <i class="bi bi-exclamation-triangle"></i>
+                <p id="karaoke-error-message">{% if is_english %}An error occurred{% elif is_chinese %}发生错误{% else %}エラーが発生しました{% endif %}</p>
+                <button class="btn-karaoke-retry" onclick="retryKaraoke()">{% if is_english %}Retry{% elif is_chinese %}重试{% else %}再試行{% endif %}</button>
+            </div>
+        </div>
+        <div class="karaoke-modal-footer">
+            <button class="btn-karaoke-cancel" onclick="cancelKaraoke()">{% if is_english %}Cancel{% elif is_chinese %}取消{% else %}キャンセル{% endif %}</button>
+        </div>
+    </div>
+</div>
+
+<style>
+/* カラオケモードボタン */
+.karaoke-mode-section {
+    display: flex;
+    gap: 0.75rem;
+    margin-top: 1rem;
+    justify-content: center;
+}
+
+.btn-karaoke-mode {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+    background: linear-gradient(135deg, #9b59b6 0%, #8e44ad 100%);
+    color: white;
+    border: none;
+    border-radius: 25px;
+    padding: 0.75rem 1.5rem;
+    font-size: 0.95rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    box-shadow: 0 4px 15px rgba(155, 89, 182, 0.3);
+}
+
+.btn-karaoke-mode:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 6px 20px rgba(155, 89, 182, 0.4);
+}
+
+.btn-karaoke-mode i {
+    font-size: 1.1rem;
+}
+
+.btn-normal-mode {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+    background: linear-gradient(135deg, #ff7940 0%, #ff6b35 100%);
+    color: white;
+    border: none;
+    border-radius: 25px;
+    padding: 0.75rem 1.5rem;
+    font-size: 0.95rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    box-shadow: 0 4px 15px rgba(255, 121, 64, 0.3);
+}
+
+.btn-normal-mode:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 6px 20px rgba(255, 121, 64, 0.4);
+}
+
+/* カラオケモーダル */
+.karaoke-modal {
+    display: none;
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(0, 0, 0, 0.7);
+    z-index: 10000;
+    justify-content: center;
+    align-items: center;
+    backdrop-filter: blur(5px);
+}
+
+.karaoke-modal.active {
+    display: flex;
+}
+
+.karaoke-modal-content {
+    background: white;
+    border-radius: 20px;
+    width: 90%;
+    max-width: 450px;
+    overflow: hidden;
+    box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+    animation: modalSlideIn 0.3s ease;
+}
+
+@keyframes modalSlideIn {
+    from {
+        opacity: 0;
+        transform: scale(0.9) translateY(20px);
+    }
+    to {
+        opacity: 1;
+        transform: scale(1) translateY(0);
+    }
+}
+
+.karaoke-modal-header {
+    background: linear-gradient(135deg, #9b59b6 0%, #8e44ad 100%);
+    color: white;
+    padding: 1.5rem;
+    text-align: center;
+}
+
+.karaoke-modal-header h3 {
+    margin: 0;
+    font-size: 1.3rem;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.5rem;
+}
+
+.karaoke-modal-body {
+    padding: 2rem;
+    text-align: center;
+}
+
+.karaoke-spinner {
+    width: 60px;
+    height: 60px;
+    border: 4px solid #f0e6f0;
+    border-top: 4px solid #9b59b6;
+    border-radius: 50%;
+    animation: spin 1s linear infinite;
+    margin: 0 auto 1.5rem;
+}
+
+@keyframes spin {
+    0% { transform: rotate(0deg); }
+    100% { transform: rotate(360deg); }
+}
+
+.karaoke-status {
+    font-size: 1rem;
+    color: #333;
+    margin-bottom: 1.5rem;
+    font-weight: 500;
+}
+
+.karaoke-progress-bar {
+    width: 100%;
+    height: 8px;
+    background: #f0e6f0;
+    border-radius: 4px;
+    overflow: hidden;
+    margin-bottom: 0.5rem;
+}
+
+.karaoke-progress {
+    height: 100%;
+    background: linear-gradient(135deg, #9b59b6 0%, #8e44ad 100%);
+    border-radius: 4px;
+    width: 0%;
+    transition: width 0.3s ease;
+}
+
+.karaoke-progress-text {
+    font-size: 0.9rem;
+    color: #9b59b6;
+    font-weight: 600;
+    margin-bottom: 1rem;
+}
+
+.karaoke-note {
+    font-size: 0.85rem;
+    color: #888;
+    line-height: 1.5;
+}
+
+.karaoke-error {
+    text-align: center;
+}
+
+.karaoke-error i {
+    font-size: 3rem;
+    color: #e74c3c;
+    margin-bottom: 1rem;
+}
+
+.karaoke-error p {
+    color: #333;
+    margin-bottom: 1.5rem;
+}
+
+.btn-karaoke-retry {
+    background: linear-gradient(135deg, #9b59b6 0%, #8e44ad 100%);
+    color: white;
+    border: none;
+    border-radius: 25px;
+    padding: 0.75rem 2rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.3s ease;
+}
+
+.btn-karaoke-retry:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 15px rgba(155, 89, 182, 0.3);
+}
+
+.karaoke-modal-footer {
+    padding: 1rem 2rem 1.5rem;
+    text-align: center;
+}
+
+.btn-karaoke-cancel {
+    background: #f5f5f5;
+    color: #666;
+    border: none;
+    border-radius: 25px;
+    padding: 0.75rem 2rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.3s ease;
+}
+
+.btn-karaoke-cancel:hover {
+    background: #eee;
+}
+
+/* カラオケモード時のプレイヤーラベル */
+.karaoke-active-label {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+    background: linear-gradient(135deg, #9b59b6 0%, #8e44ad 100%);
+    color: white;
+    padding: 0.5rem 1rem;
+    border-radius: 20px;
+    font-size: 0.85rem;
+    font-weight: 600;
+    margin-bottom: 1rem;
+    animation: pulse 2s infinite;
+}
+
+@keyframes pulse {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.7; }
+}
+
+@media (max-width: 480px) {
+    .karaoke-mode-section {
+        flex-direction: column;
+    }
+    
+    .btn-karaoke-mode,
+    .btn-normal-mode {
+        width: 100%;
+        justify-content: center;
+    }
+}
+</style>
+
+<script>
+// カラオケモード用の変数
+let karaokeAudioUrl = null;
+let originalAudioUrl = null;
+let isKaraokeMode = false;
+let karaokeProcessing = false;
+
+// カラオケモード開始
+async function startKaraokeMode(audioUrl) {
+    if (karaokeProcessing) return;
+    
+    originalAudioUrl = audioUrl;
+    karaokeProcessing = true;
+    
+    // モーダル表示
+    document.getElementById('karaokeModal').classList.add('active');
+    document.getElementById('karaoke-processing').style.display = 'block';
+    document.getElementById('karaoke-error').style.display = 'none';
+    
+    try {
+        // ステータス更新
+        updateKaraokeStatus('{% if is_english %}Loading audio file...{% elif is_chinese %}正在加载音频文件...{% else %}音声ファイルを読み込み中...{% endif %}', 10);
+        
+        // 音声ファイルを取得
+        const response = await fetch(audioUrl);
+        const arrayBuffer = await response.arrayBuffer();
+        
+        updateKaraokeStatus('{% if is_english %}Preparing audio processing...{% elif is_chinese %}正在准备音频处理...{% else %}音声処理を準備中...{% endif %}', 20);
+        
+        // AudioContextを作成
+        const audioContext = new (window.AudioContext || window.webkitAudioContext)();
+        const audioBuffer = await audioContext.decodeAudioData(arrayBuffer);
+        
+        updateKaraokeStatus('{% if is_english %}Removing vocals... (This may take a moment){% elif is_chinese %}正在移除人声...（可能需要一些时间）{% else %}ボーカルを除去中...（しばらくお待ちください）{% endif %}', 40);
+        
+        // 簡易的なボーカル除去（センターチャンネル除去法）
+        // 注: 本格的な実装にはDemucsが必要ですが、まずは簡易版で実装
+        const instrumentalBuffer = await removeVocalsSimple(audioContext, audioBuffer);
+        
+        updateKaraokeStatus('{% if is_english %}Creating playable audio...{% elif is_chinese %}正在创建可播放的音频...{% else %}再生可能な音声を作成中...{% endif %}', 80);
+        
+        // BufferをBlobに変換
+        const wavBlob = audioBufferToWav(instrumentalBuffer);
+        karaokeAudioUrl = URL.createObjectURL(wavBlob);
+        
+        updateKaraokeStatus('{% if is_english %}Complete!{% elif is_chinese %}完成！{% else %}完了！{% endif %}', 100);
+        
+        // 少し待ってからモーダルを閉じてプレイヤーを更新
+        setTimeout(() => {
+            document.getElementById('karaokeModal').classList.remove('active');
+            switchToKaraokePlayer();
+            karaokeProcessing = false;
+        }, 500);
+        
+    } catch (error) {
+        console.error('Karaoke mode error:', error);
+        document.getElementById('karaoke-processing').style.display = 'none';
+        document.getElementById('karaoke-error').style.display = 'block';
+        document.getElementById('karaoke-error-message').textContent = 
+            '{% if is_english %}Failed to process audio. Please try again.{% elif is_chinese %}音频处理失败。请重试。{% else %}音声処理に失敗しました。もう一度お試しください。{% endif %}';
+        karaokeProcessing = false;
+    }
+}
+
+// ステータス更新
+function updateKaraokeStatus(message, progress) {
+    document.getElementById('karaoke-status').textContent = message;
+    document.getElementById('karaoke-progress').style.width = progress + '%';
+    document.getElementById('karaoke-progress-text').textContent = progress + '%';
+}
+
+// 簡易ボーカル除去（センターチャンネル除去法）
+async function removeVocalsSimple(audioContext, audioBuffer) {
+    const numberOfChannels = audioBuffer.numberOfChannels;
+    const length = audioBuffer.length;
+    const sampleRate = audioBuffer.sampleRate;
+    
+    // ステレオの場合のみボーカル除去が可能
+    if (numberOfChannels < 2) {
+        // モノラルの場合はそのまま返す
+        return audioBuffer;
+    }
+    
+    // 新しいバッファを作成（ステレオ）
+    const newBuffer = audioContext.createBuffer(2, length, sampleRate);
+    
+    const leftChannel = audioBuffer.getChannelData(0);
+    const rightChannel = audioBuffer.getChannelData(1);
+    const newLeft = newBuffer.getChannelData(0);
+    const newRight = newBuffer.getChannelData(1);
+    
+    // センターチャンネル（ボーカル）を除去
+    // 左右の差分を取ることでセンターに位置する音（通常ボーカル）を除去
+    for (let i = 0; i < length; i++) {
+        const diff = (leftChannel[i] - rightChannel[i]) * 0.7;
+        newLeft[i] = diff;
+        newRight[i] = -diff;
+        
+        // 進捗更新（重い処理なので間引く）
+        if (i % (length / 10) === 0) {
+            const progress = 40 + Math.floor((i / length) * 35);
+            updateKaraokeStatus('{% if is_english %}Removing vocals...{% elif is_chinese %}正在移除人声...{% else %}ボーカルを除去中...{% endif %}', progress);
+        }
+    }
+    
+    return newBuffer;
+}
+
+// AudioBufferをWAVに変換
+function audioBufferToWav(buffer) {
+    const numChannels = buffer.numberOfChannels;
+    const sampleRate = buffer.sampleRate;
+    const format = 1; // PCM
+    const bitDepth = 16;
+    
+    const bytesPerSample = bitDepth / 8;
+    const blockAlign = numChannels * bytesPerSample;
+    
+    const dataLength = buffer.length * blockAlign;
+    const bufferLength = 44 + dataLength;
+    
+    const arrayBuffer = new ArrayBuffer(bufferLength);
+    const view = new DataView(arrayBuffer);
+    
+    // WAVヘッダー
+    writeString(view, 0, 'RIFF');
+    view.setUint32(4, 36 + dataLength, true);
+    writeString(view, 8, 'WAVE');
+    writeString(view, 12, 'fmt ');
+    view.setUint32(16, 16, true);
+    view.setUint16(20, format, true);
+    view.setUint16(22, numChannels, true);
+    view.setUint32(24, sampleRate, true);
+    view.setUint32(28, sampleRate * blockAlign, true);
+    view.setUint16(32, blockAlign, true);
+    view.setUint16(34, bitDepth, true);
+    writeString(view, 36, 'data');
+    view.setUint32(40, dataLength, true);
+    
+    // オーディオデータ
+    const channels = [];
+    for (let i = 0; i < numChannels; i++) {
+        channels.push(buffer.getChannelData(i));
+    }
+    
+    let offset = 44;
+    for (let i = 0; i < buffer.length; i++) {
+        for (let channel = 0; channel < numChannels; channel++) {
+            const sample = Math.max(-1, Math.min(1, channels[channel][i]));
+            view.setInt16(offset, sample < 0 ? sample * 0x8000 : sample * 0x7FFF, true);
+            offset += 2;
+        }
+    }
+    
+    return new Blob([arrayBuffer], { type: 'audio/wav' });
+}
+
+function writeString(view, offset, string) {
+    for (let i = 0; i < string.length; i++) {
+        view.setUint8(offset + i, string.charCodeAt(i));
+    }
+}
+
+// カラオケプレイヤーに切り替え
+function switchToKaraokePlayer() {
+    const player = document.getElementById('main-audio-player');
+    const currentTime = player.currentTime;
+    const wasPlaying = !player.paused;
+    
+    player.src = karaokeAudioUrl;
+    player.currentTime = currentTime;
+    
+    if (wasPlaying) {
+        player.play();
+    }
+    
+    // ボタン表示を切り替え
+    document.getElementById('karaoke-btn').style.display = 'none';
+    document.getElementById('normal-mode-btn').style.display = 'inline-flex';
+    
+    // カラオケモードラベルを追加
+    const audioControls = player.closest('.audio-controls');
+    if (!document.querySelector('.karaoke-active-label')) {
+        const label = document.createElement('div');
+        label.className = 'karaoke-active-label';
+        label.innerHTML = '<i class="bi bi-mic"></i> {% if is_english %}Karaoke Mode Active{% elif is_chinese %}卡拉OK模式已启用{% else %}カラオケモード{% endif %}';
+        audioControls.insertBefore(label, audioControls.firstChild);
+    }
+    
+    isKaraokeMode = true;
+}
+
+// 通常モードに戻す
+function switchToNormalMode() {
+    const player = document.getElementById('main-audio-player');
+    const currentTime = player.currentTime;
+    const wasPlaying = !player.paused;
+    
+    player.src = originalAudioUrl;
+    player.currentTime = Math.min(currentTime, player.duration || currentTime);
+    
+    if (wasPlaying) {
+        player.play();
+    }
+    
+    // ボタン表示を切り替え
+    document.getElementById('karaoke-btn').style.display = 'inline-flex';
+    document.getElementById('normal-mode-btn').style.display = 'none';
+    
+    // カラオケモードラベルを削除
+    const label = document.querySelector('.karaoke-active-label');
+    if (label) {
+        label.remove();
+    }
+    
+    isKaraokeMode = false;
+}
+
+// キャンセル
+function cancelKaraoke() {
+    document.getElementById('karaokeModal').classList.remove('active');
+    karaokeProcessing = false;
+}
+
+// 再試行
+function retryKaraoke() {
+    if (originalAudioUrl) {
+        document.getElementById('karaoke-processing').style.display = 'block';
+        document.getElementById('karaoke-error').style.display = 'none';
+        startKaraokeMode(originalAudioUrl);
+    }
+}
+
+// モーダル外クリックで閉じる
+document.getElementById('karaokeModal').addEventListener('click', function(e) {
+    if (e.target === this && !karaokeProcessing) {
+        cancelKaraoke();
     }
 });
 </script>
