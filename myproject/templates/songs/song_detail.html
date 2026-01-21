@@ -2603,7 +2603,7 @@ let isKaraokeMode = false;
 let karaokeProcessing = false;
 const songId = {{ song.pk }};
 
-// カラオケモード開始（サーバーサイドDemucs版）
+// カラオケモード開始（ブラウザ内センターチャンネル除去版）
 async function startKaraokeMode(audioUrl) {
     if (karaokeProcessing) return;
     
@@ -2617,43 +2617,30 @@ async function startKaraokeMode(audioUrl) {
     
     try {
         // ステータス更新
-        updateKaraokeStatus('{% if is_english %}Sending to AI processing server...{% elif is_chinese %}正在发送到AI处理服务器...{% else %}AI処理サーバーに送信中...{% endif %}', 10);
+        updateKaraokeStatus('{% if is_english %}Loading audio...{% elif is_chinese %}正在加载音频...{% else %}音声を読み込み中...{% endif %}', 10);
         
-        // 進捗アニメーション（サーバー処理中）
-        let fakeProgress = 10;
-        const progressInterval = setInterval(() => {
-            if (fakeProgress < 90) {
-                fakeProgress += Math.random() * 5;
-                updateKaraokeStatus('{% if is_english %}AI is removing vocals... (30-60 seconds){% elif is_chinese %}AI正在移除人声...（30-60秒）{% else %}AIがボーカルを除去中...（30〜60秒）{% endif %}', Math.floor(fakeProgress));
-            }
-        }, 2000);
+        // 音声ファイルをダウンロード
+        const response = await fetch(audioUrl);
+        if (!response.ok) throw new Error('Failed to fetch audio');
         
-        // サーバーにリクエスト
-        const response = await fetch(`/songs/${songId}/karaoke/`, {
-            method: 'GET',
-            headers: {
-                'X-CSRFToken': '{{ csrf_token }}'
-            }
-        });
+        updateKaraokeStatus('{% if is_english %}Decoding audio...{% elif is_chinese %}正在解码音频...{% else %}音声をデコード中...{% endif %}', 30);
         
-        clearInterval(progressInterval);
+        const arrayBuffer = await response.arrayBuffer();
         
-        if (!response.ok) {
-            // Content-Typeをチェック
-            const contentType = response.headers.get('content-type');
-            if (contentType && contentType.includes('application/json')) {
-                const errorData = await response.json();
-                throw new Error(errorData.error || 'Server error');
-            } else {
-                throw new Error('{% if is_english %}Server error (status: {% elif is_chinese %}服务器错误（状态：{% else %}サーバーエラー（ステータス: {% endif %}' + response.status + ')');
-            }
-        }
+        // AudioContextでデコード
+        const audioContext = new (window.AudioContext || window.webkitAudioContext)();
+        const audioBuffer = await audioContext.decodeAudioData(arrayBuffer);
         
-        updateKaraokeStatus('{% if is_english %}Processing complete! Loading audio...{% elif is_chinese %}处理完成！正在加载音频...{% else %}処理完了！音声を読み込み中...{% endif %}', 95);
+        updateKaraokeStatus('{% if is_english %}Removing vocals...{% elif is_chinese %}正在移除人声...{% else %}ボーカルを除去中...{% endif %}', 50);
         
-        // 音声データを取得
-        const audioBlob = await response.blob();
-        karaokeAudioUrl = URL.createObjectURL(audioBlob);
+        // センターチャンネル除去でボーカルを減衰
+        const processedBuffer = removeVocals(audioContext, audioBuffer);
+        
+        updateKaraokeStatus('{% if is_english %}Encoding audio...{% elif is_chinese %}正在编码音频...{% else %}音声をエンコード中...{% endif %}', 80);
+        
+        // WAVに変換
+        const wavBlob = audioBufferToWav(processedBuffer);
+        karaokeAudioUrl = URL.createObjectURL(wavBlob);
         
         updateKaraokeStatus('{% if is_english %}Complete!{% elif is_chinese %}完成！{% else %}完了！{% endif %}', 100);
         
@@ -2662,6 +2649,7 @@ async function startKaraokeMode(audioUrl) {
             document.getElementById('karaokeModal').classList.remove('active');
             switchToKaraokePlayer();
             karaokeProcessing = false;
+            audioContext.close();
         }, 500);
         
     } catch (error) {
@@ -2671,6 +2659,95 @@ async function startKaraokeMode(audioUrl) {
         document.getElementById('karaoke-error-message').textContent = 
             error.message || '{% if is_english %}Failed to process audio. Please try again.{% elif is_chinese %}音频处理失败。请重试。{% else %}音声処理に失敗しました。もう一度お試しください。{% endif %}';
         karaokeProcessing = false;
+    }
+}
+
+// センターチャンネル除去（ボーカル減衰）
+function removeVocals(audioContext, audioBuffer) {
+    const numChannels = audioBuffer.numberOfChannels;
+    const length = audioBuffer.length;
+    const sampleRate = audioBuffer.sampleRate;
+    
+    // 出力バッファを作成（ステレオ）
+    const outputBuffer = audioContext.createBuffer(2, length, sampleRate);
+    
+    if (numChannels >= 2) {
+        // ステレオの場合：L - R でセンター（ボーカル）を除去
+        const leftChannel = audioBuffer.getChannelData(0);
+        const rightChannel = audioBuffer.getChannelData(1);
+        const outputLeft = outputBuffer.getChannelData(0);
+        const outputRight = outputBuffer.getChannelData(1);
+        
+        for (let i = 0; i < length; i++) {
+            // センター成分を計算して除去
+            const center = (leftChannel[i] + rightChannel[i]) / 2;
+            outputLeft[i] = leftChannel[i] - center * 0.8;  // 80%除去
+            outputRight[i] = rightChannel[i] - center * 0.8;
+        }
+    } else {
+        // モノラルの場合：そのまま返す（ボーカル除去不可）
+        const monoChannel = audioBuffer.getChannelData(0);
+        outputBuffer.getChannelData(0).set(monoChannel);
+        outputBuffer.getChannelData(1).set(monoChannel);
+    }
+    
+    return outputBuffer;
+}
+
+// AudioBufferをWAVに変換
+function audioBufferToWav(buffer) {
+    const numChannels = buffer.numberOfChannels;
+    const sampleRate = buffer.sampleRate;
+    const format = 1; // PCM
+    const bitDepth = 16;
+    
+    const bytesPerSample = bitDepth / 8;
+    const blockAlign = numChannels * bytesPerSample;
+    
+    const dataLength = buffer.length * blockAlign;
+    const headerLength = 44;
+    const totalLength = headerLength + dataLength;
+    
+    const arrayBuffer = new ArrayBuffer(totalLength);
+    const view = new DataView(arrayBuffer);
+    
+    // WAVヘッダー書き込み
+    writeString(view, 0, 'RIFF');
+    view.setUint32(4, totalLength - 8, true);
+    writeString(view, 8, 'WAVE');
+    writeString(view, 12, 'fmt ');
+    view.setUint32(16, 16, true);
+    view.setUint16(20, format, true);
+    view.setUint16(22, numChannels, true);
+    view.setUint32(24, sampleRate, true);
+    view.setUint32(28, sampleRate * blockAlign, true);
+    view.setUint16(32, blockAlign, true);
+    view.setUint16(34, bitDepth, true);
+    writeString(view, 36, 'data');
+    view.setUint32(40, dataLength, true);
+    
+    // オーディオデータ書き込み
+    const channels = [];
+    for (let i = 0; i < numChannels; i++) {
+        channels.push(buffer.getChannelData(i));
+    }
+    
+    let offset = 44;
+    for (let i = 0; i < buffer.length; i++) {
+        for (let ch = 0; ch < numChannels; ch++) {
+            const sample = Math.max(-1, Math.min(1, channels[ch][i]));
+            const intSample = sample < 0 ? sample * 0x8000 : sample * 0x7FFF;
+            view.setInt16(offset, intSample, true);
+            offset += 2;
+        }
+    }
+    
+    return new Blob([arrayBuffer], { type: 'audio/wav' });
+}
+
+function writeString(view, offset, string) {
+    for (let i = 0; i < string.length; i++) {
+        view.setUint8(offset + i, string.charCodeAt(i));
     }
 }
 
