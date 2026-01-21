@@ -2573,8 +2573,9 @@ let karaokeAudioUrl = null;
 let originalAudioUrl = null;
 let isKaraokeMode = false;
 let karaokeProcessing = false;
+const songId = {{ song.pk }};
 
-// カラオケモード開始
+// カラオケモード開始（サーバーサイドDemucs版）
 async function startKaraokeMode(audioUrl) {
     if (karaokeProcessing) return;
     
@@ -2588,29 +2589,37 @@ async function startKaraokeMode(audioUrl) {
     
     try {
         // ステータス更新
-        updateKaraokeStatus('{% if is_english %}Loading audio file...{% elif is_chinese %}正在加载音频文件...{% else %}音声ファイルを読み込み中...{% endif %}', 10);
+        updateKaraokeStatus('{% if is_english %}Sending to AI processing server...{% elif is_chinese %}正在发送到AI处理服务器...{% else %}AI処理サーバーに送信中...{% endif %}', 10);
         
-        // 音声ファイルを取得
-        const response = await fetch(audioUrl);
-        const arrayBuffer = await response.arrayBuffer();
+        // 進捗アニメーション（サーバー処理中）
+        let fakeProgress = 10;
+        const progressInterval = setInterval(() => {
+            if (fakeProgress < 90) {
+                fakeProgress += Math.random() * 5;
+                updateKaraokeStatus('{% if is_english %}AI is removing vocals... (30-60 seconds){% elif is_chinese %}AI正在移除人声...（30-60秒）{% else %}AIがボーカルを除去中...（30〜60秒）{% endif %}', Math.floor(fakeProgress));
+            }
+        }, 2000);
         
-        updateKaraokeStatus('{% if is_english %}Preparing audio processing...{% elif is_chinese %}正在准备音频处理...{% else %}音声処理を準備中...{% endif %}', 20);
+        // サーバーにリクエスト
+        const response = await fetch(`/songs/${songId}/karaoke/`, {
+            method: 'GET',
+            headers: {
+                'X-CSRFToken': '{{ csrf_token }}'
+            }
+        });
         
-        // AudioContextを作成
-        const audioContext = new (window.AudioContext || window.webkitAudioContext)();
-        const audioBuffer = await audioContext.decodeAudioData(arrayBuffer);
+        clearInterval(progressInterval);
         
-        updateKaraokeStatus('{% if is_english %}Removing vocals... (This may take a moment){% elif is_chinese %}正在移除人声...（可能需要一些时间）{% else %}ボーカルを除去中...（しばらくお待ちください）{% endif %}', 40);
+        if (!response.ok) {
+            const errorData = await response.json();
+            throw new Error(errorData.error || 'Server error');
+        }
         
-        // 簡易的なボーカル除去（センターチャンネル除去法）
-        // 注: 本格的な実装にはDemucsが必要ですが、まずは簡易版で実装
-        const instrumentalBuffer = await removeVocalsSimple(audioContext, audioBuffer);
+        updateKaraokeStatus('{% if is_english %}Processing complete! Loading audio...{% elif is_chinese %}处理完成！正在加载音频...{% else %}処理完了！音声を読み込み中...{% endif %}', 95);
         
-        updateKaraokeStatus('{% if is_english %}Creating playable audio...{% elif is_chinese %}正在创建可播放的音频...{% else %}再生可能な音声を作成中...{% endif %}', 80);
-        
-        // BufferをBlobに変換
-        const wavBlob = audioBufferToWav(instrumentalBuffer);
-        karaokeAudioUrl = URL.createObjectURL(wavBlob);
+        // 音声データを取得
+        const audioBlob = await response.blob();
+        karaokeAudioUrl = URL.createObjectURL(audioBlob);
         
         updateKaraokeStatus('{% if is_english %}Complete!{% elif is_chinese %}完成！{% else %}完了！{% endif %}', 100);
         
@@ -2626,7 +2635,7 @@ async function startKaraokeMode(audioUrl) {
         document.getElementById('karaoke-processing').style.display = 'none';
         document.getElementById('karaoke-error').style.display = 'block';
         document.getElementById('karaoke-error-message').textContent = 
-            '{% if is_english %}Failed to process audio. Please try again.{% elif is_chinese %}音频处理失败。请重试。{% else %}音声処理に失敗しました。もう一度お試しください。{% endif %}';
+            error.message || '{% if is_english %}Failed to process audio. Please try again.{% elif is_chinese %}音频处理失败。请重试。{% else %}音声処理に失敗しました。もう一度お試しください。{% endif %}';
         karaokeProcessing = false;
     }
 }
@@ -2636,98 +2645,6 @@ function updateKaraokeStatus(message, progress) {
     document.getElementById('karaoke-status').textContent = message;
     document.getElementById('karaoke-progress').style.width = progress + '%';
     document.getElementById('karaoke-progress-text').textContent = progress + '%';
-}
-
-// 簡易ボーカル除去（センターチャンネル除去法）
-async function removeVocalsSimple(audioContext, audioBuffer) {
-    const numberOfChannels = audioBuffer.numberOfChannels;
-    const length = audioBuffer.length;
-    const sampleRate = audioBuffer.sampleRate;
-    
-    // ステレオの場合のみボーカル除去が可能
-    if (numberOfChannels < 2) {
-        // モノラルの場合はそのまま返す
-        return audioBuffer;
-    }
-    
-    // 新しいバッファを作成（ステレオ）
-    const newBuffer = audioContext.createBuffer(2, length, sampleRate);
-    
-    const leftChannel = audioBuffer.getChannelData(0);
-    const rightChannel = audioBuffer.getChannelData(1);
-    const newLeft = newBuffer.getChannelData(0);
-    const newRight = newBuffer.getChannelData(1);
-    
-    // センターチャンネル（ボーカル）を除去
-    // 左右の差分を取ることでセンターに位置する音（通常ボーカル）を除去
-    for (let i = 0; i < length; i++) {
-        const diff = (leftChannel[i] - rightChannel[i]) * 0.7;
-        newLeft[i] = diff;
-        newRight[i] = -diff;
-        
-        // 進捗更新（重い処理なので間引く）
-        if (i % (length / 10) === 0) {
-            const progress = 40 + Math.floor((i / length) * 35);
-            updateKaraokeStatus('{% if is_english %}Removing vocals...{% elif is_chinese %}正在移除人声...{% else %}ボーカルを除去中...{% endif %}', progress);
-        }
-    }
-    
-    return newBuffer;
-}
-
-// AudioBufferをWAVに変換
-function audioBufferToWav(buffer) {
-    const numChannels = buffer.numberOfChannels;
-    const sampleRate = buffer.sampleRate;
-    const format = 1; // PCM
-    const bitDepth = 16;
-    
-    const bytesPerSample = bitDepth / 8;
-    const blockAlign = numChannels * bytesPerSample;
-    
-    const dataLength = buffer.length * blockAlign;
-    const bufferLength = 44 + dataLength;
-    
-    const arrayBuffer = new ArrayBuffer(bufferLength);
-    const view = new DataView(arrayBuffer);
-    
-    // WAVヘッダー
-    writeString(view, 0, 'RIFF');
-    view.setUint32(4, 36 + dataLength, true);
-    writeString(view, 8, 'WAVE');
-    writeString(view, 12, 'fmt ');
-    view.setUint32(16, 16, true);
-    view.setUint16(20, format, true);
-    view.setUint16(22, numChannels, true);
-    view.setUint32(24, sampleRate, true);
-    view.setUint32(28, sampleRate * blockAlign, true);
-    view.setUint16(32, blockAlign, true);
-    view.setUint16(34, bitDepth, true);
-    writeString(view, 36, 'data');
-    view.setUint32(40, dataLength, true);
-    
-    // オーディオデータ
-    const channels = [];
-    for (let i = 0; i < numChannels; i++) {
-        channels.push(buffer.getChannelData(i));
-    }
-    
-    let offset = 44;
-    for (let i = 0; i < buffer.length; i++) {
-        for (let channel = 0; channel < numChannels; channel++) {
-            const sample = Math.max(-1, Math.min(1, channels[channel][i]));
-            view.setInt16(offset, sample < 0 ? sample * 0x8000 : sample * 0x7FFF, true);
-            offset += 2;
-        }
-    }
-    
-    return new Blob([arrayBuffer], { type: 'audio/wav' });
-}
-
-function writeString(view, offset, string) {
-    for (let i = 0; i < string.length; i++) {
-        view.setUint8(offset + i, string.charCodeAt(i));
-    }
 }
 
 // カラオケプレイヤーに切り替え

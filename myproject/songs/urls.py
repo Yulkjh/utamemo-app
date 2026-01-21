@@ -34,4 +34,7 @@ urlpatterns = [
     path('classroom/<int:pk>/share/', views.classroom_share_song, name='classroom_share_song'),
     path('classroom/<int:pk>/leave/', views.classroom_leave, name='classroom_leave'),
     path('classroom/<int:pk>/delete/', views.classroom_delete, name='classroom_delete'),
+    
+    # カラオケ機能
+    path('songs/<int:pk>/karaoke/', views.karaoke_separate, name='karaoke_separate'),
 ]
