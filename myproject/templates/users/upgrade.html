@@ -1,277 +1,723 @@
-{% extends 'base.html' %}
+{% extends 'base.html' %}{% extends 'base.html' %}
 
-{% block title %}{% if is_english %}Plans{% elif is_chinese %}订阅方案{% else %}料金プラン{% endif %} - UTAMEMO{% endblock %}
 
-{% block content %}
-<!-- 料金プランカードを一時的に非表示
-<div class="pricing-page">
-    <div class="container py-5">
-        <div class="row justify-content-center">
-            <div class="col-lg-10">
-                <!-- ヘッダー -->
-                <div class="text-center mb-5">
-                    <h1 class="pricing-title">
-                        {% if is_english %}Choose Your Plan{% elif is_chinese %}选择您的方案{% else %}料金プラン{% endif %}
-                    </h1>
-                    <p class="pricing-subtitle">
-                        {% if is_english %}Create AI-powered songs from your notes{% elif is_chinese %}用AI将笔记变成歌曲{% else %}ノートから歌詞を生成、AI楽曲を作成{% endif %}
-                    </p>
-                </div>
-                <!-- プランカード -->
-                <div class="row g-4 justify-content-center">
-                    <!-- 無料プラン -->
-                    <div class="col-md-6 col-lg-5">
-                        <div class="plan-card {% if not is_pro %}current-plan{% endif %}">
-                            <div class="plan-header">
-                                <h3 class="plan-name">{% if is_english %}Free Plan{% elif is_chinese %}免费方案{% else %}無料プラン{% endif %}</h3>
-                                <div class="plan-price">
-                                    <span class="currency">¥</span>
-                                    <span class="amount">0</span>
-                                    <span class="period">/{% if is_english %}month{% elif is_chinese %}月{% else %}月{% endif %}</span>
-                                </div>
-                                {% if not is_pro %}
-                                <button class="plan-btn current" disabled>
-                                    {% if is_english %}Current Plan{% elif is_chinese %}当前方案{% else %}現在のプラン{% endif %}
-                                </button>
-                                {% else %}
-                                <button class="plan-btn" disabled>
-                                    {% if is_english %}Free{% elif is_chinese %}免费{% else %}無料{% endif %}
-                                </button>
-                                {% endif %}
-                            </div>
-                            
-                            <div class="plan-features">
-                                <h4 class="features-title">{% if is_english %}Music{% elif is_chinese %}音乐{% else %}音楽{% endif %}</h4>
-                                <ul class="feature-list">
-                                    <li class="available">
-                                        <i class="bi bi-check"></i>
-                                        <span>{% if is_english %}3 songs/day{% elif is_chinese %}每天3首歌{% else %}3曲/日{% endif %}</span>
-                                    </li>
-                                    <!-- V7.5関連の行削除 -->
-                                    <li class="unavailable">
-                                        <i class="bi bi-x"></i>
-                                        <span>{% if is_english %}Commercial use{% elif is_chinese %}商用{% else %}商用禁止{% endif %}</span>
-                                    </li>
-                                    <li class="available">
-                                        <i class="bi bi-check"></i>
-                                        <span>{% if is_english %}Standard features{% elif is_chinese %}标准功能{% else %}標準機能のみ{% endif %}</span>
-                                    </li>
-                                    <li class="available">
-                                        <i class="bi bi-check"></i>
-                                        <span>{% if is_english %}Shared queue{% elif is_chinese %}共享队列{% else %}共有クリエイションキュー{% endif %}</span>
-                                    </li>
-                                    <li class="unavailable">
-                                        <i class="bi bi-x"></i>
-                                        <span>{% if is_english %}Premium models{% elif is_chinese %}高级模型{% else %}プレミアムモデル{% endif %}</span>
-                                    </li>
-                                </ul>
-                            </div>
-                        </div>
-                    </div>
 
-                    <!-- Proプラン -->
-                    <div class="col-md-6 col-lg-5">
-                        <div class="plan-card pro {% if is_pro %}current-plan{% endif %}">
-                            <div class="pro-badge-corner">PRO</div>
-                            <div class="plan-header">
-                                <h3 class="plan-name">{% if is_english %}Pro Plan{% elif is_chinese %}Pro方案{% else %}Proプラン{% endif %}</h3>
-                                <div class="plan-price">
-                                    <span class="currency">¥</span>
-                                    <span class="amount">980</span>
-                                    <span class="period">/{% if is_english %}month{% elif is_chinese %}月{% else %}月{% endif %}</span>
-                                </div>
-                                {% if is_pro %}
-                                <button class="plan-btn current" disabled>
-                                    {% if is_english %}Current Plan{% elif is_chinese %}当前方案{% else %}現在のプラン{% endif %}
-                                </button>
-                                {% else %}
-                                <button class="plan-btn upgrade" id="checkout-button" {% if not stripe_publishable_key %}disabled{% endif %}>
-                                    {% if is_english %}Upgrade{% elif is_chinese %}升级{% else %}アップグレード{% endif %}
-                                </button>
-                                {% endif %}
-                            </div>
-                            
-                            <div class="plan-features">
-                                <h4 class="features-title">{% if is_english %}Music{% elif is_chinese %}音乐{% else %}音楽{% endif %}</h4>
-                                <ul class="feature-list">
-                                    <li class="available">
-                                        <i class="bi bi-check"></i>
-                                        <span>{% if is_english %}Unlimited songs{% elif is_chinese %}无限歌曲{% else %}無制限{% endif %}</span>
-                                    </li>
-                                    <!-- 全モデル関連の行削除 -->
-                                    <li class="available">
-                                        <i class="bi bi-check"></i>
-                                        <span>{% if is_english %}Commercial use{% elif is_chinese %}商用允许{% else %}商用利用OK{% endif %}</span>
-                                    </li>
-                                    <li class="available">
-                                        <i class="bi bi-check"></i>
-                                        <span>{% if is_english %}Premium features{% elif is_chinese %}高级功能{% else %}プレミアム機能{% endif %}</span>
-                                    </li>
-                                    <li class="available">
-                                        <i class="bi bi-check"></i>
-                                        <span>{% if is_english %}Priority queue{% elif is_chinese %}优先队列{% else %}優先クリエイションキュー{% endif %}</span>
-                                    </li>
-                                    <li class="available">
-                                        <i class="bi bi-check"></i>
-                                        <span>{% if is_english %}High quality audio{% elif is_chinese %}高音质{% else %}高音質ダウンロード{% endif %}</span>
-                                    </li>
-                                </ul>
-                            </div>
-                        </div>
-                    </div>
+{% block title %}{% if is_english %}Plans{% elif is_chinese %}订阅方案{% else %}料金プラン{% endif %} - UTAMEMO{% endblock %}{% block title %}{% if is_english %}Plans{% elif is_chinese %}订阅方案{% else %}料金プラン{% endif %} - UTAMEMO{% endblock %}
+
+
+
+{% block content %}{% block content %}
+
+<div class="pricing-page"><!-- 料金プランカードを一時的に非表示
+
+    <div class="container py-5"><div class="pricing-page">
+
+        <div class="row justify-content-center">    <div class="container py-5">
+
+            <div class="col-lg-12">        <div class="row justify-content-center">
+
+                <!-- ヘッダー -->            <div class="col-lg-10">
+
+                <div class="text-center mb-5">                <!-- ヘッダー -->
+
+                    <h1 class="pricing-title">                <div class="text-center mb-5">
+
+                        {% if is_english %}Choose Your Plan{% elif is_chinese %}选择您的方案{% else %}料金プラン{% endif %}                    <h1 class="pricing-title">
+
+                    </h1>                        {% if is_english %}Choose Your Plan{% elif is_chinese %}选择您的方案{% else %}料金プラン{% endif %}
+
+                    <p class="pricing-subtitle">                    </h1>
+
+                        {% if is_english %}Create AI-powered songs from your notes{% elif is_chinese %}用AI将笔记变成歌曲{% else %}ノートから歌詞を生成、AI楽曲を作成{% endif %}                    <p class="pricing-subtitle">
+
+                    </p>                        {% if is_english %}Create AI-powered songs from your notes{% elif is_chinese %}用AI将笔记变成歌曲{% else %}ノートから歌詞を生成、AI楽曲を作成{% endif %}
+
+                </div>                    </p>
+
                 </div>
 
-                {% if not stripe_publishable_key and not is_pro %}
-                <p class="text-center text-warning mt-4">
-                    <i class="bi bi-exclamation-triangle"></i>
-                    {% if is_english %}Payment system is being set up{% elif is_chinese %}支付系统正在设置中{% else %}決済システム準備中{% endif %}
-                </p>
-                {% endif %}
-            </div>
-        </div>
-    </div>
-</div>
--->
+                <!-- プランカード -->                <!-- プランカード -->
+
+                <div class="row g-4 justify-content-center">                <div class="row g-4 justify-content-center">
+
+                    <!-- フリープラン -->                    <!-- 無料プラン -->
+
+                    <div class="col-md-6 col-lg-3">                    <div class="col-md-6 col-lg-5">
+
+                        <div class="plan-card {% if current_plan == 'free' %}current-plan{% endif %}">                        <div class="plan-card {% if not is_pro %}current-plan{% endif %}">
+
+                            <div class="plan-header">                            <div class="plan-header">
+
+                                <h3 class="plan-name">{% if is_english %}Free{% elif is_chinese %}免费{% else %}フリー{% endif %}</h3>                                <h3 class="plan-name">{% if is_english %}Free Plan{% elif is_chinese %}免费方案{% else %}無料プラン{% endif %}</h3>
+
+                                <div class="plan-price">                                <div class="plan-price">
+
+                                    <span class="currency">¥</span>                                    <span class="currency">¥</span>
+
+                                    <span class="amount">0</span>                                    <span class="amount">0</span>
+
+                                    <span class="period">/{% if is_english %}month{% elif is_chinese %}月{% else %}月{% endif %}</span>                                    <span class="period">/{% if is_english %}month{% elif is_chinese %}月{% else %}月{% endif %}</span>
+
+                                </div>                                </div>
+
+                                {% if current_plan == 'free' %}                                {% if not is_pro %}
+
+                                <button class="plan-btn current" disabled>                                <button class="plan-btn current" disabled>
+
+                                    {% if is_english %}Current Plan{% elif is_chinese %}当前方案{% else %}現在のプラン{% endif %}                                    {% if is_english %}Current Plan{% elif is_chinese %}当前方案{% else %}現在のプラン{% endif %}
+
+                                </button>                                </button>
+
+                                {% else %}                                {% else %}
+
+                                <button class="plan-btn" disabled>{% if is_english %}Free{% elif is_chinese %}免费{% else %}無料{% endif %}</button>                                <button class="plan-btn" disabled>
+
+                                {% endif %}                                    {% if is_english %}Free{% elif is_chinese %}免费{% else %}無料{% endif %}
+
+                            </div>                                </button>
+
+                                                            {% endif %}
+
+                            <div class="plan-target">                            </div>
+
+                                <h5>{% if is_english %}Perfect for{% elif is_chinese %}适合{% else %}こんな人に{% endif %}</h5>                            
+
+                                <p>{% if is_english %}First-time users who want to try learning through songs{% elif is_chinese %}首次使用想尝试歌曲学习的用户{% else %}UTAMEMOを初めて使う人、歌で暗記を試したい人{% endif %}</p>                            <div class="plan-features">
+
+                            </div>                                <h4 class="features-title">{% if is_english %}Music{% elif is_chinese %}音乐{% else %}音楽{% endif %}</h4>
+
+                                                            <ul class="feature-list">
+
+                            <div class="plan-features">                                    <li class="available">
+
+                                <h5>{% if is_english %}Features{% elif is_chinese %}功能{% else %}できること{% endif %}</h5>                                        <i class="bi bi-check"></i>
+
+                                <ul class="feature-list">                                        <span>{% if is_english %}3 songs/day{% elif is_chinese %}每天3首歌{% else %}3曲/日{% endif %}</span>
+
+                                    <li class="available"><i class="bi bi-check"></i> {% if is_english %}5 songs/day{% elif is_chinese %}每天5首{% else %}1日5曲まで{% endif %}</li>                                    </li>
+
+                                    <li class="available"><i class="bi bi-check"></i> v7.5 {% if is_english %}unlimited{% elif is_chinese %}无限{% else %}無制限{% endif %}</li>                                    <!-- V7.5関連の行削除 -->
+
+                                    <li class="limited"><i class="bi bi-dash"></i> v7.6, O2 {% if is_english %}1 time only{% elif is_chinese %}各1次{% else %}各1回のみ{% endif %}</li>                                    <li class="unavailable">
+
+                                </ul>                                        <i class="bi bi-x"></i>
+
+                            </div>                                        <span>{% if is_english %}Commercial use{% elif is_chinese %}商用{% else %}商用禁止{% endif %}</span>
+
+                        </div>                                    </li>
+
+                    </div>                                    <li class="available">
+
+                                        <i class="bi bi-check"></i>
+
+                    <!-- スタータープラン -->                                        <span>{% if is_english %}Standard features{% elif is_chinese %}标准功能{% else %}標準機能のみ{% endif %}</span>
+
+                    <div class="col-md-6 col-lg-3">                                    </li>
+
+                        <div class="plan-card {% if current_plan == 'starter' %}current-plan{% endif %}">                                    <li class="available">
+
+                            <div class="plan-header">                                        <i class="bi bi-check"></i>
+
+                                <h3 class="plan-name">{% if is_english %}Starter{% elif is_chinese %}入门{% else %}スターター{% endif %}</h3>                                        <span>{% if is_english %}Shared queue{% elif is_chinese %}共享队列{% else %}共有クリエイションキュー{% endif %}</span>
+
+                                <div class="plan-price">                                    </li>
+
+                                    <span class="currency">¥</span>                                    <li class="unavailable">
+
+                                    <span class="amount">660</span>                                        <i class="bi bi-x"></i>
+
+                                    <span class="period">/{% if is_english %}month{% elif is_chinese %}月{% else %}月{% endif %}</span>                                        <span>{% if is_english %}Premium models{% elif is_chinese %}高级模型{% else %}プレミアムモデル{% endif %}</span>
+
+                                </div>                                    </li>
+
+                                {% if current_plan == 'starter' %}                                </ul>
+
+                                <button class="plan-btn current" disabled>                            </div>
+
+                                    {% if is_english %}Current Plan{% elif is_chinese %}当前方案{% else %}現在のプラン{% endif %}                        </div>
+
+                                </button>                    </div>
+
+                                {% elif current_plan == 'pro' or current_plan == 'school' %}
+
+                                <button class="plan-btn" disabled>-</button>                    <!-- Proプラン -->
+
+                                {% else %}                    <div class="col-md-6 col-lg-5">
+
+                                <button class="plan-btn upgrade" onclick="checkout('starter')" {% if not stripe_publishable_key %}disabled{% endif %}>                        <div class="plan-card pro {% if is_pro %}current-plan{% endif %}">
+
+                                    {% if is_english %}Subscribe{% elif is_chinese %}订阅{% else %}登録する{% endif %}                            <div class="pro-badge-corner">PRO</div>
+
+                                </button>                            <div class="plan-header">
+
+                                {% endif %}                                <h3 class="plan-name">{% if is_english %}Pro Plan{% elif is_chinese %}Pro方案{% else %}Proプラン{% endif %}</h3>
+
+                            </div>                                <div class="plan-price">
+
+                                                                <span class="currency">¥</span>
+
+                            <div class="plan-target">                                    <span class="amount">980</span>
+
+                                <h5>{% if is_english %}Perfect for{% elif is_chinese %}适合{% else %}こんな人に{% endif %}</h5>                                    <span class="period">/{% if is_english %}month{% elif is_chinese %}月{% else %}月{% endif %}</span>
+
+                                <p>{% if is_english %}Students who struggle with memorization{% elif is_chinese %}记忆困难的学生{% else %}暗記が苦手な中高生、日々の学習に取り入れたい人{% endif %}</p>                                </div>
+
+                            </div>                                {% if is_pro %}
+
+                                                            <button class="plan-btn current" disabled>
+
+                            <div class="plan-features">                                    {% if is_english %}Current Plan{% elif is_chinese %}当前方案{% else %}現在のプラン{% endif %}
+
+                                <h5>{% if is_english %}Features{% elif is_chinese %}功能{% else %}できること{% endif %}</h5>                                </button>
+
+                                <ul class="feature-list">                                {% else %}
+
+                                    <li class="available"><i class="bi bi-check"></i> {% if is_english %}80 songs/month{% elif is_chinese %}每月80首{% else %}月80曲まで{% endif %}</li>                                <button class="plan-btn upgrade" id="checkout-button" {% if not stripe_publishable_key %}disabled{% endif %}>
+
+                                    <li class="available"><i class="bi bi-check"></i> v7.5: 40{% if is_english %} songs{% elif is_chinese %}首{% else %}曲{% endif %}</li>                                    {% if is_english %}Upgrade{% elif is_chinese %}升级{% else %}アップグレード{% endif %}
+
+                                    <li class="available"><i class="bi bi-check"></i> v7.6: 25{% if is_english %} songs{% elif is_chinese %}首{% else %}曲{% endif %}</li>                                </button>
+
+                                    <li class="available"><i class="bi bi-check"></i> O2: 15{% if is_english %} songs{% elif is_chinese %}首{% else %}曲{% endif %}</li>                                {% endif %}
+
+                                </ul>                            </div>
+
+                            </div>                            
+
+                        </div>                            <div class="plan-features">
+
+                    </div>                                <h4 class="features-title">{% if is_english %}Music{% elif is_chinese %}音乐{% else %}音楽{% endif %}</h4>
+
+                                <ul class="feature-list">
+
+                    <!-- プロプラン -->                                    <li class="available">
+
+                    <div class="col-md-6 col-lg-3">                                        <i class="bi bi-check"></i>
+
+                        <div class="plan-card pro {% if current_plan == 'pro' %}current-plan{% endif %}">                                        <span>{% if is_english %}Unlimited songs{% elif is_chinese %}无限歌曲{% else %}無制限{% endif %}</span>
+
+                            <div class="pro-badge-corner">{% if is_english %}POPULAR{% elif is_chinese %}热门{% else %}人気{% endif %}</div>                                    </li>
+
+                            <div class="plan-header">                                    <!-- 全モデル関連の行削除 -->
+
+                                <h3 class="plan-name">{% if is_english %}Pro{% elif is_chinese %}专业{% else %}プロ{% endif %}</h3>                                    <li class="available">
+
+                                <div class="plan-price">                                        <i class="bi bi-check"></i>
+
+                                    <span class="currency">¥</span>                                        <span>{% if is_english %}Commercial use{% elif is_chinese %}商用允许{% else %}商用利用OK{% endif %}</span>
+
+                                    <span class="amount">1,900</span>                                    </li>
+
+                                    <span class="period">/{% if is_english %}month{% elif is_chinese %}月{% else %}月{% endif %}</span>                                    <li class="available">
+
+                                </div>                                        <i class="bi bi-check"></i>
+
+                                {% if current_plan == 'pro' %}                                        <span>{% if is_english %}Premium features{% elif is_chinese %}高级功能{% else %}プレミアム機能{% endif %}</span>
+
+                                <button class="plan-btn current" disabled>                                    </li>
+
+                                    {% if is_english %}Current Plan{% elif is_chinese %}当前方案{% else %}現在のプラン{% endif %}                                    <li class="available">
+
+                                </button>                                        <i class="bi bi-check"></i>
+
+                                {% else %}                                        <span>{% if is_english %}Priority queue{% elif is_chinese %}优先队列{% else %}優先クリエイションキュー{% endif %}</span>
+
+                                <button class="plan-btn upgrade" onclick="checkout('pro')" {% if not stripe_publishable_key %}disabled{% endif %}>                                    </li>
+
+                                    {% if is_english %}Subscribe{% elif is_chinese %}订阅{% else %}登録する{% endif %}                                    <li class="available">
+
+                                </button>                                        <i class="bi bi-check"></i>
+
+                                {% endif %}                                        <span>{% if is_english %}High quality audio{% elif is_chinese %}高音质{% else %}高音質ダウンロード{% endif %}</span>
+
+                            </div>                                    </li>
+
+                                                            </ul>
+
+                            <div class="plan-target">                            </div>
+
+                                <h5>{% if is_english %}Perfect for{% elif is_chinese %}适合{% else %}こんな人に{% endif %}</h5>                        </div>
+
+                                <p>{% if is_english %}Researchers, business contestants who need efficient memorization{% elif is_chinese %}需要高效记忆的研究人员和商业竞赛参与者{% else %}探究活動・研究・ビジネスコンテストに取り組む人{% endif %}</p>                    </div>
+
+                            </div>                </div>
+
+                            
+
+                            <div class="plan-features">                {% if not stripe_publishable_key and not is_pro %}
+
+                                <h5>{% if is_english %}Features{% elif is_chinese %}功能{% else %}できること{% endif %}</h5>                <p class="text-center text-warning mt-4">
+
+                                <ul class="feature-list">                    <i class="bi bi-exclamation-triangle"></i>
+
+                                    <li class="available"><i class="bi bi-check"></i> {% if is_english %}300 songs/month{% elif is_chinese %}每月300首{% else %}月300曲まで{% endif %}</li>                    {% if is_english %}Payment system is being set up{% elif is_chinese %}支付系统正在设置中{% else %}決済システム準備中{% endif %}
+
+                                    <li class="available"><i class="bi bi-check"></i> v7.5: 100{% if is_english %} songs{% elif is_chinese %}首{% else %}曲{% endif %}</li>                </p>
+
+                                    <li class="available"><i class="bi bi-check"></i> v7.6: 100{% if is_english %} songs{% elif is_chinese %}首{% else %}曲{% endif %}</li>                {% endif %}
+
+                                    <li class="available"><i class="bi bi-check"></i> O2: 100{% if is_english %} songs{% elif is_chinese %}首{% else %}曲{% endif %}</li>            </div>
+
+                                </ul>        </div>
+
+                            </div>    </div>
+
+                        </div></div>
+
+                    </div>-->
+
 {% endblock %}
 
-<style>
-/* 料金プランページ */
-.pricing-page {
-    background: #0d0d0d;
-    min-height: 100vh;
+                    <!-- スクールプラン -->
+
+                    <div class="col-md-6 col-lg-3"><style>
+
+                        <div class="plan-card school {% if current_plan == 'school' %}current-plan{% endif %}">/* 料金プランページ */
+
+                            <div class="school-badge-corner">{% if is_english %}SCHOOL{% elif is_chinese %}学校{% else %}学校・塾{% endif %}</div>.pricing-page {
+
+                            <div class="plan-header">    background: #0d0d0d;
+
+                                <h3 class="plan-name">{% if is_english %}School{% elif is_chinese %}学校{% else %}スクール{% endif %}</h3>    min-height: 100vh;
+
+                                <div class="plan-price">}
+
+                                    <span class="currency">¥</span>
+
+                                    <span class="amount">450</span>.pricing-title {
+
+                                    <span class="period">/{% if is_english %}student/month{% elif is_chinese %}学生/月{% else %}生徒/月{% endif %}</span>    font-size: 2.5rem;
+
+                                </div>    font-weight: 700;
+
+                                <a href="mailto:contact@utamemo.com" class="plan-btn contact">    color: #fff;
+
+                                    {% if is_english %}Contact Us{% elif is_chinese %}联系我们{% else %}お問い合わせ{% endif %}    margin-bottom: 0.5rem;
+
+                                </a>}
+
+                            </div>
+
+                            .pricing-subtitle {
+
+                            <div class="plan-target">    font-size: 1.1rem;
+
+                                <h5>{% if is_english %}Perfect for{% elif is_chinese %}适合{% else %}こんな学校・塾に{% endif %}</h5>    color: #888;
+
+                                <p>{% if is_english %}Schools and tutoring centers wanting to support class-wide memorization{% elif is_chinese %}希望支持全班记忆学习的学校和补习班{% else %}クラス全体で暗記学習を支援したい学校・塾{% endif %}</p>}
+
+                            </div>
+
+                            /* プランカード */
+
+                            <div class="plan-features">.plan-card {
+
+                                <h5>{% if is_english %}Features{% elif is_chinese %}功能{% else %}できること（1人/月）{% endif %}</h5>    background: #1a1a1a;
+
+                                <ul class="feature-list">    border: 1px solid #2a2a2a;
+
+                                    <li class="available"><i class="bi bi-check"></i> {% if is_english %}100 songs/student{% elif is_chinese %}每学生100首{% else %}月100曲/生徒{% endif %}</li>    border-radius: 16px;
+
+                                    <li class="available"><i class="bi bi-check"></i> v7.5: 40, v7.6: 40, O2: 20</li>    padding: 2rem;
+
+                                    <li class="available"><i class="bi bi-check"></i> {% if is_english %}Class sharing{% elif is_chinese %}班级共享{% else %}クラス共有モード{% endif %}</li>    height: 100%;
+
+                                    <li class="available"><i class="bi bi-check"></i> {% if is_english %}Teacher dashboard{% elif is_chinese %}教师管理面板{% else %}教師管理画面{% endif %}</li>    position: relative;
+
+                                </ul>    transition: all 0.3s ease;
+
+                            </div>}
+
+                        </div>
+
+                    </div>.plan-card:hover {
+
+                </div>    border-color: #3a3a3a;
+
 }
 
-.pricing-title {
-    font-size: 2.5rem;
-    font-weight: 700;
+                {% if not stripe_publishable_key and current_plan == 'free' %}
+
+                <p class="text-center text-warning mt-4">.plan-card.current-plan {
+
+                    <i class="bi bi-exclamation-triangle"></i>    border-color: #ff7940;
+
+                    {% if is_english %}Payment system is being set up{% elif is_chinese %}支付系统正在设置中{% else %}決済システム準備中{% endif %}}
+
+                </p>
+
+                {% endif %}.plan-card.pro {
+
+            </div>    border-color: #ff7940;
+
+        </div>    background: linear-gradient(180deg, #1f1510 0%, #1a1a1a 100%);
+
+    </div>}
+
+</div>
+
+.pro-badge-corner {
+
+<style>    position: absolute;
+
+/* 料金プランページ */    top: 1rem;
+
+.pricing-page {    right: 1rem;
+
+    background: #0d0d0d;    background: linear-gradient(135deg, #ff7940 0%, #ff6b35 100%);
+
+    min-height: 100vh;    color: #fff;
+
+}    padding: 0.25rem 0.75rem;
+
+    border-radius: 4px;
+
+.pricing-title {    font-size: 0.75rem;
+
+    font-size: 2.5rem;    font-weight: 700;
+
+    font-weight: 700;}
+
     color: #fff;
-    margin-bottom: 0.5rem;
+
+    margin-bottom: 0.5rem;.plan-header {
+
+}    margin-bottom: 2rem;
+
 }
 
 .pricing-subtitle {
-    font-size: 1.1rem;
-    color: #888;
-}
 
-/* プランカード */
-.plan-card {
+    font-size: 1.1rem;.plan-name {
+
+    color: #888;    font-size: 1.5rem;
+
+}    font-weight: 700;
+
+    color: #fff;
+
+/* プランカード */    margin-bottom: 1rem;
+
+.plan-card {}
+
     background: #1a1a1a;
-    border: 1px solid #2a2a2a;
-    border-radius: 16px;
-    padding: 2rem;
-    height: 100%;
-    position: relative;
-    transition: all 0.3s ease;
-}
 
-.plan-card:hover {
-    border-color: #3a3a3a;
-}
+    border: 1px solid #2a2a2a;.plan-price {
 
-.plan-card.current-plan {
-    border-color: #ff7940;
-}
+    border-radius: 16px;    display: flex;
 
-.plan-card.pro {
-    border-color: #ff7940;
-    background: linear-gradient(180deg, #1f1510 0%, #1a1a1a 100%);
-}
+    padding: 1.5rem;    align-items: baseline;
 
-.pro-badge-corner {
-    position: absolute;
-    top: 1rem;
-    right: 1rem;
-    background: linear-gradient(135deg, #ff7940 0%, #ff6b35 100%);
-    color: #fff;
-    padding: 0.25rem 0.75rem;
-    border-radius: 4px;
-    font-size: 0.75rem;
-    font-weight: 700;
-}
+    height: 100%;    gap: 2px;
 
-.plan-header {
-    margin-bottom: 2rem;
-}
+    position: relative;    margin-bottom: 1.5rem;
 
-.plan-name {
-    font-size: 1.5rem;
-    font-weight: 700;
-    color: #fff;
-    margin-bottom: 1rem;
-}
+    transition: all 0.3s ease;}
 
-.plan-price {
-    display: flex;
-    align-items: baseline;
-    gap: 2px;
-    margin-bottom: 1.5rem;
 }
 
 .plan-price .currency {
-    font-size: 1.25rem;
-    font-weight: 600;
-    color: #fff;
-}
 
-.plan-price .amount {
-    font-size: 3rem;
-    font-weight: 800;
-    color: #fff;
-    line-height: 1;
-}
+.plan-card:hover {    font-size: 1.25rem;
 
-.plan-price .period {
+    border-color: #3a3a3a;    font-weight: 600;
+
+    transform: translateY(-4px);    color: #fff;
+
+}}
+
+
+
+.plan-card.current-plan {.plan-price .amount {
+
+    border-color: #ff7940;    font-size: 3rem;
+
+}    font-weight: 800;
+
+    color: #fff;
+
+.plan-card.pro {    line-height: 1;
+
+    border-color: #ff7940;}
+
+    background: linear-gradient(180deg, #1f1510 0%, #1a1a1a 100%);
+
+}.plan-price .period {
+
     font-size: 1rem;
-    color: #888;
-    margin-left: 4px;
+
+.plan-card.school {    color: #888;
+
+    border-color: #4a9eff;    margin-left: 4px;
+
+    background: linear-gradient(180deg, #101520 0%, #1a1a1a 100%);}
+
 }
 
 .plan-btn {
-    width: 100%;
-    padding: 0.875rem 1.5rem;
-    border-radius: 50px;
-    font-size: 1rem;
-    font-weight: 600;
-    border: 1px solid #3a3a3a;
-    background: transparent;
-    color: #888;
-    cursor: pointer;
-    transition: all 0.2s ease;
+
+.pro-badge-corner, .school-badge-corner {    width: 100%;
+
+    position: absolute;    padding: 0.875rem 1.5rem;
+
+    top: 1rem;    border-radius: 50px;
+
+    right: 1rem;    font-size: 1rem;
+
+    color: #fff;    font-weight: 600;
+
+    padding: 0.25rem 0.75rem;    border: 1px solid #3a3a3a;
+
+    border-radius: 4px;    background: transparent;
+
+    font-size: 0.7rem;    color: #888;
+
+    font-weight: 700;    cursor: pointer;
+
+}    transition: all 0.2s ease;
+
 }
 
-.plan-btn.current {
-    border-color: #3a3a3a;
+.pro-badge-corner {
+
+    background: linear-gradient(135deg, #ff7940 0%, #ff6b35 100%);.plan-btn.current {
+
+}    border-color: #3a3a3a;
+
     color: #666;
-    cursor: default;
+
+.school-badge-corner {    cursor: default;
+
+    background: linear-gradient(135deg, #4a9eff 0%, #2563eb 100%);}
+
 }
 
 .plan-btn.upgrade {
-    background: linear-gradient(135deg, #ff7940 0%, #ff6b35 100%);
-    border: none;
-    color: #fff;
+
+.plan-header {    background: linear-gradient(135deg, #ff7940 0%, #ff6b35 100%);
+
+    margin-bottom: 1.5rem;    border: none;
+
+    padding-bottom: 1.5rem;    color: #fff;
+
+    border-bottom: 1px solid #2a2a2a;}
+
 }
 
 .plan-btn.upgrade:hover:not(:disabled) {
-    transform: translateY(-2px);
-    box-shadow: 0 8px 25px rgba(255, 121, 64, 0.4);
-}
 
-.plan-btn:disabled {
-    opacity: 0.6;
-    cursor: not-allowed;
-}
+.plan-name {    transform: translateY(-2px);
 
-/* 機能リスト */
-.plan-features {
-    padding-top: 1.5rem;
-    border-top: 1px solid #2a2a2a;
-}
+    font-size: 1.25rem;    box-shadow: 0 8px 25px rgba(255, 121, 64, 0.4);
 
-.features-title {
-    font-size: 1rem;
-    font-weight: 700;
+    font-weight: 700;}
+
     color: #fff;
+
+    margin-bottom: 0.75rem;.plan-btn:disabled {
+
+}    opacity: 0.6;
+
+    cursor: not-allowed;
+
+.plan-price {}
+
+    display: flex;
+
+    align-items: baseline;/* 機能リスト */
+
+    gap: 2px;.plan-features {
+
+    margin-bottom: 1rem;    padding-top: 1.5rem;
+
+}    border-top: 1px solid #2a2a2a;
+
+}
+
+.plan-price .currency {
+
+    font-size: 1rem;.features-title {
+
+    font-weight: 600;    font-size: 1rem;
+
+    color: #fff;    font-weight: 700;
+
+}    color: #fff;
+
     margin-bottom: 1rem;
+
+.plan-price .amount {}
+
+    font-size: 2.25rem;
+
+    font-weight: 800;.feature-list {
+
+    color: #fff;    list-style: none;
+
+    line-height: 1;    padding: 0;
+
+}    margin: 0;
+
+}
+
+.plan-price .period {
+
+    font-size: 0.85rem;.feature-list li {
+
+    color: #888;    display: flex;
+
+    margin-left: 4px;    align-items: center;
+
+}    gap: 0.75rem;
+
+    padding: 0.625rem 0;
+
+.plan-btn {    font-size: 0.95rem;
+
+    width: 100%;}
+
+    padding: 0.75rem 1rem;
+
+    border-radius: 50px;.feature-list li.available {
+
+    font-size: 0.9rem;    color: #fff;
+
+    font-weight: 600;}
+
+    border: 1px solid #3a3a3a;
+
+    background: transparent;.feature-list li.available i {
+
+    color: #888;    color: #4ade80;
+
+    cursor: pointer;    font-size: 1.1rem;
+
+    transition: all 0.2s ease;}
+
+    text-decoration: none;
+
+    display: block;.feature-list li.unavailable {
+
+    text-align: center;    color: #666;
+
+}}
+
+
+
+.plan-btn.current {.feature-list li.unavailable i {
+
+    border-color: #ff7940;    color: #666;
+
+    color: #ff7940;    font-size: 1.1rem;
+
+    cursor: default;}
+
+}
+
+/* レスポンシブ */
+
+.plan-btn.upgrade {@media (max-width: 768px) {
+
+    background: linear-gradient(135deg, #ff7940 0%, #ff6b35 100%);    .pricing-title {
+
+    border: none;        font-size: 2rem;
+
+    color: #fff;    }
+
+}    
+
+    .plan-price .amount {
+
+.plan-btn.upgrade:hover:not(:disabled) {        font-size: 2.5rem;
+
+    transform: translateY(-2px);    }
+
+    box-shadow: 0 8px 25px rgba(255, 121, 64, 0.4);}
+
+}</style>
+
+{% endblock %}
+
+.plan-btn.contact {
+
+    background: linear-gradient(135deg, #4a9eff 0%, #2563eb 100%);{% block extra_js %}
+
+    border: none;<script>
+
+    color: #fff;document.addEventListener('DOMContentLoaded', function() {
+
+}    const checkoutButton = document.getElementById('checkout-button');
+
+    
+
+.plan-btn.contact:hover {    if (checkoutButton && !checkoutButton.disabled) {
+
+    transform: translateY(-2px);        checkoutButton.addEventListener('click', async function() {
+
+    box-shadow: 0 8px 25px rgba(74, 158, 255, 0.4);            checkoutButton.disabled = true;
+
+}            checkoutButton.innerHTML = '<i class="bi bi-hourglass-split"></i> {% if is_english %}Processing...{% elif is_chinese %}处理中...{% else %}処理中...{% endif %}';
+
+            
+
+.plan-btn:disabled {            try {
+
+    opacity: 0.6;                const response = await fetch('{% url "users:create_checkout" %}', {
+
+    cursor: not-allowed;                    method: 'POST',
+
+}                    headers: {
+
+                        'Content-Type': 'application/json',
+
+/* ターゲット */                        'X-CSRFToken': '{{ csrf_token }}'
+
+.plan-target {                    }
+
+    margin-bottom: 1rem;                });
+
+}                
+
+                const data = await response.json();
+
+.plan-target h5 {                
+
+    font-size: 0.8rem;                if (data.checkout_url) {
+
+    font-weight: 600;                    window.location.href = data.checkout_url;
+
+    color: #ff7940;                } else {
+
+    margin-bottom: 0.5rem;                    alert(data.error || '{% if is_english %}An error occurred{% elif is_chinese %}发生错误{% else %}エラーが発生しました{% endif %}');
+
+}                    checkoutButton.disabled = false;
+
+                    checkoutButton.innerHTML = '<i class="bi bi-lightning-fill"></i> {% if is_english %}Subscribe Now{% elif is_chinese %}立即订阅{% else %}今すぐ登録{% endif %}';
+
+.plan-target p {                }
+
+    font-size: 0.85rem;            } catch (error) {
+
+    color: #aaa;                console.error('Error:', error);
+
+    line-height: 1.4;                alert('{% if is_english %}Connection error{% elif is_chinese %}连接错误{% else %}接続エラー{% endif %}');
+
+    margin: 0;                checkoutButton.disabled = false;
+
+}                checkoutButton.innerHTML = '<i class="bi bi-lightning-fill"></i> {% if is_english %}Subscribe Now{% elif is_chinese %}立即订阅{% else %}今すぐ登録{% endif %}';
+
+            }
+
+/* 機能リスト */        });
+
+.plan-features h5 {    }
+
+    font-size: 0.8rem;});
+
+    font-weight: 600;</script>
+
+    color: #fff;{% endblock %}
+    margin-bottom: 0.75rem;
 }
 
 .feature-list {
@@ -283,9 +729,9 @@
 .feature-list li {
     display: flex;
     align-items: center;
-    gap: 0.75rem;
-    padding: 0.625rem 0;
-    font-size: 0.95rem;
+    gap: 0.5rem;
+    padding: 0.4rem 0;
+    font-size: 0.85rem;
 }
 
 .feature-list li.available {
@@ -294,26 +740,36 @@
 
 .feature-list li.available i {
     color: #4ade80;
-    font-size: 1.1rem;
 }
 
-.feature-list li.unavailable {
-    color: #666;
+.feature-list li.limited {
+    color: #888;
 }
 
-.feature-list li.unavailable i {
-    color: #666;
-    font-size: 1.1rem;
+.feature-list li.limited i {
+    color: #888;
 }
 
 /* レスポンシブ */
+@media (max-width: 992px) {
+    .col-lg-3 {
+        flex: 0 0 50%;
+        max-width: 50%;
+    }
+}
+
 @media (max-width: 768px) {
     .pricing-title {
-        font-size: 2rem;
+        font-size: 1.75rem;
+    }
+    
+    .col-lg-3, .col-md-6 {
+        flex: 0 0 100%;
+        max-width: 100%;
     }
     
     .plan-price .amount {
-        font-size: 2.5rem;
+        font-size: 2rem;
     }
 }
 </style>
@@ -321,40 +777,36 @@
 
 {% block extra_js %}
 <script>
-document.addEventListener('DOMContentLoaded', function() {
-    const checkoutButton = document.getElementById('checkout-button');
+async function checkout(plan) {
+    const buttons = document.querySelectorAll('.plan-btn.upgrade');
+    buttons.forEach(btn => {
+        btn.disabled = true;
+        btn.innerHTML = '<i class="bi bi-hourglass-split"></i> {% if is_english %}Processing...{% elif is_chinese %}处理中...{% else %}処理中...{% endif %}';
+    });
     
-    if (checkoutButton && !checkoutButton.disabled) {
-        checkoutButton.addEventListener('click', async function() {
-            checkoutButton.disabled = true;
-            checkoutButton.innerHTML = '<i class="bi bi-hourglass-split"></i> {% if is_english %}Processing...{% elif is_chinese %}处理中...{% else %}処理中...{% endif %}';
-            
-            try {
-                const response = await fetch('{% url "users:create_checkout" %}', {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json',
-                        'X-CSRFToken': '{{ csrf_token }}'
-                    }
-                });
-                
-                const data = await response.json();
-                
-                if (data.checkout_url) {
-                    window.location.href = data.checkout_url;
-                } else {
-                    alert(data.error || '{% if is_english %}An error occurred{% elif is_chinese %}发生错误{% else %}エラーが発生しました{% endif %}');
-                    checkoutButton.disabled = false;
-                    checkoutButton.innerHTML = '<i class="bi bi-lightning-fill"></i> {% if is_english %}Subscribe Now{% elif is_chinese %}立即订阅{% else %}今すぐ登録{% endif %}';
-                }
-            } catch (error) {
-                console.error('Error:', error);
-                alert('{% if is_english %}Connection error{% elif is_chinese %}连接错误{% else %}接続エラー{% endif %}');
-                checkoutButton.disabled = false;
-                checkoutButton.innerHTML = '<i class="bi bi-lightning-fill"></i> {% if is_english %}Subscribe Now{% elif is_chinese %}立即订阅{% else %}今すぐ登録{% endif %}';
-            }
+    try {
+        const response = await fetch('{% url "users:create_checkout" %}', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRFToken': '{{ csrf_token }}'
+            },
+            body: JSON.stringify({ plan: plan })
         });
+        
+        const data = await response.json();
+        
+        if (data.checkout_url) {
+            window.location.href = data.checkout_url;
+        } else {
+            alert(data.error || '{% if is_english %}An error occurred{% elif is_chinese %}发生错误{% else %}エラーが発生しました{% endif %}');
+            location.reload();
+        }
+    } catch (error) {
+        console.error('Error:', error);
+        alert('{% if is_english %}Connection error{% elif is_chinese %}连接错误{% else %}接続エラー{% endif %}');
+        location.reload();
     }
-});
+}
 </script>
 {% endblock %}

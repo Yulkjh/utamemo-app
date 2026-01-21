@@ -7,8 +7,10 @@ class User(AbstractUser):
     
     # プラン選択肢
     PLAN_CHOICES = [
-        ('free', 'Free'),
-        ('pro', 'Pro'),
+        ('free', 'フリー'),
+        ('starter', 'スターター'),
+        ('pro', 'プロ'),
+        ('school', 'スクール'),
     ]
     
     email = models.EmailField(
@@ -86,13 +88,48 @@ class User(AbstractUser):
     
     @property
     def is_pro(self):
-        """Proプランかどうかを判定"""
+        """有料プランかどうかを判定"""
         from django.utils import timezone
-        if self.plan != 'pro':
+        if self.plan == 'free':
             return False
         if self.plan_expires_at and self.plan_expires_at < timezone.now():
             return False
         return True
+    
+    @property
+    def is_starter(self):
+        """スタータープラン以上かどうか"""
+        return self.plan in ['starter', 'pro', 'school'] and self.is_pro
+    
+    @property
+    def is_pro_plan(self):
+        """プロプラン以上かどうか"""
+        return self.plan in ['pro', 'school'] and self.is_pro
+    
+    @property
+    def is_school(self):
+        """スクールプランかどうか"""
+        return self.plan == 'school' and self.is_pro
+    
+    def get_monthly_song_limit(self):
+        """月間作成可能曲数を取得"""
+        limits = {
+            'free': 5,  # 1日5曲 = 月約150曲だが、フリーは日次制限
+            'starter': 80,
+            'pro': 300,
+            'school': 100,
+        }
+        return limits.get(self.plan, 5)
+    
+    def get_model_limits(self):
+        """AIモデル別の月間制限を取得"""
+        limits = {
+            'free': {'v7.5': 999, 'v7.6': 1, 'o2': 1},  # フリーはv7.5無制限、他は1回
+            'starter': {'v7.5': 40, 'v7.6': 25, 'o2': 15},
+            'pro': {'v7.5': 100, 'v7.6': 100, 'o2': 100},
+            'school': {'v7.5': 40, 'v7.6': 40, 'o2': 20},
+        }
+        return limits.get(self.plan, limits['free'])
 
     class Meta:
         verbose_name = 'ユーザー'

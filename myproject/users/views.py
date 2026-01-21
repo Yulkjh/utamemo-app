@@ -238,28 +238,39 @@ class UpgradeView(LoginRequiredMixin, TemplateView):
         context = super().get_context_data(**kwargs)
         context['current_plan'] = self.request.user.plan
         context['is_pro'] = self.request.user.is_pro
+        context['current_plan'] = self.request.user.plan
         context['stripe_publishable_key'] = getattr(settings, 'STRIPE_PUBLISHABLE_KEY', '')
+        context['stripe_price_ids'] = getattr(settings, 'STRIPE_PRICE_IDS', {})
         return context
 
 
 # テストモード: Trueの間は無料で即アップグレード、Falseで本番Stripe決済
-FREE_UPGRADE_MODE = True
+FREE_UPGRADE_MODE = False
 
 
 @login_required
 @require_POST
 def create_checkout_session(request):
-    """Stripeチェックアウトセッションを作成（またはテスト用無料アップグレード）"""
+    """Stripeチェックアウトセッションを作成"""
     try:
+        import json
+        data = json.loads(request.body)
+        plan = data.get('plan', 'starter')  # デフォルトはスターター
+        
         user = request.user
         domain = request.build_absolute_uri('/')[:-1]
         
+        # 有効なプランか確認
+        valid_plans = ['starter', 'pro', 'school']
+        if plan not in valid_plans:
+            return JsonResponse({'error': 'Invalid plan'}, status=400)
+        
         # テストモード: 無料で即アップグレード
         if FREE_UPGRADE_MODE:
-            user.plan = 'pro'
+            user.plan = plan
             user.plan_expires_at = timezone.now() + timedelta(days=30)
             user.save()
-            return JsonResponse({'checkout_url': f'{domain}/users/upgrade/success/?free_upgrade=1'})
+            return JsonResponse({'checkout_url': f'{domain}/users/upgrade/success/?free_upgrade=1&plan={plan}'})
         
         # 本番モード: Stripe決済
         import stripe
@@ -268,9 +279,12 @@ def create_checkout_session(request):
         if not stripe.api_key:
             return JsonResponse({'error': 'Stripe is not configured'}, status=500)
         
-        price_id = getattr(settings, 'STRIPE_PRO_PRICE_ID', '')
+        # プランに対応する価格IDを取得
+        price_ids = getattr(settings, 'STRIPE_PRICE_IDS', {})
+        price_id = price_ids.get(plan, '')
+        
         if not price_id:
-            return JsonResponse({'error': 'Price not configured'}, status=500)
+            return JsonResponse({'error': f'Price not configured for {plan} plan'}, status=500)
         
         if not user.stripe_customer_id:
             customer = stripe.Customer.create(
@@ -285,9 +299,9 @@ def create_checkout_session(request):
             payment_method_types=['card'],
             line_items=[{'price': price_id, 'quantity': 1}],
             mode='subscription',
-            success_url=f'{domain}/users/upgrade/success/?session_id={{CHECKOUT_SESSION_ID}}',
+            success_url=f'{domain}/users/upgrade/success/?session_id={{CHECKOUT_SESSION_ID}}&plan={plan}',
             cancel_url=f'{domain}/users/upgrade/',
-            metadata={'user_id': user.id}
+            metadata={'user_id': user.id, 'plan': plan}
         )
         
         return JsonResponse({'checkout_url': checkout_session.url})
@@ -301,17 +315,25 @@ def upgrade_success(request):
     """アップグレード成功後のコールバック"""
     free_upgrade = request.GET.get('free_upgrade')
     session_id = request.GET.get('session_id')
+    plan = request.GET.get('plan', 'starter')
     
     app_language = request.session.get('app_language', 'ja')
+    
+    plan_names = {
+        'starter': {'ja': 'スターター', 'en': 'Starter', 'zh': '入门'},
+        'pro': {'ja': 'プロ', 'en': 'Pro', 'zh': '专业'},
+        'school': {'ja': 'スクール', 'en': 'School', 'zh': '学校'},
+    }
+    plan_name = plan_names.get(plan, plan_names['starter']).get(app_language, plan)
     
     if free_upgrade:
         # テストモード: 無料アップグレード済み
         if app_language == 'en':
-            messages.success(request, 'Welcome to Pro! You now have access to Mureka O2.')
+            messages.success(request, f'Welcome to {plan_name}! Your plan has been activated.')
         elif app_language == 'zh':
-            messages.success(request, '欢迎加入Pro！您现在可以使用Mureka O2。')
+            messages.success(request, f'欢迎加入{plan_name}！您的计划已激活。')
         else:
-            messages.success(request, 'Proプランへようこそ！Mureka O2が利用可能になりました。')
+            messages.success(request, f'{plan_name}プランへようこそ！プランが有効になりました。')
     
     elif session_id:
         # 本番モード: Stripe決済後
@@ -322,17 +344,21 @@ def upgrade_success(request):
             
             if session.payment_status == 'paid':
                 user = request.user
-                user.plan = 'pro'
+                # メタデータからプランを取得（フォールバックはURLパラメータ）
+                actual_plan = session.metadata.get('plan', plan)
+                user.plan = actual_plan
                 user.stripe_subscription_id = session.subscription
                 user.plan_expires_at = timezone.now() + timedelta(days=30)
                 user.save()
                 
+                plan_name = plan_names.get(actual_plan, plan_names['starter']).get(app_language, actual_plan)
+                
                 if app_language == 'en':
-                    messages.success(request, 'Welcome to Pro! You now have access to Mureka O2.')
+                    messages.success(request, f'Welcome to {plan_name}! Your plan has been activated.')
                 elif app_language == 'zh':
-                    messages.success(request, '欢迎加入Pro！您现在可以使用Mureka O2。')
+                    messages.success(request, f'欢迎加入{plan_name}！您的计划已激活。')
                 else:
-                    messages.success(request, 'Proプランへようこそ！Mureka O2が利用可能になりました。')
+                    messages.success(request, f'{plan_name}プランへようこそ！プランが有効になりました。')
         except Exception as e:
             print(f"Error processing payment success: {e}")
     

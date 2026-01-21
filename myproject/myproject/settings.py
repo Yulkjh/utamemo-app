@@ -191,7 +191,16 @@ MUREKA_API_URL = os.getenv('MUREKA_API_URL', 'https://platform.mureka.ai')
 STRIPE_PUBLISHABLE_KEY = os.getenv('STRIPE_PUBLISHABLE_KEY', '')
 STRIPE_SECRET_KEY = os.getenv('STRIPE_SECRET_KEY', '')
 STRIPE_WEBHOOK_SECRET = os.getenv('STRIPE_WEBHOOK_SECRET', '')
-STRIPE_PRO_PRICE_ID = os.getenv('STRIPE_PRO_PRICE_ID', '')  # Stripe Dashboardで作成した月額プランの価格ID
+
+# 各プランの価格ID（Stripe Dashboardで作成後に設定）
+STRIPE_PRICE_IDS = {
+    'starter': os.getenv('STRIPE_STARTER_PRICE_ID', ''),  # ¥660/月
+    'pro': os.getenv('STRIPE_PRO_PRICE_ID', ''),          # ¥1,900/月
+    'school': os.getenv('STRIPE_SCHOOL_PRICE_ID', ''),    # ¥450/月（生徒1人あたり）
+}
+
+# 後方互換性のため
+STRIPE_PRO_PRICE_ID = STRIPE_PRICE_IDS['pro']
 
 # デフォルトの主キーフィールドタイプ
 # https://docs.djangoproject.com/en/5.2/ref/settings/#default-auto-field
