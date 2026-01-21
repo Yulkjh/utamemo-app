@@ -1630,26 +1630,28 @@ def karaoke_separate(request, pk):
         # 出力ディレクトリ
         output_dir = tempfile.mkdtemp()
         
-        # Demucsを実行
+        # Demucsを実行（軽量モデルで高速化）
         try:
             subprocess.run([
                 'python', '-m', 'demucs',
                 '--two-stems', 'vocals',  # ボーカルとその他に分離
-                '-n', 'htdemucs',  # モデル名
+                '-n', 'mdx_extra',  # 軽量で高速なモデル
                 '-o', output_dir,
+                '--mp3',  # 直接MP3出力
+                '--mp3-bitrate', '192',
                 input_path
-            ], check=True, timeout=300)  # 5分タイムアウト
+            ], check=True, timeout=180)  # 3分タイムアウト
             
             # 分離されたファイルを探す
             base_name = os.path.splitext(os.path.basename(input_path))[0]
-            no_vocals_path = os.path.join(output_dir, 'htdemucs', base_name, 'no_vocals.wav')
+            no_vocals_path = os.path.join(output_dir, 'mdx_extra', base_name, 'no_vocals.mp3')
             
             if os.path.exists(no_vocals_path):
-                # WAVをMP3に変換
-                audio = AudioSegment.from_wav(no_vocals_path)
-                mp3_buffer = io.BytesIO()
-                audio.export(mp3_buffer, format='mp3', bitrate='192k')
-                mp3_buffer.seek(0)
+                # MP3ファイルを直接返す
+                with open(no_vocals_path, 'rb') as f:
+                    mp3_data = f.read()
+                
+                mp3_buffer = io.BytesIO(mp3_data)
                 
                 # クリーンアップ
                 os.unlink(input_path)
