@@ -2619,8 +2619,13 @@ async function startKaraokeMode(audioUrl) {
         // ステータス更新
         updateKaraokeStatus('{% if is_english %}Loading audio...{% elif is_chinese %}正在加载音频...{% else %}音声を読み込み中...{% endif %}', 10);
         
-        // 音声ファイルをダウンロード
-        const response = await fetch(audioUrl);
+        // 外部URLの場合はプロキシ経由でダウンロード（CORS対策）
+        let fetchUrl = audioUrl;
+        if (audioUrl.startsWith('http') && !audioUrl.includes(window.location.host)) {
+            fetchUrl = `/songs/${songId}/audio-proxy/`;
+        }
+        
+        const response = await fetch(fetchUrl);
         if (!response.ok) throw new Error('Failed to fetch audio');
         
         updateKaraokeStatus('{% if is_english %}Decoding audio...{% elif is_chinese %}正在解码音频...{% else %}音声をデコード中...{% endif %}', 30);

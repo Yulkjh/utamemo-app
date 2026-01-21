@@ -1596,3 +1596,32 @@ def classroom_delete(request, pk):
         return redirect('songs:classroom_list')
     
     return redirect('songs:classroom_detail', pk=pk)
+
+
+def audio_proxy(request, pk):
+    """外部音声URLをプロキシして返す（CORS対策）"""
+    from django.http import HttpResponse
+    import requests as req
+    
+    song = get_object_or_404(Song, pk=pk)
+    
+    # 音声URLを取得
+    audio_url = song.audio_url
+    if not audio_url:
+        return HttpResponse('No audio URL', status=404)
+    
+    try:
+        # 外部URLから音声をダウンロード
+        response = req.get(audio_url, timeout=30)
+        response.raise_for_status()
+        
+        # Content-Typeを取得
+        content_type = response.headers.get('Content-Type', 'audio/mpeg')
+        
+        return HttpResponse(
+            response.content,
+            content_type=content_type
+        )
+    except Exception as e:
+        logger.error(f'Audio proxy error: {e}')
+        return HttpResponse(f'Error: {e}', status=500)

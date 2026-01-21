@@ -34,4 +34,7 @@ urlpatterns = [
     path('classroom/<int:pk>/share/', views.classroom_share_song, name='classroom_share_song'),
     path('classroom/<int:pk>/leave/', views.classroom_leave, name='classroom_leave'),
     path('classroom/<int:pk>/delete/', views.classroom_delete, name='classroom_delete'),
+    
+    # 音声プロキシ（CORS対策）
+    path('songs/<int:pk>/audio-proxy/', views.audio_proxy, name='audio_proxy'),
 ]
