@@ -35,6 +35,11 @@ UTAMEMO（ウタメモ）
 
 ※ 本番環境では Render（Python 3.11.0 / PostgreSQL）での動作を前提としています。
 
+## デプロイメント関連ドキュメント
+
+- **[ドメイン設定とDNSレコードの確認（日本語）](DOMAIN_SETUP.md)** - カスタムドメインとDNS設定の詳細ガイド
+- **[Domain Setup and DNS Records (English)](DOMAIN_SETUP_EN.md)** - Comprehensive guide for custom domain and DNS configuration
+
 ### 主要パッケージ
 - google-generativeai
 - cryptography（暗号化）
