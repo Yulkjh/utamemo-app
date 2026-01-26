@@ -1,14 +1,14 @@
 {% extends 'base.html' %}
 {% load lyrics_filters %}
 
-{% block title %}{% if is_english %}My Songs{% elif is_chinese %}我的歌曲{% else %}MY楽曲{% endif %} - UTAMEMO{% endblock %}
+{% block title %}{% if is_english %}My Songs{% elif is_spanish %}Mis Canciones{% elif is_german %}Meine Songs{% elif is_portuguese %}Minhas Músicas{% elif is_chinese %}我的歌曲{% else %}MY楽曲{% endif %} - UTAMEMO{% endblock %}
 
 {% block content %}
 {% csrf_token %}
 <div class="container py-4">
     <!-- ヘッダーセクション -->
     <div class="mb-4 fade-in">
-        <h1 class="h4 fw-bold mb-0">{% if is_english %}My Songs{% elif is_chinese %}我的歌曲{% else %}MY楽曲{% endif %}</h1>
+        <h1 class="h4 fw-bold mb-0">{% if is_english %}My Songs{% elif is_spanish %}Mis Canciones{% elif is_german %}Meine Songs{% elif is_portuguese %}Minhas Músicas{% elif is_chinese %}我的歌曲{% else %}MY楽曲{% endif %}</h1>
     </div>
 
     <!-- 楽曲一覧（Spotify風リスト） -->
@@ -40,9 +40,9 @@
                 <span class="song-genre-badge">{{ song.genre|translate_genre:app_language }}</span>
                 {% endif %}
                 {% if song.is_public %}
-                <span class="song-public-badge">{% if is_english %}Public{% elif is_chinese %}公开{% else %}公開{% endif %}</span>
+                <span class="song-public-badge">{% if is_english %}Public{% elif is_spanish %}Público{% elif is_german %}Öffentlich{% elif is_portuguese %}Público{% elif is_chinese %}公开{% else %}公開{% endif %}</span>
                 {% else %}
-                <span class="song-private-badge">{% if is_english %}Private{% elif is_chinese %}私密{% else %}非公開{% endif %}</span>
+                <span class="song-private-badge">{% if is_english %}Private{% elif is_spanish %}Privado{% elif is_german %}Privat{% elif is_portuguese %}Privado{% elif is_chinese %}私密{% else %}非公開{% endif %}</span>
                 {% endif %}
                 {% if song.generation_status == 'pending' and song.queue_position %}
                 <span class="queue-badge">#{{ song.queue_position }}</span>
@@ -52,11 +52,11 @@
             <!-- ステータス表示 -->
             <div class="song-status">
                 {% if song.generation_status == 'generating' %}
-                <span class="status-text generating">{% if is_english %}Generating...{% elif is_chinese %}生成中...{% else %}生成中...{% endif %}</span>
+                <span class="status-text generating">{% if is_english %}Generating...{% elif is_spanish %}Generando...{% elif is_german %}Generiere...{% elif is_portuguese %}Gerando...{% elif is_chinese %}生成中...{% else %}生成中...{% endif %}</span>
                 {% elif song.generation_status == 'pending' %}
-                <span class="status-text pending">{% if is_english %}Waiting{% elif is_chinese %}等待中{% else %}待機中{% endif %}</span>
+                <span class="status-text pending">{% if is_english %}Waiting{% elif is_spanish %}Esperando{% elif is_german %}Warte{% elif is_portuguese %}Aguardando{% elif is_chinese %}等待中{% else %}待機中{% endif %}</span>
                 {% elif song.generation_status == 'failed' %}
-                <span class="status-text failed">{% if is_english %}Failed{% elif is_chinese %}失败{% else %}失敗{% endif %}</span>
+                <span class="status-text failed">{% if is_english %}Failed{% elif is_spanish %}Fallido{% elif is_german %}Fehlgeschlagen{% elif is_portuguese %}Falhou{% elif is_chinese %}失败{% else %}失敗{% endif %}</span>
                 {% elif song.duration %}
                 <span class="song-duration">{{ song.duration|format_duration }}</span>
                 {% endif %}
@@ -70,11 +70,11 @@
                 <div class="menu-dropdown" id="menu-{{ song.pk }}">
                     <a href="{% url 'songs:song_detail' song.pk %}" class="menu-item">
                         <i class="bi bi-eye"></i>
-                        <span>{% if is_english %}View Details{% elif is_chinese %}查看详情{% else %}詳細を見る{% endif %}</span>
+                        <span>{% if is_english %}View Details{% elif is_spanish %}Ver Detalles{% elif is_german %}Details anzeigen{% elif is_portuguese %}Ver Detalhes{% elif is_chinese %}查看详情{% else %}詳細を見る{% endif %}</span>
                     </a>
                     <button class="menu-item delete-item" onclick="confirmDelete({{ song.pk }}, '{{ song.title|escapejs }}')">
                         <i class="bi bi-trash"></i>
-                        <span>{% if is_english %}Delete{% elif is_chinese %}删除{% else %}削除{% endif %}</span>
+                        <span>{% if is_english %}Delete{% elif is_spanish %}Eliminar{% elif is_german %}Löschen{% elif is_portuguese %}Excluir{% elif is_chinese %}删除{% else %}削除{% endif %}</span>
                     </button>
                 </div>
             </div>
@@ -89,11 +89,11 @@
 
     <!-- ページネーション -->
     {% if is_paginated %}
-    <nav aria-label="{% if is_english %}Song pagination{% elif is_chinese %}歌曲分页{% else %}楽曲ページネーション{% endif %}" class="mt-5">
+    <nav aria-label="{% if is_english %}Song pagination{% elif is_spanish %}Paginación de canciones{% elif is_german %}Seitennavigation{% elif is_portuguese %}Paginação de músicas{% elif is_chinese %}歌曲分页{% else %}楽曲ページネーション{% endif %}" class="mt-5">
         <ul class="pagination justify-content-center">
             {% if page_obj.has_previous %}
             <li class="page-item">
-                <a class="page-link" href="?page={{ page_obj.previous_page_number }}">{% if is_english %}Prev{% elif is_chinese %}上一页{% else %}前へ{% endif %}</a>
+                <a class="page-link" href="?page={{ page_obj.previous_page_number }}">{% if is_english %}Prev{% elif is_spanish %}Anterior{% elif is_german %}Zurück{% elif is_portuguese %}Anterior{% elif is_chinese %}上一页{% else %}前へ{% endif %}</a>
             </li>
             {% endif %}
             
@@ -111,7 +111,7 @@
             
             {% if page_obj.has_next %}
             <li class="page-item">
-                <a class="page-link" href="?page={{ page_obj.next_page_number }}">{% if is_english %}Next{% elif is_chinese %}下一页{% else %}次へ{% endif %}</a>
+                <a class="page-link" href="?page={{ page_obj.next_page_number }}">{% if is_english %}Next{% elif is_spanish %}Siguiente{% elif is_german %}Weiter{% elif is_portuguese %}Próxima{% elif is_chinese %}下一页{% else %}次へ{% endif %}</a>
             </li>
             {% endif %}
         </ul>
@@ -124,11 +124,20 @@
         <div class="empty-state-icon mx-auto mb-4">
             <i class="bi bi-music-note-beamed" style="font-size: 4rem; color: var(--text-muted);"></i>
         </div>
-        <h4 class="text-muted mb-3">{% if is_english %}No songs yet{% elif is_chinese %}还没有歌曲{% else %}まだ楽曲がありません{% endif %}</h4>
+        <h4 class="text-muted mb-3">{% if is_english %}No songs yet{% elif is_spanish %}Aún no hay canciones{% elif is_german %}Noch keine Songs{% elif is_portuguese %}Ainda não há músicas{% elif is_chinese %}还没有歌曲{% else %}まだ楽曲がありません{% endif %}</h4>
         <p class="text-muted mb-4">
             {% if is_english %}
             Upload a photo of your study material<br>
             and create your first song!
+            {% elif is_spanish %}
+            ¡Sube una foto de tu material de estudio<br>
+            y crea tu primera canción!
+            {% elif is_german %}
+            Lade ein Foto deines Lernmaterials hoch<br>
+            und erstelle deinen ersten Song!
+            {% elif is_portuguese %}
+            Faça upload de uma foto do seu material de estudo<br>
+            e crie sua primeira música!
             {% elif is_chinese %}
             上传你的学习资料照片<br>
             创作你的第一首歌曲！
@@ -138,10 +147,10 @@
             {% endif %}
         </p>
         <a href="{% url 'songs:upload_image' %}" class="btn-gradient-primary me-3">
-            <i class="bi bi-camera"></i> {% if is_english %}Upload Image{% elif is_chinese %}上传图片{% else %}画像をアップロード{% endif %}
+            <i class="bi bi-camera"></i> {% if is_english %}Upload Image{% elif is_spanish %}Subir Imagen{% elif is_german %}Bild hochladen{% elif is_portuguese %}Enviar Imagem{% elif is_chinese %}上传图片{% else %}画像をアップロード{% endif %}
         </a>
         <a href="{% url 'songs:create_song' %}" class="btn-outline-modern">
-            <i class="bi bi-pencil-square"></i> {% if is_english %}Create Directly{% elif is_chinese %}直接创作{% else %}直接作成{% endif %}
+            <i class="bi bi-pencil-square"></i> {% if is_english %}Create Directly{% elif is_spanish %}Crear Directamente{% elif is_german %}Direkt erstellen{% elif is_portuguese %}Criar Diretamente{% elif is_chinese %}直接创作{% else %}直接作成{% endif %}
         </a>
     </div>
     {% endif %}
@@ -719,18 +728,18 @@ function confirmDelete(songId, songTitle) {
                 <div class="delete-modal-icon">
                     <i class="bi bi-trash"></i>
                 </div>
-                <h3 class="delete-modal-title">{% if is_english %}Delete Song?{% elif is_chinese %}删除歌曲？{% else %}楽曲を削除しますか？{% endif %}</h3>
+                <h3 class="delete-modal-title">{% if is_english %}Delete Song?{% elif is_spanish %}¿Eliminar Canción?{% elif is_german %}Lied löschen?{% elif is_portuguese %}Excluir Música?{% elif is_chinese %}删除歌曲？{% else %}楽曲を削除しますか？{% endif %}</h3>
                 <p class="delete-modal-text" id="deleteSongTitle"></p>
                 <div class="delete-modal-actions">
-                    <button class="btn-cancel" onclick="closeDeleteModal()">{% if is_english %}Cancel{% elif is_chinese %}取消{% else %}キャンセル{% endif %}</button>
-                    <button class="btn-delete" onclick="deleteSong()">{% if is_english %}Delete{% elif is_chinese %}删除{% else %}削除{% endif %}</button>
+                    <button class="btn-cancel" onclick="closeDeleteModal()">{% if is_english %}Cancel{% elif is_spanish %}Cancelar{% elif is_german %}Abbrechen{% elif is_portuguese %}Cancelar{% elif is_chinese %}取消{% else %}キャンセル{% endif %}</button>
+                    <button class="btn-delete" onclick="deleteSong()">{% if is_english %}Delete{% elif is_spanish %}Eliminar{% elif is_german %}Löschen{% elif is_portuguese %}Excluir{% elif is_chinese %}删除{% else %}削除{% endif %}</button>
                 </div>
             </div>
         `;
         document.body.appendChild(modal);
     }
     
-    document.getElementById('deleteSongTitle').textContent = `「${songTitle}」{% if is_english %} will be permanently deleted.{% elif is_chinese %}将被永久删除。{% else %}を完全に削除します。{% endif %}`;
+    document.getElementById('deleteSongTitle').textContent = `「${songTitle}」{% if is_english %} will be permanently deleted.{% elif is_spanish %} se eliminará permanentemente.{% elif is_german %} wird endgültig gelöscht.{% elif is_portuguese %} será excluído permanentemente.{% elif is_chinese %}将被永久删除。{% else %}を完全に削除します。{% endif %}`;
     
     // メニューを閉じる
     document.querySelectorAll('.menu-dropdown.show').forEach(menu => {
@@ -773,12 +782,12 @@ function deleteSong() {
             }
             closeDeleteModal();
         } else {
-            alert(data.error || '{% if is_english %}Failed to delete{% elif is_chinese %}删除失败{% else %}削除に失敗しました{% endif %}');
+            alert(data.error || '{% if is_english %}Failed to delete{% elif is_spanish %}Error al eliminar{% elif is_german %}Löschen fehlgeschlagen{% elif is_portuguese %}Falha ao excluir{% elif is_chinese %}删除失败{% else %}削除に失敗しました{% endif %}');
         }
     })
     .catch(error => {
         console.error('Delete error:', error);
-        alert('{% if is_english %}Failed to delete{% elif is_chinese %}删除失败{% else %}削除に失敗しました{% endif %}');
+        alert('{% if is_english %}Failed to delete{% elif is_spanish %}Error al eliminar{% elif is_german %}Löschen fehlgeschlagen{% elif is_portuguese %}Falha ao excluir{% elif is_chinese %}删除失败{% else %}削除に失敗しました{% endif %}');
     });
 }
 

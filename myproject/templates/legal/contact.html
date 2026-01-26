@@ -1,7 +1,7 @@
 {% extends 'base.html' %}
 {% load i18n %}
 
-{% block title %}{% if app_language == 'en' %}Contact{% else %}お問い合わせ{% endif %} - UTAMEMO{% endblock %}
+{% block title %}{% if app_language == 'en' %}Contact{% elif app_language == 'es' %}Contacto{% elif app_language == 'de' %}Kontakt{% elif app_language == 'pt' %}Contato{% elif app_language == 'zh' %}联系我们{% else %}お問い合わせ{% endif %} - UTAMEMO{% endblock %}
 
 {% block content %}
 <div class="container py-5">
@@ -12,6 +12,18 @@
                     {% if app_language == 'en' %}
                     <h1 class="mb-4">Contact Us</h1>
                     <p class="text-muted mb-4">Have questions or feedback? We'd love to hear from you.</p>
+                    {% elif app_language == 'es' %}
+                    <h1 class="mb-4">Contáctenos</h1>
+                    <p class="text-muted mb-4">¿Tiene preguntas o comentarios? Nos encantaría saber de usted.</p>
+                    {% elif app_language == 'de' %}
+                    <h1 class="mb-4">Kontaktieren Sie uns</h1>
+                    <p class="text-muted mb-4">Haben Sie Fragen oder Feedback? Wir würden uns freuen, von Ihnen zu hören.</p>
+                    {% elif app_language == 'zh' %}
+                    <h1 class="mb-4">联系我们</h1>
+                    <p class="text-muted mb-4">有问题或反馈？我们很乐意听取您的意见。</p>
+                    {% elif app_language == 'pt' %}
+                    <h1 class="mb-4">Contate-nos</h1>
+                    <p class="text-muted mb-4">Tem perguntas ou feedback? Adoraríamos ouvir de você.</p>
                     {% else %}
                     <h1 class="mb-4">お問い合わせ</h1>
                     <p class="text-muted mb-4">ご質問やご意見がございましたら、お気軽にお問い合わせください。</p>
@@ -31,7 +43,7 @@
                         
                         <div class="mb-3">
                             <label for="name" class="form-label">
-                                {% if app_language == 'en' %}Name{% else %}お名前{% endif %}
+                                {% if app_language == 'en' %}Name{% elif app_language == 'es' %}Nombre{% elif app_language == 'de' %}Name{% elif app_language == 'pt' %}Nome{% elif app_language == 'zh' %}姓名{% else %}お名前{% endif %}
                             </label>
                             <input type="text" class="form-control" id="name" name="name" required
                                    value="{{ user.username }}" {% if user.is_authenticated %}readonly{% endif %}>
@@ -39,39 +51,39 @@
                         
                         <div class="mb-3">
                             <label for="email" class="form-label">
-                                {% if app_language == 'en' %}Email{% else %}メールアドレス{% endif %}
+                                {% if app_language == 'en' %}Email{% elif app_language == 'es' %}Correo electrónico{% elif app_language == 'de' %}E-Mail{% elif app_language == 'pt' %}E-mail{% elif app_language == 'zh' %}电子邮件{% else %}メールアドレス{% endif %}
                             </label>
                             <input type="email" class="form-control" id="email" name="email" required
                                    value="{% if user.is_authenticated %}{{ user.email }}{% endif %}"
-                                   placeholder="{% if app_language == 'en' %}your@email.com{% else %}example@email.com{% endif %}">
+                                   placeholder="{% if app_language == 'en' %}your@email.com{% elif app_language == 'es' %}tu@correo.com{% elif app_language == 'de' %}ihre@email.com{% elif app_language == 'pt' %}seu@email.com{% elif app_language == 'zh' %}your@email.com{% else %}example@email.com{% endif %}">
                         </div>
                         
                         <div class="mb-3">
                             <label for="subject" class="form-label">
-                                {% if app_language == 'en' %}Subject{% else %}件名{% endif %}
+                                {% if app_language == 'en' %}Subject{% elif app_language == 'es' %}Asunto{% elif app_language == 'de' %}Betreff{% elif app_language == 'pt' %}Assunto{% elif app_language == 'zh' %}主题{% else %}件名{% endif %}
                             </label>
                             <select class="form-select" id="subject" name="subject" required>
-                                <option value="">{% if app_language == 'en' %}Select a subject{% else %}件名を選択してください{% endif %}</option>
-                                <option value="general">{% if app_language == 'en' %}General Inquiry{% else %}一般的なお問い合わせ{% endif %}</option>
-                                <option value="bug">{% if app_language == 'en' %}Bug Report{% else %}バグ報告{% endif %}</option>
-                                <option value="feature">{% if app_language == 'en' %}Feature Request{% else %}機能リクエスト{% endif %}</option>
-                                <option value="account">{% if app_language == 'en' %}Account Issue{% else %}アカウントに関する問題{% endif %}</option>
-                                <option value="billing">{% if app_language == 'en' %}Billing Question{% else %}お支払いに関するご質問{% endif %}</option>
-                                <option value="other">{% if app_language == 'en' %}Other{% else %}その他{% endif %}</option>
+                                <option value="">{% if app_language == 'en' %}Select a subject{% elif app_language == 'es' %}Seleccione un asunto{% elif app_language == 'de' %}Wählen Sie einen Betreff{% elif app_language == 'pt' %}Selecione um assunto{% elif app_language == 'zh' %}选择主题{% else %}件名を選択してください{% endif %}</option>
+                                <option value="general">{% if app_language == 'en' %}General Inquiry{% elif app_language == 'es' %}Consulta General{% elif app_language == 'de' %}Allgemeine Anfrage{% elif app_language == 'pt' %}Consulta Geral{% elif app_language == 'zh' %}一般咨询{% else %}一般的なお問い合わせ{% endif %}</option>
+                                <option value="bug">{% if app_language == 'en' %}Bug Report{% elif app_language == 'es' %}Reporte de Error{% elif app_language == 'de' %}Fehlerbericht{% elif app_language == 'pt' %}Relatório de Bug{% elif app_language == 'zh' %}错误报告{% else %}バグ報告{% endif %}</option>
+                                <option value="feature">{% if app_language == 'en' %}Feature Request{% elif app_language == 'es' %}Solicitud de Función{% elif app_language == 'de' %}Funktionsanfrage{% elif app_language == 'pt' %}Solicitação de Recurso{% elif app_language == 'zh' %}功能请求{% else %}機能リクエスト{% endif %}</option>
+                                <option value="account">{% if app_language == 'en' %}Account Issue{% elif app_language == 'es' %}Problema de Cuenta{% elif app_language == 'de' %}Kontoproblem{% elif app_language == 'pt' %}Problema de Conta{% elif app_language == 'zh' %}账户问题{% else %}アカウントに関する問題{% endif %}</option>
+                                <option value="billing">{% if app_language == 'en' %}Billing Question{% elif app_language == 'es' %}Pregunta de Facturación{% elif app_language == 'de' %}Abrechnungsfrage{% elif app_language == 'pt' %}Pergunta sobre Cobrança{% elif app_language == 'zh' %}账单问题{% else %}お支払いに関するご質問{% endif %}</option>
+                                <option value="other">{% if app_language == 'en' %}Other{% elif app_language == 'es' %}Otro{% elif app_language == 'de' %}Sonstiges{% elif app_language == 'pt' %}Outro{% elif app_language == 'zh' %}其他{% else %}その他{% endif %}</option>
                             </select>
                         </div>
                         
                         <div class="mb-4">
                             <label for="message" class="form-label">
-                                {% if app_language == 'en' %}Message{% else %}メッセージ{% endif %}
+                                {% if app_language == 'en' %}Message{% elif app_language == 'es' %}Mensaje{% elif app_language == 'de' %}Nachricht{% elif app_language == 'pt' %}Mensagem{% elif app_language == 'zh' %}留言{% else %}メッセージ{% endif %}
                             </label>
                             <textarea class="form-control" id="message" name="message" rows="5" required
-                                      placeholder="{% if app_language == 'en' %}Please describe your inquiry in detail...{% else %}お問い合わせ内容を詳しくご記入ください...{% endif %}"></textarea>
+                                      placeholder="{% if app_language == 'en' %}Please describe your inquiry in detail...{% elif app_language == 'es' %}Por favor describa su consulta en detalle...{% elif app_language == 'de' %}Bitte beschreiben Sie Ihre Anfrage im Detail...{% elif app_language == 'pt' %}Por favor descreva sua consulta em detalhes...{% elif app_language == 'zh' %}请详细描述您的问题...{% else %}お問い合わせ内容を詳しくご記入ください...{% endif %}"></textarea>
                         </div>
                         
                         <button type="submit" class="btn btn-primary w-100">
                             <i class="bi bi-send me-2"></i>
-                            {% if app_language == 'en' %}Send Message{% else %}送信する{% endif %}
+                            {% if app_language == 'en' %}Send Message{% elif app_language == 'es' %}Enviar Mensaje{% elif app_language == 'de' %}Nachricht senden{% elif app_language == 'pt' %}Enviar Mensagem{% elif app_language == 'zh' %}发送消息{% else %}送信する{% endif %}
                         </button>
                     </form>
                     
@@ -79,7 +91,7 @@
                     
                     <div class="text-center">
                         <p class="mb-2">
-                            {% if app_language == 'en' %}Or email us directly:{% else %}または、直接メールでお問い合わせ:{% endif %}
+                            {% if app_language == 'en' %}Or email us directly:{% elif app_language == 'es' %}O envíenos un correo directamente:{% elif app_language == 'de' %}Oder schreiben Sie uns direkt:{% elif app_language == 'pt' %}Ou envie-nos um e-mail diretamente:{% elif app_language == 'zh' %}或直接发送邮件：{% else %}または、直接メールでお問い合わせ:{% endif %}
                         </p>
                         <a href="mailto:hope47284@gmail.com" class="text-decoration-none">
                             <i class="bi bi-envelope me-2"></i>hope47284@gmail.com
@@ -89,7 +101,7 @@
                     <div class="mt-4 pt-4 border-top text-center">
                         <a href="{% url 'songs:home' %}" class="btn btn-outline-secondary">
                             <i class="bi bi-arrow-left me-2"></i>
-                            {% if app_language == 'en' %}Back to Home{% else %}ホームに戻る{% endif %}
+                            {% if app_language == 'en' %}Back to Home{% elif app_language == 'es' %}Volver al Inicio{% elif app_language == 'de' %}Zurück zur Startseite{% elif app_language == 'pt' %}Voltar ao Início{% elif app_language == 'zh' %}返回首页{% else %}ホームに戻る{% endif %}
                         </a>
                     </div>
                 </div>

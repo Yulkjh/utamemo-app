@@ -1,7 +1,7 @@
 {% extends 'base.html' %}
 {% load static %}
 
-{% block title %}{% if is_english %}Create Class{% elif is_chinese %}创建班级{% else %}クラスを作成{% endif %} - UTAMEMO{% endblock %}
+{% block title %}{% if is_english %}Create Class{% elif is_spanish %}Crear Clase{% elif is_german %}Klasse erstellen{% elif is_portuguese %}Criar Turma{% elif is_chinese %}创建班级{% else %}クラスを作成{% endif %} - UTAMEMO{% endblock %}
 
 {% block content %}
 <style>
@@ -149,40 +149,40 @@
 
 <div class="create-page">
     <div class="create-main-card">
-        <h1 class="create-title">{% if is_english %}Create Class{% elif is_chinese %}创建班级{% else %}クラスを作成{% endif %}</h1>
+        <h1 class="create-title">{% if is_english %}Create Class{% elif is_spanish %}Crear Clase{% elif is_german %}Klasse erstellen{% elif is_portuguese %}Criar Turma{% elif is_chinese %}创建班级{% else %}クラスを作成{% endif %}</h1>
         
         <form method="post" class="create-form">
             {% csrf_token %}
             
             <div class="form-group">
                 <label class="form-label" for="name">
-                    {% if is_english %}Class Name{% elif is_chinese %}班级名称{% else %}クラス名{% endif %}
+                    {% if is_english %}Class Name{% elif is_spanish %}Nombre de la Clase{% elif is_german %}Klassenname{% elif is_portuguese %}Nome da Turma{% elif is_chinese %}班级名称{% else %}クラス名{% endif %}
                     <span class="required">*</span>
                 </label>
                 <input type="text" 
                        class="form-input" 
                        id="name" 
                        name="name" 
-                       placeholder="{% if is_english %}e.g. English Class 3-A{% elif is_chinese %}例如：英语3-A班{% else %}例：英語3年A組{% endif %}"
+                       placeholder="{% if is_english %}e.g. English Class 3-A{% elif is_spanish %}ej. Clase de Inglés 3-A{% elif is_german %}z.B. Englischkurs 3-A{% elif is_portuguese %}ex. Turma de Inglês 3-A{% elif is_chinese %}例如：英语3-A班{% else %}例：英語3年A組{% endif %}"
                        maxlength="100"
                        required>
             </div>
             
             <div class="form-group">
                 <label class="form-label" for="description">
-                    {% if is_english %}Description{% elif is_chinese %}描述{% else %}説明{% endif %}
-                    <span class="optional">({% if is_english %}optional{% elif is_chinese %}可选{% else %}任意{% endif %})</span>
+                    {% if is_english %}Description{% elif is_spanish %}Descripción{% elif is_german %}Beschreibung{% elif is_portuguese %}Descrição{% elif is_chinese %}描述{% else %}説明{% endif %}
+                    <span class="optional">({% if is_english %}optional{% elif is_spanish %}opcional{% elif is_german %}optional{% elif is_portuguese %}opcional{% elif is_chinese %}可选{% else %}任意{% endif %})</span>
                 </label>
                 <textarea class="form-input" 
                           id="description" 
                           name="description" 
                           rows="3"
-                          placeholder="{% if is_english %}e.g. Songs for learning English vocabulary{% elif is_chinese %}例如：用于学习英语词汇的歌曲{% else %}例：英単語学習用の楽曲を共有するクラス{% endif %}"></textarea>
+                          placeholder="{% if is_english %}e.g. Songs for learning English vocabulary{% elif is_spanish %}ej. Canciones para aprender vocabulario en inglés{% elif is_german %}z.B. Lieder zum Englisch-Vokabeln lernen{% elif is_portuguese %}ex. Músicas para aprender vocabulário em inglês{% elif is_chinese %}例如：用于学习英语词汇的歌曲{% else %}例：英単語学習用の楽曲を共有するクラス{% endif %}"></textarea>
             </div>
             
             <button type="submit" class="create-btn">
                 <i class="bi bi-plus-lg"></i>
-                {% if is_english %}Create{% elif is_chinese %}创建{% else %}作成する{% endif %}
+                {% if is_english %}Create{% elif is_spanish %}Crear{% elif is_german %}Erstellen{% elif is_portuguese %}Criar{% elif is_chinese %}创建{% else %}作成する{% endif %}
             </button>
         </form>
     </div>
@@ -190,7 +190,7 @@
     <div class="back-link">
         <a href="{% url 'songs:classroom_list' %}">
             <i class="bi bi-arrow-left"></i>
-            {% if is_english %}Back to My Classes{% elif is_chinese %}返回我的班级{% else %}マイクラスに戻る{% endif %}
+            {% if is_english %}Back to My Classes{% elif is_spanish %}Volver a Mis Clases{% elif is_german %}Zurück zu Meinen Klassen{% elif is_portuguese %}Voltar às Minhas Turmas{% elif is_chinese %}返回我的班级{% else %}マイクラスに戻る{% endif %}
         </a>
     </div>
 </div>

@@ -1,7 +1,7 @@
 {% extends 'base.html' %}
 {% load i18n %}
 
-{% block title %}{% if app_language == 'en' %}Terms of Service{% else %}利用規約{% endif %} - UTAMEMO{% endblock %}
+{% block title %}{% if app_language == 'en' %}Terms of Service{% elif app_language == 'es' %}Términos de Servicio{% elif app_language == 'de' %}Nutzungsbedingungen{% elif app_language == 'pt' %}Termos de Serviço{% elif app_language == 'zh' %}服务条款{% else %}利用規約{% endif %} - UTAMEMO{% endblock %}
 
 {% block content %}
 <div class="container py-5">
@@ -10,112 +10,448 @@
             <div class="card shadow-sm">
                 <div class="card-body p-4 p-md-5">
                     {% if app_language == 'en' %}
-                    <h1 class="mb-4">Terms of Service</h1>
-                    <p class="text-muted mb-4">Last updated: January 19, 2026</p>
+                    <h1 class="mb-4">UTAMEMO Terms of Service</h1>
+                    <p class="text-muted mb-4">These Terms of Service (hereinafter "Terms") establish the conditions for using "UTAMEMO" (hereinafter "the Service"), a learning support service provided by HOPE (hereinafter "the Operator"). By using the Service, users are deemed to have agreed to these Terms.</p>
                     
-                    <h2 class="h5 mt-4">1. Acceptance of Terms</h2>
-                    <p>By using UTAMEMO (hereinafter "the Service"), you agree to these Terms of Service. If you do not agree, please do not use the Service.</p>
+                    <h2 class="h5 mt-4">Article 1 (Scope of Application)</h2>
+                    <p>These Terms apply to all relationships between the Operator and users regarding the use of the Service.</p>
+                    <p>The Operator may establish additional rules or guidelines regarding the Service. Such rules form part of these Terms.</p>
                     
-                    <h2 class="h5 mt-4">2. Service Description</h2>
-                    <p>UTAMEMO is a service that uses AI to generate songs from lyrics. Users can:</p>
+                    <h2 class="h5 mt-4">Article 2 (Definitions)</h2>
+                    <p>In these Terms, the following terms have the meanings specified below:</p>
                     <ul>
-                        <li>Input lyrics and generate songs</li>
-                        <li>Save and manage created songs</li>
-                        <li>Share songs publicly or keep them private</li>
+                        <li>"The Service" refers to "UTAMEMO" provided by the Operator, including the current web service and future application versions (including smartphones, tablets, etc.).</li>
+                        <li>"User" refers to any person who agrees to these Terms and uses the Service.</li>
+                        <li>"Content" refers to images, text, etc. uploaded by users on the Service, as well as lyrics, music, and all other information generated through the Service.</li>
                     </ul>
                     
-                    <h2 class="h5 mt-4">3. User Responsibilities</h2>
-                    <p>Users must not:</p>
+                    <h2 class="h5 mt-4">Article 3 (Service Description)</h2>
+                    <p>The Service uses AI technology to generate lyrics and music based on learning content, with the purpose of supporting learning.</p>
+                    <p>The Operator may change, add to, or terminate the content of the Service without prior notice.</p>
+                    <p>The Service is intended to support learning and does not guarantee learning outcomes or grade improvements.</p>
+                    
+                    <h2 class="h5 mt-4">Article 4 (Terms of Use)</h2>
+                    <p>The Service is intended for users from elementary school students to adults.</p>
+                    <p>When minors use the Service, they must obtain consent from a parent or legal guardian.</p>
+                    <p>When using the school plan, the school or teacher assumes management responsibility.</p>
+                    
+                    <h2 class="h5 mt-4">Article 5 (Account Management)</h2>
+                    <p>Users are responsible for managing their own usage information for the Service.</p>
+                    <p>The Operator is not liable for damages arising from inadequate management, user error, or use by third parties.</p>
+                    
+                    <h2 class="h5 mt-4">Article 6 (Prohibited Acts)</h2>
+                    <p>Users must not engage in the following activities when using the Service:</p>
                     <ul>
-                        <li>Use copyrighted lyrics without permission</li>
-                        <li>Generate content that is illegal, harmful, or violates others' rights</li>
-                        <li>Attempt to disrupt or hack the Service</li>
-                        <li>Use the Service for commercial purposes without permission</li>
+                        <li>Uploading materials or content that infringe copyrights or other rights</li>
+                        <li>Using the Service's generated content as trademarks, product names, service names, logos, etc.</li>
+                        <li>Acts that violate laws or public order and morals</li>
+                        <li>Acts that interfere with the operation of the Service</li>
+                        <li>Other acts deemed inappropriate by the Operator</li>
                     </ul>
                     
-                    <h2 class="h5 mt-4">4. Intellectual Property</h2>
-                    <p>Songs generated through the Service are created using AI technology. Users retain rights to their original lyrics, but AI-generated music is subject to the following:</p>
+                    <h2 class="h5 mt-4">Article 7 (Content and Intellectual Property Rights)</h2>
+                    <p>All copyrights (including the rights under Articles 27 and 28 of the Copyright Act) to lyrics, music, and all other generated content through the Service belong to the Operator.</p>
+                    <p>Users may use the generated content non-exclusively for personal use or learning purposes within schools.</p>
+                    <p>Users may not commercially use, redistribute, secondarily distribute, or use as trademarks the generated content without prior permission from the Operator.</p>
+                    
+                    <h2 class="h5 mt-4">Article 8 (Fees and Plans)</h2>
+                    <p>The Service offers free and paid plans.</p>
+                    <p>Details of paid plans, including content, fees, and payment methods, are specified separately on the Service.</p>
+                    <p>Fees for paid plans are, in principle, non-refundable regardless of the reason.</p>
+                    <p>For school plans, the contracting party is the school or teacher, and refunds are not provided to individual students.</p>
+                    
+                    <h2 class="h5 mt-4">Article 9 (Service Suspension/Interruption)</h2>
+                    <p>The Operator may suspend or interrupt all or part of the Service without prior notice in the following cases:</p>
                     <ul>
-                        <li>Users may use generated songs for personal, non-commercial purposes</li>
-                        <li>Commercial use may require additional licensing</li>
+                        <li>When performing system maintenance or inspection</li>
+                        <li>When force majeure such as natural disasters or communication failures occurs</li>
+                        <li>When the Operator deems it necessary for other reasons</li>
                     </ul>
                     
-                    <h2 class="h5 mt-4">5. Account Management</h2>
-                    <p>Users are responsible for maintaining the security of their accounts. We are not liable for any loss resulting from unauthorized access to your account.</p>
+                    <h2 class="h5 mt-4">Article 10 (Disclaimer)</h2>
+                    <p>The Operator does not guarantee the accuracy, completeness, or usefulness of the Service content.</p>
+                    <p>The Operator assumes no responsibility for any disputes between users or with third parties arising from the use of the Service.</p>
                     
-                    <h2 class="h5 mt-4">6. Service Changes and Termination</h2>
-                    <p>We reserve the right to modify, suspend, or terminate the Service at any time without notice.</p>
+                    <h2 class="h5 mt-4">Article 11 (Changes to Terms)</h2>
+                    <p>The Operator may modify these Terms when deemed necessary. Modified Terms become effective upon display on the Service.</p>
                     
-                    <h2 class="h5 mt-4">7. Disclaimer</h2>
-                    <p>The Service is provided "as is" without any warranties. We are not responsible for:</p>
+                    <h2 class="h5 mt-4">Article 12 (Governing Law and Jurisdiction)</h2>
+                    <p>These Terms are governed by Japanese law.</p>
+                    <p>Any disputes arising in connection with the Service shall be subject to the exclusive jurisdiction of the court having jurisdiction over the Operator's location.</p>
+                    
+                    <h2 class="h5 mt-4">Article 13 (Contact)</h2>
+                    <p>Inquiries regarding the Service shall be made through the method separately designated by the Operator via our <a href="{% url 'contact' %}">Contact Page</a>.</p>
+                    
+                    {% elif app_language == 'es' %}
+                    <h1 class="mb-4">Términos de Servicio de UTAMEMO</h1>
+                    <p class="text-muted mb-4">Estos Términos de Servicio (en adelante "Términos") establecen las condiciones para el uso de "UTAMEMO" (en adelante "el Servicio"), un servicio de apoyo al aprendizaje proporcionado por HOPE (en adelante "el Operador"). Al usar el Servicio, se considera que los usuarios han aceptado estos Términos.</p>
+                    
+                    <h2 class="h5 mt-4">Artículo 1 (Ámbito de Aplicación)</h2>
+                    <p>Estos Términos se aplican a todas las relaciones entre el Operador y los usuarios respecto al uso del Servicio.</p>
+                    <p>El Operador puede establecer reglas o directrices adicionales sobre el Servicio. Dichas reglas forman parte de estos Términos.</p>
+                    
+                    <h2 class="h5 mt-4">Artículo 2 (Definiciones)</h2>
+                    <p>En estos Términos, los siguientes términos tienen los significados especificados a continuación:</p>
                     <ul>
-                        <li>Service interruptions or errors</li>
-                        <li>Loss of data</li>
-                        <li>Any damages resulting from use of the Service</li>
+                        <li>"El Servicio" se refiere a "UTAMEMO" proporcionado por el Operador, incluyendo el servicio web actual y futuras versiones de aplicaciones (incluyendo smartphones, tablets, etc.).</li>
+                        <li>"Usuario" se refiere a cualquier persona que acepta estos Términos y utiliza el Servicio.</li>
+                        <li>"Contenido" se refiere a imágenes, texto, etc. subidos por usuarios en el Servicio, así como letras, música y toda otra información generada a través del Servicio.</li>
                     </ul>
                     
-                    <h2 class="h5 mt-4">8. Changes to Terms</h2>
-                    <p>We may update these Terms at any time. Continued use of the Service after changes constitutes acceptance of the new Terms.</p>
+                    <h2 class="h5 mt-4">Artículo 3 (Descripción del Servicio)</h2>
+                    <p>El Servicio utiliza tecnología de IA para generar letras y música basadas en contenido de aprendizaje, con el propósito de apoyar el aprendizaje.</p>
+                    <p>El Operador puede cambiar, añadir o terminar el contenido del Servicio sin previo aviso.</p>
+                    <p>El Servicio está destinado a apoyar el aprendizaje y no garantiza resultados de aprendizaje o mejoras en las calificaciones.</p>
                     
-                    <h2 class="h5 mt-4">9. Contact</h2>
-                    <p>For questions about these Terms, please contact us through our <a href="{% url 'contact' %}">Contact Page</a>.</p>
+                    <h2 class="h5 mt-4">Artículo 4 (Condiciones de Uso)</h2>
+                    <p>El Servicio está destinado a usuarios desde estudiantes de primaria hasta adultos.</p>
+                    <p>Cuando menores utilicen el Servicio, deben obtener el consentimiento de un padre o tutor legal.</p>
+                    <p>Al usar el plan escolar, la escuela o el profesor asume la responsabilidad de gestión.</p>
+                    
+                    <h2 class="h5 mt-4">Artículo 5 (Gestión de Cuenta)</h2>
+                    <p>Los usuarios son responsables de gestionar su propia información de uso del Servicio.</p>
+                    <p>El Operador no es responsable de daños derivados de gestión inadecuada, error del usuario o uso por terceros.</p>
+                    
+                    <h2 class="h5 mt-4">Artículo 6 (Actos Prohibidos)</h2>
+                    <p>Los usuarios no deben participar en las siguientes actividades al usar el Servicio:</p>
+                    <ul>
+                        <li>Subir materiales o contenido que infrinjan derechos de autor u otros derechos</li>
+                        <li>Usar el contenido generado del Servicio como marcas, nombres de productos, nombres de servicios, logotipos, etc.</li>
+                        <li>Actos que violen leyes o el orden público y la moral</li>
+                        <li>Actos que interfieran con la operación del Servicio</li>
+                        <li>Otros actos considerados inapropiados por el Operador</li>
+                    </ul>
+                    
+                    <h2 class="h5 mt-4">Artículo 7 (Contenido y Derechos de Propiedad Intelectual)</h2>
+                    <p>Todos los derechos de autor (incluyendo los derechos bajo los Artículos 27 y 28 de la Ley de Derechos de Autor) sobre letras, música y todo otro contenido generado a través del Servicio pertenecen al Operador.</p>
+                    <p>Los usuarios pueden usar el contenido generado de forma no exclusiva para uso personal o fines de aprendizaje dentro de las escuelas.</p>
+                    <p>Los usuarios no pueden usar comercialmente, redistribuir, distribuir secundariamente o usar como marcas el contenido generado sin permiso previo del Operador.</p>
+                    
+                    <h2 class="h5 mt-4">Artículo 8 (Tarifas y Planes)</h2>
+                    <p>El Servicio ofrece planes gratuitos y de pago.</p>
+                    <p>Los detalles de los planes de pago, incluyendo contenido, tarifas y métodos de pago, se especifican por separado en el Servicio.</p>
+                    <p>Las tarifas de los planes de pago, en principio, no son reembolsables independientemente del motivo.</p>
+                    <p>Para planes escolares, la parte contratante es la escuela o el profesor, y no se proporcionan reembolsos a estudiantes individuales.</p>
+                    
+                    <h2 class="h5 mt-4">Artículo 9 (Suspensión/Interrupción del Servicio)</h2>
+                    <p>El Operador puede suspender o interrumpir todo o parte del Servicio sin previo aviso en los siguientes casos:</p>
+                    <ul>
+                        <li>Cuando se realice mantenimiento o inspección del sistema</li>
+                        <li>Cuando ocurra fuerza mayor como desastres naturales o fallos de comunicación</li>
+                        <li>Cuando el Operador lo considere necesario por otras razones</li>
+                    </ul>
+                    
+                    <h2 class="h5 mt-4">Artículo 10 (Exención de Responsabilidad)</h2>
+                    <p>El Operador no garantiza la exactitud, integridad o utilidad del contenido del Servicio.</p>
+                    <p>El Operador no asume ninguna responsabilidad por disputas entre usuarios o con terceros derivadas del uso del Servicio.</p>
+                    
+                    <h2 class="h5 mt-4">Artículo 11 (Cambios en los Términos)</h2>
+                    <p>El Operador puede modificar estos Términos cuando lo considere necesario. Los Términos modificados entran en vigor al mostrarse en el Servicio.</p>
+                    
+                    <h2 class="h5 mt-4">Artículo 12 (Ley Aplicable y Jurisdicción)</h2>
+                    <p>Estos Términos se rigen por la ley japonesa.</p>
+                    <p>Cualquier disputa que surja en relación con el Servicio estará sujeta a la jurisdicción exclusiva del tribunal que tenga jurisdicción sobre la ubicación del Operador.</p>
+                    
+                    <h2 class="h5 mt-4">Artículo 13 (Contacto)</h2>
+                    <p>Las consultas sobre el Servicio se realizarán a través del método designado por separado por el Operador a través de nuestra <a href="{% url 'contact' %}">Página de Contacto</a>.</p>
+                    
+                    {% elif app_language == 'de' %}
+                    <h1 class="mb-4">UTAMEMO Nutzungsbedingungen</h1>
+                    <p class="text-muted mb-4">Diese Nutzungsbedingungen (nachfolgend "Bedingungen") legen die Bedingungen für die Nutzung von "UTAMEMO" (nachfolgend "der Service") fest, einem von HOPE (nachfolgend "der Betreiber") bereitgestellten Lernunterstützungsdienst. Durch die Nutzung des Services gelten Nutzer als mit diesen Bedingungen einverstanden.</p>
+                    
+                    <h2 class="h5 mt-4">Artikel 1 (Geltungsbereich)</h2>
+                    <p>Diese Bedingungen gelten für alle Beziehungen zwischen dem Betreiber und Nutzern bezüglich der Nutzung des Services.</p>
+                    <p>Der Betreiber kann zusätzliche Regeln oder Richtlinien zum Service aufstellen. Solche Regeln sind Teil dieser Bedingungen.</p>
+                    
+                    <h2 class="h5 mt-4">Artikel 2 (Definitionen)</h2>
+                    <p>In diesen Bedingungen haben folgende Begriffe die unten angegebenen Bedeutungen:</p>
+                    <ul>
+                        <li>"Der Service" bezeichnet "UTAMEMO", bereitgestellt vom Betreiber, einschließlich des aktuellen Webdienstes und zukünftiger Anwendungsversionen (einschließlich Smartphones, Tablets usw.).</li>
+                        <li>"Nutzer" bezeichnet jede Person, die diesen Bedingungen zustimmt und den Service nutzt.</li>
+                        <li>"Inhalte" bezeichnet Bilder, Text usw., die von Nutzern auf dem Service hochgeladen werden, sowie Texte, Musik und alle anderen durch den Service generierten Informationen.</li>
+                    </ul>
+                    
+                    <h2 class="h5 mt-4">Artikel 3 (Servicebeschreibung)</h2>
+                    <p>Der Service nutzt KI-Technologie zur Generierung von Texten und Musik basierend auf Lerninhalten mit dem Zweck, das Lernen zu unterstützen.</p>
+                    <p>Der Betreiber kann den Inhalt des Services ohne vorherige Ankündigung ändern, ergänzen oder beenden.</p>
+                    <p>Der Service dient der Lernunterstützung und garantiert keine Lernergebnisse oder Notenverbesserungen.</p>
+                    
+                    <h2 class="h5 mt-4">Artikel 4 (Nutzungsbedingungen)</h2>
+                    <p>Der Service richtet sich an Nutzer von Grundschülern bis Erwachsenen.</p>
+                    <p>Wenn Minderjährige den Service nutzen, müssen sie die Zustimmung eines Elternteils oder gesetzlichen Vertreters einholen.</p>
+                    <p>Bei Nutzung des Schulplans übernimmt die Schule oder der Lehrer die Verwaltungsverantwortung.</p>
+                    
+                    <h2 class="h5 mt-4">Artikel 5 (Kontoverwaltung)</h2>
+                    <p>Nutzer sind für die Verwaltung ihrer eigenen Nutzungsinformationen für den Service verantwortlich.</p>
+                    <p>Der Betreiber haftet nicht für Schäden, die aus unzureichender Verwaltung, Benutzerfehlern oder der Nutzung durch Dritte entstehen.</p>
+                    
+                    <h2 class="h5 mt-4">Artikel 6 (Verbotene Handlungen)</h2>
+                    <p>Nutzer dürfen bei der Nutzung des Services folgende Aktivitäten nicht durchführen:</p>
+                    <ul>
+                        <li>Hochladen von Materialien oder Inhalten, die Urheberrechte oder andere Rechte verletzen</li>
+                        <li>Verwendung der generierten Inhalte des Services als Marken, Produktnamen, Dienstnamen, Logos usw.</li>
+                        <li>Handlungen, die gegen Gesetze oder die öffentliche Ordnung und Moral verstoßen</li>
+                        <li>Handlungen, die den Betrieb des Services beeinträchtigen</li>
+                        <li>Andere vom Betreiber als unangemessen erachtete Handlungen</li>
+                    </ul>
+                    
+                    <h2 class="h5 mt-4">Artikel 7 (Inhalte und geistige Eigentumsrechte)</h2>
+                    <p>Alle Urheberrechte (einschließlich der Rechte nach Artikeln 27 und 28 des Urheberrechtsgesetzes) an Texten, Musik und allen anderen durch den Service generierten Inhalten gehören dem Betreiber.</p>
+                    <p>Nutzer dürfen die generierten Inhalte nicht-exklusiv für persönliche Nutzung oder Lernzwecke innerhalb von Schulen verwenden.</p>
+                    <p>Nutzer dürfen die generierten Inhalte ohne vorherige Genehmigung des Betreibers nicht kommerziell nutzen, weiterverteilen, sekundär verteilen oder als Marken verwenden.</p>
+                    
+                    <h2 class="h5 mt-4">Artikel 8 (Gebühren und Pläne)</h2>
+                    <p>Der Service bietet kostenlose und kostenpflichtige Pläne.</p>
+                    <p>Details zu kostenpflichtigen Plänen, einschließlich Inhalt, Gebühren und Zahlungsmethoden, werden separat auf dem Service angegeben.</p>
+                    <p>Gebühren für kostenpflichtige Pläne sind grundsätzlich unabhängig vom Grund nicht erstattungsfähig.</p>
+                    <p>Bei Schulplänen ist die Vertragspartei die Schule oder der Lehrer, und Rückerstattungen werden nicht an einzelne Schüler gewährt.</p>
+                    
+                    <h2 class="h5 mt-4">Artikel 9 (Serviceaussetzung/-unterbrechung)</h2>
+                    <p>Der Betreiber kann den gesamten oder einen Teil des Services ohne vorherige Ankündigung in folgenden Fällen aussetzen oder unterbrechen:</p>
+                    <ul>
+                        <li>Bei Systemwartung oder -inspektion</li>
+                        <li>Bei höherer Gewalt wie Naturkatastrophen oder Kommunikationsausfällen</li>
+                        <li>Wenn der Betreiber dies aus anderen Gründen für notwendig erachtet</li>
+                    </ul>
+                    
+                    <h2 class="h5 mt-4">Artikel 10 (Haftungsausschluss)</h2>
+                    <p>Der Betreiber garantiert nicht die Richtigkeit, Vollständigkeit oder Nützlichkeit des Service-Inhalts.</p>
+                    <p>Der Betreiber übernimmt keine Verantwortung für Streitigkeiten zwischen Nutzern oder mit Dritten, die aus der Nutzung des Services entstehen.</p>
+                    
+                    <h2 class="h5 mt-4">Artikel 11 (Änderungen der Bedingungen)</h2>
+                    <p>Der Betreiber kann diese Bedingungen ändern, wenn er dies für notwendig erachtet. Geänderte Bedingungen treten mit der Anzeige auf dem Service in Kraft.</p>
+                    
+                    <h2 class="h5 mt-4">Artikel 12 (Anwendbares Recht und Gerichtsstand)</h2>
+                    <p>Diese Bedingungen unterliegen japanischem Recht.</p>
+                    <p>Alle Streitigkeiten im Zusammenhang mit dem Service unterliegen der ausschließlichen Zuständigkeit des Gerichts am Standort des Betreibers.</p>
+                    
+                    <h2 class="h5 mt-4">Artikel 13 (Kontakt)</h2>
+                    <p>Anfragen zum Service sind über die vom Betreiber separat angegebene Methode über unsere <a href="{% url 'contact' %}">Kontaktseite</a> zu stellen.</p>
+                    
+                    {% elif app_language == 'pt' %}
+                    <h1 class="mb-4">Termos de Serviço do UTAMEMO</h1>
+                    <p class="text-muted mb-4">Estes Termos de Serviço (doravante "Termos") estabelecem as condições para o uso do "UTAMEMO" (doravante "o Serviço"), um serviço de apoio à aprendizagem fornecido pela HOPE (doravante "o Operador"). Ao usar o Serviço, considera-se que os usuários concordaram com estes Termos.</p>
+                    
+                    <h2 class="h5 mt-4">Artigo 1 (Âmbito de Aplicação)</h2>
+                    <p>Estes Termos aplicam-se a todas as relações entre o Operador e os usuários relativamente ao uso do Serviço.</p>
+                    <p>O Operador pode estabelecer regras ou diretrizes adicionais sobre o Serviço. Tais regras fazem parte destes Termos.</p>
+                    
+                    <h2 class="h5 mt-4">Artigo 2 (Definições)</h2>
+                    <p>Nestes Termos, os seguintes termos têm os significados especificados abaixo:</p>
+                    <ul>
+                        <li>"O Serviço" refere-se ao "UTAMEMO" fornecido pelo Operador, incluindo o serviço web atual e futuras versões de aplicativos (incluindo smartphones, tablets, etc.).</li>
+                        <li>"Usuário" refere-se a qualquer pessoa que concorda com estes Termos e usa o Serviço.</li>
+                        <li>"Conteúdo" refere-se a imagens, texto, etc. carregados por usuários no Serviço, bem como letras, músicas e todas as outras informações geradas através do Serviço.</li>
+                    </ul>
+                    
+                    <h2 class="h5 mt-4">Artigo 3 (Descrição do Serviço)</h2>
+                    <p>O Serviço utiliza tecnologia de IA para gerar letras e músicas com base em conteúdo de aprendizagem, com o objetivo de apoiar a aprendizagem.</p>
+                    <p>O Operador pode alterar, adicionar ou encerrar o conteúdo do Serviço sem aviso prévio.</p>
+                    <p>O Serviço destina-se a apoiar a aprendizagem e não garante resultados de aprendizagem ou melhoria de notas.</p>
+                    
+                    <h2 class="h5 mt-4">Artigo 4 (Condições de Uso)</h2>
+                    <p>O Serviço destina-se a usuários desde estudantes do ensino fundamental até adultos.</p>
+                    <p>Quando menores usarem o Serviço, devem obter o consentimento de um pai ou responsável legal.</p>
+                    <p>Ao usar o plano escolar, a escola ou o professor assume a responsabilidade de gestão.</p>
+                    
+                    <h2 class="h5 mt-4">Artigo 5 (Gestão de Conta)</h2>
+                    <p>Os usuários são responsáveis por gerenciar suas próprias informações de uso do Serviço.</p>
+                    <p>O Operador não é responsável por danos decorrentes de gestão inadequada, erro do usuário ou uso por terceiros.</p>
+                    
+                    <h2 class="h5 mt-4">Artigo 6 (Atos Proibidos)</h2>
+                    <p>Os usuários não devem realizar as seguintes atividades ao usar o Serviço:</p>
+                    <ul>
+                        <li>Carregar materiais ou conteúdo que infrinjam direitos autorais ou outros direitos</li>
+                        <li>Usar o conteúdo gerado do Serviço como marcas registradas, nomes de produtos, nomes de serviços, logotipos, etc.</li>
+                        <li>Atos que violem leis ou a ordem pública e a moral</li>
+                        <li>Atos que interfiram na operação do Serviço</li>
+                        <li>Outros atos considerados inadequados pelo Operador</li>
+                    </ul>
+                    
+                    <h2 class="h5 mt-4">Artigo 7 (Conteúdo e Direitos de Propriedade Intelectual)</h2>
+                    <p>Todos os direitos autorais (incluindo os direitos sob os Artigos 27 e 28 da Lei de Direitos Autorais) sobre letras, músicas e todo outro conteúdo gerado através do Serviço pertencem ao Operador.</p>
+                    <p>Os usuários podem usar o conteúdo gerado de forma não exclusiva para uso pessoal ou fins de aprendizagem dentro das escolas.</p>
+                    <p>Os usuários não podem usar comercialmente, redistribuir, distribuir secundariamente ou usar como marcas registradas o conteúdo gerado sem permissão prévia do Operador.</p>
+                    
+                    <h2 class="h5 mt-4">Artigo 8 (Taxas e Planos)</h2>
+                    <p>O Serviço oferece planos gratuitos e pagos.</p>
+                    <p>Os detalhes dos planos pagos, incluindo conteúdo, taxas e métodos de pagamento, são especificados separadamente no Serviço.</p>
+                    <p>As taxas dos planos pagos, em princípio, não são reembolsáveis independentemente do motivo.</p>
+                    <p>Para planos escolares, a parte contratante é a escola ou o professor, e reembolsos não são fornecidos a estudantes individuais.</p>
+                    
+                    <h2 class="h5 mt-4">Artigo 9 (Suspensão/Interrupção do Serviço)</h2>
+                    <p>O Operador pode suspender ou interromper todo ou parte do Serviço sem aviso prévio nos seguintes casos:</p>
+                    <ul>
+                        <li>Quando realizar manutenção ou inspeção do sistema</li>
+                        <li>Quando ocorrer força maior como desastres naturais ou falhas de comunicação</li>
+                        <li>Quando o Operador considerar necessário por outras razões</li>
+                    </ul>
+                    
+                    <h2 class="h5 mt-4">Artigo 10 (Isenção de Responsabilidade)</h2>
+                    <p>O Operador não garante a precisão, integridade ou utilidade do conteúdo do Serviço.</p>
+                    <p>O Operador não assume nenhuma responsabilidade por disputas entre usuários ou com terceiros decorrentes do uso do Serviço.</p>
+                    
+                    <h2 class="h5 mt-4">Artigo 11 (Alterações aos Termos)</h2>
+                    <p>O Operador pode modificar estes Termos quando considerar necessário. Os Termos modificados entram em vigor após serem exibidos no Serviço.</p>
+                    
+                    <h2 class="h5 mt-4">Artigo 12 (Lei Aplicável e Jurisdição)</h2>
+                    <p>Estes Termos são regidos pela lei japonesa.</p>
+                    <p>Quaisquer disputas que surjam em conexão com o Serviço estarão sujeitas à jurisdição exclusiva do tribunal com jurisdição sobre a localização do Operador.</p>
+                    
+                    <h2 class="h5 mt-4">Artigo 13 (Contato)</h2>
+                    <p>Consultas sobre o Serviço devem ser feitas através do método designado separadamente pelo Operador através da nossa <a href="{% url 'contact' %}">Página de Contato</a>.</p>
+                    
+                    {% elif app_language == 'zh' %}
+                    <h1 class="mb-4">UTAMEMO 服务条款</h1>
+                    <p class="text-muted mb-4">本服务条款（以下简称"条款"）规定了使用HOPE（以下简称"运营方"）提供的学习支援服务"UTAMEMO"（以下简称"本服务"）的条件。使用本服务即视为用户已同意本条款。</p>
+                    
+                    <h2 class="h5 mt-4">第1条（适用范围）</h2>
+                    <p>本条款适用于运营方与用户之间关于本服务使用的所有关系。</p>
+                    <p>运营方可能会制定关于本服务的附加规则或指南。此类规则构成本条款的一部分。</p>
+                    
+                    <h2 class="h5 mt-4">第2条（定义）</h2>
+                    <p>在本条款中，以下术语具有以下含义：</p>
+                    <ul>
+                        <li>"本服务"指运营方提供的"UTAMEMO"，包括当前的网络服务和未来的应用程序版本（包括智能手机、平板电脑等）。</li>
+                        <li>"用户"指同意本条款并使用本服务的任何人。</li>
+                        <li>"内容"指用户在本服务上上传的图像、文本等，以及通过本服务生成的歌词、音乐和所有其他信息。</li>
+                    </ul>
+                    
+                    <h2 class="h5 mt-4">第3条（服务说明）</h2>
+                    <p>本服务使用AI技术根据学习内容生成歌词和音乐，旨在支持学习。</p>
+                    <p>运营方可能会在不事先通知的情况下更改、添加或终止服务内容。</p>
+                    <p>本服务旨在支持学习，不保证学习成果或成绩提高。</p>
+                    
+                    <h2 class="h5 mt-4">第4条（使用条件）</h2>
+                    <p>本服务面向小学生至成人用户。</p>
+                    <p>未成年人使用本服务时，必须获得父母或法定监护人的同意。</p>
+                    <p>使用学校计划时，学校或教师承担管理责任。</p>
+                    
+                    <h2 class="h5 mt-4">第5条（账户管理）</h2>
+                    <p>用户有责任管理自己的服务使用信息。</p>
+                    <p>运营方对因管理不善、用户错误或第三方使用造成的损害不承担责任。</p>
+                    
+                    <h2 class="h5 mt-4">第6条（禁止行为）</h2>
+                    <p>用户在使用本服务时不得从事以下活动：</p>
+                    <ul>
+                        <li>上传侵犯版权或其他权利的材料或内容</li>
+                        <li>将服务生成的内容用作商标、产品名称、服务名称、标志等</li>
+                        <li>违反法律或公共秩序和道德的行为</li>
+                        <li>干扰服务运营的行为</li>
+                        <li>运营方认为不适当的其他行为</li>
+                    </ul>
+                    
+                    <h2 class="h5 mt-4">第7条（内容和知识产权）</h2>
+                    <p>通过本服务生成的歌词、音乐和所有其他内容的所有版权（包括著作权法第27条和第28条规定的权利）均属于运营方。</p>
+                    <p>用户可以非独占方式将生成的内容用于个人使用或学校内的学习目的。</p>
+                    <p>未经运营方事先许可，用户不得将生成的内容用于商业用途、再分发、二次分发或用作商标。</p>
+                    
+                    <h2 class="h5 mt-4">第8条（费用和计划）</h2>
+                    <p>本服务提供免费和付费计划。</p>
+                    <p>付费计划的详细信息，包括内容、费用和付款方式，在服务上另行规定。</p>
+                    <p>付费计划的费用原则上不论任何原因均不予退还。</p>
+                    <p>对于学校计划，合同方为学校或教师，不向个别学生退款。</p>
+                    
+                    <h2 class="h5 mt-4">第9条（服务暂停/中断）</h2>
+                    <p>在以下情况下，运营方可能会在不事先通知的情况下暂停或中断全部或部分服务：</p>
+                    <ul>
+                        <li>进行系统维护或检查时</li>
+                        <li>发生自然灾害或通信故障等不可抗力时</li>
+                        <li>运营方因其他原因认为有必要时</li>
+                    </ul>
+                    
+                    <h2 class="h5 mt-4">第10条（免责声明）</h2>
+                    <p>运营方不保证服务内容的准确性、完整性或有用性。</p>
+                    <p>运营方对因使用本服务而产生的用户之间或与第三方之间的任何纠纷不承担责任。</p>
+                    
+                    <h2 class="h5 mt-4">第11条（条款变更）</h2>
+                    <p>运营方可在认为必要时修改本条款。修改后的条款在服务上显示后生效。</p>
+                    
+                    <h2 class="h5 mt-4">第12条（准据法和管辖权）</h2>
+                    <p>本条款受日本法律管辖。</p>
+                    <p>与本服务相关的任何争议应由运营方所在地有管辖权的法院专属管辖。</p>
+                    
+                    <h2 class="h5 mt-4">第13条（联系方式）</h2>
+                    <p>有关本服务的咨询应通过运营方另行指定的方式通过我们的<a href="{% url 'contact' %}">联系页面</a>进行。</p>
                     
                     {% else %}
-                    <h1 class="mb-4">利用規約</h1>
-                    <p class="text-muted mb-4">最終更新日：2026年1月19日</p>
+                    <h1 class="mb-4">UTAMEMO 利用規約</h1>
+                    <p class="text-muted mb-4">本利用規約（以下「本規約」といいます。）は、HOPE（以下「運営者」といいます。）が提供する学習支援サービス「UTAMEMO」（以下「本サービス」といいます。）の利用条件を定めるものです。ユーザーは、本サービスを利用することにより、本規約に同意したものとみなされます。</p>
                     
-                    <h2 class="h5 mt-4">第1条（規約の同意）</h2>
-                    <p>UTAMEMO（以下「本サービス」）をご利用いただくことで、本利用規約に同意したものとみなします。同意いただけない場合は、本サービスのご利用をお控えください。</p>
+                    <h2 class="h5 mt-4">第1条（適用）</h2>
+                    <p>本規約は、本サービスの利用に関する運営者とユーザーとの間の一切の関係に適用されます。</p>
+                    <p>運営者は、本規約のほか、本サービスに関する個別規定やガイドライン等を定めることがあります。これらは本規約の一部を構成するものとします。</p>
                     
-                    <h2 class="h5 mt-4">第2条（サービス内容）</h2>
-                    <p>本サービスは、AIを活用して歌詞から楽曲を生成するサービスです。ユーザーは以下のことができます：</p>
+                    <h2 class="h5 mt-4">第2条（用語の定義）</h2>
+                    <p>本規約において、以下の用語は次の意味を有します。</p>
                     <ul>
-                        <li>歌詞を入力して楽曲を生成する</li>
-                        <li>作成した楽曲を保存・管理する</li>
-                        <li>楽曲を公開または非公開に設定する</li>
+                        <li>「本サービス」とは、運営者が提供する「UTAMEMO」をいい、現在提供しているWebサービスに加え、将来提供されるアプリケーション版（スマートフォン、タブレット等を含みます）を含みます。</li>
+                        <li>「ユーザー」とは、本規約に同意のうえ、本サービスを利用するすべての者をいいます。</li>
+                        <li>「コンテンツ」とは、ユーザーが本サービス上でアップロードする画像・テキスト等および本サービスを通じて生成される歌詞、楽曲その他一切の情報をいいます。</li>
                     </ul>
                     
-                    <h2 class="h5 mt-4">第3条（禁止事項）</h2>
-                    <p>ユーザーは以下の行為を行ってはなりません：</p>
-                    <ul>
-                        <li>著作権で保護された歌詞を無断で使用すること</li>
-                        <li>違法、有害、または他者の権利を侵害するコンテンツを生成すること</li>
-                        <li>本サービスの妨害やハッキングを試みること</li>
-                        <li>許可なく商用目的で本サービスを利用すること</li>
-                    </ul>
+                    <h2 class="h5 mt-4">第3条（サービス内容）</h2>
+                    <p>本サービスは、学習内容をもとにAI技術を用いて歌詞や楽曲等を生成し、学習を補助することを目的としたサービスです。</p>
+                    <p>運営者は、本サービスの内容を予告なく変更、追加、または終了することがあります。</p>
+                    <p>本サービスは学習を補助するものであり、学習成果や成績向上等を保証するものではありません。</p>
                     
-                    <h2 class="h5 mt-4">第4条（知的財産権）</h2>
-                    <p>本サービスを通じて生成された楽曲はAI技術を使用して作成されます。ユーザーは元の歌詞に対する権利を保持しますが、AI生成の音楽には以下が適用されます：</p>
-                    <ul>
-                        <li>生成された楽曲は個人的な非商用目的で使用できます</li>
-                        <li>商用利用には追加のライセンスが必要な場合があります</li>
-                    </ul>
+                    <h2 class="h5 mt-4">第4条（利用条件）</h2>
+                    <p>本サービスは、小学生から成人までを対象としています。</p>
+                    <p>未成年者が本サービスを利用する場合、必ず保護者または法定代理人の同意を得たうえで利用するものとします。</p>
+                    <p>学校向けプランを利用する場合、当該学校または教員が管理責任を負うものとします。</p>
                     
                     <h2 class="h5 mt-4">第5条（アカウント管理）</h2>
-                    <p>ユーザーは自身のアカウントのセキュリティを維持する責任があります。不正アクセスによる損害について、当方は責任を負いません。</p>
+                    <p>ユーザーは、自己の責任において本サービスの利用情報を管理するものとします。</p>
+                    <p>ユーザーの管理不十分、使用上の過誤、第三者の使用等により生じた損害について、運営者は責任を負いません。</p>
                     
-                    <h2 class="h5 mt-4">第6条（サービスの変更・終了）</h2>
-                    <p>当方は、予告なく本サービスを変更、一時停止、または終了する権利を有します。</p>
-                    
-                    <h2 class="h5 mt-4">第7条（免責事項）</h2>
-                    <p>本サービスは「現状のまま」提供され、いかなる保証もありません。以下について当方は責任を負いません：</p>
+                    <h2 class="h5 mt-4">第6条（禁止事項）</h2>
+                    <p>ユーザーは、本サービスの利用にあたり、以下の行為をしてはなりません。</p>
                     <ul>
-                        <li>サービスの中断やエラー</li>
-                        <li>データの損失</li>
-                        <li>本サービスの利用に起因する損害</li>
+                        <li>著作権その他の権利を侵害する教材・コンテンツをアップロードする行為</li>
+                        <li>本サービスの生成物を商標、商品名、サービス名、ロゴ等として使用する行為</li>
+                        <li>法令または公序良俗に反する行為</li>
+                        <li>本サービスの運営を妨害する行為</li>
+                        <li>その他、運営者が不適切と判断する行為</li>
                     </ul>
                     
-                    <h2 class="h5 mt-4">第8条（規約の変更）</h2>
-                    <p>当方は、本規約をいつでも更新することができます。変更後も本サービスを継続して利用することで、新しい規約に同意したものとみなします。</p>
+                    <h2 class="h5 mt-4">第7条（コンテンツおよび知的財産権）</h2>
+                    <p>本サービスを通じて生成される歌詞、楽曲その他一切の生成物に関する著作権（著作権法第27条および第28条の権利を含みます）は、すべて運営者に帰属します。</p>
+                    <p>ユーザーは、本サービスの生成物を、個人利用または学校内の学習目的に限り、非独占的に利用することができます。</p>
+                    <p>ユーザーは、運営者の事前の許可なく、生成物を商用利用、再配布、二次配布、または商標的に利用することはできません。</p>
                     
-                    <h2 class="h5 mt-4">第9条（お問い合わせ）</h2>
-                    <p>本規約に関するご質問は、<a href="{% url 'contact' %}">お問い合わせページ</a>よりご連絡ください。</p>
+                    <h2 class="h5 mt-4">第8条（料金・プラン）</h2>
+                    <p>本サービスには、無料プランおよび有料プランがあります。</p>
+                    <p>有料プランの内容、料金、支払方法等は、本サービス上で別途定めるものとします。</p>
+                    <p>有料プランの利用料金は、理由の如何を問わず、原則として返金されません。</p>
+                    <p>学校向けプランにおいては、契約主体は学校または教員とし、生徒個人への返金は行いません。</p>
+                    
+                    <h2 class="h5 mt-4">第9条（サービスの停止・中断）</h2>
+                    <p>運営者は、以下の場合には、ユーザーに事前に通知することなく、本サービスの全部または一部を停止または中断することがあります。</p>
+                    <ul>
+                        <li>システムの保守・点検を行う場合</li>
+                        <li>天災、通信障害等の不可抗力が生じた場合</li>
+                        <li>その他、運営者が必要と判断した場合</li>
+                    </ul>
+                    
+                    <h2 class="h5 mt-4">第10条（免責事項）</h2>
+                    <p>運営者は、本サービスの内容の正確性、完全性、有用性について保証するものではありません。</p>
+                    <p>本サービスの利用により生じたユーザー間または第三者とのトラブルについて、運営者は一切の責任を負いません。</p>
+                    
+                    <h2 class="h5 mt-4">第11条（規約の変更）</h2>
+                    <p>運営者は、必要と判断した場合には、本規約を変更することができます。変更後の規約は、本サービス上に表示した時点で効力を生じるものとします。</p>
+                    
+                    <h2 class="h5 mt-4">第12条（準拠法・管轄）</h2>
+                    <p>本規約は、日本法を準拠法とします。</p>
+                    <p>本サービスに関して生じた紛争については、運営者の所在地を管轄する裁判所を専属的合意管轄とします。</p>
+                    
+                    <h2 class="h5 mt-4">第13条（お問い合わせ）</h2>
+                    <p>本サービスに関するお問い合わせは、運営者が別途指定する方法により、<a href="{% url 'contact' %}">お問い合わせページ</a>よりご連絡ください。</p>
                     {% endif %}
                     
                     <div class="mt-5 pt-4 border-top">
                         <a href="{% url 'songs:home' %}" class="btn btn-outline-primary">
                             <i class="bi bi-arrow-left me-2"></i>
-                            {% if app_language == 'en' %}Back to Home{% else %}ホームに戻る{% endif %}
+                            {% if app_language == 'en' %}Back to Home{% elif app_language == 'es' %}Volver al Inicio{% elif app_language == 'de' %}Zurück zur Startseite{% elif app_language == 'pt' %}Voltar ao Início{% elif app_language == 'zh' %}返回首页{% else %}ホームに戻る{% endif %}
                         </a>
                     </div>
                 </div>

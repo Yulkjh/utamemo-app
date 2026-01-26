@@ -1,7 +1,7 @@
 {% extends 'base.html' %}
 {% load lyrics_filters %}
 
-{% block title %}{% if is_english %}Browse Songs{% elif is_chinese %}浏览歌曲{% else %}楽曲を探す{% endif %} - UTAMEMO{% endblock %}
+{% block title %}{% if is_english %}Browse Songs{% elif is_spanish %}Explorar Canciones{% elif is_german %}Lieder Durchsuchen{% elif is_portuguese %}Explorar Músicas{% elif is_chinese %}浏览歌曲{% else %}楽曲を探す{% endif %} - UTAMEMO{% endblock %}
 
 {% block content %}
 {% if user.is_authenticated %}
@@ -12,7 +12,7 @@
     <div class="library-header">
         <div class="container">
             <div class="header-content">
-                <h1 class="library-title">{% if is_english %}Browse Songs{% elif is_chinese %}浏览歌曲{% else %}楽曲を探す{% endif %}</h1>
+                <h1 class="library-title">{% if is_english %}Browse Songs{% elif is_spanish %}Explorar Canciones{% elif is_german %}Lieder Durchsuchen{% elif is_portuguese %}Explorar Músicas{% elif is_chinese %}浏览歌曲{% else %}楽曲を探す{% endif %}</h1>
             </div>
             
             <!-- 検索バー -->
@@ -26,12 +26,12 @@
                             </svg>
                         </div>
                         <input type="text" name="q" class="search-input" id="songSearch" 
-                               placeholder="{% if is_english %}Search songs, genres...{% elif is_chinese %}搜索歌曲、类型...{% else %}楽曲、ジャンルで検索...{% endif %}" 
+                               placeholder="{% if is_english %}Search songs, genres...{% elif is_spanish %}Buscar canciones, géneros...{% elif is_german %}Lieder, Genres suchen...{% elif is_portuguese %}Pesquisar músicas, gêneros...{% elif is_chinese %}搜索歌曲、类型...{% else %}楽曲、ジャンルで検索...{% endif %}" 
                                value="{{ request.GET.q|default:'' }}"
                                autocomplete="off">
                         <button type="submit" class="search-button">
                             <i class="bi bi-search"></i>
-                            <span class="search-button-text">{% if is_english %}Search{% elif is_chinese %}搜索{% else %}検索{% endif %}</span>
+                            <span class="search-button-text">{% if is_english %}Search{% elif is_spanish %}Buscar{% elif is_german %}Suchen{% elif is_portuguese %}Pesquisar{% elif is_chinese %}搜索{% else %}検索{% endif %}</span>
                         </button>
                         <button type="button" class="search-clear" id="clearSearch" style="display: none;">
                             <i class="bi bi-x-circle-fill"></i>
@@ -90,11 +90,11 @@
                     <div class="song-actions">
                         {% if song.audio_url %}
                         <button class="play-button" onclick="event.stopPropagation(); playAudio('{{ song.audio_url }}', this, {{ song.pk }})" data-song-id="{{ song.pk }}">
-                            <i class="bi bi-play-fill"></i><span>{% if is_english %}Play{% elif is_chinese %}播放{% else %}再生{% endif %}</span>
+                            <i class="bi bi-play-fill"></i><span>{% if is_english %}Play{% elif is_spanish %}Reproducir{% elif is_german %}Abspielen{% elif is_portuguese %}Reproduzir{% elif is_chinese %}播放{% else %}再生{% endif %}</span>
                         </button>
                         {% else %}
                         <a href="{% url 'songs:song_detail' song.pk %}" class="play-button" onclick="event.stopPropagation();">
-                            <i class="bi bi-play-fill"></i><span>{% if is_english %}Play{% elif is_chinese %}播放{% else %}再生{% endif %}</span>
+                            <i class="bi bi-play-fill"></i><span>{% if is_english %}Play{% elif is_spanish %}Reproducir{% elif is_german %}Abspielen{% elif is_portuguese %}Reproduzir{% elif is_chinese %}播放{% else %}再生{% endif %}</span>
                         </a>
                         {% endif %}
                         {% if user.is_authenticated %}
@@ -121,12 +121,12 @@
                 <div class="empty-icon">
                     <i class="bi bi-music-note-beamed"></i>
                 </div>
-                <h3>{% if is_english %}No songs found{% elif is_chinese %}未找到歌曲{% else %}楽曲がありません{% endif %}</h3>
-                <p>{% if is_english %}Would you like to create the first learning song?{% elif is_chinese %}要不要创作第一首学习歌曲？{% else %}最初の学習楽曲を作成しませんか？{% endif %}</p>
+                <h3>{% if is_english %}No songs found{% elif is_spanish %}No se encontraron canciones{% elif is_german %}Keine Lieder gefunden{% elif is_portuguese %}Nenhuma música encontrada{% elif is_chinese %}未找到歌曲{% else %}楽曲がありません{% endif %}</h3>
+                <p>{% if is_english %}Would you like to create the first learning song?{% elif is_spanish %}¿Te gustaría crear la primera canción de aprendizaje?{% elif is_german %}Möchten Sie das erste Lernlied erstellen?{% elif is_portuguese %}Gostaria de criar a primeira música de aprendizado?{% elif is_chinese %}要不要创作第一首学习歌曲？{% else %}最初の学習楽曲を作成しませんか？{% endif %}</p>
                 {% if user.is_authenticated %}
-                <a href="{% url 'songs:upload_image' %}" class="btn-primary">{% if is_english %}Create Song{% elif is_chinese %}创作歌曲{% else %}楽曲を作成{% endif %}</a>
+                <a href="{% url 'songs:upload_image' %}" class="btn-primary">{% if is_english %}Create Song{% elif is_spanish %}Crear Canción{% elif is_german %}Lied Erstellen{% elif is_portuguese %}Criar Música{% elif is_chinese %}创作歌曲{% else %}楽曲を作成{% endif %}</a>
                 {% else %}
-                <a href="{% url 'users:register' %}" class="btn-primary">{% if is_english %}Get Started{% elif is_chinese %}开始使用{% else %}今すぐ始める{% endif %}</a>
+                <a href="{% url 'users:register' %}" class="btn-primary">{% if is_english %}Get Started{% elif is_spanish %}Comenzar{% elif is_german %}Loslegen{% elif is_portuguese %}Começar{% elif is_chinese %}开始使用{% else %}今すぐ始める{% endif %}</a>
                 {% endif %}
             </div>
             {% endif %}
@@ -824,11 +824,11 @@ function playAudio(audioUrl, button, songId) {
         if (currentAudio.paused) {
             currentAudio.play();
             icon.className = 'bi bi-pause-fill';
-            textSpan.textContent = '{% if is_english %}Pause{% elif is_chinese %}暂停{% else %}停止{% endif %}';
+            textSpan.textContent = '{% if is_english %}Pause{% elif is_spanish %}Pausa{% elif is_german %}Pause{% elif is_chinese %}暂停{% else %}停止{% endif %}';
         } else {
             currentAudio.pause();
             icon.className = 'bi bi-play-fill';
-            textSpan.textContent = '{% if is_english %}Play{% elif is_chinese %}播放{% else %}再生{% endif %}';
+            textSpan.textContent = '{% if is_english %}Play{% elif is_spanish %}Reproducir{% elif is_german %}Abspielen{% elif is_chinese %}播放{% else %}再生{% endif %}';
         }
         return;
     }
@@ -841,7 +841,7 @@ function playAudio(audioUrl, button, songId) {
             const prevIcon = currentPlayButton.querySelector('i');
             const prevTextSpan = currentPlayButton.querySelector('span');
             prevIcon.className = 'bi bi-play-fill';
-            prevTextSpan.textContent = '{% if is_english %}Play{% elif is_chinese %}播放{% else %}再生{% endif %}';
+            prevTextSpan.textContent = '{% if is_english %}Play{% elif is_spanish %}Reproducir{% elif is_german %}Abspielen{% elif is_chinese %}播放{% else %}再生{% endif %}';
         }
     }
     
@@ -852,7 +852,7 @@ function playAudio(audioUrl, button, songId) {
     currentAudio.play().then(() => {
         console.log('Playing audio');
         icon.className = 'bi bi-pause-fill';
-        textSpan.textContent = '{% if is_english %}Pause{% elif is_chinese %}暂停{% else %}停止{% endif %}';
+        textSpan.textContent = '{% if is_english %}Pause{% elif is_spanish %}Pausa{% elif is_german %}Pause{% elif is_chinese %}暂停{% else %}停止{% endif %}';
         // 再生回数を記録
         recordPlay(songId);
     }).catch(error => {
@@ -864,7 +864,7 @@ function playAudio(audioUrl, button, songId) {
     // 再生終了時
     currentAudio.addEventListener('ended', () => {
         icon.className = 'bi bi-play-fill';
-        textSpan.textContent = '{% if is_english %}Play{% elif is_chinese %}播放{% else %}再生{% endif %}';
+        textSpan.textContent = '{% if is_english %}Play{% elif is_spanish %}Reproducir{% elif is_german %}Abspielen{% elif is_chinese %}播放{% else %}再生{% endif %}';
         currentAudio = null;
         currentPlayButton = null;
     });

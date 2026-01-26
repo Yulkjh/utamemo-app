@@ -48,6 +48,9 @@ if os.getenv('RENDER'):
     if RENDER_EXTERNAL_HOSTNAME:
         ALLOWED_HOSTS.append(RENDER_EXTERNAL_HOSTNAME)
 
+# カスタムドメインを追加
+ALLOWED_HOSTS.extend(['utamemo.com', 'www.utamemo.com'])
+
 
 # アプリケーション定義
 
@@ -201,6 +204,21 @@ STRIPE_PRICE_IDS = {
 
 # 後方互換性のため
 STRIPE_PRO_PRICE_ID = STRIPE_PRICE_IDS['pro']
+
+# ========================================
+# メール設定
+# ========================================
+# メールバックエンド（本番環境ではSMTPを使用）
+EMAIL_BACKEND = os.getenv('EMAIL_BACKEND', 'django.core.mail.backends.console.EmailBackend')
+EMAIL_HOST = os.getenv('EMAIL_HOST', 'smtp.gmail.com')
+EMAIL_PORT = int(os.getenv('EMAIL_PORT', 587))
+EMAIL_USE_TLS = os.getenv('EMAIL_USE_TLS', 'True').lower() in ('true', '1', 'yes')
+EMAIL_HOST_USER = os.getenv('EMAIL_HOST_USER', 'hope47284@gmail.com')
+EMAIL_HOST_PASSWORD = os.getenv('EMAIL_HOST_PASSWORD', '')
+DEFAULT_FROM_EMAIL = os.getenv('DEFAULT_FROM_EMAIL', 'UTAMEMO <hope47284@gmail.com>')
+
+# パスワードリセットトークンの有効期限（秒）
+PASSWORD_RESET_TIMEOUT = int(os.getenv('PASSWORD_RESET_TIMEOUT', 3600))  # 1時間
 
 # デフォルトの主キーフィールドタイプ
 # https://docs.djangoproject.com/en/5.2/ref/settings/#default-auto-field

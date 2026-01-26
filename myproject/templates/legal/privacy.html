@@ -1,7 +1,7 @@
 {% extends 'base.html' %}
 {% load i18n %}
 
-{% block title %}{% if app_language == 'en' %}Privacy Policy{% else %}プライバシーポリシー{% endif %} - UTAMEMO{% endblock %}
+{% block title %}{% if app_language == 'en' %}Privacy Policy{% elif app_language == 'es' %}Política de Privacidad{% elif app_language == 'de' %}Datenschutzrichtlinie{% elif app_language == 'pt' %}Política de Privacidade{% elif app_language == 'zh' %}隐私政策{% else %}プライバシーポリシー{% endif %} - UTAMEMO{% endblock %}
 
 {% block content %}
 <div class="container py-5">
@@ -33,8 +33,8 @@
                     <h2 class="h5 mt-4">3. Information Sharing</h2>
                     <p>We do not sell your personal information. We may share information with:</p>
                     <ul>
-                        <li><strong>AI Service Providers:</strong> To generate songs (lyrics are sent to AI APIs)</li>
-                        <li><strong>Payment Processors:</strong> For Pro plan subscriptions (Stripe)</li>
+                        <li><strong>AI Service Providers:</strong> To generate songs</li>
+                        <li><strong>Payment Processors:</strong> For paid plan subscriptions</li>
                         <li><strong>Legal Requirements:</strong> When required by law</li>
                     </ul>
                     
@@ -61,14 +61,243 @@
                         <li>Language preferences</li>
                     </ul>
                     
-                    <h2 class="h5 mt-4">7. Children's Privacy</h2>
-                    <p>The Service is not intended for users under 13 years of age. We do not knowingly collect information from children.</p>
-                    
-                    <h2 class="h5 mt-4">8. Changes to This Policy</h2>
+                    <h2 class="h5 mt-4">7. Changes to This Policy</h2>
                     <p>We may update this Privacy Policy. We will notify you of significant changes by posting a notice on the Service.</p>
                     
-                    <h2 class="h5 mt-4">9. Contact Us</h2>
+                    <h2 class="h5 mt-4">8. Contact Us</h2>
                     <p>For privacy-related questions, please contact us through our <a href="{% url 'contact' %}">Contact Page</a>.</p>
+                    
+                    {% elif app_language == 'es' %}
+                    <h1 class="mb-4">Política de Privacidad</h1>
+                    <p class="text-muted mb-4">Última actualización: 19 de enero de 2026</p>
+                    
+                    <h2 class="h5 mt-4">1. Información que Recopilamos</h2>
+                    <p>Recopilamos la siguiente información:</p>
+                    <ul>
+                        <li><strong>Información de Cuenta:</strong> Nombre de usuario, dirección de correo electrónico (opcional), contraseña (encriptada)</li>
+                        <li><strong>Contenido:</strong> Letras que ingresa, canciones que crea</li>
+                        <li><strong>Datos de Uso:</strong> Registros de acceso, información del dispositivo</li>
+                    </ul>
+                    
+                    <h2 class="h5 mt-4">2. Cómo Usamos Su Información</h2>
+                    <p>Usamos su información para:</p>
+                    <ul>
+                        <li>Proporcionar y mejorar el Servicio</li>
+                        <li>Procesar sus solicitudes de generación de canciones</li>
+                        <li>Comunicarnos con usted sobre el Servicio</li>
+                        <li>Garantizar la seguridad y prevenir el fraude</li>
+                    </ul>
+                    
+                    <h2 class="h5 mt-4">3. Compartir Información</h2>
+                    <p>No vendemos su información personal. Podemos compartir información con:</p>
+                    <ul>
+                        <li><strong>Proveedores de Servicios de IA:</strong> Para generar canciones</li>
+                        <li><strong>Procesadores de Pago:</strong> Para suscripciones de planes de pago</li>
+                        <li><strong>Requisitos Legales:</strong> Cuando lo exija la ley</li>
+                    </ul>
+                    
+                    <h2 class="h5 mt-4">4. Seguridad de Datos</h2>
+                    <p>Implementamos medidas de seguridad que incluyen:</p>
+                    <ul>
+                        <li>Encriptación HTTPS para todas las comunicaciones</li>
+                        <li>Hash de contraseñas</li>
+                        <li>Almacenamiento seguro de datos</li>
+                    </ul>
+                    
+                    <h2 class="h5 mt-4">5. Sus Derechos</h2>
+                    <p>Usted tiene derecho a:</p>
+                    <ul>
+                        <li>Acceder a sus datos personales</li>
+                        <li>Eliminar su cuenta y datos</li>
+                        <li>Exportar sus datos</li>
+                    </ul>
+                    
+                    <h2 class="h5 mt-4">6. Cookies</h2>
+                    <p>Usamos cookies para:</p>
+                    <ul>
+                        <li>Gestión de sesiones (mantenerlo conectado)</li>
+                        <li>Preferencias de idioma</li>
+                    </ul>
+                    
+                    <h2 class="h5 mt-4">7. Cambios a Esta Política</h2>
+                    <p>Podemos actualizar esta Política de Privacidad. Le notificaremos de cambios significativos publicando un aviso en el Servicio.</p>
+                    
+                    <h2 class="h5 mt-4">8. Contáctenos</h2>
+                    <p>Para preguntas relacionadas con la privacidad, contáctenos a través de nuestra <a href="{% url 'contact' %}">Página de Contacto</a>.</p>
+                    
+                    {% elif app_language == 'de' %}
+                    <h1 class="mb-4">Datenschutzrichtlinie</h1>
+                    <p class="text-muted mb-4">Zuletzt aktualisiert: 19. Januar 2026</p>
+                    
+                    <h2 class="h5 mt-4">1. Informationen, die wir sammeln</h2>
+                    <p>Wir sammeln folgende Informationen:</p>
+                    <ul>
+                        <li><strong>Kontoinformationen:</strong> Benutzername, E-Mail-Adresse (optional), Passwort (verschlüsselt)</li>
+                        <li><strong>Inhalte:</strong> Liedtexte, die Sie eingeben, Lieder, die Sie erstellen</li>
+                        <li><strong>Nutzungsdaten:</strong> Zugriffsprotokolle, Geräteinformationen</li>
+                    </ul>
+                    
+                    <h2 class="h5 mt-4">2. Wie wir Ihre Informationen verwenden</h2>
+                    <p>Wir verwenden Ihre Informationen um:</p>
+                    <ul>
+                        <li>Den Service bereitzustellen und zu verbessern</li>
+                        <li>Ihre Anfragen zur Liederstellung zu bearbeiten</li>
+                        <li>Mit Ihnen über den Service zu kommunizieren</li>
+                        <li>Sicherheit zu gewährleisten und Betrug zu verhindern</li>
+                    </ul>
+                    
+                    <h2 class="h5 mt-4">3. Weitergabe von Informationen</h2>
+                    <p>Wir verkaufen Ihre persönlichen Daten nicht. Wir können Informationen teilen mit:</p>
+                    <ul>
+                        <li><strong>KI-Dienstleistern:</strong> Zur Generierung von Liedern</li>
+                        <li><strong>Zahlungsabwicklern:</strong> Für kostenpflichtige Abonnements</li>
+                        <li><strong>Rechtliche Anforderungen:</strong> Wenn gesetzlich vorgeschrieben</li>
+                    </ul>
+                    
+                    <h2 class="h5 mt-4">4. Datensicherheit</h2>
+                    <p>Wir implementieren Sicherheitsmaßnahmen einschließlich:</p>
+                    <ul>
+                        <li>HTTPS-Verschlüsselung für alle Kommunikationen</li>
+                        <li>Passwort-Hashing</li>
+                        <li>Sichere Datenspeicherung</li>
+                    </ul>
+                    
+                    <h2 class="h5 mt-4">5. Ihre Rechte</h2>
+                    <p>Sie haben das Recht auf:</p>
+                    <ul>
+                        <li>Zugang zu Ihren persönlichen Daten</li>
+                        <li>Löschung Ihres Kontos und Ihrer Daten</li>
+                        <li>Export Ihrer Daten</li>
+                    </ul>
+                    
+                    <h2 class="h5 mt-4">6. Cookies</h2>
+                    <p>Wir verwenden Cookies für:</p>
+                    <ul>
+                        <li>Sitzungsverwaltung (Sie angemeldet zu halten)</li>
+                        <li>Spracheinstellungen</li>
+                    </ul>
+                    
+                    <h2 class="h5 mt-4">7. Änderungen dieser Richtlinie</h2>
+                    <p>Wir können diese Datenschutzrichtlinie aktualisieren. Wir werden Sie über wesentliche Änderungen durch einen Hinweis auf dem Service informieren.</p>
+                    
+                    <h2 class="h5 mt-4">8. Kontaktieren Sie uns</h2>
+                    <p>Bei datenschutzbezogenen Fragen kontaktieren Sie uns bitte über unsere <a href="{% url 'contact' %}">Kontaktseite</a>.</p>
+                    
+                    {% elif app_language == 'pt' %}
+                    <h1 class="mb-4">Política de Privacidade</h1>
+                    <p class="text-muted mb-4">Última atualização: 19 de janeiro de 2026</p>
+                    
+                    <h2 class="h5 mt-4">1. Informações que Coletamos</h2>
+                    <p>Coletamos as seguintes informações:</p>
+                    <ul>
+                        <li><strong>Informações da Conta:</strong> Nome de usuário, endereço de e-mail (opcional), senha (criptografada)</li>
+                        <li><strong>Conteúdo:</strong> Letras que você insere, músicas que você cria</li>
+                        <li><strong>Dados de Uso:</strong> Logs de acesso, informações do dispositivo</li>
+                    </ul>
+                    
+                    <h2 class="h5 mt-4">2. Como Usamos Suas Informações</h2>
+                    <p>Usamos suas informações para:</p>
+                    <ul>
+                        <li>Fornecer e melhorar o Serviço</li>
+                        <li>Processar suas solicitações de geração de músicas</li>
+                        <li>Comunicar-nos com você sobre o Serviço</li>
+                        <li>Garantir a segurança e prevenir fraudes</li>
+                    </ul>
+                    
+                    <h2 class="h5 mt-4">3. Compartilhamento de Informações</h2>
+                    <p>Não vendemos suas informações pessoais. Podemos compartilhar informações com:</p>
+                    <ul>
+                        <li><strong>Provedores de Serviços de IA:</strong> Para gerar músicas</li>
+                        <li><strong>Processadores de Pagamento:</strong> Para assinaturas de planos pagos</li>
+                        <li><strong>Requisitos Legais:</strong> Quando exigido por lei</li>
+                    </ul>
+                    
+                    <h2 class="h5 mt-4">4. Segurança de Dados</h2>
+                    <p>Implementamos medidas de segurança incluindo:</p>
+                    <ul>
+                        <li>Criptografia HTTPS para todas as comunicações</li>
+                        <li>Hash de senhas</li>
+                        <li>Armazenamento seguro de dados</li>
+                    </ul>
+                    
+                    <h2 class="h5 mt-4">5. Seus Direitos</h2>
+                    <p>Você tem o direito de:</p>
+                    <ul>
+                        <li>Acessar seus dados pessoais</li>
+                        <li>Excluir sua conta e dados</li>
+                        <li>Exportar seus dados</li>
+                    </ul>
+                    
+                    <h2 class="h5 mt-4">6. Cookies</h2>
+                    <p>Usamos cookies para:</p>
+                    <ul>
+                        <li>Gerenciamento de sessão (manter você conectado)</li>
+                        <li>Preferências de idioma</li>
+                    </ul>
+                    
+                    <h2 class="h5 mt-4">7. Alterações nesta Política</h2>
+                    <p>Podemos atualizar esta Política de Privacidade. Notificaremos você sobre alterações significativas publicando um aviso no Serviço.</p>
+                    
+                    <h2 class="h5 mt-4">8. Contate-nos</h2>
+                    <p>Para perguntas relacionadas à privacidade, entre em contato conosco através da nossa <a href="{% url 'contact' %}">Página de Contato</a>.</p>
+                    
+                    {% elif app_language == 'zh' %}
+                    <h1 class="mb-4">隐私政策</h1>
+                    <p class="text-muted mb-4">最后更新：2026年1月19日</p>
+                    
+                    <h2 class="h5 mt-4">1. 我们收集的信息</h2>
+                    <p>我们收集以下信息：</p>
+                    <ul>
+                        <li><strong>账户信息：</strong>用户名、电子邮件地址（可选）、密码（加密）</li>
+                        <li><strong>内容：</strong>您输入的歌词、您创建的歌曲</li>
+                        <li><strong>使用数据：</strong>访问日志、设备信息</li>
+                    </ul>
+                    
+                    <h2 class="h5 mt-4">2. 我们如何使用您的信息</h2>
+                    <p>我们使用您的信息来：</p>
+                    <ul>
+                        <li>提供和改进服务</li>
+                        <li>处理您的歌曲生成请求</li>
+                        <li>就服务与您沟通</li>
+                        <li>确保安全并防止欺诈</li>
+                    </ul>
+                    
+                    <h2 class="h5 mt-4">3. 信息共享</h2>
+                    <p>我们不会出售您的个人信息。我们可能与以下方共享信息：</p>
+                    <ul>
+                        <li><strong>AI服务提供商：</strong>用于生成歌曲</li>
+                        <li><strong>支付处理商：</strong>用于付费订阅</li>
+                        <li><strong>法律要求：</strong>当法律要求时</li>
+                    </ul>
+                    
+                    <h2 class="h5 mt-4">4. 数据安全</h2>
+                    <p>我们实施的安全措施包括：</p>
+                    <ul>
+                        <li>所有通信的HTTPS加密</li>
+                        <li>密码哈希</li>
+                        <li>安全的数据存储</li>
+                    </ul>
+                    
+                    <h2 class="h5 mt-4">5. 您的权利</h2>
+                    <p>您有权：</p>
+                    <ul>
+                        <li>访问您的个人数据</li>
+                        <li>删除您的账户和数据</li>
+                        <li>导出您的数据</li>
+                    </ul>
+                    
+                    <h2 class="h5 mt-4">6. Cookie</h2>
+                    <p>我们使用Cookie用于：</p>
+                    <ul>
+                        <li>会话管理（保持您的登录状态）</li>
+                        <li>语言偏好设置</li>
+                    </ul>
+                    
+                    <h2 class="h5 mt-4">7. 政策变更</h2>
+                    <p>我们可能会更新此隐私政策。如有重大变更，我们将在服务上发布通知。</p>
+                    
+                    <h2 class="h5 mt-4">8. 联系我们</h2>
+                    <p>如有隐私相关问题，请通过我们的<a href="{% url 'contact' %}">联系页面</a>与我们联系。</p>
                     
                     {% else %}
                     <h1 class="mb-4">プライバシーポリシー</h1>
@@ -94,8 +323,8 @@
                     <h2 class="h5 mt-4">3. 情報の共有</h2>
                     <p>当方はお客様の個人情報を販売しません。以下の場合に情報を共有することがあります：</p>
                     <ul>
-                        <li><strong>AIサービスプロバイダー：</strong>楽曲生成のため（歌詞がAI APIに送信されます）</li>
-                        <li><strong>決済処理業者：</strong>Proプランのサブスクリプション用（Stripe）</li>
+                        <li><strong>AIサービスプロバイダー：</strong>楽曲生成のため</li>
+                        <li><strong>決済処理業者：</strong>有料プランのサブスクリプション用</li>
                         <li><strong>法的要件：</strong>法律で求められる場合</li>
                     </ul>
                     
@@ -122,20 +351,17 @@
                         <li>言語設定の保存</li>
                     </ul>
                     
-                    <h2 class="h5 mt-4">7. 未成年者のプライバシー</h2>
-                    <p>本サービスは13歳未満のユーザーを対象としていません。13歳未満の方からの情報を意図的に収集することはありません。</p>
-                    
-                    <h2 class="h5 mt-4">8. ポリシーの変更</h2>
+                    <h2 class="h5 mt-4">7. ポリシーの変更</h2>
                     <p>本プライバシーポリシーを更新する場合があります。重要な変更がある場合は、本サービス上で通知します。</p>
                     
-                    <h2 class="h5 mt-4">9. お問い合わせ</h2>
+                    <h2 class="h5 mt-4">8. お問い合わせ</h2>
                     <p>プライバシーに関するご質問は、<a href="{% url 'contact' %}">お問い合わせページ</a>よりご連絡ください。</p>
                     {% endif %}
                     
                     <div class="mt-5 pt-4 border-top">
                         <a href="{% url 'songs:home' %}" class="btn btn-outline-primary">
                             <i class="bi bi-arrow-left me-2"></i>
-                            {% if app_language == 'en' %}Back to Home{% else %}ホームに戻る{% endif %}
+                            {% if app_language == 'en' %}Back to Home{% elif app_language == 'es' %}Volver al Inicio{% elif app_language == 'de' %}Zurück zur Startseite{% elif app_language == 'pt' %}Voltar ao Início{% elif app_language == 'zh' %}返回首页{% else %}ホームに戻る{% endif %}
                         </a>
                     </div>
                 </div>

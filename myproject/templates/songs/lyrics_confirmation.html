@@ -1,6 +1,6 @@
 {% extends 'base.html' %}
 
-{% block title %}{% if is_english %}Lyrics Confirmation{% elif is_chinese %}歌词确认{% else %}歌詞確認{% endif %} - UTAMEMO{% endblock %}
+{% block title %}{% if is_english %}Lyrics Confirmation{% elif is_spanish %}Confirmación de Letra{% elif is_german %}Textbestätigung{% elif is_chinese %}歌词确认{% else %}歌詞確認{% endif %} - UTAMEMO{% endblock %}
 
 {% block content %}
 <div class="container py-5">
@@ -10,12 +10,18 @@
             <div class="text-center mb-5 fade-in">
                 {% if manual_mode %}
                 <h1 class="display-6 fw-bold mb-3">
-                    {% if is_english %}Create Lyrics{% elif is_chinese %}创作歌词{% else %}歌詞を入力{% endif %}
+                    {% if is_english %}Create Lyrics{% elif is_spanish %}Crear Letra{% elif is_german %}Text erstellen{% elif is_chinese %}创作歌词{% else %}歌詞を入力{% endif %}
                 </h1>
                 <p class="lead text-secondary">
                     {% if is_english %}
                     Create your own lyrics<br>
                     Generate a song when you're done
+                    {% elif is_spanish %}
+                    Crea tu propia letra<br>
+                    Genera una canción cuando termines
+                    {% elif is_german %}
+                    Erstelle deinen eigenen Text<br>
+                    Generiere einen Song wenn du fertig bist
                     {% elif is_chinese %}
                     自由创作歌词<br>
                     完成后即可生成歌曲
@@ -26,12 +32,18 @@
                 </p>
                 {% else %}
                 <h1 class="display-6 fw-bold mb-3">
-                    {% if is_english %}Edit Lyrics{% elif is_chinese %}编辑歌词{% else %}歌詞を編集{% endif %}
+                    {% if is_english %}Edit Lyrics{% elif is_spanish %}Editar Letra{% elif is_german %}Text bearbeiten{% elif is_chinese %}编辑歌词{% else %}歌詞を編集{% endif %}
                 </h1>
                 <p class="lead text-secondary">
                     {% if is_english %}
                     AI-generated lyrics from your content<br>
                     Edit freely before creating the song
+                    {% elif is_spanish %}
+                    Letra generada por IA de tu contenido<br>
+                    Edita libremente antes de crear la canción
+                    {% elif is_german %}
+                    KI-generierter Text aus deinem Inhalt<br>
+                    Bearbeite frei vor dem Erstellen des Songs
                     {% elif is_chinese %}
                     AI会根据你所放的内容并生成歌词<br>
                     您可以自由编辑后创造歌曲
@@ -57,40 +69,40 @@
                                     <div class="row g-3">
                                         <div class="col-md-6">
                                             <label for="song-title" class="form-label fw-bold">
-                                                {% if is_english %}Song Title{% elif is_chinese %}歌曲标题{% else %}楽曲タイトル{% endif %}
+                                                {% if is_english %}Song Title{% elif is_spanish %}Título de la Canción{% elif is_german %}Songtitel{% elif is_chinese %}歌曲标题{% else %}楽曲タイトル{% endif %}
                                             </label>
-                                            <input type="text" class="form-control form-control-lg" id="song-title" name="title" placeholder="{% if is_english %}e.g. My Study Song{% elif is_chinese %}例: 我的学习歌{% else %}例: 数学の歌{% endif %}" required>
+                                            <input type="text" class="form-control form-control-lg" id="song-title" name="title" placeholder="{% if is_english %}e.g. My Study Song{% elif is_spanish %}ej. Mi Canción de Estudio{% elif is_german %}z.B. Mein Lernsong{% elif is_chinese %}例: 我的学习歌{% else %}例: 数学の歌{% endif %}" required>
                                         </div>
                                         <div class="col-md-6">
                                             <label for="song-genre" class="form-label fw-bold">
-                                                {% if is_english %}Genre{% elif is_chinese %}曲风{% else %}ジャンル{% endif %}
+                                                {% if is_english %}Genre{% elif is_spanish %}Género{% elif is_german %}Genre{% elif is_chinese %}曲风{% else %}ジャンル{% endif %}
                                             </label>
                                             <select class="form-select form-select-lg" id="song-genre" name="genre">
-                                                <option value="Auto" selected>{% if is_english %}Auto (AI chooses){% elif is_chinese %}自动（AI选择）{% else %}おまかせ（AIが自動選択）{% endif %}</option>
-                                                <option value="ポップ">{% if is_english %}Pop{% elif is_chinese %}流行{% else %}ポップ{% endif %}</option>
-                                                <option value="ロック">{% if is_english %}Rock{% elif is_chinese %}摇滚{% else %}ロック{% endif %}</option>
-                                                <option value="バラード">{% if is_english %}Ballad{% elif is_chinese %}抒情{% else %}バラード{% endif %}</option>
-                                                <option value="ダンス">{% if is_english %}Dance{% elif is_chinese %}舞曲{% else %}ダンス{% endif %}</option>
-                                                <option value="ジャズ">{% if is_english %}Jazz{% elif is_chinese %}爵士{% else %}ジャズ{% endif %}</option>
-                                                <option value="クラシック">{% if is_english %}Classical{% elif is_chinese %}古典{% else %}クラシック{% endif %}</option>
-                                                <option value="ヒップホップ">{% if is_english %}Hip Hop{% elif is_chinese %}嘻哈{% else %}ヒップホップ{% endif %}</option>
-                                                <option value="ラップ">{% if is_english %}Rap{% elif is_chinese %}说唱{% else %}ラップ{% endif %}</option>
+                                                <option value="Auto" selected>{% if is_english %}Auto (AI chooses){% elif is_spanish %}Auto (IA elige){% elif is_german %}Auto (KI wählt){% elif is_chinese %}自动（AI选择）{% else %}おまかせ（AIが自動選択）{% endif %}</option>
+                                                <option value="ポップ">{% if is_english %}Pop{% elif is_spanish %}Pop{% elif is_german %}Pop{% elif is_chinese %}流行{% else %}ポップ{% endif %}</option>
+                                                <option value="ロック">{% if is_english %}Rock{% elif is_spanish %}Rock{% elif is_german %}Rock{% elif is_chinese %}摇滚{% else %}ロック{% endif %}</option>
+                                                <option value="バラード">{% if is_english %}Ballad{% elif is_spanish %}Balada{% elif is_german %}Ballade{% elif is_chinese %}抒情{% else %}バラード{% endif %}</option>
+                                                <option value="ダンス">{% if is_english %}Dance{% elif is_spanish %}Dance{% elif is_german %}Dance{% elif is_chinese %}舞曲{% else %}ダンス{% endif %}</option>
+                                                <option value="ジャズ">{% if is_english %}Jazz{% elif is_spanish %}Jazz{% elif is_german %}Jazz{% elif is_chinese %}爵士{% else %}ジャズ{% endif %}</option>
+                                                <option value="クラシック">{% if is_english %}Classical{% elif is_spanish %}Clásica{% elif is_german %}Klassik{% elif is_chinese %}古典{% else %}クラシック{% endif %}</option>
+                                                <option value="ヒップホップ">{% if is_english %}Hip Hop{% elif is_spanish %}Hip Hop{% elif is_german %}Hip Hop{% elif is_chinese %}嘻哈{% else %}ヒップホップ{% endif %}</option>
+                                                <option value="ラップ">{% if is_english %}Rap{% elif is_spanish %}Rap{% elif is_german %}Rap{% elif is_chinese %}说唱{% else %}ラップ{% endif %}</option>
                                                 <option value="R&B">R&B</option>
-                                                <option value="エレクトロニック">{% if is_english %}Electronic{% elif is_chinese %}电子{% else %}エレクトロニック{% endif %}</option>
-                                                <option value="カントリー">{% if is_english %}Country{% elif is_chinese %}乡村{% else %}カントリー{% endif %}</option>
-                                                <option value="フォーク">{% if is_english %}Folk{% elif is_chinese %}民谣{% else %}フォーク{% endif %}</option>
-                                                <option value="レゲエ">{% if is_english %}Reggae{% elif is_chinese %}雷鬼{% else %}レゲエ{% endif %}</option>
-                                                <option value="ブルース">{% if is_english %}Blues{% elif is_chinese %}蓝调{% else %}ブルース{% endif %}</option>
-                                                <option value="メタル">{% if is_english %}Metal{% elif is_chinese %}金属{% else %}メタル{% endif %}</option>
-                                                <option value="パンク">{% if is_english %}Punk{% elif is_chinese %}朋克{% else %}パンク{% endif %}</option>
-                                                <option value="ソウル">{% if is_english %}Soul{% elif is_chinese %}灵魂{% else %}ソウル{% endif %}</option>
-                                                <option value="ファンク">{% if is_english %}Funk{% elif is_chinese %}放克{% else %}ファンク{% endif %}</option>
-                                                <option value="ディスコ">{% if is_english %}Disco{% elif is_chinese %}迪斯科{% else %}ディスコ{% endif %}</option>
-                                                <option value="アンビエント">{% if is_english %}Ambient{% elif is_chinese %}氛围{% else %}アンビエント{% endif %}</option>
+                                                <option value="エレクトロニック">{% if is_english %}Electronic{% elif is_spanish %}Electrónica{% elif is_german %}Elektronisch{% elif is_chinese %}电子{% else %}エレクトロニック{% endif %}</option>
+                                                <option value="カントリー">{% if is_english %}Country{% elif is_spanish %}Country{% elif is_german %}Country{% elif is_chinese %}乡村{% else %}カントリー{% endif %}</option>
+                                                <option value="フォーク">{% if is_english %}Folk{% elif is_spanish %}Folk{% elif is_german %}Folk{% elif is_chinese %}民谣{% else %}フォーク{% endif %}</option>
+                                                <option value="レゲエ">{% if is_english %}Reggae{% elif is_spanish %}Reggae{% elif is_german %}Reggae{% elif is_chinese %}雷鬼{% else %}レゲエ{% endif %}</option>
+                                                <option value="ブルース">{% if is_english %}Blues{% elif is_spanish %}Blues{% elif is_german %}Blues{% elif is_chinese %}蓝调{% else %}ブルース{% endif %}</option>
+                                                <option value="メタル">{% if is_english %}Metal{% elif is_spanish %}Metal{% elif is_german %}Metal{% elif is_chinese %}金属{% else %}メタル{% endif %}</option>
+                                                <option value="パンク">{% if is_english %}Punk{% elif is_spanish %}Punk{% elif is_german %}Punk{% elif is_chinese %}朋克{% else %}パンク{% endif %}</option>
+                                                <option value="ソウル">{% if is_english %}Soul{% elif is_spanish %}Soul{% elif is_german %}Soul{% elif is_chinese %}灵魂{% else %}ソウル{% endif %}</option>
+                                                <option value="ファンク">{% if is_english %}Funk{% elif is_spanish %}Funk{% elif is_german %}Funk{% elif is_chinese %}放克{% else %}ファンク{% endif %}</option>
+                                                <option value="ディスコ">{% if is_english %}Disco{% elif is_spanish %}Disco{% elif is_german %}Disco{% elif is_chinese %}迪斯科{% else %}ディスコ{% endif %}</option>
+                                                <option value="アンビエント">{% if is_english %}Ambient{% elif is_spanish %}Ambient{% elif is_german %}Ambient{% elif is_chinese %}氛围{% else %}アンビエント{% endif %}</option>
                                                 <option value="J-POP">J-Pop</option>
                                                 <option value="K-POP">K-Pop</option>
-                                                <option value="アニソン">{% if is_english %}Anime{% elif is_chinese %}动漫{% else %}アニソン{% endif %}</option>
-                                                <option value="ボカロ">{% if is_english %}Vocaloid{% elif is_chinese %}V家{% else %}ボカロ{% endif %}</option>
+                                                <option value="アニソン">{% if is_english %}Anime{% elif is_spanish %}Anime{% elif is_german %}Anime{% elif is_chinese %}动漫{% else %}アニソン{% endif %}</option>
+                                                <option value="ボカロ">{% if is_english %}Vocaloid{% elif is_spanish %}Vocaloid{% elif is_german %}Vocaloid{% elif is_chinese %}V家{% else %}ボカロ{% endif %}</option>
                                             </select>
                                         </div>
                                     </div>
@@ -98,17 +110,17 @@
                                     <!-- ボーカルスタイル -->
                                     <div class="mt-3">
                                         <label class="form-label fw-bold">
-                                            {% if is_english %}Vocal Style{% elif is_chinese %}声音性别{% else %}ボーカルの性別{% endif %}
+                                            {% if is_english %}Vocal Style{% elif is_spanish %}Estilo Vocal{% elif is_german %}Vokalstil{% elif is_chinese %}声音性别{% else %}ボーカルの性別{% endif %}
                                         </label>
                                         <div class="vocal-toggle-container">
                                             <input type="radio" name="vocal_style" id="vocal-female" value="female" class="vocal-toggle-input" checked>
                                             <input type="radio" name="vocal_style" id="vocal-male" value="male" class="vocal-toggle-input">
                                             <div class="vocal-toggle-wrapper">
                                                 <label for="vocal-female" class="vocal-toggle-btn">
-                                                    {% if is_english %}Female{% elif is_chinese %}女声{% else %}女性{% endif %}
+                                                    {% if is_english %}Female{% elif is_spanish %}Femenino{% elif is_german %}Weiblich{% elif is_chinese %}女声{% else %}女性{% endif %}
                                                 </label>
                                                 <label for="vocal-male" class="vocal-toggle-btn">
-                                                    {% if is_english %}Male{% elif is_chinese %}男声{% else %}男性{% endif %}
+                                                    {% if is_english %}Male{% elif is_spanish %}Masculino{% elif is_german %}Männlich{% elif is_chinese %}男声{% else %}男性{% endif %}
                                                 </label>
                                             </div>
                                         </div>
@@ -118,12 +130,12 @@
                                     <div class="mt-3">
                                         <label class="form-label fw-bold">
                                             <i class="bi bi-cpu me-1"></i>
-                                            {% if is_english %}AI Model{% elif is_chinese %}AI模型{% else %}AIモデル{% endif %}
+                                            {% if is_english %}AI Model{% elif is_spanish %}Modelo de IA{% elif is_german %}KI-Modell{% elif is_chinese %}AI模型{% else %}AIモデル{% endif %}
                                         </label>
                                         <select name="mureka_model" class="form-select">
-                                            <option value="mureka-7.5" selected>{% if is_english %}Standard{% elif is_chinese %}标准{% else %}スタンダード{% endif %}</option>
-                                            <option value="mureka-7.6">{% if is_english %}High Quality{% elif is_chinese %}高品质{% else %}高品質{% endif %}</option>
-                                            <option value="mureka-o2">{% if is_english %}Premium{% elif is_chinese %}专业{% else %}プレミアム{% endif %}</option>
+                                            <option value="mureka-7.5" selected>{% if is_english %}Standard{% elif is_spanish %}Estándar{% elif is_german %}Standard{% elif is_chinese %}标准{% else %}スタンダード{% endif %}</option>
+                                            <option value="mureka-7.6">{% if is_english %}High Quality{% elif is_spanish %}Alta Calidad{% elif is_german %}Hohe Qualität{% elif is_chinese %}高品质{% else %}高品質{% endif %}</option>
+                                            <option value="mureka-o2">{% if is_english %}Premium{% elif is_spanish %}Premium{% elif is_german %}Premium{% elif is_chinese %}专业{% else %}プレミアム{% endif %}</option>
                                         </select>
                                     </div>
                                 </div>
@@ -132,21 +144,21 @@
                                 <div class="mb-4">
                                     <label for="music_prompt" class="form-label fw-bold">
                                         <i class="bi bi-chat-dots me-1"></i>
-                                        {% if is_english %}Customize (Optional){% elif is_chinese %}自定义（可选）{% else %}カスタマイズ（任意）{% endif %}
+                                        {% if is_english %}Customize (Optional){% elif is_spanish %}Personalizar (Opcional){% elif is_german %}Anpassen (Optional){% elif is_chinese %}自定义（可选）{% else %}カスタマイズ（任意）{% endif %}
                                     </label>
                                     <textarea name="music_prompt" id="music_prompt" class="form-control custom-request-input" rows="2" 
-                                        placeholder="{% if is_english %}e.g. 'Make it upbeat', 'Add piano', 'Emotional ballad style'{% elif is_chinese %}例如：'轻快一点'、'加钢琴'、'抒情风格'{% else %}例：「アップテンポで」「ピアノを入れて」「感動的なバラード調」{% endif %}"></textarea>
+                                        placeholder="{% if is_english %}e.g. 'Make it upbeat', 'Add piano', 'Emotional ballad style'{% elif is_spanish %}ej. 'Hazlo alegre', 'Añade piano', 'Estilo balada emocional'{% elif is_german %}z.B. 'Mach es fröhlich', 'Füge Klavier hinzu', 'Emotionaler Balladenstil'{% elif is_chinese %}例如：'轻快一点'、'加钢琴'、'抒情风格'{% else %}例：「アップテンポで」「ピアノを入れて」「感動的なバラード調」{% endif %}"></textarea>
                                     <small class="text-muted">
-                                        {% if is_english %}Tell AI how you want your song to sound{% elif is_chinese %}告诉AI你想要什么样的歌曲{% else %}AIにどのような曲を作ってほしいか自由に伝えられます{% endif %}
+                                        {% if is_english %}Tell AI how you want your song to sound{% elif is_spanish %}Dile a la IA cómo quieres que suene tu canción{% elif is_german %}Sag der KI, wie dein Song klingen soll{% elif is_chinese %}告诉AI你想要什么样的歌曲{% else %}AIにどのような曲を作ってほしいか自由に伝えられます{% endif %}
                                     </small>
                                 </div>
                                 
                                 <!-- 歌詞エディタ -->
                                 <div class="mb-3">
                                     <label for="lyrics-textarea" class="form-label fw-bold">
-                                        {% if is_english %}Lyrics{% elif is_chinese %}歌词{% else %}歌詞{% endif %}
+                                        {% if is_english %}Lyrics{% elif is_spanish %}Letra{% elif is_german %}Songtext{% elif is_chinese %}歌词{% else %}歌詞{% endif %}
                                     </label>
-                                    <textarea id="lyrics-textarea" name="generated_lyrics" class="lyrics-editor" rows="15" {% if manual_mode %}placeholder="{% if is_english %}[Verse 1]&#10;Enter your lyrics here...&#10;&#10;[Chorus]&#10;Your chorus lyrics...{% elif is_chinese %}[Verse 1]&#10;在此输入歌词...&#10;&#10;[Chorus]&#10;副歌歌词...{% else %}[Verse 1]&#10;ここに歌詞を入力...&#10;&#10;[Chorus]&#10;サビの歌詞...{% endif %}"{% endif %}>{{ generated_lyrics }}</textarea>
+                                    <textarea id="lyrics-textarea" name="generated_lyrics" class="lyrics-editor" rows="15" {% if manual_mode %}placeholder="{% if is_english %}[Verse 1]&#10;Enter your lyrics here...&#10;&#10;[Chorus]&#10;Your chorus lyrics...{% elif is_spanish %}[Verso 1]&#10;Escribe tu letra aquí...&#10;&#10;[Coro]&#10;Tu letra del coro...{% elif is_german %}[Strophe 1]&#10;Gib deinen Text hier ein...&#10;&#10;[Refrain]&#10;Dein Refrain-Text...{% elif is_chinese %}[Verse 1]&#10;在此输入歌词...&#10;&#10;[Chorus]&#10;副歌歌词...{% else %}[Verse 1]&#10;ここに歌詞を入力...&#10;&#10;[Chorus]&#10;サビの歌詞...{% endif %}"{% endif %}>{{ generated_lyrics }}</textarea>
                                 </div>
                                 
                                 {% if not manual_mode %}

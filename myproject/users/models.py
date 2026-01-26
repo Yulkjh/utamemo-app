@@ -88,7 +88,10 @@ class User(AbstractUser):
     
     @property
     def is_pro(self):
-        """有料プランかどうかを判定"""
+        """有料プランかどうかを判定（管理者は常にTrue）"""
+        # スタッフまたはスーパーユーザーは常にすべての機能にアクセス可能
+        if self.is_staff or self.is_superuser:
+            return True
         from django.utils import timezone
         if self.plan == 'free':
             return False
@@ -99,34 +102,46 @@ class User(AbstractUser):
     @property
     def is_starter(self):
         """スタータープラン以上かどうか"""
+        if self.is_staff or self.is_superuser:
+            return True
         return self.plan in ['starter', 'pro', 'school'] and self.is_pro
     
     @property
     def is_pro_plan(self):
         """プロプラン以上かどうか"""
+        if self.is_staff or self.is_superuser:
+            return True
         return self.plan in ['pro', 'school'] and self.is_pro
     
     @property
     def is_school(self):
         """スクールプランかどうか"""
+        if self.is_staff or self.is_superuser:
+            return True
         return self.plan == 'school' and self.is_pro
     
     def get_monthly_song_limit(self):
-        """月間作成可能曲数を取得"""
+        """月間作成可能曲数を取得（-1は無制限）"""
+        # 管理者は無制限
+        if self.is_staff or self.is_superuser:
+            return -1
         limits = {
-            'free': 5,  # 1日5曲 = 月約150曲だが、フリーは日次制限
+            'free': 2,  # 1日2曲
             'starter': 80,
-            'pro': 300,
+            'pro': -1,  # 無制限
             'school': 100,
         }
-        return limits.get(self.plan, 5)
+        return limits.get(self.plan, 2)
     
     def get_model_limits(self):
-        """AIモデル別の月間制限を取得"""
+        """AIモデル別の月間制限を取得（-1は無制限）"""
+        # 管理者は無制限
+        if self.is_staff or self.is_superuser:
+            return {'v7.5': -1, 'v7.6': -1, 'o2': -1}
         limits = {
-            'free': {'v7.5': 999, 'v7.6': 1, 'o2': 1},  # フリーはv7.5無制限、他は1回
+            'free': {'v7.5': 999, 'v7.6': 0, 'o2': 5},  # フリーはv7.5無制限、v7.6は使用不可、O2は月5回
             'starter': {'v7.5': 40, 'v7.6': 25, 'o2': 15},
-            'pro': {'v7.5': 100, 'v7.6': 100, 'o2': 100},
+            'pro': {'v7.5': -1, 'v7.6': -1, 'o2': -1},  # 無制限
             'school': {'v7.5': 40, 'v7.6': 40, 'o2': 20},
         }
         return limits.get(self.plan, limits['free'])

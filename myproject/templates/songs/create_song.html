@@ -1,6 +1,6 @@
 {% extends 'base.html' %}
 
-{% block title %}{% if is_english %}Create Song{% elif is_chinese %}创建歌曲{% else %}楽曲作成{% endif %} - UTAMEMO{% endblock %}
+{% block title %}{% if is_english %}Create Song{% elif is_spanish %}Crear Canción{% elif is_german %}Lied erstellen{% elif is_portuguese %}Criar Música{% elif is_chinese %}创建歌曲{% else %}楽曲作成{% endif %} - UTAMEMO{% endblock %}
 
 {% block content %}
 <div class="container py-5">
@@ -8,11 +8,20 @@
         <div class="col-lg-8">
             <!-- ヘッダーセクション -->
             <div class="text-center mb-5 fade-in">
-                <h1 class="display-6 fw-bold mb-3">{% if is_english %}Create Song{% elif is_chinese %}创建歌曲{% else %}楽曲を作成{% endif %}</h1>
+                <h1 class="display-6 fw-bold mb-3">{% if is_english %}Create Song{% elif is_spanish %}Crear Canción{% elif is_german %}Lied erstellen{% elif is_portuguese %}Criar Música{% elif is_chinese %}创建歌曲{% else %}楽曲を作成{% endif %}</h1>
                 <p class="lead text-secondary">
                     {% if is_english %}
                     Generate learning songs from extracted text<br>
                     AI will automatically create optimal lyrics and melody
+                    {% elif is_spanish %}
+                    Genera canciones de aprendizaje a partir del texto extraído<br>
+                    La IA creará automáticamente letras y melodías óptimas
+                    {% elif is_german %}
+                    Erzeuge Lernlieder aus extrahiertem Text<br>
+                    KI erstellt automatisch optimale Texte und Melodien
+                    {% elif is_portuguese %}
+                    Gere músicas de aprendizado a partir de texto extraído<br>
+                    A IA criará automaticamente letras e melodias otimizadas
                     {% elif is_chinese %}
                     从提取的文本生成学习歌曲<br>
                     AI将自动创建最佳歌词和旋律
@@ -26,8 +35,8 @@
             <!-- メインフォーム -->
             <div class="create-form-card fade-in">
                 <div class="form-header">
-                    <h3>{% if is_english %}AI Song Generation{% elif is_chinese %}AI歌曲生成{% else %}AI楽曲生成{% endif %}</h3>
-                    <p class="mb-0">{% if is_english %}Enter the information below to create your own learning song{% elif is_chinese %}输入以下信息，创建您的专属学习歌曲{% else %}以下の情報を入力して、あなただけの学習楽曲を作成しましょう{% endif %}</p>
+                    <h3>{% if is_english %}AI Song Generation{% elif is_spanish %}Generación de Canciones con IA{% elif is_german %}KI-Liederstellung{% elif is_portuguese %}Geração de Música com IA{% elif is_chinese %}AI歌曲生成{% else %}AI楽曲生成{% endif %}</h3>
+                    <p class="mb-0">{% if is_english %}Enter the information below to create your own learning song{% elif is_spanish %}Ingresa la información a continuación para crear tu propia canción de aprendizaje{% elif is_german %}Gib die Informationen unten ein, um dein eigenes Lernlied zu erstellen{% elif is_portuguese %}Insira as informações abaixo para criar sua própria música de aprendizado{% elif is_chinese %}输入以下信息，创建您的专属学习歌曲{% else %}以下の情報を入力して、あなただけの学習楽曲を作成しましょう{% endif %}</p>
                 </div>
                 
                 <div class="form-body">
@@ -37,10 +46,10 @@
                         <!-- タイトル入力 -->
                         <div class="form-group mb-4">
                             <label for="{{ form.title.id_for_label }}" class="form-label">
-                                {% if is_english %}Song Title{% elif is_chinese %}歌曲标题{% else %}楽曲タイトル{% endif %} <span class="text-danger">*</span>
+                                {% if is_english %}Song Title{% elif is_spanish %}Título de la Canción{% elif is_german %}Liedtitel{% elif is_portuguese %}Título da Música{% elif is_chinese %}歌曲标题{% else %}楽曲タイトル{% endif %} <span class="text-danger">*</span>
                             </label>
                             {{ form.title }}
-                            <div class="form-text">{% if is_english %}Give it a memorable title that expresses the content{% elif is_chinese %}取一个易于记忆且能表达内容的标题{% else %}覚えやすく、内容を表現するタイトルを付けましょう{% endif %}</div>
+                            <div class="form-text">{% if is_english %}Give it a memorable title that expresses the content{% elif is_spanish %}Dale un título memorable que exprese el contenido{% elif is_german %}Gib ihm einen einprägsamen Titel, der den Inhalt ausdrückt{% elif is_portuguese %}Dê um título memorável que expresse o conteúdo{% elif is_chinese %}取一个易于记忆且能表达内容的标题{% else %}覚えやすく、内容を表現するタイトルを付けましょう{% endif %}</div>
                             {% if form.title.errors %}
                             <div class="text-danger mt-2">
                                 {% for error in form.title.errors %}
@@ -53,11 +62,11 @@
                         <!-- ジャンル入力 -->
                         <div class="form-group mb-4">
                             <label for="{{ form.genre.id_for_label }}" class="form-label">
-                                {% if is_english %}Music Genre{% elif is_chinese %}音乐类型{% else %}音楽ジャンル{% endif %}
+                                {% if is_english %}Music Genre{% elif is_spanish %}Género Musical{% elif is_german %}Musikgenre{% elif is_portuguese %}Gênero Musical{% elif is_chinese %}音乐类型{% else %}音楽ジャンル{% endif %}
                             </label>
                             {{ form.genre }}
                             <div class="form-text">
-                                {% if is_english %}Select a genre that fits your learning content{% elif is_chinese %}选择适合您学习内容的类型{% else %}学習内容に合ったジャンルを選択してください{% endif %}
+                                {% if is_english %}Select a genre that fits your learning content{% elif is_spanish %}Selecciona un género que se ajuste a tu contenido de aprendizaje{% elif is_german %}Wähle ein Genre, das zu deinem Lerninhalt passt{% elif is_portuguese %}Selecione um gênero que se adapte ao seu conteúdo de aprendizado{% elif is_chinese %}选择适合您学习内容的类型{% else %}学習内容に合ったジャンルを選択してください{% endif %}
                                 <div class="genre-suggestions mt-2">
                                     {% if is_english %}
                                     <span class="genre-tag active" onclick="setGenre('Auto')">Auto</span>
@@ -67,6 +76,33 @@
                                     <span class="genre-tag" onclick="setGenre('Rap')">Rap</span>
                                     <span class="genre-tag" onclick="setGenre('Electronic')">Electronic</span>
                                     <span class="genre-tag" onclick="setGenre('Classical')">Classical</span>
+                                    <span class="genre-tag" onclick="setGenre('Jazz')">Jazz</span>
+                                    {% elif is_spanish %}
+                                    <span class="genre-tag active" onclick="setGenre('Auto')">Auto</span>
+                                    <span class="genre-tag" onclick="setGenre('Pop')">Pop</span>
+                                    <span class="genre-tag" onclick="setGenre('Rock')">Rock</span>
+                                    <span class="genre-tag" onclick="setGenre('Balada')">Balada</span>
+                                    <span class="genre-tag" onclick="setGenre('Rap')">Rap</span>
+                                    <span class="genre-tag" onclick="setGenre('Electrónica')">Electrónica</span>
+                                    <span class="genre-tag" onclick="setGenre('Clásica')">Clásica</span>
+                                    <span class="genre-tag" onclick="setGenre('Jazz')">Jazz</span>
+                                    {% elif is_german %}
+                                    <span class="genre-tag active" onclick="setGenre('Auto')">Auto</span>
+                                    <span class="genre-tag" onclick="setGenre('Pop')">Pop</span>
+                                    <span class="genre-tag" onclick="setGenre('Rock')">Rock</span>
+                                    <span class="genre-tag" onclick="setGenre('Ballade')">Ballade</span>
+                                    <span class="genre-tag" onclick="setGenre('Rap')">Rap</span>
+                                    <span class="genre-tag" onclick="setGenre('Elektronisch')">Elektronisch</span>
+                                    <span class="genre-tag" onclick="setGenre('Klassik')">Klassik</span>
+                                    <span class="genre-tag" onclick="setGenre('Jazz')">Jazz</span>
+                                    {% elif is_portuguese %}
+                                    <span class="genre-tag active" onclick="setGenre('Auto')">Auto</span>
+                                    <span class="genre-tag" onclick="setGenre('Pop')">Pop</span>
+                                    <span class="genre-tag" onclick="setGenre('Rock')">Rock</span>
+                                    <span class="genre-tag" onclick="setGenre('Balada')">Balada</span>
+                                    <span class="genre-tag" onclick="setGenre('Rap')">Rap</span>
+                                    <span class="genre-tag" onclick="setGenre('Eletrônica')">Eletrônica</span>
+                                    <span class="genre-tag" onclick="setGenre('Clássica')">Clássica</span>
                                     <span class="genre-tag" onclick="setGenre('Jazz')">Jazz</span>
                                     {% elif is_chinese %}
                                     <span class="genre-tag active" onclick="setGenre('Auto')">自动</span>
@@ -101,23 +137,23 @@
                         <!-- ボーカルスタイル選択 -->
                         <div class="form-group mb-4">
                             <label class="form-label">
-                                {% if is_english %}Vocal Style{% elif is_chinese %}声音性别{% else %}ボーカルの性別{% endif %} <span class="text-danger">*</span>
+                                {% if is_english %}Vocal Style{% elif is_spanish %}Estilo Vocal{% elif is_german %}Gesangsstil{% elif is_portuguese %}Estilo Vocal{% elif is_chinese %}声音性别{% else %}ボーカルの性別{% endif %} <span class="text-danger">*</span>
                             </label>
                             <div class="vocal-toggle-container">
                                 <input type="radio" name="vocal_style" id="vocal-female" value="female" class="vocal-toggle-input" checked>
                                 <input type="radio" name="vocal_style" id="vocal-male" value="male" class="vocal-toggle-input">
                                 <div class="vocal-toggle-wrapper">
                                     <label for="vocal-female" class="vocal-toggle-btn">
-                                        {% if is_english %}Female{% elif is_chinese %}女声{% else %}女性{% endif %}
+                                        {% if is_english %}Female{% elif is_spanish %}Femenino{% elif is_german %}Weiblich{% elif is_portuguese %}Feminino{% elif is_chinese %}女声{% else %}女性{% endif %}
                                     </label>
                                     <label for="vocal-male" class="vocal-toggle-btn">
-                                        {% if is_english %}Male{% elif is_chinese %}男声{% else %}男性{% endif %}
+                                        {% if is_english %}Male{% elif is_spanish %}Masculino{% elif is_german %}Männlich{% elif is_portuguese %}Masculino{% elif is_chinese %}男声{% else %}男性{% endif %}
                                     </label>
                                 </div>
                             </div>
                             {% if form.vocal_style.errors %}
                             <div class="text-danger mt-2">
-                                <small>{% if is_english %}This field is required.{% elif is_chinese %}此字段为必填项。{% else %}このフィールドは必須です。{% endif %}</small>
+                                <small>{% if is_english %}This field is required.{% elif is_spanish %}Este campo es obligatorio.{% elif is_german %}Dieses Feld ist erforderlich.{% elif is_portuguese %}Este campo é obrigatório.{% elif is_chinese %}此字段为必填项。{% else %}このフィールドは必須です。{% endif %}</small>
                             </div>
                             {% endif %}
                         </div>
@@ -126,12 +162,12 @@
                         <div class="form-group mb-4">
                             <label class="form-label">
                                 <i class="bi bi-cpu me-1"></i>
-                                {% if is_english %}AI Model{% elif is_chinese %}AI模型{% else %}AIモデル{% endif %}
+                                {% if is_english %}AI Model{% elif is_spanish %}Modelo de IA{% elif is_german %}KI-Modell{% elif is_portuguese %}Modelo de IA{% elif is_chinese %}AI模型{% else %}AIモデル{% endif %}
                             </label>
                             <select name="mureka_model" class="form-select">
-                                <option value="mureka-7.5" selected>{% if is_english %}Standard{% elif is_chinese %}标准{% else %}スタンダード{% endif %}</option>
-                                <option value="mureka-7.6">{% if is_english %}High Quality{% elif is_chinese %}高品质{% else %}高品質{% endif %}</option>
-                                <option value="mureka-o2">{% if is_english %}Premium{% elif is_chinese %}专业{% else %}プレミアム{% endif %}</option>
+                                <option value="mureka-7.5" selected>{% if is_english %}Standard{% elif is_spanish %}Estándar{% elif is_german %}Standard{% elif is_portuguese %}Padrão{% elif is_chinese %}标准{% else %}スタンダード{% endif %}</option>
+                                <option value="mureka-7.6">{% if is_english %}High Quality{% elif is_spanish %}Alta Calidad{% elif is_german %}Hohe Qualität{% elif is_portuguese %}Alta Qualidade{% elif is_chinese %}高品质{% else %}高品質{% endif %}</option>
+                                <option value="mureka-o2">{% if is_english %}Premium{% elif is_spanish %}Premium{% elif is_german %}Premium{% elif is_portuguese %}Premium{% elif is_chinese %}专业{% else %}プレミアム{% endif %}</option>
                             </select>
                         </div>
                         
@@ -139,12 +175,12 @@
                         <div class="form-group mb-4">
                             <label for="music_prompt" class="form-label">
                                 <i class="bi bi-chat-dots me-1"></i>
-                                {% if is_english %}Customize (Optional){% elif is_chinese %}自定义（可选）{% else %}カスタマイズ（任意）{% endif %}
+                                {% if is_english %}Customize (Optional){% elif is_spanish %}Personalizar (Opcional){% elif is_german %}Anpassen (Optional){% elif is_portuguese %}Personalizar (Opcional){% elif is_chinese %}自定义（可选）{% else %}カスタマイズ（任意）{% endif %}
                             </label>
                             <textarea name="music_prompt" id="music_prompt" class="form-control custom-request-input" rows="2" 
-                                placeholder="{% if is_english %}e.g. 'Make it upbeat', 'Add piano', 'Emotional ballad style', 'Like a J-pop song'{% elif is_chinese %}例如：'轻快一点'、'加钢琴'、'抒情风格'、'像日本流行歌曲'{% else %}例：「アップテンポで」「ピアノを入れて」「感動的なバラード調」「J-POPっぽく」{% endif %}"></textarea>
+                                placeholder="{% if is_english %}e.g. 'Make it upbeat', 'Add piano', 'Emotional ballad style', 'Like a J-pop song'{% elif is_spanish %}ej. 'Hazlo animado', 'Añade piano', 'Estilo balada emocional', 'Como una canción de J-pop'{% elif is_german %}z.B. 'Mach es fröhlich', 'Füge Klavier hinzu', 'Emotionaler Balladenstil', 'Wie ein J-Pop-Song'{% elif is_portuguese %}ex. 'Faça animado', 'Adicione piano', 'Estilo balada emocional', 'Como uma música de J-pop'{% elif is_chinese %}例如：'轻快一点'、'加钢琴'、'抒情风格'、'像日本流行歌曲'{% else %}例：「アップテンポで」「ピアノを入れて」「感動的なバラード調」「J-POPっぽく」{% endif %}"></textarea>
                             <small class="text-muted">
-                                {% if is_english %}Tell AI how you want your song to sound{% elif is_chinese %}告诉AI你想要什么样的歌曲{% else %}AIにどのような曲を作ってほしいか自由に伝えられます{% endif %}
+                                {% if is_english %}Tell AI how you want your song to sound{% elif is_spanish %}Dile a la IA cómo quieres que suene tu canción{% elif is_german %}Sag der KI, wie dein Lied klingen soll{% elif is_portuguese %}Diga à IA como você quer que sua música soe{% elif is_chinese %}告诉AI你想要什么样的歌曲{% else %}AIにどのような曲を作ってほしいか自由に伝えられます{% endif %}
                             </small>
                         </div>
                         
@@ -156,14 +192,14 @@
                         <!-- 送信ボタン -->
                         <div class="form-actions">
                             <button type="submit" class="btn-create-song">
-                                <span class="btn-text">{% if is_english %}Generate AI Song{% elif is_chinese %}AI生成歌曲{% else %}AI楽曲を生成{% endif %}</span>
+                                <span class="btn-text">{% if is_english %}Generate AI Song{% elif is_spanish %}Generar Canción con IA{% elif is_german %}KI-Lied generieren{% elif is_chinese %}AI生成歌曲{% else %}AI楽曲を生成{% endif %}</span>
                                 <span class="btn-loading" style="display: none;">
                                     <span class="spinner-border spinner-border-sm"></span>
-                                    {% if is_english %}Generating...{% elif is_chinese %}生成中...{% else %}楽曲を生成中...{% endif %}
+                                    {% if is_english %}Generating...{% elif is_spanish %}Generando...{% elif is_german %}Generiere...{% elif is_chinese %}生成中...{% else %}楽曲を生成中...{% endif %}
                                 </span>
                             </button>
                             <a href="{% url 'songs:upload_image' %}" class="btn-secondary-action">
-                                {% if is_english %}Back to Upload{% elif is_chinese %}返回上传{% else %}画像アップロードに戻る{% endif %}
+                                {% if is_english %}Back to Upload{% elif is_spanish %}Volver a Subir{% elif is_german %}Zurück zum Hochladen{% elif is_chinese %}返回上传{% else %}画像アップロードに戻る{% endif %}
                             </a>
                         </div>
                     </form>
@@ -524,6 +560,12 @@ document.addEventListener('DOMContentLoaded', function() {
     {% if is_english %}
     if (genreInput) genreInput.placeholder = 'Genre (e.g. Pop, Rock, Classical)';
     if (titleInput) titleInput.placeholder = 'Enter the song title';
+    {% elif is_spanish %}
+    if (genreInput) genreInput.placeholder = 'Género (ej. Pop, Rock, Clásica)';
+    if (titleInput) titleInput.placeholder = 'Ingrese el título de la canción';
+    {% elif is_german %}
+    if (genreInput) genreInput.placeholder = 'Genre (z.B. Pop, Rock, Klassik)';
+    if (titleInput) titleInput.placeholder = 'Geben Sie den Liedtitel ein';
     {% elif is_chinese %}
     if (genreInput) genreInput.placeholder = '类型（例：流行、摇滚、古典）';
     if (titleInput) titleInput.placeholder = '输入歌曲标题';

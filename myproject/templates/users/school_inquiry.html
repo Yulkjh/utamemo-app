@@ -1,0 +1,341 @@
+{% extends 'base.html' %}
+
+{% block title %}{% if is_english %}School Plan Inquiry{% elif is_spanish %}Consulta Plan Escolar{% elif is_german %}Schulplan Anfrage{% elif is_chinese %}学校方案咨询{% else %}スクールプラン お問い合わせ{% endif %} - UTAMEMO{% endblock %}
+
+{% block content %}
+<div class="inquiry-container">
+    <div class="inquiry-wrapper">
+        <div class="inquiry-header fade-in">
+            <h1 class="inquiry-title">{% if is_english %}School Plan Inquiry{% elif is_spanish %}Consulta Plan Escolar{% elif is_german %}Schulplan Anfrage{% elif is_chinese %}学校方案咨询{% else %}スクールプラン お問い合わせ{% endif %}</h1>
+            <p class="inquiry-subtitle">{% if is_english %}Contact us about our educational institution plan{% elif is_spanish %}Contáctenos sobre nuestro plan para instituciones educativas{% elif is_german %}Kontaktieren Sie uns bezüglich unseres Bildungseinrichtungsplans{% elif is_chinese %}关于教育机构方案的咨询请在此处提交{% else %}教育機関向けプランについてのお問い合わせはこちらから{% endif %}</p>
+        </div>
+
+        <div class="inquiry-content fade-in">
+            <div class="plan-summary">
+                <h3>{% if is_english %}School Plan Features{% elif is_spanish %}Características del Plan Escolar{% elif is_german %}Schulplan Funktionen{% elif is_chinese %}学校方案特点{% else %}スクールプランの特徴{% endif %}</h3>
+                <ul>
+                    <li>{% if is_english %}Up to 100 songs/student/month{% elif is_spanish %}Hasta 100 canciones/estudiante/mes{% elif is_german %}Bis zu 100 Lieder/Schüler/Monat{% elif is_chinese %}每学生每月最多100首{% else %}生徒1人あたり月100曲まで生成可能{% endif %}</li>
+                    <li>{% if is_english %}All models available (v7.5, v7.6, O2){% elif is_spanish %}Todos los modelos disponibles (v7.5, v7.6, O2){% elif is_german %}Alle Modelle verfügbar (v7.5, v7.6, O2){% elif is_chinese %}所有模型可用（v7.5、v7.6、O2）{% else %}全モデル（v7.5, v7.6, O2）利用可能{% endif %}</li>
+                    <li>{% if is_english %}Class sharing feature{% elif is_spanish %}Función de compartir en clase{% elif is_german %}Klassenfreigabe-Funktion{% elif is_chinese %}班级共享功能{% else %}クラス共有機能{% endif %}</li>
+                    <li>{% if is_english %}Teacher management dashboard{% elif is_spanish %}Panel de gestión para profesores{% elif is_german %}Lehrer-Verwaltungs-Dashboard{% elif is_chinese %}教师管理仪表板{% else %}教師用管理ダッシュボード{% endif %}</li>
+                    <li>{% if is_english %}Bulk management & billing{% elif is_spanish %}Gestión y facturación masiva{% elif is_german %}Massenverwaltung & Abrechnung{% elif is_chinese %}批量管理和计费{% else %}一括管理・請求{% endif %}</li>
+                </ul>
+                <div class="plan-price-info">
+                    <span class="price">¥450</span>
+                    <span class="unit">/{% if is_english %}student/mo{% elif is_spanish %}estudiante/mes{% elif is_german %}Schüler/Monat{% elif is_chinese %}学生/月{% else %}生徒/月{% endif %}</span>
+                </div>
+            </div>
+
+            <form method="post" class="inquiry-form" id="schoolInquiryForm">
+                {% csrf_token %}
+                
+                <div class="form-group">
+                    <label for="organization_name">{% if is_english %}School/Educational Institution Name{% elif is_spanish %}Nombre de la Escuela/Institución Educativa{% elif is_german %}Schul-/Bildungseinrichtungsname{% elif is_chinese %}学校/教育机构名称{% else %}学校・教育機関名{% endif %} <span class="required">*</span></label>
+                    <input type="text" id="organization_name" name="organization_name" required 
+                           placeholder="{% if is_english %}e.g.: ABC High School{% elif is_spanish %}ej.: Escuela Secundaria ABC{% elif is_german %}z.B.: ABC Gymnasium{% elif is_chinese %}例：ABC高中{% else %}例：○○高等学校{% endif %}">
+                </div>
+
+                <div class="form-group">
+                    <label for="contact_name">{% if is_english %}Contact Person{% elif is_spanish %}Persona de Contacto{% elif is_german %}Ansprechpartner{% elif is_chinese %}联系人{% else %}担当者名{% endif %} <span class="required">*</span></label>
+                    <input type="text" id="contact_name" name="contact_name" required
+                           placeholder="{% if is_english %}e.g.: John Smith{% elif is_spanish %}ej.: Juan García{% elif is_german %}z.B.: Hans Müller{% elif is_chinese %}例：张三{% else %}例：山田 太郎{% endif %}">
+                </div>
+
+                <div class="form-group">
+                    <label for="email">{% if is_english %}Email Address{% elif is_spanish %}Correo Electrónico{% elif is_german %}E-Mail-Adresse{% elif is_chinese %}电子邮件{% else %}メールアドレス{% endif %} <span class="required">*</span></label>
+                    <input type="email" id="email" name="email" required
+                           placeholder="{% if is_english %}e.g.: contact@school.edu{% elif is_spanish %}ej.: contacto@escuela.edu{% elif is_german %}z.B.: kontakt@schule.de{% elif is_chinese %}例：contact@school.edu.cn{% else %}例：yamada@school.ed.jp{% endif %}">
+                </div>
+
+                <div class="form-group">
+                    <label for="phone">{% if is_english %}Phone Number{% elif is_spanish %}Número de Teléfono{% elif is_german %}Telefonnummer{% elif is_chinese %}电话号码{% else %}電話番号{% endif %}</label>
+                    <input type="tel" id="phone" name="phone"
+                           placeholder="{% if is_english %}e.g.: +1-123-456-7890{% elif is_spanish %}ej.: +34-123-456-789{% elif is_german %}z.B.: +49-123-456789{% elif is_chinese %}例：+86-10-12345678{% else %}例：03-1234-5678{% endif %}">
+                </div>
+
+                <div class="form-group">
+                    <label for="student_count">{% if is_english %}Expected Number of Students{% elif is_spanish %}Número Esperado de Estudiantes{% elif is_german %}Erwartete Schülerzahl{% elif is_chinese %}预计学生人数{% else %}予定生徒数{% endif %} <span class="required">*</span></label>
+                    <select id="student_count" name="student_count" required>
+                        <option value="">{% if is_english %}Please select{% elif is_spanish %}Por favor seleccione{% elif is_german %}Bitte auswählen{% elif is_chinese %}请选择{% else %}選択してください{% endif %}</option>
+                        <option value="1-30">1〜30{% if is_english %} students{% elif is_spanish %} estudiantes{% elif is_german %} Schüler{% elif is_chinese %}人{% else %}人{% endif %}</option>
+                        <option value="31-100">31〜100{% if is_english %} students{% elif is_spanish %} estudiantes{% elif is_german %} Schüler{% elif is_chinese %}人{% else %}人{% endif %}</option>
+                        <option value="101-300">101〜300{% if is_english %} students{% elif is_spanish %} estudiantes{% elif is_german %} Schüler{% elif is_chinese %}人{% else %}人{% endif %}</option>
+                        <option value="301-500">301〜500{% if is_english %} students{% elif is_spanish %} estudiantes{% elif is_german %} Schüler{% elif is_chinese %}人{% else %}人{% endif %}</option>
+                        <option value="501+">501{% if is_english %}+ students{% elif is_spanish %}+ estudiantes{% elif is_german %}+ Schüler{% elif is_chinese %}人以上{% else %}人以上{% endif %}</option>
+                    </select>
+                </div>
+
+                <div class="form-group">
+                    <label for="start_date">{% if is_english %}Desired Start Date{% elif is_spanish %}Fecha de Inicio Deseada{% elif is_german %}Gewünschtes Startdatum{% elif is_chinese %}期望开始时间{% else %}利用開始希望時期{% endif %}</label>
+                    <select id="start_date" name="start_date">
+                        <option value="">{% if is_english %}Please select{% elif is_spanish %}Por favor seleccione{% elif is_german %}Bitte auswählen{% elif is_chinese %}请选择{% else %}選択してください{% endif %}</option>
+                        <option value="immediate">{% if is_english %}Immediately{% elif is_spanish %}Inmediatamente{% elif is_german %}Sofort{% elif is_chinese %}立即{% else %}すぐに{% endif %}</option>
+                        <option value="1month">{% if is_english %}Within 1 month{% elif is_spanish %}Dentro de 1 mes{% elif is_german %}Innerhalb 1 Monat{% elif is_chinese %}1个月内{% else %}1ヶ月以内{% endif %}</option>
+                        <option value="3months">{% if is_english %}Within 3 months{% elif is_spanish %}Dentro de 3 meses{% elif is_german %}Innerhalb 3 Monaten{% elif is_chinese %}3个月内{% else %}3ヶ月以内{% endif %}</option>
+                        <option value="next_semester">{% if is_english %}Next semester{% elif is_spanish %}Próximo semestre{% elif is_german %}Nächstes Semester{% elif is_chinese %}下学期{% else %}次学期から{% endif %}</option>
+                        <option value="next_year">{% if is_english %}Next academic year{% elif is_spanish %}Próximo año académico{% elif is_german %}Nächstes Schuljahr{% elif is_chinese %}下学年{% else %}来年度から{% endif %}</option>
+                        <option value="undecided">{% if is_english %}Undecided{% elif is_spanish %}Sin decidir{% elif is_german %}Unentschieden{% elif is_chinese %}未定{% else %}未定{% endif %}</option>
+                    </select>
+                </div>
+
+                <div class="form-group">
+                    <label for="message">{% if is_english %}Inquiry Details{% elif is_spanish %}Detalles de la Consulta{% elif is_german %}Anfrage-Details{% elif is_chinese %}咨询内容{% else %}お問い合わせ内容{% endif %} <span class="required">*</span></label>
+                    <textarea id="message" name="message" rows="5" required
+                              placeholder="{% if is_english %}Please write your questions or requests{% elif is_spanish %}Por favor escriba sus preguntas o solicitudes{% elif is_german %}Bitte schreiben Sie Ihre Fragen oder Wünsche{% elif is_chinese %}请写下您的问题或要求{% else %}ご質問やご要望をお書きください{% endif %}"></textarea>
+                </div>
+
+                <div class="form-group checkbox-group">
+                    <label class="checkbox-label">
+                        <input type="checkbox" name="agree_privacy" required>
+                        <span>{% if is_english %}I agree to the{% elif is_spanish %}Acepto la{% elif is_german %}Ich stimme der{% elif is_chinese %}我同意{% else %}{% endif %}<a href="{% url 'privacy' %}" target="_blank">{% if is_english %}Privacy Policy{% elif is_spanish %}Política de Privacidad{% elif is_german %}Datenschutzrichtlinie{% elif is_chinese %}隐私政策{% else %}プライバシーポリシー{% endif %}</a>{% if is_english %}{% elif is_spanish %}{% elif is_german %} zu{% elif is_chinese %}{% else %}に同意する{% endif %}</span>
+                    </label>
+                </div>
+
+                <button type="submit" class="submit-btn">{% if is_english %}Submit{% elif is_spanish %}Enviar{% elif is_german %}Absenden{% elif is_chinese %}提交{% else %}送信する{% endif %}</button>
+            </form>
+
+            <div class="inquiry-note">
+                <p>{% if is_english %}※ We will contact you within 2-3 business days.{% elif is_spanish %}※ Le contactaremos dentro de 2-3 días hábiles.{% elif is_german %}※ Wir werden Sie innerhalb von 2-3 Werktagen kontaktieren.{% elif is_chinese %}※ 我们将在2-3个工作日内与您联系。{% else %}※ 通常2〜3営業日以内にご連絡いたします。{% endif %}</p>
+                <p>{% if is_english %}※ For urgent inquiries, please contact{% elif is_spanish %}※ Para consultas urgentes, contacte{% elif is_german %}※ Für dringende Anfragen kontaktieren Sie bitte{% elif is_chinese %}※ 如有紧急咨询，请直接联系{% else %}※ お急ぎの場合は{% endif %} <a href="mailto:hope47284@gmail.com">hope47284@gmail.com</a> {% if is_english %}directly.{% elif is_spanish %}directamente.{% elif is_german %}direkt.{% elif is_chinese %}。{% else %}まで直接ご連絡ください。{% endif %}</p>
+            </div>
+        </div>
+    </div>
+</div>
+
+<style>
+.inquiry-container {
+    min-height: 100vh;
+    background: linear-gradient(135deg, #fafafa 0%, #f5f5f5 100%);
+    padding: 40px 20px;
+}
+
+.inquiry-wrapper {
+    max-width: 700px;
+    margin: 0 auto;
+}
+
+.inquiry-header {
+    text-align: center;
+    margin-bottom: 30px;
+}
+
+.inquiry-title {
+    font-size: 1.8rem;
+    font-weight: 700;
+    color: #333;
+    margin-bottom: 8px;
+}
+
+.inquiry-subtitle {
+    color: #666;
+    font-size: 1rem;
+}
+
+.inquiry-content {
+    background: white;
+    border-radius: 16px;
+    padding: 30px;
+    box-shadow: 0 2px 12px rgba(0,0,0,0.06);
+}
+
+.plan-summary {
+    background: #fff9f5;
+    border-radius: 12px;
+    padding: 20px;
+    margin-bottom: 30px;
+    border-left: 4px solid #ff6b35;
+}
+
+.plan-summary h3 {
+    font-size: 1.1rem;
+    font-weight: 600;
+    color: #333;
+    margin-bottom: 12px;
+}
+
+.plan-summary ul {
+    list-style: none;
+    padding: 0;
+    margin: 0 0 15px 0;
+}
+
+.plan-summary li {
+    padding: 6px 0;
+    color: #555;
+    font-size: 0.9rem;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.plan-summary li::before {
+    content: "✓";
+    color: #ff6b35;
+    font-weight: 600;
+}
+
+.plan-price-info {
+    display: flex;
+    align-items: baseline;
+    gap: 4px;
+}
+
+.plan-price-info .price {
+    font-size: 1.5rem;
+    font-weight: 700;
+    color: #ff6b35;
+}
+
+.plan-price-info .unit {
+    font-size: 0.9rem;
+    color: #888;
+}
+
+.inquiry-form {
+    display: flex;
+    flex-direction: column;
+    gap: 20px;
+}
+
+.form-group {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+}
+
+.form-group label {
+    font-size: 0.9rem;
+    font-weight: 600;
+    color: #333;
+}
+
+.form-group .required {
+    color: #e53935;
+}
+
+.form-group input,
+.form-group select,
+.form-group textarea {
+    padding: 12px 14px;
+    border: 1px solid #ddd;
+    border-radius: 8px;
+    font-size: 1rem;
+    transition: border-color 0.2s, box-shadow 0.2s;
+}
+
+.form-group input:focus,
+.form-group select:focus,
+.form-group textarea:focus {
+    outline: none;
+    border-color: #ff6b35;
+    box-shadow: 0 0 0 3px rgba(255, 107, 53, 0.1);
+}
+
+.form-group textarea {
+    resize: vertical;
+    min-height: 120px;
+}
+
+.checkbox-group {
+    flex-direction: row;
+}
+
+.checkbox-label {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    cursor: pointer;
+    font-weight: normal !important;
+}
+
+.checkbox-label input[type="checkbox"] {
+    width: 18px;
+    height: 18px;
+    cursor: pointer;
+}
+
+.checkbox-label a {
+    color: #ff6b35;
+    text-decoration: none;
+}
+
+.checkbox-label a:hover {
+    text-decoration: underline;
+}
+
+.submit-btn {
+    background: linear-gradient(135deg, #ff6b35, #ff8c5a);
+    color: white;
+    border: none;
+    border-radius: 10px;
+    padding: 14px 24px;
+    font-size: 1rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.2s;
+    margin-top: 10px;
+}
+
+.submit-btn:hover {
+    background: linear-gradient(135deg, #e55a28, #ff6b35);
+    transform: translateY(-2px);
+}
+
+.submit-btn:disabled {
+    opacity: 0.7;
+    cursor: not-allowed;
+    transform: none;
+}
+
+.inquiry-note {
+    margin-top: 25px;
+    padding-top: 20px;
+    border-top: 1px solid #eee;
+}
+
+.inquiry-note p {
+    font-size: 0.85rem;
+    color: #888;
+    margin: 5px 0;
+}
+
+.inquiry-note a {
+    color: #ff6b35;
+}
+
+/* Animation */
+.fade-in {
+    animation: fadeIn 0.5s ease-out;
+}
+
+@keyframes fadeIn {
+    from { opacity: 0; transform: translateY(10px); }
+    to { opacity: 1; transform: translateY(0); }
+}
+
+/* Responsive */
+@media (max-width: 768px) {
+    .inquiry-content {
+        padding: 20px;
+    }
+    
+    .inquiry-title {
+        font-size: 1.5rem;
+    }
+}
+</style>
+
+<script>
+document.getElementById('schoolInquiryForm').addEventListener('submit', async function(e) {
+    e.preventDefault();
+    
+    const btn = this.querySelector('.submit-btn');
+    const originalText = btn.textContent;
+    btn.textContent = '送信中...';
+    btn.disabled = true;
+    
+    // 通常のフォーム送信
+    this.submit();
+});
+</script>
+{% endblock %}

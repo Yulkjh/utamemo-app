@@ -1,6 +1,6 @@
 {% extends 'base.html' %}
 
-{% block title %}{{ profile_user.username }}{% if is_english %}'s Profile{% elif is_chinese %}的个人资料{% else %}のプロフィール{% endif %} - UTAMEMO{% endblock %}
+{% block title %}{{ profile_user.username }}{% if is_english %}'s Profile{% elif is_spanish %} - Perfil{% elif is_german %}s Profil{% elif is_portuguese %} - Perfil{% elif is_chinese %}的个人资料{% else %}のプロフィール{% endif %} - UTAMEMO{% endblock %}
 
 {% block content %}
 {% csrf_token %}
@@ -32,7 +32,7 @@
                         {% endif %}
                         
                         {% if user.is_authenticated and user == profile_user %}
-                        <a href="{% url 'users:profile_edit' %}" class="avatar-edit-btn" title="{% if is_english %}Edit Profile{% elif is_chinese %}编辑个人资料{% else %}プロフィールを編集{% endif %}">
+                        <a href="{% url 'users:profile_edit' %}" class="avatar-edit-btn" title="{% if is_english %}Edit Profile{% elif is_spanish %}Editar Perfil{% elif is_german %}Profil Bearbeiten{% elif is_portuguese %}Editar Perfil{% elif is_chinese %}编辑个人资料{% else %}プロフィールを編集{% endif %}">
                             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                                 <path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/>
                                 <circle cx="12" cy="13" r="4"/>
@@ -50,30 +50,30 @@
                                     <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/>
                                     <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/>
                                 </svg>
-                                {% if is_english %}Edit{% elif is_chinese %}编辑{% else %}編集{% endif %}
+                                {% if is_english %}Edit{% elif is_spanish %}Editar{% elif is_german %}Bearbeiten{% elif is_portuguese %}Editar{% elif is_chinese %}编辑{% else %}編集{% endif %}
                             </a>
                             {% endif %}
                         </div>
                         {% if profile_user.bio %}
                         <p class="profile-bio">{{ profile_user.bio }}</p>
                         {% else %}
-                        <p class="profile-bio">{% if is_english %}Experiencing learning revolution with UTAMEMO{% elif is_chinese %}用UTAMEMO体验学习革命{% else %}UTAMEMOで学習の革命を体験中{% endif %}</p>
+                        <p class="profile-bio">{% if is_english %}Experiencing learning revolution with UTAMEMO{% elif is_spanish %}Experimentando la revolución del aprendizaje con UTAMEMO{% elif is_german %}Erleben Sie die Lernrevolution mit UTAMEMO{% elif is_portuguese %}Experimentando a revolução do aprendizado com UTAMEMO{% elif is_chinese %}用UTAMEMO体验学习革命{% else %}UTAMEMOで学習の革命を体験中{% endif %}</p>
                         {% endif %}
                         
                         <div class="profile-stats">
                             <div class="stat-item">
                                 <div class="stat-number">{{ user_songs.count }}</div>
-                                <div class="stat-label">{% if is_english %}Songs{% elif is_chinese %}歌曲{% else %}楽曲{% endif %}</div>
+                                <div class="stat-label">{% if is_english %}Songs{% elif is_spanish %}Canciones{% elif is_german %}Lieder{% elif is_portuguese %}Músicas{% elif is_chinese %}歌曲{% else %}楽曲{% endif %}</div>
                             </div>
                             <div class="stat-divider"></div>
                             <div class="stat-item">
                                 <div class="stat-number">{{ total_likes }}</div>
-                                <div class="stat-label">{% if is_english %}Total Likes{% elif is_chinese %}总点赞{% else %}総いいね数{% endif %}</div>
+                                <div class="stat-label">{% if is_english %}Total Likes{% elif is_spanish %}Me Gusta Totales{% elif is_german %}Gesamte Likes{% elif is_portuguese %}Total de Curtidas{% elif is_chinese %}总点赞{% else %}総いいね数{% endif %}</div>
                             </div>
                             <div class="stat-divider"></div>
                             <div class="stat-item">
                                 <div class="stat-number">{{ profile_user.date_joined|date:"Y.m" }}</div>
-                                <div class="stat-label">{% if is_english %}Joined{% elif is_chinese %}加入{% else %}開始{% endif %}</div>
+                                <div class="stat-label">{% if is_english %}Joined{% elif is_spanish %}Unido{% elif is_german %}Beigetreten{% elif is_portuguese %}Entrou{% elif is_chinese %}加入{% else %}開始{% endif %}</div>
                             </div>
                         </div>
                     </div>
@@ -86,10 +86,10 @@
         <div class="classrooms-section fade-in">
             <div class="section-header">
                 <div class="section-title">
-                    <h3>{% if is_english %}My Classes{% elif is_chinese %}我的班级{% else %}参加中のクラス{% endif %}</h3>
+                    <h3>{% if is_english %}My Classes{% elif is_spanish %}Mis Clases{% elif is_german %}Meine Klassen{% elif is_portuguese %}Minhas Turmas{% elif is_chinese %}我的班级{% else %}参加中のクラス{% endif %}</h3>
                 </div>
                 <a href="{% url 'songs:classroom_list' %}" class="view-all-link">
-                    {% if is_english %}View All{% elif is_chinese %}查看全部{% else %}すべて見る{% endif %}
+                    {% if is_english %}View All{% elif is_spanish %}Ver Todo{% elif is_german %}Alle Anzeigen{% elif is_portuguese %}Ver Todos{% elif is_chinese %}查看全部{% else %}すべて見る{% endif %}
                     <i class="bi bi-arrow-right"></i>
                 </a>
             </div>
@@ -98,13 +98,13 @@
                 {% for classroom in hosted_classrooms %}
                 <a href="{% url 'songs:classroom_detail' classroom.pk %}" class="classroom-card hosted">
                     <div class="classroom-card-header">
-                        <span class="host-badge">{% if is_english %}Host{% elif is_chinese %}主持人{% else %}ホスト{% endif %}</span>
+                        <span class="host-badge">{% if is_english %}Host{% elif is_spanish %}Anfitrión{% elif is_german %}Gastgeber{% elif is_chinese %}主持人{% else %}ホスト{% endif %}</span>
                     </div>
                     <div class="classroom-card-body">
                         <h4 class="classroom-name">{{ classroom.name }}</h4>
                         <div class="classroom-meta">
-                            <span><i class="bi bi-people-fill"></i> {{ classroom.members.count }}{% if is_english %} members{% elif is_chinese %}人{% else %}人{% endif %}</span>
-                            <span><i class="bi bi-music-note-beamed"></i> {{ classroom.shared_songs.count }}{% if is_english %} songs{% elif is_chinese %}曲{% else %}曲{% endif %}</span>
+                            <span><i class="bi bi-people-fill"></i> {{ classroom.members.count }}{% if is_english %} members{% elif is_spanish %} miembros{% elif is_german %} Mitglieder{% elif is_chinese %}人{% else %}人{% endif %}</span>
+                            <span><i class="bi bi-music-note-beamed"></i> {{ classroom.shared_songs.count }}{% if is_english %} songs{% elif is_spanish %} canciones{% elif is_german %} Lieder{% elif is_chinese %}曲{% else %}曲{% endif %}</span>
                         </div>
                     </div>
                 </a>
@@ -116,7 +116,7 @@
                         <h4 class="classroom-name">{{ classroom.name }}</h4>
                         <div class="classroom-meta">
                             <span><i class="bi bi-person-fill"></i> {{ classroom.host.username }}</span>
-                            <span><i class="bi bi-music-note-beamed"></i> {{ classroom.shared_songs.count }}{% if is_english %} songs{% elif is_chinese %}曲{% else %}曲{% endif %}</span>
+                            <span><i class="bi bi-music-note-beamed"></i> {{ classroom.shared_songs.count }}{% if is_english %} songs{% elif is_spanish %} canciones{% elif is_german %} Lieder{% elif is_chinese %}曲{% else %}曲{% endif %}</span>
                         </div>
                     </div>
                 </a>
@@ -129,9 +129,9 @@
         <div class="songs-section fade-in">
             <div class="section-header">
                 <div class="section-title">
-                    <h3>{{ profile_user.username }}{% if is_english %}'s Songs{% elif is_chinese %}的歌曲{% else %}の楽曲{% endif %}</h3>
+                    <h3>{{ profile_user.username }}{% if is_english %}'s Songs{% elif is_spanish %} - Canciones{% elif is_german %}s Lieder{% elif is_chinese %}的歌曲{% else %}の楽曲{% endif %}</h3>
                 </div>
-                <div class="song-count-badge">{{ user_songs.count }}{% if is_english %} songs{% elif is_chinese %}首{% else %}曲{% endif %}</div>
+                <div class="song-count-badge">{{ user_songs.count }}{% if is_english %} songs{% elif is_spanish %} canciones{% elif is_german %} Lieder{% elif is_chinese %}首{% else %}曲{% endif %}</div>
             </div>
 
             {% if user_songs %}
@@ -153,7 +153,7 @@
                         <button class="song-like-btn{% if song.pk in user_liked_songs %} liked{% endif %}" 
                                 onclick="toggleLike({{ song.pk }}, this)" 
                                 data-song-id="{{ song.pk }}"
-                                title="{% if is_english %}Like{% elif is_chinese %}点赞{% else %}いいね{% endif %}">
+                                title="{% if is_english %}Like{% elif is_spanish %}Me Gusta{% elif is_german %}Gefällt mir{% elif is_chinese %}点赞{% else %}いいね{% endif %}">
                             <i class="bi bi-heart{% if song.pk in user_liked_songs %}-fill{% endif %}"></i>
                             <span class="like-count">{{ song.likes_count|default:0 }}</span>
                         </button>
@@ -169,12 +169,12 @@
                 <div class="empty-icon">
                     <i class="bi bi-music-note-beamed" style="font-size: 4rem; color: #ccc;"></i>
                 </div>
-                <h5 class="empty-title">{% if is_english %}No songs yet{% elif is_chinese %}暂无歌曲{% else %}まだ楽曲がありません{% endif %}</h5>
+                <h5 class="empty-title">{% if is_english %}No songs yet{% elif is_spanish %}Aún no hay canciones{% elif is_german %}Noch keine Lieder{% elif is_chinese %}暂无歌曲{% else %}まだ楽曲がありません{% endif %}</h5>
                 <p class="empty-description">
                     {% if user == profile_user %}
-                    {% if is_english %}Create your first song with UTAMEMO and revolutionize your learning{% elif is_chinese %}用UTAMEMO创作您的第一首歌曲，革新您的学习{% else %}UTAMEMOで最初の楽曲を作成して、学習を革新しましょう{% endif %}
+                    {% if is_english %}Create your first song with UTAMEMO and revolutionize your learning{% elif is_spanish %}Crea tu primera canción con UTAMEMO y revoluciona tu aprendizaje{% elif is_german %}Erstellen Sie Ihr erstes Lied mit UTAMEMO und revolutionieren Sie Ihr Lernen{% elif is_chinese %}用UTAMEMO创作您的第一首歌曲，革新您的学习{% else %}UTAMEMOで最初の楽曲を作成して、学習を革新しましょう{% endif %}
                     {% else %}
-                    {% if is_english %}{{ profile_user.username }} hasn't created any songs yet{% elif is_chinese %}{{ profile_user.username }}还没有创作任何歌曲{% else %}{{ profile_user.username }}さんはまだ楽曲を作成していません{% endif %}
+                    {% if is_english %}{{ profile_user.username }} hasn't created any songs yet{% elif is_spanish %}{{ profile_user.username }} aún no ha creado ninguna canción{% elif is_german %}{{ profile_user.username }} hat noch keine Lieder erstellt{% elif is_chinese %}{{ profile_user.username }}还没有创作任何歌曲{% else %}{{ profile_user.username }}さんはまだ楽曲を作成していません{% endif %}
                     {% endif %}
                 </p>
                 {% if user == profile_user %}
@@ -184,7 +184,7 @@
                         <line x1="12" y1="8" x2="12" y2="16"/>
                         <line x1="8" y1="12" x2="16" y2="12"/>
                     </svg>
-                    {% if is_english %}Create First Song{% elif is_chinese %}创作第一首歌{% else %}最初の楽曲を作成{% endif %}
+                    {% if is_english %}Create First Song{% elif is_spanish %}Crear Primera Canción{% elif is_german %}Erstes Lied Erstellen{% elif is_chinese %}创作第一首歌{% else %}最初の楽曲を作成{% endif %}
                 </a>
                 {% endif %}
             </div>

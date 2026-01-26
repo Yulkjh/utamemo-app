@@ -1,7 +1,7 @@
 {% extends 'base.html' %}
 {% load lyrics_filters %}
 
-{% block title %}{% if is_english %}Login{% elif is_chinese %}登录{% else %}ログイン{% endif %} - UTAMEMO{% endblock %}
+{% block title %}{% if is_english %}Login{% elif is_spanish %}Iniciar Sesión{% elif is_german %}Anmelden{% elif is_portuguese %}Entrar{% elif is_chinese %}登录{% else %}ログイン{% endif %} - UTAMEMO{% endblock %}
 
 {% block content %}
 <div class="login-container">
@@ -19,7 +19,7 @@
                                 <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/>
                                 <circle cx="12" cy="7" r="4"/>
                             </svg>
-                            {% if is_english %}Username{% elif is_chinese %}用户名{% else %}ユーザー名{% endif %}
+                            {% if is_english %}Username{% elif is_spanish %}Nombre de Usuario{% elif is_german %}Benutzername{% elif is_portuguese %}Nome de Usuário{% elif is_chinese %}用户名{% else %}ユーザー名{% endif %}
                         </label>
                         {{ form.username }}
                         {% if form.username.errors %}
@@ -42,7 +42,7 @@
                                 <circle cx="12" cy="16" r="1"/>
                                 <path d="M7 11V7a5 5 0 0 1 10 0v4"/>
                             </svg>
-                            {% if is_english %}Password{% elif is_chinese %}密码{% else %}パスワード{% endif %}
+                            {% if is_english %}Password{% elif is_spanish %}Contraseña{% elif is_german %}Passwort{% elif is_portuguese %}Senha{% elif is_chinese %}密码{% else %}パスワード{% endif %}
                         </label>
                         {{ form.password }}
                         {% if form.password.errors %}
@@ -66,11 +66,18 @@
                             <line x1="12" y1="16" x2="12.01" y2="16"/>
                         </svg>
                         <div>
-                            <strong>{% if is_english %}Login Error{% elif is_chinese %}登录错误{% else %}ログインエラー{% endif %}</strong>
+                            <strong>{% if is_english %}Login Error{% elif is_spanish %}Error de Inicio de Sesión{% elif is_german %}Anmeldefehler{% elif is_portuguese %}Erro de Login{% elif is_chinese %}登录错误{% else %}ログインエラー{% endif %}</strong>
                             <p>{{ form.non_field_errors.0|translate_error:app_language }}</p>
                         </div>
                     </div>
                     {% endif %}
+                    
+                    <!-- Forgot Password Link -->
+                    <div class="forgot-password-link mb-3">
+                        <a href="{% url 'users:password_reset' %}">
+                            {% if is_english %}Forgot your password?{% elif is_spanish %}¿Olvidó su contraseña?{% elif is_german %}Passwort vergessen?{% elif is_portuguese %}Esqueceu sua senha?{% elif is_chinese %}忘记密码？{% else %}パスワードを忘れた場合{% endif %}
+                        </a>
+                    </div>
                     
                     <!-- Submit Button -->
                     <button type="submit" class="btn-login">
@@ -79,10 +86,10 @@
                             <polyline points="10,17 15,12 10,7"/>
                             <line x1="15" y1="12" x2="3" y2="12"/>
                         </svg>
-                        <span class="btn-text">{% if is_english %}Login{% elif is_chinese %}登录{% else %}ログイン{% endif %}</span>
+                        <span class="btn-text">{% if is_english %}Login{% elif is_spanish %}Iniciar Sesión{% elif is_german %}Anmelden{% elif is_portuguese %}Entrar{% elif is_chinese %}登录{% else %}ログイン{% endif %}</span>
                         <div class="btn-loading" style="display: none;">
                             <div class="spinner"></div>
-                            {% if is_english %}Authenticating...{% elif is_chinese %}验证中...{% else %}認証中...{% endif %}
+                            {% if is_english %}Authenticating...{% elif is_spanish %}Autenticando...{% elif is_german %}Authentifiziere...{% elif is_portuguese %}Autenticando...{% elif is_chinese %}验证中...{% else %}認証中...{% endif %}
                         </div>
                     </button>
                 </form>
@@ -91,7 +98,7 @@
             <!-- Footer -->
             <div class="login-footer">
                 <div class="divider">
-                    <span>{% if is_english %}or{% elif is_chinese %}或{% else %}または{% endif %}</span>
+                    <span>{% if is_english %}or{% elif is_spanish %}o{% elif is_german %}oder{% elif is_portuguese %}ou{% elif is_chinese %}或{% else %}または{% endif %}</span>
                 </div>
                 <a href="{% url 'users:register' %}" class="btn-register">
                     <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
@@ -100,7 +107,7 @@
                         <line x1="20" y1="8" x2="20" y2="14"/>
                         <line x1="23" y1="11" x2="17" y2="11"/>
                     </svg>
-                    {% if is_english %}Create New Account{% elif is_chinese %}创建新账户{% else %}新規アカウント作成{% endif %}
+                    {% if is_english %}Create New Account{% elif is_spanish %}Crear Nueva Cuenta{% elif is_german %}Neues Konto Erstellen{% elif is_portuguese %}Criar Nova Conta{% elif is_chinese %}创建新账户{% else %}新規アカウント作成{% endif %}
                 </a>
             </div>
         </div>
@@ -189,6 +196,22 @@
     border-radius: var(--radius-lg);
     padding: 1rem;
     margin-bottom: 1.5rem;
+}
+
+.forgot-password-link {
+    text-align: right;
+}
+
+.forgot-password-link a {
+    color: var(--text-muted);
+    font-size: 0.875rem;
+    text-decoration: none;
+    transition: color 0.3s ease;
+}
+
+.forgot-password-link a:hover {
+    color: var(--primary-color);
+    text-decoration: underline;
 }
 
 .alert-error strong {

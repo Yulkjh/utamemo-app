@@ -17,7 +17,7 @@
                             <div class="title-edit-container">
                                 <h1 class="song-main-title" id="song-title-display">{{ song.title }}</h1>
                                 {% if user == song.created_by %}
-                                <button class="btn-edit-title" onclick="startTitleEdit()" title="{% if is_english %}Edit Title{% elif is_chinese %}编辑标题{% else %}タイトルを編集{% endif %}">
+                                <button class="btn-edit-title" onclick="startTitleEdit()" title="{% if is_english %}Edit Title{% elif is_spanish %}Editar Título{% elif is_german %}Titel bearbeiten{% elif is_portuguese %}Editar Título{% elif is_chinese %}编辑标题{% else %}タイトルを編集{% endif %}">
                                     <i class="bi bi-pencil"></i>
                                 </button>
                                 {% endif %}
@@ -25,10 +25,10 @@
                             <div class="title-edit-form" id="title-edit-form" style="display: none;">
                                 <input type="text" id="title-input" class="title-input" value="{{ song.title }}" maxlength="200">
                                 <button class="btn-save-title" onclick="saveTitleEdit()">
-                                    <i class="bi bi-check"></i> {% if is_english %}Save{% elif is_chinese %}保存{% else %}保存{% endif %}
+                                    <i class="bi bi-check"></i> {% if is_english %}Save{% elif is_spanish %}Guardar{% elif is_german %}Speichern{% elif is_portuguese %}Salvar{% elif is_chinese %}保存{% else %}保存{% endif %}
                                 </button>
                                 <button class="btn-cancel-title" onclick="cancelTitleEdit()">
-                                    <i class="bi bi-x"></i> {% if is_english %}Cancel{% elif is_chinese %}取消{% else %}キャンセル{% endif %}
+                                    <i class="bi bi-x"></i> {% if is_english %}Cancel{% elif is_spanish %}Cancelar{% elif is_german %}Abbrechen{% elif is_portuguese %}Cancelar{% elif is_chinese %}取消{% else %}キャンセル{% endif %}
                                 </button>
                             </div>
                         </div>
@@ -57,10 +57,10 @@
                     <!-- タグ表示 -->
                     <div class="tags-section mt-3">
                         <div class="tags-header">
-                            <span class="tags-title">{% if is_english %}Tags{% elif is_chinese %}标签{% else %}タグ{% endif %}</span>
+                            <span class="tags-title">{% if is_english %}Tags{% elif is_spanish %}Etiquetas{% elif is_german %}Tags{% elif is_portuguese %}Tags{% elif is_chinese %}标签{% else %}タグ{% endif %}</span>
                             {% if user == song.created_by %}
                             <button class="btn-edit-tags" onclick="openTagEditor()">
-                                <i class="bi bi-pencil"></i> {% if is_english %}Edit{% elif is_chinese %}编辑{% else %}編集{% endif %}
+                                <i class="bi bi-pencil"></i> {% if is_english %}Edit{% elif is_spanish %}Editar{% elif is_german %}Bearbeiten{% elif is_portuguese %}Editar{% elif is_chinese %}编辑{% else %}編集{% endif %}
                             </button>
                             {% endif %}
                         </div>
@@ -68,7 +68,7 @@
                             {% for tag in song.tags.all %}
                             <span class="tag-badge">#{{ tag.name }}</span>
                             {% empty %}
-                            <span class="text-muted">{% if is_english %}No tags yet{% elif is_chinese %}暂无标签{% else %}タグがまだありません{% endif %}</span>
+                            <span class="text-muted">{% if is_english %}No tags yet{% elif is_spanish %}Sin etiquetas{% elif is_german %}Noch keine Tags{% elif is_portuguese %}Nenhuma tag ainda{% elif is_chinese %}暂无标签{% else %}タグがまだありません{% endif %}</span>
                             {% endfor %}
                         </div>
                     </div>
@@ -79,7 +79,7 @@
             <div class="music-player-card fade-in">
                 <div class="player-header">
                     <div>
-                        <h3>{% if is_english %}Play Song{% elif is_chinese %}播放歌曲{% else %}楽曲を再生{% endif %}</h3>
+                        <h3>{% if is_english %}Play Song{% elif is_spanish %}Reproducir Canción{% elif is_german %}Song abspielen{% elif is_portuguese %}Reproduzir Música{% elif is_chinese %}播放歌曲{% else %}楽曲を再生{% endif %}</h3>
                     </div>
                 </div>
                 
@@ -89,7 +89,7 @@
                     <div class="audio-controls">
                         <audio controls class="custom-audio-player" id="main-audio-player">
                             <source src="{{ song.audio_file.url }}" type="audio/mpeg">
-                            {% if is_english %}Your browser does not support audio playback.{% elif is_chinese %}您的浏览器不支持音频播放。{% else %}お使いのブラウザは音声の再生をサポートしていません。{% endif %}
+                            {% if is_english %}Your browser does not support audio playback.{% elif is_spanish %}Su navegador no soporta la reproducción de audio.{% elif is_german %}Ihr Browser unterstützt keine Audiowiedergabe.{% elif is_portuguese %}Seu navegador não suporta reprodução de áudio.{% elif is_chinese %}您的浏览器不支持音频播放。{% else %}お使いのブラウザは音声の再生をサポートしていません。{% endif %}
                         </audio>
                     </div>
                     {% elif song.audio_url %}
@@ -97,7 +97,7 @@
                     <div class="audio-controls">
                         <audio controls class="custom-audio-player" id="main-audio-player" preload="none">
                             <source src="{{ song.audio_url }}" type="audio/mpeg">
-                            {% if is_english %}Your browser does not support audio playback.{% elif is_chinese %}您的浏览器不支持音频播放。{% else %}お使いのブラウザは音声の再生をサポートしていません。{% endif %}
+                            {% if is_english %}Your browser does not support audio playback.{% elif is_spanish %}Su navegador no soporta la reproducción de audio.{% elif is_german %}Ihr Browser unterstützt keine Audiowiedergabe.{% elif is_portuguese %}Seu navegador não suporta reprodução de áudio.{% elif is_chinese %}您的浏览器不支持音频播放。{% else %}お使いのブラウザは音声の再生をサポートしていません。{% endif %}
                         </audio>
                     </div>
                     {% else %}
@@ -106,37 +106,37 @@
                         
                         <div id="status-message">
                         {% if song.generation_status == 'pending' %}
-                            <p><strong>{% if is_english %}⏳ Waiting in queue...{% elif is_chinese %}⏳ 排队等候中...{% else %}⏳ キューで待機中...{% endif %}</strong></p>
+                            <p><strong>{% if is_english %}⏳ Waiting in queue...{% elif is_spanish %}⏳ Esperando en cola...{% elif is_german %}⏳ In der Warteschlange...{% elif is_portuguese %}⏳ Aguardando na fila...{% elif is_chinese %}⏳ 排队等候中...{% else %}⏳ キューで待機中...{% endif %}</strong></p>
                             {% if song.queue_position %}
                                 <div class="queue-info">
                                     <div class="queue-number">{{ song.queue_position }}</div>
-                                    <p>{% if is_english %}<strong>{{ song.queue_position|add:"-1" }} people</strong> ahead of you{% elif is_chinese %}前面有<strong>{{ song.queue_position|add:"-1" }}人</strong>在等待{% else %}現在<strong>{{ song.queue_position|add:"-1" }}人</strong>待っています{% endif %}</p>
+                                    <p>{% if is_english %}<strong>{{ song.queue_position|add:"-1" }} people</strong> ahead of you{% elif is_spanish %}<strong>{{ song.queue_position|add:"-1" }} personas</strong> delante de ti{% elif is_german %}<strong>{{ song.queue_position|add:"-1" }} Personen</strong> vor dir{% elif is_portuguese %}<strong>{{ song.queue_position|add:"-1" }} pessoas</strong> na sua frente{% elif is_chinese %}前面有<strong>{{ song.queue_position|add:"-1" }}人</strong>在等待{% else %}現在<strong>{{ song.queue_position|add:"-1" }}人</strong>待っています{% endif %}</p>
                                 </div>
                             {% endif %}
                         {% elif song.generation_status == 'generating' %}
-                            <p><strong>{% if is_english %}Generating your song...{% elif is_chinese %}正在生成歌曲...{% else %}楽曲を生成中です...{% endif %}</strong><br>{% if is_english %}Usually takes 1-2 minutes.{% elif is_chinese %}通常需要1-2分钟。{% else %}通常1〜2分で完成します。{% endif %}</p>
+                            <p><strong>{% if is_english %}Generating your song...{% elif is_spanish %}Generando tu canción...{% elif is_german %}Song wird generiert...{% elif is_portuguese %}Gerando sua música...{% elif is_chinese %}正在生成歌曲...{% else %}楽曲を生成中です...{% endif %}</strong><br>{% if is_english %}Usually takes 1-2 minutes.{% elif is_spanish %}Normalmente tarda 1-2 minutos.{% elif is_german %}Dauert normalerweise 1-2 Minuten.{% elif is_portuguese %}Geralmente leva 1-2 minutos.{% elif is_chinese %}通常需要1-2分钟。{% else %}通常1〜2分で完成します。{% endif %}</p>
                         {% elif song.generation_status == 'failed' %}
-                            <p><strong>{% if is_english %}❌ Generation failed{% elif is_chinese %}❌ 生成失败{% else %}❌ 生成に失敗しました{% endif %}</strong></p>
+                            <p><strong>{% if is_english %}❌ Generation failed{% elif is_spanish %}❌ Generación fallida{% elif is_german %}❌ Generierung fehlgeschlagen{% elif is_portuguese %}❌ Falha na geração{% elif is_chinese %}❌ 生成失败{% else %}❌ 生成に失敗しました{% endif %}</strong></p>
                             {% if user == song.created_by %}
                                 {% if song.retry_count < 1 %}
                                 <form method="post" action="{% url 'songs:retry_song' song.pk %}" style="margin-top: 1rem;">
                                     {% csrf_token %}
                                     <button type="submit" class="btn-download" style="background: linear-gradient(135deg, #ff7940 0%, #ff6b35 100%);">
-                                        <i class="bi bi-arrow-clockwise"></i> {% if is_english %}Retry{% elif is_chinese %}重试{% else %}再生成する{% endif %}
+                                        <i class="bi bi-arrow-clockwise"></i> {% if is_english %}Retry{% elif is_spanish %}Reintentar{% elif is_german %}Wiederholen{% elif is_portuguese %}Tentar Novamente{% elif is_chinese %}重试{% else %}再生成する{% endif %}
                                     </button>
                                 </form>
                                 {% else %}
-                                <p style="margin-top: 1rem; color: #666;">{% if is_english %}Retry limit (1) reached{% elif is_chinese %}重试次数（1次）已达上限{% else %}再生成の上限（1回）に達しました{% endif %}</p>
+                                <p style="margin-top: 1rem; color: #666;">{% if is_english %}Retry limit (1) reached{% elif is_spanish %}Límite de reintentos (1) alcanzado{% elif is_german %}Wiederholungslimit (1) erreicht{% elif is_portuguese %}Limite de tentativas (1) atingido{% elif is_chinese %}重试次数（1次）已达上限{% else %}再生成の上限（1回）に達しました{% endif %}</p>
                                 {% endif %}
                             {% else %}
-                            <p>{% if is_english %}Only the creator can retry.{% elif is_chinese %}只有创作者可以重试。{% else %}作成者のみが再生成できます。{% endif %}</p>
+                            <p>{% if is_english %}Only the creator can retry.{% elif is_spanish %}Solo el creador puede reintentar.{% elif is_german %}Nur der Ersteller kann wiederholen.{% elif is_portuguese %}Apenas o criador pode tentar novamente.{% elif is_chinese %}只有创作者可以重试。{% else %}作成者のみが再生成できます。{% endif %}</p>
                             {% endif %}
                         {% else %}
-                            <p><strong>{% if is_english %}Generating your song...{% elif is_chinese %}正在生成歌曲...{% else %}楽曲を生成中です...{% endif %}</strong><br>{% if is_english %}Usually takes 1-2 minutes.{% elif is_chinese %}通常需要1-2分钟。{% else %}通常1〜2分で完成します。{% endif %}</p>
+                            <p><strong>{% if is_english %}Generating your song...{% elif is_spanish %}Generando tu canción...{% elif is_german %}Song wird generiert...{% elif is_portuguese %}Gerando sua música...{% elif is_chinese %}正在生成歌曲...{% else %}楽曲を生成中です...{% endif %}</strong><br>{% if is_english %}Usually takes 1-2 minutes.{% elif is_spanish %}Normalmente tarda 1-2 minutos.{% elif is_german %}Dauert normalerweise 1-2 Minuten.{% elif is_portuguese %}Geralmente leva 1-2 minutos.{% elif is_chinese %}通常需要1-2分钟。{% else %}通常1〜2分で完成します。{% endif %}</p>
                         {% endif %}
                         </div>
                         
-                        <p class="auto-refresh-note" id="connection-status">{% if is_english %}Connecting to real-time updates...{% elif is_chinese %}正在连接实时更新...{% else %}リアルタイム更新に接続中...{% endif %}</p>
+                        <p class="auto-refresh-note" id="connection-status">{% if is_english %}Connecting to real-time updates...{% elif is_spanish %}Conectando a actualizaciones en tiempo real...{% elif is_german %}Verbinde mit Echtzeit-Updates...{% elif is_portuguese %}Conectando às atualizações em tempo real...{% elif is_chinese %}正在连接实时更新...{% else %}リアルタイム更新に接続中...{% endif %}</p>
                         <div class="progress mt-3">
                             <div class="progress-bar progress-bar-striped progress-bar-animated" role="progressbar" id="progress-bar" style="width: 10%"></div>
                         </div>
@@ -147,7 +147,7 @@
                         let checkCount = 0;
                         const maxChecks = 18; // 最大3分間チェック
                         
-                        document.getElementById('connection-status').textContent = '{% if is_english %}Auto-refresh active{% elif is_chinese %}自动更新中{% else %}自動更新中{% endif %}';
+                        document.getElementById('connection-status').textContent = '{% if is_english %}Auto-refresh active{% elif is_spanish %}Actualización automática activa{% elif is_german %}Automatische Aktualisierung aktiv{% elif is_portuguese %}Atualização automática ativa{% elif is_chinese %}自动更新中{% else %}自動更新中{% endif %}';
                         
                         async function checkSongStatus() {
                             try {
@@ -158,7 +158,7 @@
                                     if (data.completed || data.failed) {
                                         // 完了または失敗時のみリロード
                                         clearInterval(checkInterval);
-                                        document.getElementById('connection-status').textContent = '{% if is_english %}Reloading...{% elif is_chinese %}正在刷新...{% else %}リロード中...{% endif %}';
+                                        document.getElementById('connection-status').textContent = '{% if is_english %}Reloading...{% elif is_spanish %}Recargando...{% elif is_german %}Neu laden...{% elif is_portuguese %}Recarregando...{% elif is_chinese %}正在刷新...{% else %}リロード中...{% endif %}';
                                         location.reload();
                                     } else {
                                         // 進捗バーの更新
@@ -175,7 +175,7 @@
                             checkCount++;
                             if (checkCount >= maxChecks) {
                                 clearInterval(checkInterval);
-                                document.getElementById('connection-status').textContent = '{% if is_english %}Check complete{% elif is_chinese %}检查完成{% else %}チェック完了{% endif %}';
+                                document.getElementById('connection-status').textContent = '{% if is_english %}Check complete{% elif is_spanish %}Verificación completa{% elif is_german %}Überprüfung abgeschlossen{% elif is_portuguese %}Verificação concluída{% elif is_chinese %}检查完成{% else %}チェック完了{% endif %}';
                                 return;
                             }
                             console.log('楽曲生成状況をチェック中...', checkCount, '/', maxChecks);
@@ -194,7 +194,7 @@
             <div class="privacy-settings-card fade-in">
                 <div class="privacy-header">
                     <div>
-                        <h3>{% if is_english %}Privacy Settings{% elif is_chinese %}隐私设置{% else %}公開設定{% endif %}</h3>
+                        <h3>{% if is_english %}Privacy Settings{% elif is_spanish %}Configuración de Privacidad{% elif is_german %}Datenschutzeinstellungen{% elif is_portuguese %}Configurações de Privacidade{% elif is_chinese %}隐私设置{% else %}公開設定{% endif %}</h3>
                     </div>
                 </div>
                 
@@ -203,15 +203,15 @@
                         {% if song.is_public %}
                         <div class="status-public">
                             <i class="bi bi-globe"></i>
-                            <span>{% if is_english %}This song is <strong>Public</strong>{% elif is_chinese %}这首歌曲<strong>公开</strong>{% else %}この楽曲は<strong>公開中</strong>です{% endif %}</span>
+                            <span>{% if is_english %}This song is <strong>Public</strong>{% elif is_spanish %}Esta canción es <strong>Pública</strong>{% elif is_german %}Dieser Song ist <strong>Öffentlich</strong>{% elif is_portuguese %}Esta música está <strong>Pública</strong>{% elif is_chinese %}这首歌曲<strong>公开</strong>{% else %}この楽曲は<strong>公開中</strong>です{% endif %}</span>
                         </div>
-                        <p class="status-description">{% if is_english %}Other users can discover and listen to this song in the song list.{% elif is_chinese %}其他用户可以在歌曲列表中发现并收听这首歌曲。{% else %}他のユーザーも楽曲一覧でこの楽曲を発見して聴くことができます。{% endif %}</p>
+                        <p class="status-description">{% if is_english %}Other users can discover and listen to this song in the song list.{% elif is_spanish %}Otros usuarios pueden descubrir y escuchar esta canción en la lista de canciones.{% elif is_german %}Andere Benutzer können diesen Song in der Songliste entdecken und anhören.{% elif is_portuguese %}Outros usuários podem descobrir e ouvir esta música na lista de músicas.{% elif is_chinese %}其他用户可以在歌曲列表中发现并收听这首歌曲。{% else %}他のユーザーも楽曲一覧でこの楽曲を発見して聴くことができます。{% endif %}</p>
                         {% else %}
                         <div class="status-private">
                             <i class="bi bi-lock"></i>
-                            <span>{% if is_english %}This song is <strong>Private</strong>{% elif is_chinese %}这首歌曲<strong>私密</strong>{% else %}この楽曲は<strong>プライベート</strong>です{% endif %}</span>
+                            <span>{% if is_english %}This song is <strong>Private</strong>{% elif is_spanish %}Esta canción es <strong>Privada</strong>{% elif is_german %}Dieser Song ist <strong>Privat</strong>{% elif is_portuguese %}Esta música está <strong>Privada</strong>{% elif is_chinese %}这首歌曲<strong>私密</strong>{% else %}この楽曲は<strong>プライベート</strong>です{% endif %}</span>
                         </div>
-                        <p class="status-description">{% if is_english %}Only you can listen to this song. Make it public to let others listen too.{% elif is_chinese %}只有您可以收听这首歌曲。公开后其他用户也可以收听。{% else %}この楽曲はあなただけが聴くことができます。公開すると他のユーザーも聴けるようになります。{% endif %}</p>
+                        <p class="status-description">{% if is_english %}Only you can listen to this song. Make it public to let others listen too.{% elif is_spanish %}Solo tú puedes escuchar esta canción. Hazla pública para que otros también puedan escucharla.{% elif is_german %}Nur du kannst diesen Song hören. Mache ihn öffentlich, damit andere ihn auch hören können.{% elif is_portuguese %}Somente você pode ouvir esta música. Torne-a pública para que outros também possam ouvi-la.{% elif is_chinese %}只有您可以收听这首歌曲。公开后其他用户也可以收听。{% else %}この楽曲はあなただけが聴くことができます。公開すると他のユーザーも聴けるようになります。{% endif %}</p>
                         {% endif %}
                     </div>
                     
@@ -219,12 +219,12 @@
                         {% if song.is_public %}
                         <button class="btn-privacy-action btn-make-private" onclick="togglePrivacy({{ song.pk }}, false)">
                             <i class="bi bi-lock"></i>
-                            {% if is_english %}Make Private{% elif is_chinese %}设为私密{% else %}プライベートに変更{% endif %}
+                            {% if is_english %}Make Private{% elif is_spanish %}Hacer Privado{% elif is_german %}Privat machen{% elif is_portuguese %}Tornar Privado{% elif is_chinese %}设为私密{% else %}プライベートに変更{% endif %}
                         </button>
                         {% else %}
                         <button class="btn-privacy-action btn-make-public" onclick="confirmAndPublish({{ song.pk }})">
                             <i class="bi bi-globe"></i>
-                            {% if is_english %}Make Public{% elif is_chinese %}公开{% else %}公開する{% endif %}
+                            {% if is_english %}Make Public{% elif is_spanish %}Hacer Público{% elif is_german %}Öffentlich machen{% elif is_portuguese %}Tornar Público{% elif is_chinese %}公开{% else %}公開する{% endif %}
                         </button>
                         {% endif %}
                     </div>
@@ -236,7 +236,7 @@
             {% if song.lyrics %}
             <div class="lyrics-card fade-in">
                 <div class="lyrics-header">
-                    <h3>{% if is_english %}Lyrics{% elif is_chinese %}歌词{% else %}歌詞{% endif %}</h3>
+                    <h3>{% if is_english %}Lyrics{% elif is_spanish %}Letra{% elif is_german %}Songtext{% elif is_portuguese %}Letra{% elif is_chinese %}歌词{% else %}歌詞{% endif %}</h3>
                 </div>
                 <div class="lyrics-content">
                     {{ lyrics_content|remove_asterisks|linebreaks }}
@@ -247,7 +247,7 @@
             <!-- コメントセクション -->
             <div class="comments-card fade-in">
                 <div class="comments-header">
-                    <h3><i class="bi bi-chat-dots"></i> {% if is_english %}Comments{% elif is_chinese %}评论{% else %}コメント{% endif %} ({{ comments.count }})</h3>
+                    <h3><i class="bi bi-chat-dots"></i> {% if is_english %}Comments{% elif is_spanish %}Comentarios{% elif is_german %}Kommentare{% elif is_portuguese %}Comentários{% elif is_chinese %}评论{% else %}コメント{% endif %} ({{ comments.count }})</h3>
                 </div>
                 
                 {% if user.is_authenticated %}
@@ -262,7 +262,7 @@
                                 {{ comment_form.content }}
                                 <div class="comment-actions mt-2">
                                     <button type="submit" class="btn-gradient-primary">
-                                        <i class="bi bi-send"></i> {% if is_english %}Post{% elif is_chinese %}发布{% else %}投稿{% endif %}
+                                        <i class="bi bi-send"></i> {% if is_english %}Post{% elif is_spanish %}Publicar{% elif is_german %}Posten{% elif is_portuguese %}Publicar{% elif is_chinese %}发布{% else %}投稿{% endif %}
                                     </button>
                                 </div>
                             </div>
@@ -290,7 +290,7 @@
                     {% empty %}
                     <div class="no-comments">
                         <i class="bi bi-chat"></i>
-                        <p>{% if is_english %}No comments yet.<br>Be the first to comment!{% elif is_chinese %}还没有评论。<br>来发表第一条评论吧！{% else %}まだコメントがありません。<br>最初のコメントを投稿してみませんか？{% endif %}</p>
+                        <p>{% if is_english %}No comments yet.<br>Be the first to comment!{% elif is_spanish %}Aún no hay comentarios.<br>¡Sé el primero en comentar!{% elif is_german %}Noch keine Kommentare.<br>Sei der Erste, der kommentiert!{% elif is_portuguese %}Ainda não há comentários.<br>Seja o primeiro a comentar!{% elif is_chinese %}还没有评论。<br>来发表第一条评论吧！{% else %}まだコメントがありません。<br>最初のコメントを投稿してみませんか？{% endif %}</p>
                     </div>
                     {% endfor %}
                 </div>
@@ -301,7 +301,7 @@
         <div class="col-lg-4">
             <!-- アクションパネル -->
             <div class="action-panel fade-in">
-                <h4>{% if is_english %}About This Song{% elif is_chinese %}关于这首歌{% else %}この楽曲について{% endif %}</h4>
+                <h4>{% if is_english %}About This Song{% elif is_spanish %}Sobre Esta Canción{% elif is_german %}Über diesen Song{% elif is_portuguese %}Sobre Esta Música{% elif is_chinese %}关于这首歌{% else %}この楽曲について{% endif %}</h4>
                 
                 <!-- 統計情報 -->
                 <div class="stats-grid">
@@ -310,21 +310,21 @@
                             <i class="bi bi-heart-fill"></i>
                         </div>
                         <div class="stat-value">{{ song.likes_count }}</div>
-                        <div class="stat-label">{% if is_english %}Likes{% elif is_chinese %}喜欢{% else %}いいね{% endif %}</div>
+                        <div class="stat-label">{% if is_english %}Likes{% elif is_spanish %}Me gusta{% elif is_german %}Gefällt mir{% elif is_portuguese %}Curtidas{% elif is_chinese %}喜欢{% else %}いいね{% endif %}</div>
                     </div>
                     <div class="stat-box">
                         <div class="stat-icon">
                             <i class="bi bi-chat-dots"></i>
                         </div>
                         <div class="stat-value">{{ comments.count }}</div>
-                        <div class="stat-label">{% if is_english %}Comments{% elif is_chinese %}评论{% else %}コメント{% endif %}</div>
+                        <div class="stat-label">{% if is_english %}Comments{% elif is_spanish %}Comentarios{% elif is_german %}Kommentare{% elif is_portuguese %}Comentários{% elif is_chinese %}评论{% else %}コメント{% endif %}</div>
                     </div>
                     <div class="stat-box">
                         <div class="stat-icon">
                             <i class="bi bi-play-circle-fill"></i>
                         </div>
                         <div class="stat-value" id="total-plays">{{ song.total_plays|default:0 }}</div>
-                        <div class="stat-label">{% if is_english %}Plays{% elif is_chinese %}播放{% else %}再生回数{% endif %}</div>
+                        <div class="stat-label">{% if is_english %}Plays{% elif is_spanish %}Reproducciones{% elif is_german %}Wiedergaben{% elif is_portuguese %}Reproduções{% elif is_chinese %}播放{% else %}再生回数{% endif %}</div>
                     </div>
                 </div>
 
@@ -333,18 +333,18 @@
                 <div class="action-buttons">
                     <button class="action-button like-button" onclick="toggleLike({{ song.pk }})" id="like-btn-{{ song.pk }}">
                         <i class="bi bi-heart{% if is_liked %}-fill{% endif %}"></i>
-                        <span>{% if is_liked %}{% if is_english %}Liked{% elif is_chinese %}已喜欢{% else %}いいね済み{% endif %}{% else %}{% if is_english %}Like{% elif is_chinese %}喜欢{% else %}いいね{% endif %}{% endif %}</span>
+                        <span>{% if is_liked %}{% if is_english %}Liked{% elif is_spanish %}Me gusta{% elif is_german %}Gefällt mir{% elif is_portuguese %}Curtido{% elif is_chinese %}已喜欢{% else %}いいね済み{% endif %}{% else %}{% if is_english %}Like{% elif is_spanish %}Me gusta{% elif is_german %}Gefällt mir{% elif is_portuguese %}Curtir{% elif is_chinese %}喜欢{% else %}いいね{% endif %}{% endif %}</span>
                     </button>
                     <button class="action-button favorite-button" onclick="toggleFavorite({{ song.pk }})" id="fav-btn-{{ song.pk }}">
                         <i class="bi bi-bookmark{% if is_favorited %}-fill{% endif %}"></i>
-                        <span>{% if is_favorited %}{% if is_english %}Saved{% elif is_chinese %}已收藏{% else %}お気に入り済み{% endif %}{% else %}{% if is_english %}Save{% elif is_chinese %}收藏{% else %}お気に入り{% endif %}{% endif %}</span>
+                        <span>{% if is_favorited %}{% if is_english %}Saved{% elif is_spanish %}Guardado{% elif is_german %}Gespeichert{% elif is_portuguese %}Salvo{% elif is_chinese %}已收藏{% else %}お気に入り済み{% endif %}{% else %}{% if is_english %}Save{% elif is_spanish %}Guardar{% elif is_german %}Speichern{% elif is_portuguese %}Salvar{% elif is_chinese %}收藏{% else %}お気に入り{% endif %}{% endif %}</span>
                     </button>
                 </div>
                 {% else %}
                 <div class="auth-prompt">
-                    <p>{% if is_english %}Please log in to<br>like or comment{% elif is_chinese %}请登录后<br>点赞或评论{% else %}いいねやコメントをするには<br>ログインが必要です{% endif %}</p>
+                    <p>{% if is_english %}Please log in to<br>like or comment{% elif is_spanish %}Inicia sesión para<br>dar me gusta o comentar{% elif is_german %}Bitte melde dich an, um<br>zu liken oder zu kommentieren{% elif is_portuguese %}Faça login para<br>curtir ou comentar{% elif is_chinese %}请登录后<br>点赞或评论{% else %}いいねやコメントをするには<br>ログインが必要です{% endif %}</p>
                     <a href="{% url 'users:login' %}" class="btn-gradient-primary">
-                        <i class="bi bi-box-arrow-in-right"></i> {% if is_english %}Login{% elif is_chinese %}登录{% else %}ログイン{% endif %}
+                        <i class="bi bi-box-arrow-in-right"></i> {% if is_english %}Login{% elif is_spanish %}Iniciar Sesión{% elif is_german %}Anmelden{% elif is_portuguese %}Entrar{% elif is_chinese %}登录{% else %}ログイン{% endif %}
                     </a>
                 </div>
                 {% endif %}
@@ -352,7 +352,7 @@
 
             <!-- 関連楽曲 -->
             <div class="related-songs fade-in">
-                <h4>{% if is_english %}Related Songs{% elif is_chinese %}相关歌曲{% else %}関連楽曲{% endif %}</h4>
+                <h4>{% if is_english %}Related Songs{% elif is_spanish %}Canciones Relacionadas{% elif is_german %}Ähnliche Songs{% elif is_portuguese %}Músicas Relacionadas{% elif is_chinese %}相关歌曲{% else %}関連楽曲{% endif %}</h4>
                 <div class="related-list">
                     {% for related in related_songs %}
                     <a href="{% url 'songs:song_detail' related.pk %}" class="related-song-item">
@@ -367,7 +367,7 @@
                     {% empty %}
                     <div class="related-placeholder">
                         <i class="bi bi-music-note-list"></i>
-                        <p>{% if is_english %}No related songs yet{% elif is_chinese %}暂无相关歌曲{% else %}関連楽曲がまだありません{% endif %}</p>
+                        <p>{% if is_english %}No related songs yet{% elif is_spanish %}Aún no hay canciones relacionadas{% elif is_german %}Noch keine ähnlichen Songs{% elif is_portuguese %}Ainda não há músicas relacionadas{% elif is_chinese %}暂无相关歌曲{% else %}関連楽曲がまだありません{% endif %}</p>
                     </div>
                     {% endfor %}
                 </div>
@@ -376,20 +376,26 @@
             <!-- カラオケセクション -->
             {% if song.audio_file or song.audio_url %}
             <div class="karaoke-section fade-in">
-                <h4>{% if is_english %}Karaoke{% elif is_chinese %}卡拉OK{% else %}カラオケ{% endif %}</h4>
+                <h4>{% if is_english %}Karaoke{% elif is_spanish %}Karaoke{% elif is_german %}Karaoke{% elif is_portuguese %}Karaokê{% elif is_chinese %}卡拉OK{% else %}カラオケ{% endif %}</h4>
                 <div class="karaoke-buttons">
+                    {% if user.is_authenticated and user.is_pro %}
                     {% if song.audio_file %}
                     <button class="btn-karaoke" onclick="startKaraokeMode('{{ song.audio_file.url }}')" id="karaoke-btn">
-                        <i class="bi bi-mic"></i> {% if is_english %}Karaoke Mode{% elif is_chinese %}卡拉OK模式{% else %}カラオケモード{% endif %}
+                        <i class="bi bi-mic"></i> {% if is_english %}Karaoke Mode{% elif is_spanish %}Modo Karaoke{% elif is_german %}Karaoke-Modus{% elif is_portuguese %}Modo Karaokê{% elif is_chinese %}卡拉OK模式{% else %}カラオケモード{% endif %}
                     </button>
                     {% elif song.audio_url %}
                     <button class="btn-karaoke" onclick="startKaraokeMode('{{ song.audio_url }}')" id="karaoke-btn">
-                        <i class="bi bi-mic"></i> {% if is_english %}Karaoke Mode{% elif is_chinese %}卡拉OK模式{% else %}カラオケモード{% endif %}
+                        <i class="bi bi-mic"></i> {% if is_english %}Karaoke Mode{% elif is_spanish %}Modo Karaoke{% elif is_german %}Karaoke-Modus{% elif is_portuguese %}Modo Karaokê{% elif is_chinese %}卡拉OK模式{% else %}カラオケモード{% endif %}
                     </button>
                     {% endif %}
                     <button class="btn-normal" onclick="switchToNormalMode()" id="normal-mode-btn" style="display: none;">
-                        <i class="bi bi-music-note-beamed"></i> {% if is_english %}Normal Mode{% elif is_chinese %}普通模式{% else %}通常モード{% endif %}
+                        <i class="bi bi-music-note-beamed"></i> {% if is_english %}Normal Mode{% elif is_spanish %}Modo Normal{% elif is_german %}Normaler Modus{% elif is_portuguese %}Modo Normal{% elif is_chinese %}普通模式{% else %}通常モード{% endif %}
                     </button>
+                    {% else %}
+                    <a href="{% url 'users:upgrade' %}" class="btn-karaoke-locked">
+                        <i class="bi bi-lock"></i> {% if is_english %}Starter Plan Required{% elif is_spanish %}Plan Starter Requerido{% elif is_german %}Starter-Plan erforderlich{% elif is_portuguese %}Plano Iniciante Necessário{% elif is_chinese %}需要入门套餐{% else %}スターター以上で利用可能{% endif %}
+                    </a>
+                    {% endif %}
                 </div>
             </div>
             {% endif %}
@@ -397,19 +403,19 @@
             <!-- ダウンロードセクション -->
             {% if song.audio_file or song.audio_url %}
             <div class="download-section fade-in">
-                <h4>{% if is_english %}Download{% elif is_chinese %}下载{% else %}ダウンロード{% endif %}</h4>
+                <h4>{% if is_english %}Download{% elif is_spanish %}Descargar{% elif is_german %}Herunterladen{% elif is_portuguese %}Download{% elif is_chinese %}下载{% else %}ダウンロード{% endif %}</h4>
                 <div class="download-buttons">
                     {% if song.audio_file %}
                     <a href="{{ song.audio_file.url }}" download="{{ song.title }}.mp3" class="btn-download">
-                        <i class="bi bi-download"></i> {% if is_english %}Download MP3{% elif is_chinese %}下载MP3{% else %}MP3ダウンロード{% endif %}
+                        <i class="bi bi-download"></i> {% if is_english %}Download MP3{% elif is_spanish %}Descargar MP3{% elif is_german %}MP3 herunterladen{% elif is_portuguese %}Baixar MP3{% elif is_chinese %}下载MP3{% else %}MP3ダウンロード{% endif %}
                     </a>
                     {% elif song.audio_url %}
                     <a href="{{ song.audio_url }}" download="{{ song.title }}.mp3" class="btn-download" target="_blank">
-                        <i class="bi bi-download"></i> {% if is_english %}Download MP3{% elif is_chinese %}下载MP3{% else %}MP3ダウンロード{% endif %}
+                        <i class="bi bi-download"></i> {% if is_english %}Download MP3{% elif is_spanish %}Descargar MP3{% elif is_german %}MP3 herunterladen{% elif is_portuguese %}Baixar MP3{% elif is_chinese %}下载MP3{% else %}MP3ダウンロード{% endif %}
                     </a>
                     {% if song.api_provider == 'mureka' %}
                     <button type="button" class="btn-download-advanced" onclick="downloadMurekaAudio('{{ song.audio_url }}', '{{ song.title }}')">
-                        <i class="bi bi-cloud-download"></i> {% if is_english %}HD Download{% elif is_chinese %}高清下载{% else %}高音質ダウンロード{% endif %}
+                        <i class="bi bi-cloud-download"></i> {% if is_english %}HD Download{% elif is_spanish %}Descarga HD{% elif is_german %}HD-Download{% elif is_portuguese %}Download HD{% elif is_chinese %}高清下载{% else %}高音質ダウンロード{% endif %}
                     </button>
                     {% endif %}
                     {% endif %}
@@ -2386,6 +2392,30 @@ document.getElementById('tagModal').addEventListener('click', function(e) {
 
 .btn-normal:hover {
     background: var(--primary-color);
+    color: white;
+    transform: translateY(-2px);
+}
+
+.btn-karaoke-locked {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.5rem;
+    background: #e0e0e0;
+    color: #888;
+    border: none;
+    border-radius: var(--radius-md);
+    padding: 0.875rem 1.5rem;
+    font-size: 0.95rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    width: 100%;
+    text-decoration: none;
+}
+
+.btn-karaoke-locked:hover {
+    background: #ff6b35;
     color: white;
     transform: translateY(-2px);
 }

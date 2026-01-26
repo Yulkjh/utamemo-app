@@ -4,11 +4,19 @@ from .models import User
 
 
 class UserRegistrationForm(UserCreationForm):
-    """ユーザー登録フォーム（メールアドレス不要）"""
+    """ユーザー登録フォーム（メールアドレス必須）"""
+    
+    email = forms.EmailField(
+        required=True,
+        widget=forms.EmailInput(attrs={
+            'placeholder': 'example@email.com'
+        }),
+        help_text='パスワードリセット等に使用'
+    )
     
     class Meta:
         model = User
-        fields = ('username', 'password1', 'password2')
+        fields = ('username', 'email', 'password1', 'password2')
         widgets = {
             'username': forms.TextInput(attrs={
                 'placeholder': 'ユーザー名'

@@ -1,7 +1,7 @@
 {% extends 'base.html' %}
 {% load static %}
 
-{% block title %}{% if is_english %}Classroom{% elif is_chinese %}班级{% else %}クラス{% endif %} - UTAMEMO{% endblock %}
+{% block title %}{% if is_english %}Classroom{% elif is_spanish %}Aula{% elif is_german %}Klassenraum{% elif is_portuguese %}Turma{% elif is_chinese %}班级{% else %}クラス{% endif %} - UTAMEMO{% endblock %}
 
 {% block content %}
 <style>
@@ -244,12 +244,18 @@
         </div>
         
         <h1 class="classroom-title">
-            {% if is_english %}Classroom{% elif is_chinese %}班级{% else %}クラス{% endif %}
+            {% if is_english %}Classroom{% elif is_spanish %}Aula{% elif is_german %}Klassenraum{% elif is_portuguese %}Turma{% elif is_chinese %}班级{% else %}クラス{% endif %}
         </h1>
         
         <p class="classroom-subtitle">
             {% if is_english %}
             Share and learn together with your classmates through music.
+            {% elif is_spanish %}
+            Comparte y aprende junto con tus compañeros a través de la música.
+            {% elif is_german %}
+            Teile und lerne gemeinsam mit deinen Mitschülern durch Musik.
+            {% elif is_portuguese %}
+            Compartilhe e aprenda junto com seus colegas através da música.
             {% elif is_chinese %}
             与同学一起通过音乐分享和学习。
             {% else %}
@@ -260,18 +266,18 @@
         <div class="action-buttons">
             <a href="{% url 'songs:classroom_join' %}" class="action-btn-large btn-primary-large">
                 <i class="bi bi-box-arrow-in-right"></i>
-                {% if is_english %}Join with Code{% elif is_chinese %}使用代码加入{% else %}コードで参加{% endif %}
+                {% if is_english %}Join with Code{% elif is_spanish %}Unirse con Código{% elif is_german %}Mit Code beitreten{% elif is_portuguese %}Entrar com Código{% elif is_chinese %}使用代码加入{% else %}コードで参加{% endif %}
             </a>
             <a href="{% url 'songs:classroom_create' %}" class="action-btn-large btn-secondary-large">
                 <i class="bi bi-plus-lg"></i>
-                {% if is_english %}Create New Class{% elif is_chinese %}创建新班级{% else %}新しいクラスを作成{% endif %}
+                {% if is_english %}Create New Class{% elif is_spanish %}Crear Nueva Clase{% elif is_german %}Neue Klasse erstellen{% elif is_portuguese %}Criar Nova Turma{% elif is_chinese %}创建新班级{% else %}新しいクラスを作成{% endif %}
             </a>
         </div>
         
         {% if hosted_classrooms %}
         <div class="joined-section">
             <div class="section-label">
-                {% if is_english %}Classes I Created{% elif is_chinese %}我创建的班级{% else %}自分が作成したクラス{% endif %}
+                {% if is_english %}Classes I Created{% elif is_spanish %}Clases que Creé{% elif is_german %}Von mir erstellte Klassen{% elif is_portuguese %}Turmas que Criei{% elif is_chinese %}我创建的班级{% else %}自分が作成したクラス{% endif %}
             </div>
             <div class="classroom-list">
                 {% for classroom in hosted_classrooms %}
@@ -279,16 +285,16 @@
                     <div class="classroom-item-info">
                         <div class="classroom-item-name">
                             {{ classroom.name }}
-                            <span class="host-badge">{% if is_english %}Host{% elif is_chinese %}主持人{% else %}ホスト{% endif %}</span>
+                            <span class="host-badge">{% if is_english %}Host{% elif is_spanish %}Anfitrión{% elif is_german %}Gastgeber{% elif is_portuguese %}Anfitrião{% elif is_chinese %}主持人{% else %}ホスト{% endif %}</span>
                         </div>
                         <div class="classroom-item-meta">
                             <span>
                                 <i class="bi bi-people-fill"></i>
-                                {{ classroom.members.count }} {% if is_english %}members{% elif is_chinese %}人{% else %}人{% endif %}
+                                {{ classroom.members.count }} {% if is_english %}members{% elif is_spanish %}miembros{% elif is_german %}Mitglieder{% elif is_portuguese %}membros{% elif is_chinese %}人{% else %}人{% endif %}
                             </span>
                             <span>
                                 <i class="bi bi-music-note-beamed"></i>
-                                {{ classroom.shared_songs.count }} {% if is_english %}songs{% elif is_chinese %}曲{% else %}曲{% endif %}
+                                {{ classroom.shared_songs.count }} {% if is_english %}songs{% elif is_spanish %}canciones{% elif is_german %}Lieder{% elif is_portuguese %}músicas{% elif is_chinese %}曲{% else %}曲{% endif %}
                             </span>
                         </div>
                     </div>
@@ -304,7 +310,7 @@
         {% if joined_classrooms %}
         <div class="joined-section" {% if hosted_classrooms %}style="margin-top: 1.5rem; padding-top: 1.5rem;"{% endif %}>
             <div class="section-label">
-                {% if is_english %}Classes I Joined{% elif is_chinese %}我加入的班级{% else %}参加中のクラス{% endif %}
+                {% if is_english %}Classes I Joined{% elif is_spanish %}Clases en las que Participo{% elif is_german %}Klassen, denen ich beigetreten bin{% elif is_portuguese %}Turmas que Participo{% elif is_chinese %}我加入的班级{% else %}参加中のクラス{% endif %}
             </div>
             <div class="classroom-list">
                 {% for classroom in joined_classrooms %}
@@ -318,11 +324,11 @@
                             </span>
                             <span>
                                 <i class="bi bi-people-fill"></i>
-                                {{ classroom.members.count }} {% if is_english %}members{% elif is_chinese %}人{% else %}人{% endif %}
+                                {{ classroom.members.count }} {% if is_english %}members{% elif is_spanish %}miembros{% elif is_german %}Mitglieder{% elif is_portuguese %}membros{% elif is_chinese %}人{% else %}人{% endif %}
                             </span>
                             <span>
                                 <i class="bi bi-music-note-beamed"></i>
-                                {{ classroom.shared_songs.count }} {% if is_english %}songs{% elif is_chinese %}曲{% else %}曲{% endif %}
+                                {{ classroom.shared_songs.count }} {% if is_english %}songs{% elif is_spanish %}canciones{% elif is_german %}Lieder{% elif is_portuguese %}músicas{% elif is_chinese %}曲{% else %}曲{% endif %}
                             </span>
                         </div>
                     </div>
@@ -339,6 +345,12 @@
         <p class="empty-hint">
             {% if is_english %}
             Join a class with a code from your teacher or create your own!
+            {% elif is_spanish %}
+            ¡Únete a una clase con un código de tu profesor o crea la tuya propia!
+            {% elif is_german %}
+            Tritt mit einem Code von deinem Lehrer einer Klasse bei oder erstelle deine eigene!
+            {% elif is_portuguese %}
+            Entre em uma turma com um código do seu professor ou crie a sua própria!
             {% elif is_chinese %}
             使用老师给的代码加入班级，或创建自己的班级！
             {% else %}

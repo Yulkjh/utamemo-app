@@ -1,0 +1,117 @@
+{% extends 'base.html' %}
+
+{% block title %}{% if is_english %}Inquiry Complete{% elif is_spanish %}Consulta Completada{% elif is_german %}Anfrage abgeschlossen{% elif is_chinese %}咨询完成{% else %}お問い合わせ完了{% endif %} - UTAMEMO{% endblock %}
+
+{% block extra_css %}
+<style>
+    .complete-container {
+        max-width: 600px;
+        margin: 0 auto;
+        padding: 60px 20px;
+        text-align: center;
+    }
+    
+    .complete-icon {
+        width: 80px;
+        height: 80px;
+        background: linear-gradient(135deg, #10b981, #059669);
+        border-radius: 50%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        margin: 0 auto 30px;
+        animation: scaleIn 0.5s ease;
+    }
+    
+    .complete-icon svg {
+        width: 40px;
+        height: 40px;
+        color: white;
+    }
+    
+    @keyframes scaleIn {
+        from {
+            transform: scale(0);
+            opacity: 0;
+        }
+        to {
+            transform: scale(1);
+            opacity: 1;
+        }
+    }
+    
+    .complete-title {
+        font-size: 1.75rem;
+        font-weight: 700;
+        color: #1f2937;
+        margin-bottom: 15px;
+    }
+    
+    .complete-message {
+        color: #6b7280;
+        line-height: 1.8;
+        margin-bottom: 30px;
+    }
+    
+    .back-link {
+        display: inline-flex;
+        align-items: center;
+        gap: 8px;
+        padding: 12px 30px;
+        background: linear-gradient(135deg, #6366f1, #8b5cf6);
+        color: white;
+        text-decoration: none;
+        border-radius: 8px;
+        font-weight: 600;
+        transition: all 0.3s ease;
+    }
+    
+    .back-link:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 10px 25px rgba(99, 102, 241, 0.3);
+        color: white;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="complete-container">
+    <div class="complete-icon">
+        <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" />
+        </svg>
+    </div>
+    
+    <h1 class="complete-title">
+        {% if is_english %}Inquiry Received{% elif is_spanish %}Consulta Recibida{% elif is_german %}Anfrage eingegangen{% elif is_chinese %}咨询已收到{% else %}お問い合わせを受け付けました{% endif %}
+    </h1>
+    
+    <p class="complete-message">
+        {% if is_english %}
+        Thank you for your interest in our School Plan.<br><br>
+        Our team will contact you within 2-3 business days.
+        {% elif is_spanish %}
+        Gracias por su interés en nuestro Plan Escolar.<br><br>
+        Nuestro equipo se pondrá en contacto con usted dentro de 2-3 días hábiles.
+        {% elif is_german %}
+        Vielen Dank für Ihr Interesse an unserem Schulplan.<br><br>
+        Unser Team wird sich innerhalb von 2-3 Werktagen bei Ihnen melden.
+        {% elif is_chinese %}
+        感谢您对我们学校计划的关注。<br><br>
+        我们的团队将在2-3个工作日内与您联系。
+        {% else %}
+        この度はスクールプランにご興味をお持ちいただき、<br>
+        誠にありがとうございます。<br><br>
+        担当者より2〜3営業日以内に<br>
+        ご連絡させていただきます。
+        {% endif %}
+    </p>
+    
+    <a href="{% url 'users:upgrade' %}" class="back-link">
+        <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 19l-7-7m0 0l7-7m-7 7h18" />
+        </svg>
+        {% if is_english %}Back to Plans{% elif is_spanish %}Volver a Planes{% elif is_german %}Zurück zu Plänen{% elif is_chinese %}返回定价{% else %}料金プランに戻る{% endif %}
+    </a>
+</div>
+{% endblock %}

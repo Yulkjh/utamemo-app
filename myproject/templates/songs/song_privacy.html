@@ -1,7 +1,7 @@
 {% extends 'base.html' %}
 {% load static %}
 
-{% block title %}楽曲プライバシー設定 - {{ song.title }}{% endblock %}
+{% block title %}{% if is_english %}Song Privacy Settings{% elif is_spanish %}Configuración de Privacidad{% elif is_german %}Datenschutzeinstellungen{% elif is_portuguese %}Configurações de Privacidade{% elif is_chinese %}歌曲隐私设置{% else %}楽曲プライバシー設定{% endif %} - {{ song.title }}{% endblock %}
 
 {% block extra_css %}
 <style>
@@ -105,14 +105,16 @@
                 <i class="bi bi-music-note-beamed"></i>
             </div>
             <h2 style="color: #ff7940; margin-bottom: 0.5rem;">{{ song.title }}</h2>
-            <p class="text-muted mb-0">楽曲が正常に作成されました！</p>
+            <p class="text-muted mb-0">
+                {% if is_english %}Song created successfully!{% elif is_spanish %}¡Canción creada exitosamente!{% elif is_german %}Lied erfolgreich erstellt!{% elif is_portuguese %}Música criada com sucesso!{% elif is_chinese %}歌曲创建成功！{% else %}楽曲が正常に作成されました！{% endif %}
+            </p>
         </div>
 
         <!-- プライバシー設定フォーム -->
         <div class="privacy-form-card">
             <h3 style="color: #333; margin-bottom: 1.5rem; text-align: center;">
                 <i class="bi bi-shield-check" style="color: #ff7940;"></i>
-                プライバシー設定
+                {% if is_english %}Privacy Settings{% elif is_spanish %}Configuración de Privacidad{% elif is_german %}Datenschutzeinstellungen{% elif is_portuguese %}Configurações de Privacidade{% elif is_chinese %}隐私设置{% else %}プライバシー設定{% endif %}
             </h3>
 
             <form method="post">
@@ -134,10 +136,10 @@
 
                 <div class="text-center mt-4">
                     <button type="submit" class="btn btn-privacy-save me-3">
-                        <i class="bi bi-check-circle"></i> 設定を保存
+                        <i class="bi bi-check-circle"></i> {% if is_english %}Save Settings{% elif is_spanish %}Guardar Configuración{% elif is_german %}Einstellungen speichern{% elif is_portuguese %}Salvar Configurações{% elif is_chinese %}保存设置{% else %}設定を保存{% endif %}
                     </button>
                     <a href="{% url 'songs:song_detail' pk=song.pk %}" class="btn btn-skip">
-                        <i class="bi bi-skip-forward"></i> 後で設定
+                        <i class="bi bi-skip-forward"></i> {% if is_english %}Set Later{% elif is_spanish %}Configurar Después{% elif is_german %}Später einstellen{% elif is_portuguese %}Configurar Depois{% elif is_chinese %}稍后设置{% else %}後で設定{% endif %}
                     </a>
                 </div>
             </form>
@@ -145,10 +147,10 @@
             <!-- 説明 -->
             <div class="mt-4 p-3" style="background: rgba(255, 193, 7, 0.1); border-radius: 10px; border-left: 4px solid #ffc107;">
                 <h6 style="color: #856404; margin-bottom: 0.5rem;">
-                    <i class="bi bi-info-circle"></i> プライバシーについて
+                    <i class="bi bi-info-circle"></i> {% if is_english %}About Privacy{% elif is_spanish %}Acerca de la Privacidad{% elif is_german %}Über den Datenschutz{% elif is_portuguese %}Sobre Privacidade{% elif is_chinese %}关于隐私{% else %}プライバシーについて{% endif %}
                 </h6>
                 <small style="color: #856404;">
-                    この設定はいつでも「MY楽曲」ページから変更できます。公開後も非公開に戻すことが可能です。
+                    {% if is_english %}You can change this setting anytime from the "My Songs" page. You can make it private again after publishing.{% elif is_spanish %}Puedes cambiar esta configuración en cualquier momento desde la página "Mis Canciones". Puedes hacerla privada de nuevo después de publicar.{% elif is_german %}Du kannst diese Einstellung jederzeit auf der "Meine Lieder"-Seite ändern. Du kannst es nach der Veröffentlichung wieder privat machen.{% elif is_portuguese %}Você pode alterar esta configuração a qualquer momento na página "Minhas Músicas". Você pode torná-la privada novamente após a publicação.{% elif is_chinese %}您可以随时从"我的歌曲"页面更改此设置。发布后也可以将其设为私密。{% else %}この設定はいつでも「MY楽曲」ページから変更できます。公開後も非公開に戻すことが可能です。{% endif %}
                 </small>
             </div>
         </div>

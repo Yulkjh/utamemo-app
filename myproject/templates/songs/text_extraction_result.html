@@ -1,6 +1,6 @@
 {% extends 'base.html' %}
 
-{% block title %}{% if is_english %}Text Extraction Result{% elif is_chinese %}文本提取结果{% else %}テキスト抽出結果{% endif %} - UTAMEMO{% endblock %}
+{% block title %}{% if is_english %}Text Extraction Result{% elif is_spanish %}Resultado de Extracción de Texto{% elif is_german %}Textextraktions-Ergebnis{% elif is_chinese %}文本提取结果{% else %}テキスト抽出結果{% endif %} - UTAMEMO{% endblock %}
 
 {% block content %}
 <div class="container py-5">
@@ -28,11 +28,17 @@
                         <line x1="55" y1="65" x2="65" y2="65" stroke="url(#successGradient)" stroke-width="2" opacity="0.4"/>
                     </svg>
                 </div>
-                <h1 class="display-6 fw-bold mb-3 text-success">{% if is_english %}Text Extraction Complete!{% elif is_chinese %}文本提取完成！{% else %}テキスト抽出完了！{% endif %}</h1>
+                <h1 class="display-6 fw-bold mb-3 text-success">{% if is_english %}Text Extraction Complete!{% elif is_spanish %}¡Extracción de Texto Completada!{% elif is_german %}Textextraktion Abgeschlossen!{% elif is_chinese %}文本提取完成！{% else %}テキスト抽出完了！{% endif %}</h1>
                 <p class="lead text-secondary">
                     {% if is_english %}
                     Text successfully extracted from the image<br>
                     Review the result and proceed to create your song
+                    {% elif is_spanish %}
+                    Texto extraído exitosamente de la imagen<br>
+                    Revisa el resultado y procede a crear tu canción
+                    {% elif is_german %}
+                    Text erfolgreich aus dem Bild extrahiert<br>
+                    Überprüfen Sie das Ergebnis und erstellen Sie Ihr Lied
                     {% elif is_chinese %}
                     已成功从图片中提取文本<br>
                     确认提取结果后，继续创作歌曲
@@ -49,10 +55,10 @@
                     <div class="d-flex justify-content-between align-items-center mb-3">
                         <h5 class="fw-bold mb-0">
                             <i class="bi bi-file-text text-primary me-2"></i>
-                            {% if is_english %}Extracted Text{% elif is_chinese %}提取的文本{% else %}抽出されたテキスト{% endif %}
+                            {% if is_english %}Extracted Text{% elif is_spanish %}Texto Extraído{% elif is_german %}Extrahierter Text{% elif is_chinese %}提取的文本{% else %}抽出されたテキスト{% endif %}
                         </h5>
                         <div class="text-muted">
-                            <small>{{ extracted_text|length }} {% if is_english %}characters{% elif is_chinese %}字{% else %}文字{% endif %}</small>
+                            <small>{{ extracted_text|length }} {% if is_english %}characters{% elif is_spanish %}caracteres{% elif is_german %}Zeichen{% elif is_chinese %}字{% else %}文字{% endif %}</small>
                         </div>
                     </div>
                     
@@ -62,7 +68,7 @@
                         <!-- コピーボタン -->
                         <div class="text-end mt-3">
                             <button type="button" class="btn-outline-modern btn-sm" id="copy-text-btn">
-                                <i class="bi bi-clipboard"></i> {% if is_english %}Copy Text{% elif is_chinese %}复制文本{% else %}テキストをコピー{% endif %}
+                                <i class="bi bi-clipboard"></i> {% if is_english %}Copy Text{% elif is_spanish %}Copiar Texto{% elif is_german %}Text Kopieren{% elif is_chinese %}复制文本{% else %}テキストをコピー{% endif %}
                             </button>
                         </div>
                     </div>
@@ -73,10 +79,10 @@
                 <div class="card-modern p-4 mb-4">
                     <h6 class="fw-bold mb-3">
                         <i class="bi bi-image text-info me-2"></i>
-                        {% if is_english %}Uploaded Image{% elif is_chinese %}上传的图片{% else %}アップロードした画像{% endif %}
+                        {% if is_english %}Uploaded Image{% elif is_spanish %}Imagen Subida{% elif is_german %}Hochgeladenes Bild{% elif is_chinese %}上传的图片{% else %}アップロードした画像{% endif %}
                     </h6>
                     <div class="text-center">
-                        <img src="{{ uploaded_image.image.url }}" alt="{% if is_english %}Uploaded Image{% elif is_chinese %}上传的图片{% else %}アップロード画像{% endif %}" class="uploaded-image-preview">
+                        <img src="{{ uploaded_image.image.url }}" alt="{% if is_english %}Uploaded Image{% elif is_spanish %}Imagen Subida{% elif is_german %}Hochgeladenes Bild{% elif is_chinese %}上传的图片{% else %}アップロード画像{% endif %}" class="uploaded-image-preview">
                     </div>
                 </div>
                 {% endif %}
@@ -84,10 +90,10 @@
                 <!-- アクションボタン -->
                 <div class="text-center mt-4">
                     <a href="{% url 'songs:lyrics_confirmation' %}" class="btn-gradient-primary btn-lg me-3">
-                        <i class="bi bi-file-text"></i> {% if is_english %}Confirm Lyrics{% elif is_chinese %}确认歌词{% else %}歌詞を確認{% endif %}
+                        <i class="bi bi-file-text"></i> {% if is_english %}Confirm Lyrics{% elif is_spanish %}Confirmar Letras{% elif is_german %}Texte Bestätigen{% elif is_chinese %}确认歌词{% else %}歌詞を確認{% endif %}
                     </a>
                     <a href="{% url 'songs:upload_image' %}" class="btn-outline-modern btn-lg">
-                        <i class="bi bi-arrow-left"></i> {% if is_english %}Upload Another Image{% elif is_chinese %}上传其他图片{% else %}別の画像をアップロード{% endif %}
+                        <i class="bi bi-arrow-left"></i> {% if is_english %}Upload Another Image{% elif is_spanish %}Subir Otra Imagen{% elif is_german %}Anderes Bild Hochladen{% elif is_chinese %}上传其他图片{% else %}別の画像をアップロード{% endif %}
                     </a>
                 </div>
 
@@ -96,7 +102,7 @@
                     <div class="card-modern p-4">
                         <h6 class="fw-bold mb-3 d-flex align-items-center">
                             <i class="bi bi-lightbulb text-warning me-2"></i>
-                            {% if is_english %}Next Steps{% elif is_chinese %}下一步{% else %}次のステップ{% endif %}
+                            {% if is_english %}Next Steps{% elif is_spanish %}Siguientes Pasos{% elif is_german %}Nächste Schritte{% elif is_chinese %}下一步{% else %}次のステップ{% endif %}
                         </h6>
                         <div class="row g-3">
                             <div class="col-md-6">
@@ -105,8 +111,8 @@
                                         <i class="bi bi-check-circle"></i>
                                     </div>
                                     <div>
-                                        <div class="fw-semibold">{% if is_english %}Review Text{% elif is_chinese %}确认文本{% else %}テキストを確認{% endif %}</div>
-                                        <small class="text-muted">{% if is_english %}Check if the extraction is correct{% elif is_chinese %}检查提取结果是否正确{% else %}抽出結果が正しいかチェック{% endif %}</small>
+                                        <div class="fw-semibold">{% if is_english %}Review Text{% elif is_spanish %}Revisar Texto{% elif is_german %}Text Überprüfen{% elif is_chinese %}确认文本{% else %}テキストを確認{% endif %}</div>
+                                        <small class="text-muted">{% if is_english %}Check if the extraction is correct{% elif is_spanish %}Verifica si la extracción es correcta{% elif is_german %}Prüfen Sie, ob die Extraktion korrekt ist{% elif is_chinese %}检查提取结果是否正确{% else %}抽出結果が正しいかチェック{% endif %}</small>
                                     </div>
                                 </div>
                             </div>
@@ -116,8 +122,8 @@
                                         <i class="bi bi-file-text"></i>
                                     </div>
                                     <div>
-                                        <div class="fw-semibold">{% if is_english %}Confirm Lyrics{% elif is_chinese %}确认歌词{% else %}歌詞生成確認{% endif %}</div>
-                                        <small class="text-muted">{% if is_english %}Review the AI-generated lyrics{% elif is_chinese %}查看AI生成的歌词{% else %}AIが作成した歌詞を確認{% endif %}</small>
+                                        <div class="fw-semibold">{% if is_english %}Confirm Lyrics{% elif is_spanish %}Confirmar Letras{% elif is_german %}Texte Bestätigen{% elif is_chinese %}确认歌词{% else %}歌詞生成確認{% endif %}</div>
+                                        <small class="text-muted">{% if is_english %}Review the AI-generated lyrics{% elif is_spanish %}Revisa las letras generadas por IA{% elif is_german %}Überprüfen Sie die KI-generierten Texte{% elif is_chinese %}查看AI生成的歌词{% else %}AIが作成した歌詞を確認{% endif %}</small>
                                     </div>
                                 </div>
                             </div>

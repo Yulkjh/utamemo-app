@@ -186,7 +186,7 @@
 <div class="container" style="max-width: 900px; margin: 0 auto; padding: 2rem 1rem;">
     <a href="{% url 'songs:classroom_list' %}" class="back-link">
         <i class="bi bi-arrow-left"></i>
-        {% if is_english %}Back to classrooms{% elif is_chinese %}返回班级列表{% else %}クラス一覧に戻る{% endif %}
+        {% if is_english %}Back to classrooms{% elif is_spanish %}Volver a las aulas{% elif is_german %}Zurück zu Klassenräumen{% elif is_portuguese %}Voltar às turmas{% elif is_chinese %}返回班级列表{% else %}クラス一覧に戻る{% endif %}
     </a>
     
     <div class="classroom-header">
@@ -196,11 +196,11 @@
                 <i class="bi bi-three-dots"></i>
             </button>
             <div class="menu-dropdown" id="classroomMenu">
-                <form action="{% url 'songs:classroom_delete' classroom.id %}" method="post" style="margin: 0;" onsubmit="return confirm('{% if is_english %}Are you sure you want to delete this classroom?{% elif is_chinese %}确定要删除这个班级吗？{% else %}このクラスを削除してもよろしいですか？{% endif %}');">
+                <form action="{% url 'songs:classroom_delete' classroom.id %}" method="post" style="margin: 0;" onsubmit="return confirm('{% if is_english %}Are you sure you want to delete this classroom?{% elif is_spanish %}¿Está seguro de que desea eliminar esta aula?{% elif is_german %}Sind Sie sicher, dass Sie diesen Klassenraum löschen möchten?{% elif is_portuguese %}Tem certeza de que deseja excluir esta turma?{% elif is_chinese %}确定要删除这个班级吗？{% else %}このクラスを削除してもよろしいですか？{% endif %}');">
                     {% csrf_token %}
                     <button type="submit" class="menu-item danger">
                         <i class="bi bi-trash"></i>
-                        {% if is_english %}Delete Classroom{% elif is_chinese %}删除班级{% else %}クラスを削除{% endif %}
+                        {% if is_english %}Delete Classroom{% elif is_spanish %}Eliminar Aula{% elif is_german %}Klassenraum löschen{% elif is_portuguese %}Excluir Turma{% elif is_chinese %}删除班级{% else %}クラスを削除{% endif %}
                     </button>
                 </form>
             </div>
@@ -209,11 +209,11 @@
         
         <h1 style="margin: 0 0 0.5rem 0; font-size: 1.75rem;">{{ classroom.name }}</h1>
         <p style="margin: 0 0 1rem 0; opacity: 0.9;">
-            {% if is_english %}Host: {% elif is_chinese %}主持人: {% else %}ホスト: {% endif %}{{ classroom.host.username }}
+            {% if is_english %}Host: {% elif is_spanish %}Anfitrión: {% elif is_german %}Gastgeber: {% elif is_portuguese %}Anfitrião: {% elif is_chinese %}主持人: {% else %}ホスト: {% endif %}{{ classroom.host.username }}
         </p>
         <div>
             <span style="font-size: 0.875rem; opacity: 0.8;">
-                {% if is_english %}Class Code:{% elif is_chinese %}班级代码:{% else %}クラスコード:{% endif %}
+                {% if is_english %}Class Code:{% elif is_spanish %}Código de Clase:{% elif is_german %}Klassencode:{% elif is_portuguese %}Código da Turma:{% elif is_chinese %}班级代码:{% else %}クラスコード:{% endif %}
             </span>
             <span class="classroom-code">{{ classroom.code }}</span>
         </div>
@@ -225,11 +225,11 @@
                 <div class="d-flex justify-content-between align-items-center mb-3">
                     <h3 class="section-title" style="margin: 0; border: none; padding: 0;">
                         <i class="bi bi-music-note-list" style="color: #ff7940;"></i>
-                        {% if is_english %}Shared Songs{% elif is_chinese %}共享歌曲{% else %}共有された楽曲{% endif %}
+                        {% if is_english %}Shared Songs{% elif is_spanish %}Canciones Compartidas{% elif is_german %}Geteilte Lieder{% elif is_portuguese %}Músicas Compartilhadas{% elif is_chinese %}共享歌曲{% else %}共有された楽曲{% endif %}
                     </h3>
                     <a href="{% url 'songs:classroom_share_song' classroom.id %}" class="action-btn" style="padding: 0.5rem 1rem; font-size: 0.875rem;">
                         <i class="bi bi-plus-lg"></i>
-                        {% if is_english %}Add{% elif is_chinese %}添加{% else %}追加{% endif %}
+                        {% if is_english %}Add{% elif is_spanish %}Añadir{% elif is_german %}Hinzufügen{% elif is_portuguese %}Adicionar{% elif is_chinese %}添加{% else %}追加{% endif %}
                     </a>
                 </div>
                 
@@ -248,7 +248,7 @@
                     <div class="empty-state">
                         <i class="bi bi-music-note" style="font-size: 2rem; opacity: 0.3;"></i>
                         <p style="margin: 0.5rem 0 0 0;">
-                            {% if is_english %}No songs shared yet{% elif is_chinese %}还没有共享的歌曲{% else %}まだ楽曲が共有されていません{% endif %}
+                            {% if is_english %}No songs shared yet{% elif is_spanish %}Aún no hay canciones compartidas{% elif is_german %}Noch keine Lieder geteilt{% elif is_portuguese %}Ainda não há músicas compartilhadas{% elif is_chinese %}还没有共享的歌曲{% else %}まだ楽曲が共有されていません{% endif %}
                         </p>
                     </div>
                 {% endif %}
@@ -259,7 +259,7 @@
             <div style="background: white; border-radius: 12px; padding: 1.5rem; border: 1px solid #e5e5e5;">
                 <h3 class="section-title">
                     <i class="bi bi-people" style="color: #ff7940;"></i>
-                    {% if is_english %}Members{% elif is_chinese %}成员{% else %}メンバー{% endif %}
+                    {% if is_english %}Members{% elif is_spanish %}Miembros{% elif is_german %}Mitglieder{% elif is_portuguese %}Membros{% elif is_chinese %}成员{% else %}メンバー{% endif %}
                     <span style="color: #888; font-weight: normal;">({{ members.count }})</span>
                 </h3>
                 
@@ -267,7 +267,7 @@
                     <div class="member-avatar">{{ classroom.host.username|slice:":1"|upper }}</div>
                     <span class="member-name">{{ classroom.host.username }}</span>
                     <span class="member-role">
-                        {% if is_english %}Host{% elif is_chinese %}主持人{% else %}ホスト{% endif %}
+                        {% if is_english %}Host{% elif is_spanish %}Anfitrión{% elif is_german %}Gastgeber{% elif is_portuguese %}Anfitrião{% elif is_chinese %}主持人{% else %}ホスト{% endif %}
                     </span>
                 </div>
                 

@@ -7,9 +7,12 @@ AVAILABLE_LANGUAGES = [
     {'code': 'ja', 'name': '日本語'},
     {'code': 'en', 'name': 'English'},
     {'code': 'zh', 'name': '中文'},
+    {'code': 'es', 'name': 'Español'},
+    {'code': 'de', 'name': 'Deutsch'},
+    {'code': 'pt', 'name': 'Português'},
 ]
 
-VALID_LANG_CODES = {'ja', 'en', 'zh'}
+VALID_LANG_CODES = {'ja', 'en', 'zh', 'es', 'de', 'pt'}
 
 def language_context(request):
     """言語設定をテンプレートに提供"""
@@ -39,6 +42,9 @@ def language_context(request):
         'is_english': app_language == 'en',
         'is_japanese': app_language == 'ja',
         'is_chinese': app_language == 'zh',
+        'is_spanish': app_language == 'es',
+        'is_german': app_language == 'de',
+        'is_portuguese': app_language == 'pt',
         'available_languages': AVAILABLE_LANGUAGES,
         'current_language': current_language,
     }

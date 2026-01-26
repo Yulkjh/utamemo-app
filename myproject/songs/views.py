@@ -288,6 +288,10 @@ class CreateSongView(LoginRequiredMixin, CreateView):
                 messages.error(self.request, 'Lyrics are empty.')
             elif app_language == 'zh':
                 messages.error(self.request, '歌词为空。')
+            elif app_language == 'es':
+                messages.error(self.request, 'Las letras están vacías.')
+            elif app_language == 'de':
+                messages.error(self.request, 'Der Liedtext ist leer.')
             else:
                 messages.error(self.request, '歌詞が入力されていません。')
             return redirect('songs:lyrics_confirmation')
@@ -339,6 +343,16 @@ class CreateSongView(LoginRequiredMixin, CreateView):
                     self.request, 
                     f'歌曲已加入队列。当前排在第{self.object.queue_position - 1}位。将按顺序生成。'
                 )
+            elif app_language == 'es':
+                messages.success(
+                    self.request, 
+                    f'Canción añadida a la cola. Actualmente hay {self.object.queue_position - 1} personas delante. Se generará en orden.'
+                )
+            elif app_language == 'de':
+                messages.success(
+                    self.request, 
+                    f'Lied zur Warteschlange hinzugefügt. Derzeit {self.object.queue_position - 1} Personen vor Ihnen. Wird der Reihe nach generiert.'
+                )
             else:
                 messages.success(
                     self.request, 
@@ -349,6 +363,10 @@ class CreateSongView(LoginRequiredMixin, CreateView):
                 messages.success(self.request, 'Song generation started. Will be ready in 1-2 minutes. Please refresh the page when complete.')
             elif app_language == 'zh':
                 messages.success(self.request, '歌曲生成已开始。1-2分钟后完成。完成后请刷新页面。')
+            elif app_language == 'es':
+                messages.success(self.request, 'La generación de la canción ha comenzado. Estará lista en 1-2 minutos. Por favor actualice la página cuando esté completa.')
+            elif app_language == 'de':
+                messages.success(self.request, 'Liederstellung gestartet. In 1-2 Minuten fertig. Bitte aktualisieren Sie die Seite, wenn es fertig ist.')
             else:
                 messages.success(self.request, '楽曲の生成を開始しました。1〜2分で完成します。完成したらページを更新してください。')
         

@@ -1,5 +1,5 @@
 from django.shortcuts import render, get_object_or_404, redirect
-from django.views.generic import CreateView, TemplateView, ListView, UpdateView
+from django.views.generic import CreateView, TemplateView, ListView, UpdateView, FormView
 from django.contrib.auth.views import LoginView as AuthLoginView, LogoutView as AuthLogoutView
 from django.contrib.auth.mixins import LoginRequiredMixin
 from django.urls import reverse_lazy
@@ -10,6 +10,7 @@ from django.views.decorators.csrf import csrf_exempt
 from django.contrib.auth.decorators import login_required
 from django.conf import settings
 from django.utils import timezone
+from django.core.mail import send_mail
 from datetime import timedelta
 from .forms import UserRegistrationForm, ProfileEditForm
 from .models import User
@@ -230,15 +231,18 @@ def delete_profile_image(request):
     return JsonResponse({'success': False, 'error': '画像がありません'}, status=400)
 
 
-class UpgradeView(LoginRequiredMixin, TemplateView):
-    """プランアップグレードビュー"""
+class UpgradeView(TemplateView):
+    """プランアップグレードビュー（ログインなしでも閲覧可能）"""
     template_name = 'users/upgrade.html'
     
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
-        context['current_plan'] = self.request.user.plan
-        context['is_pro'] = self.request.user.is_pro
-        context['current_plan'] = self.request.user.plan
+        if self.request.user.is_authenticated:
+            context['current_plan'] = self.request.user.plan
+            context['is_pro'] = self.request.user.is_pro
+        else:
+            context['current_plan'] = None
+            context['is_pro'] = False
         context['stripe_publishable_key'] = getattr(settings, 'STRIPE_PUBLISHABLE_KEY', '')
         context['stripe_price_ids'] = getattr(settings, 'STRIPE_PRICE_IDS', {})
         return context
@@ -384,10 +388,11 @@ def stripe_webhook(request):
     if event['type'] == 'checkout.session.completed':
         session = event['data']['object']
         user_id = session.get('metadata', {}).get('user_id')
+        plan = session.get('metadata', {}).get('plan', 'starter')  # メタデータからプランを取得
         if user_id:
             try:
                 user = User.objects.get(id=user_id)
-                user.plan = 'pro'
+                user.plan = plan  # 正しいプランを設定
                 user.stripe_subscription_id = session.get('subscription')
                 user.plan_expires_at = timezone.now() + timedelta(days=30)
                 user.save()
@@ -417,4 +422,109 @@ def stripe_webhook(request):
                 pass
     
     return HttpResponse(status=200)
+
+
+class SchoolInquiryView(TemplateView):
+    """教育機関向けプランお問い合わせビュー"""
+    template_name = 'users/school_inquiry.html'
+    
+    def post(self, request, *args, **kwargs):
+        """フォーム送信処理"""
+        organization_name = request.POST.get('organization_name', '')
+        contact_name = request.POST.get('contact_name', '')
+        email = request.POST.get('email', '')
+        phone = request.POST.get('phone', '')
+        student_count = request.POST.get('student_count', '')
+        start_date = request.POST.get('start_date', '')
+        message = request.POST.get('message', '')
+        
+        # メール本文を作成
+        email_body = f"""
+【UTAMEMOスクールプランお問い合わせ】
+
+■ 学校・教育機関名
+{organization_name}
+
+■ ご担当者名
+{contact_name}
+
+■ メールアドレス
+{email}
+
+■ 電話番号
+{phone}
+
+■ 導入予定人数
+{student_count}
+
+■ 導入希望時期
+{start_date}
+
+■ お問い合わせ内容
+{message}
+
+---
+このメールはUTAMEMOお問い合わせフォームから自動送信されています。
+"""
+        
+        # 管理者にメール送信
+        try:
+            admin_email = 'hope47284@gmail.com'
+            send_mail(
+                subject=f'【UTAMEMOスクールプラン】{organization_name}様からのお問い合わせ',
+                message=email_body,
+                from_email=getattr(settings, 'DEFAULT_FROM_EMAIL', 'noreply@utamemo.com'),
+                recipient_list=[admin_email],
+                fail_silently=True,
+            )
+        except Exception as e:
+            # メール送信失敗してもエラーにはしない（ログに記録）
+            print(f"Email send error: {e}")
+        
+        messages.success(request, 'お問い合わせを送信しました。担当者より折り返しご連絡いたします。')
+        return redirect('users:school_inquiry_complete')
+
+
+class SchoolInquiryCompleteView(TemplateView):
+    """お問い合わせ完了ビュー"""
+    template_name = 'users/school_inquiry_complete.html'
+
+
+# ========================================
+# パスワードリセット関連ビュー
+# ========================================
+from django.contrib.auth.views import (
+    PasswordResetView, 
+    PasswordResetDoneView, 
+    PasswordResetConfirmView, 
+    PasswordResetCompleteView
+)
+
+
+class CustomPasswordResetView(PasswordResetView):
+    """パスワードリセット要求ビュー"""
+    template_name = 'users/password_reset.html'
+    email_template_name = 'users/password_reset_email.html'
+    subject_template_name = 'users/password_reset_subject.txt'
+    success_url = reverse_lazy('users:password_reset_done')
+    
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        return context
+
+
+class CustomPasswordResetDoneView(PasswordResetDoneView):
+    """パスワードリセットメール送信完了ビュー"""
+    template_name = 'users/password_reset_done.html'
+
+
+class CustomPasswordResetConfirmView(PasswordResetConfirmView):
+    """パスワードリセット確認ビュー"""
+    template_name = 'users/password_reset_confirm.html'
+    success_url = reverse_lazy('users:password_reset_complete')
+
+
+class CustomPasswordResetCompleteView(PasswordResetCompleteView):
+    """パスワードリセット完了ビュー"""
+    template_name = 'users/password_reset_complete.html'
 

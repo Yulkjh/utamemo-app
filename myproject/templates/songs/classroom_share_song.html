@@ -1,7 +1,7 @@
 {% extends 'base.html' %}
 {% load static %}
 
-{% block title %}{% if is_english %}Share Song{% elif is_chinese %}分享歌曲{% else %}楽曲を共有{% endif %} - {{ classroom.name }} - UTAMEMO{% endblock %}
+{% block title %}{% if is_english %}Share Song{% elif is_spanish %}Compartir Canción{% elif is_german %}Lied teilen{% elif is_chinese %}分享歌曲{% else %}楽曲を共有{% endif %} - {{ classroom.name }} - UTAMEMO{% endblock %}
 
 {% block content %}
 <style>
@@ -206,8 +206,8 @@
 
 <div class="container share-page">
     <div class="share-header">
-        <h1 class="share-title">{% if is_english %}Share Song{% elif is_chinese %}分享歌曲{% else %}楽曲を共有{% endif %}</h1>
-        <p class="share-subtitle">{% if is_english %}Select a song to share with your class{% elif is_chinese %}选择要分享到班级的歌曲{% else %}クラスに共有する楽曲を選択してください{% endif %}</p>
+        <h1 class="share-title">{% if is_english %}Share Song{% elif is_spanish %}Compartir Canción{% elif is_german %}Lied teilen{% elif is_portuguese %}Compartilhar Música{% elif is_chinese %}分享歌曲{% else %}楽曲を共有{% endif %}</h1>
+        <p class="share-subtitle">{% if is_english %}Select a song to share with your class{% elif is_spanish %}Selecciona una canción para compartir con tu clase{% elif is_german %}Wähle ein Lied zum Teilen mit deiner Klasse{% elif is_portuguese %}Selecione uma música para compartilhar com sua turma{% elif is_chinese %}选择要分享到班级的歌曲{% else %}クラスに共有する楽曲を選択してください{% endif %}</p>
         <div class="classroom-badge">
             <i class="bi bi-mortarboard-fill"></i>
             {{ classroom.name }}
@@ -236,7 +236,7 @@
                 <input type="hidden" name="song_id" value="{{ song.pk }}">
                 <button type="submit" class="share-btn">
                     <i class="bi bi-share-fill"></i>
-                    {% if is_english %}Share to Class{% elif is_chinese %}分享到班级{% else %}クラスに共有{% endif %}
+                    {% if is_english %}Share to Class{% elif is_spanish %}Compartir a Clase{% elif is_german %}Mit Klasse teilen{% elif is_portuguese %}Compartilhar com Turma{% elif is_chinese %}分享到班级{% else %}クラスに共有{% endif %}
                 </button>
             </form>
         </div>
@@ -247,11 +247,11 @@
         <div class="empty-state-icon">
             <i class="bi bi-music-note-beamed"></i>
         </div>
-        <h4>{% if is_english %}No songs to share{% elif is_chinese %}没有可分享的歌曲{% else %}共有できる楽曲がありません{% endif %}</h4>
-        <p>{% if is_english %}Create a song first or all your songs are already shared{% elif is_chinese %}请先创建歌曲或所有歌曲已被分享{% else %}まず楽曲を作成するか、全ての楽曲が既に共有されています{% endif %}</p>
+        <h4>{% if is_english %}No songs to share{% elif is_spanish %}No hay canciones para compartir{% elif is_german %}Keine Lieder zum Teilen{% elif is_portuguese %}Nenhuma música para compartilhar{% elif is_chinese %}没有可分享的歌曲{% else %}共有できる楽曲がありません{% endif %}</h4>
+        <p>{% if is_english %}Create a song first or all your songs are already shared{% elif is_spanish %}Crea una canción primero o todas tus canciones ya están compartidas{% elif is_german %}Erstelle zuerst ein Lied oder alle deine Lieder sind bereits geteilt{% elif is_portuguese %}Crie uma música primeiro ou todas as suas músicas já estão compartilhadas{% elif is_chinese %}请先创建歌曲或所有歌曲已被分享{% else %}まず楽曲を作成するか、全ての楽曲が既に共有されています{% endif %}</p>
         <a href="{% url 'songs:upload_image' %}" class="create-song-btn">
             <i class="bi bi-plus-lg"></i>
-            {% if is_english %}Create Song{% elif is_chinese %}创建歌曲{% else %}楽曲を作成{% endif %}
+            {% if is_english %}Create Song{% elif is_spanish %}Crear Canción{% elif is_german %}Lied erstellen{% elif is_portuguese %}Criar Música{% elif is_chinese %}创建歌曲{% else %}楽曲を作成{% endif %}
         </a>
     </div>
     {% endif %}
@@ -259,7 +259,7 @@
     <div class="back-link">
         <a href="{% url 'songs:classroom_detail' classroom.pk %}">
             <i class="bi bi-arrow-left"></i>
-            {% if is_english %}Back to Class{% elif is_chinese %}返回班级{% else %}クラスに戻る{% endif %}
+            {% if is_english %}Back to Class{% elif is_spanish %}Volver a Clase{% elif is_german %}Zurück zur Klasse{% elif is_portuguese %}Voltar para Turma{% elif is_chinese %}返回班级{% else %}クラスに戻る{% endif %}
         </a>
     </div>
 </div>

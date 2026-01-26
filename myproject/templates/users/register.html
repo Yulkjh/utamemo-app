@@ -1,7 +1,7 @@
 {% extends 'base.html' %}
 {% load lyrics_filters %}
 
-{% block title %}{% if is_english %}Register - UTAMEMO{% elif is_chinese %}注册 - UTAMEMO{% else %}新規登録 - UTAMEMO{% endif %}{% endblock %}
+{% block title %}{% if is_english %}Register - UTAMEMO{% elif is_spanish %}Registrarse - UTAMEMO{% elif is_german %}Registrieren - UTAMEMO{% elif is_portuguese %}Cadastrar - UTAMEMO{% elif is_chinese %}注册 - UTAMEMO{% else %}新規登録 - UTAMEMO{% endif %}{% endblock %}
 
 {% block content %}
 <div class="register-container">
@@ -19,7 +19,7 @@
                                 <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/>
                                 <circle cx="12" cy="7" r="4"/>
                             </svg>
-                            {% if is_english %}Username{% elif is_chinese %}用户名{% else %}ユーザー名{% endif %} <span class="required">*</span>
+                            {% if is_english %}Username{% elif is_spanish %}Nombre de Usuario{% elif is_german %}Benutzername{% elif is_portuguese %}Nome de Usuário{% elif is_chinese %}用户名{% else %}ユーザー名{% endif %} <span class="required">*</span>
                         </label>
                         {{ form.username }}
                         {% if form.username.errors %}
@@ -33,7 +33,32 @@
                         </div>
                         {% endif %}
                         <div class="field-hint">
-                            {% if is_english %}Use alphanumeric characters, underscores, and hyphens{% elif is_chinese %}可使用字母、数字、下划线和连字符{% else %}半角英数字、アンダースコア、ハイフンが使用できます{% endif %}
+                            {% if is_english %}Use alphanumeric characters, underscores, and hyphens{% elif is_spanish %}Use caracteres alfanuméricos, guiones bajos y guiones{% elif is_german %}Verwenden Sie alphanumerische Zeichen, Unterstriche und Bindestriche{% elif is_portuguese %}Use caracteres alfanuméricos, sublinhados e hífens{% elif is_chinese %}可使用字母、数字、下划线和连字符{% else %}半角英数字、アンダースコア、ハイフンが使用できます{% endif %}
+                        </div>
+                    </div>
+                    
+                    <!-- Email Field (Required) -->
+                    <div class="form-group-modern">
+                        <label for="{{ form.email.id_for_label }}" class="form-label-modern">
+                            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                <path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"/>
+                                <polyline points="22,6 12,13 2,6"/>
+                            </svg>
+                            {% if is_english %}Email{% elif is_spanish %}Correo Electrónico{% elif is_german %}E-Mail{% elif is_portuguese %}E-mail{% elif is_chinese %}电子邮箱{% else %}メールアドレス{% endif %} <span class="required">*</span>
+                        </label>
+                        {{ form.email }}
+                        {% if form.email.errors %}
+                        <div class="error-message">
+                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                <circle cx="12" cy="12" r="10"/>
+                                <line x1="12" y1="8" x2="12" y2="12"/>
+                                <line x1="12" y1="16" x2="12.01" y2="16"/>
+                            </svg>
+                            {{ form.email.errors.0|translate_error:app_language }}
+                        </div>
+                        {% endif %}
+                        <div class="field-hint">
+                            {% if is_english %}Used for password reset, etc.{% elif is_spanish %}Se utiliza para restablecer la contraseña, etc.{% elif is_german %}Wird für Passwort-Zurücksetzung usw. verwendet{% elif is_portuguese %}Usado para redefinição de senha, etc.{% elif is_chinese %}用于密码重置等{% else %}パスワードリセット等に使用します{% endif %}
                         </div>
                     </div>
                     
@@ -45,7 +70,7 @@
                                 <circle cx="12" cy="16" r="1"/>
                                 <path d="M7 11V7a5 5 0 0 1 10 0v4"/>
                             </svg>
-                            {% if is_english %}Password{% elif is_chinese %}密码{% else %}パスワード{% endif %} <span class="required">*</span>
+                            {% if is_english %}Password{% elif is_spanish %}Contraseña{% elif is_german %}Passwort{% elif is_portuguese %}Senha{% elif is_chinese %}密码{% else %}パスワード{% endif %} <span class="required">*</span>
                         </label>
                         {{ form.password1 }}
                         {% if form.password1.errors %}
@@ -59,7 +84,7 @@
                         </div>
                         {% endif %}
                         <div class="field-hint">
-                            {% if is_english %}At least 8 characters{% elif is_chinese %}至少8个字符{% else %}8文字以上{% endif %}
+                            {% if is_english %}At least 8 characters{% elif is_spanish %}Al menos 8 caracteres{% elif is_german %}Mindestens 8 Zeichen{% elif is_portuguese %}Pelo menos 8 caracteres{% elif is_chinese %}至少8个字符{% else %}8文字以上{% endif %}
                         </div>
                     </div>
                     
@@ -71,7 +96,7 @@
                                 <circle cx="12" cy="16" r="1"/>
                                 <path d="M7 11V7a5 5 0 0 1 10 0v4"/>
                             </svg>
-                            {% if is_english %}Confirm Password{% elif is_chinese %}确认密码{% else %}パスワード（確認）{% endif %} <span class="required">*</span>
+                            {% if is_english %}Confirm Password{% elif is_spanish %}Confirmar Contraseña{% elif is_german %}Passwort Bestätigen{% elif is_portuguese %}Confirmar Senha{% elif is_chinese %}确认密码{% else %}パスワード（確認）{% endif %} <span class="required">*</span>
                         </label>
                         {{ form.password2 }}
                         {% if form.password2.errors %}
@@ -94,10 +119,10 @@
                             <line x1="20" y1="8" x2="20" y2="14"/>
                             <line x1="23" y1="11" x2="17" y2="11"/>
                         </svg>
-                        <span class="btn-text">{% if is_english %}Create Account{% elif is_chinese %}创建账户{% else %}アカウントを作成{% endif %}</span>
+                        <span class="btn-text">{% if is_english %}Create Account{% elif is_spanish %}Crear Cuenta{% elif is_german %}Konto Erstellen{% elif is_portuguese %}Criar Conta{% elif is_chinese %}创建账户{% else %}アカウントを作成{% endif %}</span>
                         <div class="btn-loading" style="display: none;">
                             <div class="spinner"></div>
-                            {% if is_english %}Creating...{% elif is_chinese %}创建中...{% else %}作成中...{% endif %}
+                            {% if is_english %}Creating...{% elif is_spanish %}Creando...{% elif is_german %}Erstellen...{% elif is_portuguese %}Criando...{% elif is_chinese %}创建中...{% else %}作成中...{% endif %}
                         </div>
                         </div>
                     </button>
@@ -107,7 +132,7 @@
             <!-- Footer -->
             <div class="register-footer">
                 <div class="divider">
-                    <span>{% if is_english %}or{% elif is_chinese %}或{% else %}または{% endif %}</span>
+                    <span>{% if is_english %}or{% elif is_spanish %}o{% elif is_german %}oder{% elif is_portuguese %}ou{% elif is_chinese %}或{% else %}または{% endif %}</span>
                 </div>
                 <a href="{% url 'users:login' %}" class="btn-login-link">
                     <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
@@ -115,7 +140,7 @@
                         <polyline points="10,17 15,12 10,7"/>
                         <line x1="15" y1="12" x2="3" y2="12"/>
                     </svg>
-                    {% if is_english %}Already have an account? Login{% elif is_chinese %}已有账户？登录{% else %}すでにアカウントをお持ちの方はログイン{% endif %}
+                    {% if is_english %}Already have an account? Login{% elif is_spanish %}¿Ya tienes una cuenta? Iniciar Sesión{% elif is_german %}Bereits ein Konto? Anmelden{% elif is_portuguese %}Já tem uma conta? Entrar{% elif is_chinese %}已有账户？登录{% else %}すでにアカウントをお持ちの方はログイン{% endif %}
                 </a>
             </div>
         </div>

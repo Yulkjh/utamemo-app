@@ -1,7 +1,7 @@
 {% extends 'base.html' %}
 {% load lyrics_filters %}
 
-{% block title %}{% if is_english %}Favorites{% elif is_chinese %}收藏{% else %}お気に入り{% endif %} - UTAMEMO{% endblock %}
+{% block title %}{% if is_english %}Favorites{% elif is_spanish %}Favoritos{% elif is_german %}Favoriten{% elif is_portuguese %}Favoritos{% elif is_chinese %}收藏{% else %}お気に入り{% endif %} - UTAMEMO{% endblock %}
 
 {% block content %}
 {% if user.is_authenticated %}
@@ -11,8 +11,8 @@
     <div class="library-header">
         <div class="container">
             <div class="header-content">
-                <h1 class="library-title">{% if is_english %}Favorites{% elif is_chinese %}收藏{% else %}お気に入り{% endif %}</h1>
-                <p class="library-subtitle">{% if is_english %}Your favorite song collection{% elif is_chinese %}您的收藏歌曲集{% else %}あなたのお気に入り楽曲コレクション{% endif %}</p>
+                <h1 class="library-title">{% if is_english %}Favorites{% elif is_spanish %}Favoritos{% elif is_german %}Favoriten{% elif is_portuguese %}Favoritos{% elif is_chinese %}收藏{% else %}お気に入り{% endif %}</h1>
+                <p class="library-subtitle">{% if is_english %}Your favorite song collection{% elif is_spanish %}Tu colección de canciones favoritas{% elif is_german %}Ihre Lieblingslied-Sammlung{% elif is_portuguese %}Sua coleção de músicas favoritas{% elif is_chinese %}您的收藏歌曲集{% else %}あなたのお気に入り楽曲コレクション{% endif %}</p>
             </div>
         </div>
     </div>
@@ -49,11 +49,11 @@
                     <div class="song-actions">
                         {% if song.audio_url %}
                         <button class="play-button" onclick="event.stopPropagation(); playAudio('{{ song.audio_url }}', this, {{ song.pk }})" data-song-id="{{ song.pk }}">
-                            <i class="bi bi-play-fill"></i><span>{% if is_english %}Play{% elif is_chinese %}播放{% else %}再生{% endif %}</span>
+                            <i class="bi bi-play-fill"></i><span>{% if is_english %}Play{% elif is_spanish %}Reproducir{% elif is_german %}Abspielen{% elif is_portuguese %}Reproduzir{% elif is_chinese %}播放{% else %}再生{% endif %}</span>
                         </button>
                         {% else %}
                         <a href="{% url 'songs:song_detail' song.pk %}" class="play-button" onclick="event.stopPropagation();">
-                            <i class="bi bi-play-fill"></i><span>{% if is_english %}Play{% elif is_chinese %}播放{% else %}再生{% endif %}</span>
+                            <i class="bi bi-play-fill"></i><span>{% if is_english %}Play{% elif is_spanish %}Reproducir{% elif is_german %}Abspielen{% elif is_portuguese %}Reproduzir{% elif is_chinese %}播放{% else %}再生{% endif %}</span>
                         </a>
                         {% endif %}
                         {% if user.is_authenticated %}
@@ -73,9 +73,9 @@
             {% else %}
             <div class="empty-state">
                 <div class="empty-icon"><i class="bi bi-bookmark-heart"></i></div>
-                <h3>{% if is_english %}No favorites yet{% elif is_chinese %}还没有收藏{% else %}お気に入りがありません{% endif %}</h3>
-                <p>{% if is_english %}Browse songs and add your favorites!{% elif is_chinese %}浏览歌曲并添加您的收藏！{% else %}楽曲を探して、お気に入りに追加しましょう！{% endif %}</p>
-                <a href="{% url 'songs:song_list' %}" class="btn-primary">{% if is_english %}Browse Songs{% elif is_chinese %}浏览歌曲{% else %}楽曲を探す{% endif %}</a>
+                <h3>{% if is_english %}No favorites yet{% elif is_spanish %}Aún no hay favoritos{% elif is_german %}Noch keine Favoriten{% elif is_portuguese %}Ainda não há favoritos{% elif is_chinese %}还没有收藏{% else %}お気に入りがありません{% endif %}</h3>
+                <p>{% if is_english %}Browse songs and add your favorites!{% elif is_spanish %}¡Explora canciones y añade tus favoritos!{% elif is_german %}Durchsuchen Sie Lieder und fügen Sie Ihre Favoriten hinzu!{% elif is_portuguese %}Navegue pelas músicas e adicione seus favoritos!{% elif is_chinese %}浏览歌曲并添加您的收藏！{% else %}楽曲を探して、お気に入りに追加しましょう！{% endif %}</p>
+                <a href="{% url 'songs:song_list' %}" class="btn-primary">{% if is_english %}Browse Songs{% elif is_spanish %}Explorar Canciones{% elif is_german %}Lieder Durchsuchen{% elif is_portuguese %}Navegar Músicas{% elif is_chinese %}浏览歌曲{% else %}楽曲を探す{% endif %}</a>
             </div>
             {% endif %}
         </div>
@@ -149,7 +149,7 @@ function playAudio(audioUrl, button, songId) {
         } else {
             currentAudio.pause();
             icon.className = 'bi bi-play-fill';
-            textSpan.textContent = '{% if is_english %}Play{% elif is_chinese %}播放{% else %}再生{% endif %}';
+            textSpan.textContent = '{% if is_english %}Play{% elif is_spanish %}Reproducir{% elif is_german %}Abspielen{% elif is_chinese %}播放{% else %}再生{% endif %}';
         }
         return;
     }
@@ -158,7 +158,7 @@ function playAudio(audioUrl, button, songId) {
         currentAudio.pause();
         if (currentPlayButton) {
             currentPlayButton.querySelector('i').className = 'bi bi-play-fill';
-            currentPlayButton.querySelector('span').textContent = '{% if is_english %}Play{% elif is_chinese %}播放{% else %}再生{% endif %}';
+            currentPlayButton.querySelector('span').textContent = '{% if is_english %}Play{% elif is_spanish %}Reproducir{% elif is_german %}Abspielen{% elif is_chinese %}播放{% else %}再生{% endif %}';
         }
     }
     
@@ -167,14 +167,14 @@ function playAudio(audioUrl, button, songId) {
     
     currentAudio.play().then(() => {
         icon.className = 'bi bi-pause-fill';
-        textSpan.textContent = '{% if is_english %}Pause{% elif is_chinese %}暂停{% else %}停止{% endif %}';
+        textSpan.textContent = '{% if is_english %}Pause{% elif is_spanish %}Pausa{% elif is_german %}Pause{% elif is_chinese %}暂停{% else %}停止{% endif %}';
     }).catch(error => {
         window.location.href = '/songs/' + songId + '/';
     });
     
     currentAudio.addEventListener('ended', () => {
         icon.className = 'bi bi-play-fill';
-        textSpan.textContent = '{% if is_english %}Play{% elif is_chinese %}播放{% else %}再生{% endif %}';
+        textSpan.textContent = '{% if is_english %}Play{% elif is_spanish %}Reproducir{% elif is_german %}Abspielen{% elif is_chinese %}播放{% else %}再生{% endif %}';
         currentAudio = null;
         currentPlayButton = null;
     });

@@ -1,7 +1,7 @@
 {% extends 'base.html' %}
 {% load static %}
 
-{% block title %}{% if is_english %}Join Class{% elif is_chinese %}加入班级{% else %}クラスに参加{% endif %} - UTAMEMO{% endblock %}
+{% block title %}{% if is_english %}Join Class{% elif is_spanish %}Unirse a Clase{% elif is_german %}Klasse beitreten{% elif is_portuguese %}Entrar na Turma{% elif is_chinese %}加入班级{% else %}クラスに参加{% endif %} - UTAMEMO{% endblock %}
 
 {% block content %}
 <style>
@@ -129,7 +129,7 @@
 
 <div class="join-page">
     <div class="join-main-card">
-        <h1 class="join-title">{% if is_english %}Join Class{% elif is_chinese %}加入班级{% else %}クラスに参加{% endif %}</h1>
+        <h1 class="join-title">{% if is_english %}Join Class{% elif is_spanish %}Unirse a Clase{% elif is_german %}Klasse beitreten{% elif is_portuguese %}Entrar na Turma{% elif is_chinese %}加入班级{% else %}クラスに参加{% endif %}</h1>
         
         <form method="post" class="code-form">
             {% csrf_token %}
@@ -146,7 +146,7 @@
             
             <button type="submit" class="join-btn">
                 <i class="bi bi-box-arrow-in-right"></i>
-                {% if is_english %}Join{% elif is_chinese %}加入{% else %}参加する{% endif %}
+                {% if is_english %}Join{% elif is_spanish %}Unirse{% elif is_german %}Beitreten{% elif is_portuguese %}Entrar{% elif is_chinese %}加入{% else %}参加する{% endif %}
             </button>
         </form>
     </div>
@@ -154,7 +154,7 @@
     <div class="back-link">
         <a href="{% url 'songs:classroom_list' %}">
             <i class="bi bi-arrow-left"></i>
-            {% if is_english %}Back to My Classes{% elif is_chinese %}返回我的班级{% else %}マイクラスに戻る{% endif %}
+            {% if is_english %}Back to My Classes{% elif is_spanish %}Volver a Mis Clases{% elif is_german %}Zurück zu Meinen Klassen{% elif is_portuguese %}Voltar às Minhas Turmas{% elif is_chinese %}返回我的班级{% else %}マイクラスに戻る{% endif %}
         </a>
     </div>
 </div>

@@ -1,6 +1,6 @@
 {% extends 'base.html' %}
 
-{% block title %}{% if is_english %}Edit Profile{% elif is_chinese %}编辑个人资料{% else %}プロフィール編集{% endif %} - UTAMEMO{% endblock %}
+{% block title %}{% if is_english %}Edit Profile{% elif is_spanish %}Editar Perfil{% elif is_german %}Profil Bearbeiten{% elif is_chinese %}编辑个人资料{% else %}プロフィール編集{% endif %} - UTAMEMO{% endblock %}
 
 {% block content %}
 <div class="profile-edit-container">
@@ -11,9 +11,9 @@
                     <path d="M19 12H5"/>
                     <path d="M12 19l-7-7 7-7"/>
                 </svg>
-                {% if is_english %}Back{% elif is_chinese %}返回{% else %}戻る{% endif %}
+                {% if is_english %}Back{% elif is_spanish %}Atrás{% elif is_german %}Zurück{% elif is_chinese %}返回{% else %}戻る{% endif %}
             </a>
-            <h1>{% if is_english %}Edit Profile{% elif is_chinese %}编辑个人资料{% else %}プロフィール編集{% endif %}</h1>
+            <h1>{% if is_english %}Edit Profile{% elif is_spanish %}Editar Perfil{% elif is_german %}Profil Bearbeiten{% elif is_chinese %}编辑个人资料{% else %}プロフィール編集{% endif %}</h1>
         </div>
 
         <form method="post" enctype="multipart/form-data" class="profile-edit-form">
@@ -51,7 +51,7 @@
                             <path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/>
                             <circle cx="12" cy="13" r="4"/>
                         </svg>
-                        <span>{% if is_english %}Change photo{% elif is_chinese %}更换照片{% else %}写真を変更{% endif %}</span>
+                        <span>{% if is_english %}Change photo{% elif is_spanish %}Cambiar foto{% elif is_german %}Foto ändern{% elif is_chinese %}更换照片{% else %}写真を変更{% endif %}</span>
                     </div>
                 </div>
                 
@@ -68,8 +68,8 @@
                             <polyline points="17 8 12 3 7 8"/>
                             <line x1="12" y1="3" x2="12" y2="15"/>
                         </svg>
-                        <span class="desktop-text">{% if is_english %}Select Image{% elif is_chinese %}选择图片{% else %}画像を選択{% endif %}</span>
-                        <span class="mobile-text">{% if is_english %}Select Photo{% elif is_chinese %}选择照片{% else %}写真を選択{% endif %}</span>
+                        <span class="desktop-text">{% if is_english %}Select Image{% elif is_spanish %}Seleccionar Imagen{% elif is_german %}Bild Auswählen{% elif is_chinese %}选择图片{% else %}画像を選択{% endif %}</span>
+                        <span class="mobile-text">{% if is_english %}Select Photo{% elif is_spanish %}Seleccionar Foto{% elif is_german %}Foto Auswählen{% elif is_chinese %}选择照片{% else %}写真を選択{% endif %}</span>
                     </button>
                     
                     {% if user.profile_image_data or user.profile_image %}
@@ -78,21 +78,21 @@
                             <polyline points="3 6 5 6 21 6"/>
                             <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/>
                         </svg>
-                        {% if is_english %}Delete{% elif is_chinese %}删除{% else %}削除{% endif %}
+                        {% if is_english %}Delete{% elif is_spanish %}Eliminar{% elif is_german %}Löschen{% elif is_chinese %}删除{% else %}削除{% endif %}
                     </button>
                     {% endif %}
                 </div>
-                <p class="image-hint">{% if is_english %}JPG, PNG, GIF (Max 5MB){% elif is_chinese %}JPG、PNG、GIF格式（最大5MB）{% else %}JPG、PNG、GIF形式（最大5MB）{% endif %}</p>
+                <p class="image-hint">{% if is_english %}JPG, PNG, GIF (Max 5MB){% elif is_spanish %}JPG, PNG, GIF (Máx 5MB){% elif is_german %}JPG, PNG, GIF (Max 5MB){% elif is_chinese %}JPG、PNG、GIF格式（最大5MB）{% else %}JPG、PNG、GIF形式（最大5MB）{% endif %}</p>
             </div>
 
             <!-- 自己紹介セクション -->
             <div class="bio-section">
-                <label for="id_bio" class="form-label">{% if is_english %}Bio{% elif is_chinese %}个人简介{% else %}自己紹介{% endif %}</label>
+                <label for="id_bio" class="form-label">{% if is_english %}Bio{% elif is_spanish %}Biografía{% elif is_german %}Biografie{% elif is_chinese %}个人简介{% else %}自己紹介{% endif %}</label>
                 <textarea name="bio" 
                           id="id_bio" 
                           rows="4" 
                           maxlength="500" 
-                          placeholder="{% if is_english %}Enter your bio...{% elif is_chinese %}输入个人简介...{% else %}自己紹介を入力...{% endif %}"
+                          placeholder="{% if is_english %}Enter your bio...{% elif is_spanish %}Ingresa tu biografía...{% elif is_german %}Geben Sie Ihre Biografie ein...{% elif is_chinese %}输入个人简介...{% else %}自己紹介を入力...{% endif %}"
                           class="bio-textarea">{{ user.bio }}</textarea>
                 <div class="char-counter">
                     <span id="bio-length">{{ user.bio|length|default:0 }}</span>/500
@@ -101,14 +101,14 @@
 
             <!-- 送信ボタン -->
             <div class="form-actions">
-                <a href="{% url 'users:profile' user.username %}" class="btn-cancel">{% if is_english %}Cancel{% elif is_chinese %}取消{% else %}キャンセル{% endif %}</a>
+                <a href="{% url 'users:profile' user.username %}" class="btn-cancel">{% if is_english %}Cancel{% elif is_spanish %}Cancelar{% elif is_german %}Abbrechen{% elif is_chinese %}取消{% else %}キャンセル{% endif %}</a>
                 <button type="submit" class="btn-save">
                     <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                         <path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/>
                         <polyline points="17 21 17 13 7 13 7 21"/>
                         <polyline points="7 3 7 8 15 8"/>
                     </svg>
-                    {% if is_english %}Save{% elif is_chinese %}保存{% else %}保存する{% endif %}
+                    {% if is_english %}Save{% elif is_spanish %}Guardar{% elif is_german %}Speichern{% elif is_chinese %}保存{% else %}保存する{% endif %}
                 </button>
             </div>
         </form>

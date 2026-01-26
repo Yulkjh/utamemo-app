@@ -1,6 +1,6 @@
 {% extends 'base.html' %}
 
-{% block title %}{% if is_english %}Upload Image{% elif is_chinese %}上传图片{% else %}テキスト抽出{% endif %} - UTAMEMO{% endblock %}
+{% block title %}{% if is_english %}Upload Image{% elif is_spanish %}Subir Imagen{% elif is_german %}Bild hochladen{% elif is_portuguese %}Enviar Imagem{% elif is_chinese %}上传图片{% else %}テキスト抽出{% endif %} - UTAMEMO{% endblock %}
 
 {% block content %}
 <div class="container py-5">
@@ -8,7 +8,7 @@
         <div class="col-lg-8">
             <!-- ヘッダーセクション -->
             <div class="text-center mb-5 fade-in">
-                <h1 class="display-6 fw-bold mb-3">{% if is_english %}Scan Your Materials{% elif is_chinese %}扫描教材{% else %}教材をスキャン{% endif %}</h1>
+                <h1 class="display-6 fw-bold mb-3">{% if is_english %}Scan Your Materials{% elif is_spanish %}Escanea tus Materiales{% elif is_german %}Scanne deine Materialien{% elif is_portuguese %}Escaneie seu Material{% elif is_chinese %}扫描教材{% else %}教材をスキャン{% endif %}</h1>
             </div>
 
             <!-- アップロードエリア -->
@@ -21,23 +21,23 @@
                             <div class="upload-icon mb-3">
                                 <i class="bi bi-cloud-upload" style="font-size: 3rem; color: var(--primary-color);"></i>
                             </div>
-                            <h5 class="fw-bold mb-2">{% if is_english %}Drag and drop files here{% elif is_chinese %}拖放文件到这里{% else %}ファイルをドラッグ＆ドロップ{% endif %}</h5>
+                            <h5 class="fw-bold mb-2">{% if is_english %}Drag and drop files here{% elif is_spanish %}Arrastra y suelta archivos aquí{% elif is_german %}Dateien hier ablegen{% elif is_portuguese %}Arraste e solte arquivos aqui{% elif is_chinese %}拖放文件到这里{% else %}ファイルをドラッグ＆ドロップ{% endif %}</h5>
                             
                             <!-- 複数ファイル入力（非表示） -->
                             {{ form.images }}
                             
                             <div class="d-flex gap-2 justify-content-center flex-wrap text-center">
                                 <button type="button" class="btn-gradient-primary mobile-only" id="camera-btn">
-                                    <i class="bi bi-camera"></i> {% if is_english %}Take Photo{% elif is_chinese %}拍照{% else %}カメラで撮影{% endif %}
+                                    <i class="bi bi-camera"></i> {% if is_english %}Take Photo{% elif is_spanish %}Tomar Foto{% elif is_german %}Foto aufnehmen{% elif is_portuguese %}Tirar Foto{% elif is_chinese %}拍照{% else %}カメラで撮影{% endif %}
                                 </button>
                                 <button type="button" class="btn-gradient-primary" id="file-select-btn">
-                                    <i class="bi bi-folder-open"></i> {% if is_english %}Select Photo{% elif is_chinese %}选择照片{% else %}写真を選択{% endif %}
+                                    <i class="bi bi-folder-open"></i> {% if is_english %}Select Photo{% elif is_spanish %}Seleccionar Foto{% elif is_german %}Foto auswählen{% elif is_portuguese %}Selecionar Foto{% elif is_chinese %}选择照片{% else %}写真を選択{% endif %}
                                 </button>
                             </div>
                             
                             <div class="mt-3">
                                 <small class="text-muted">
-                                    {% if is_english %}JPG, PNG, JPEG, PDF formats • Max 10MB{% elif is_chinese %}JPG、PNG、JPEG、PDF格式 • 最大10MB{% else %}JPG、PNG、JPEG、PDF形式 • 最大10MB{% endif %}
+                                    {% if is_english %}JPG, PNG, JPEG, PDF formats • Max 10MB{% elif is_spanish %}Formatos JPG, PNG, JPEG, PDF • Máx 10MB{% elif is_german %}JPG, PNG, JPEG, PDF Formate • Max 10MB{% elif is_portuguese %}Formatos JPG, PNG, JPEG, PDF • Máx 10MB{% elif is_chinese %}JPG、PNG、JPEG、PDF格式 • 最大10MB{% else %}JPG、PNG、JPEG、PDF形式 • 最大10MB{% endif %}
                                 </small>
                             </div>
                         </div>
@@ -47,8 +47,8 @@
                             <div class="preview-container">
                                 <!-- 単一ファイルプレビュー -->
                                 <div id="single-preview" class="d-flex justify-content-center align-items-center flex-column" style="position: relative;">
-                                    <img id="preview-image" alt="{% if is_english %}Preview{% elif is_chinese %}预览{% else %}プレビュー{% endif %}" class="preview-image mx-auto">
-                                    <button type="button" class="single-preview-remove" id="single-remove-btn" title="{% if is_english %}Remove{% elif is_chinese %}删除{% else %}削除{% endif %}">
+                                    <img id="preview-image" alt="{% if is_english %}Preview{% elif is_spanish %}Vista previa{% elif is_german %}Vorschau{% elif is_portuguese %}Visualização{% elif is_chinese %}预览{% else %}プレビュー{% endif %}" class="preview-image mx-auto">
+                                    <button type="button" class="single-preview-remove" id="single-remove-btn" title="{% if is_english %}Remove{% elif is_spanish %}Eliminar{% elif is_german %}Entfernen{% elif is_portuguese %}Remover{% elif is_chinese %}删除{% else %}削除{% endif %}">
                                         <i class="bi bi-x"></i>
                                     </button>
                                 </div>
@@ -57,10 +57,10 @@
                                 <div class="preview-overlay">
                                     <div class="d-flex gap-2 justify-content-center">
                                         <button type="button" class="btn-outline-modern btn-sm mobile-only" id="change-camera-btn">
-                                            <i class="bi bi-camera"></i> {% if is_english %}Camera{% elif is_chinese %}相机{% else %}カメラ{% endif %}
+                                            <i class="bi bi-camera"></i> {% if is_english %}Camera{% elif is_spanish %}Cámara{% elif is_german %}Kamera{% elif is_portuguese %}Câmera{% elif is_chinese %}相机{% else %}カメラ{% endif %}
                                         </button>
                                         <button type="button" class="btn-outline-modern btn-sm" id="change-file-btn">
-                                            <i class="bi bi-folder-plus"></i> {% if is_english %}Add More{% elif is_chinese %}添加更多{% else %}追加{% endif %}
+                                            <i class="bi bi-folder-plus"></i> {% if is_english %}Add More{% elif is_spanish %}Añadir Más{% elif is_german %}Mehr hinzufügen{% elif is_portuguese %}Adicionar Mais{% elif is_chinese %}添加更多{% else %}追加{% endif %}
                                         </button>
                                     </div>
                                 </div>
@@ -71,7 +71,7 @@
                                         <small class="text-muted" id="file-size"></small>
                                     </div>
                                     <div class="text-success">
-                                        <i class="bi bi-check-circle-fill"></i> {% if is_english %}Ready{% elif is_chinese %}准备就绪{% else %}準備完了{% endif %}
+                                        <i class="bi bi-check-circle-fill"></i> {% if is_english %}Ready{% elif is_spanish %}Listo{% elif is_german %}Bereit{% elif is_portuguese %}Pronto{% elif is_chinese %}准备就绪{% else %}準備完了{% endif %}
                                     </div>
                                 </div>
                             </div>
@@ -81,19 +81,19 @@
                     <!-- カスタマイズリクエスト入力欄 -->
                     <div class="custom-request-section mb-4" id="custom-request-section" style="display: none;">
                         <label class="form-label fw-bold mb-2">
-                            <i class="bi bi-chat-dots me-2"></i>{% if is_english %}Custom Request (Optional){% elif is_chinese %}自定义要求（可选）{% else %}カスタマイズ（任意）{% endif %}
+                            <i class="bi bi-chat-dots me-2"></i>{% if is_english %}Custom Request (Optional){% elif is_spanish %}Solicitud Personalizada (Opcional){% elif is_german %}Individuelle Anfrage (Optional){% elif is_portuguese %}Solicitação Personalizada (Opcional){% elif is_chinese %}自定义要求（可选）{% else %}カスタマイズ（任意）{% endif %}
                         </label>
                         <textarea name="custom_request" class="form-control custom-request-input" rows="2" 
-                            placeholder="{% if is_english %}e.g. 'Include more examples', 'Make it rhyme', 'Focus on grammar rules'{% elif is_chinese %}例如：'多加例句'、'要押韵'、'重点讲语法'{% else %}例：「例文を多めに」「韻を踏んで」「文法ルールを強調して」{% endif %}"></textarea>
+                            placeholder="{% if is_english %}e.g. 'Include more examples', 'Make it rhyme', 'Focus on grammar rules'{% elif is_spanish %}ej. 'Incluir más ejemplos', 'Que rime', 'Enfocarse en las reglas gramaticales'{% elif is_german %}z.B. 'Mehr Beispiele einfügen', 'Reimen lassen', 'Auf Grammatikregeln konzentrieren'{% elif is_portuguese %}ex. 'Incluir mais exemplos', 'Rimar', 'Focar nas regras gramaticais'{% elif is_chinese %}例如：'多加例句'、'要押韵'、'重点讲语法'{% else %}例：「例文を多めに」「韻を踏んで」「文法ルールを強調して」{% endif %}"></textarea>
                         <small class="text-muted">
-                            {% if is_english %}Tell AI how you want your lyrics to be generated{% elif is_chinese %}告诉AI你想要什么样的歌词{% else %}AIにどのような歌詞を作ってほしいか伝えられます{% endif %}
+                            {% if is_english %}Tell AI how you want your lyrics to be generated{% elif is_spanish %}Dile a la IA cómo quieres que se generen tus letras{% elif is_german %}Teile der KI mit, wie deine Texte generiert werden sollen{% elif is_portuguese %}Diga à IA como você quer que suas letras sejam geradas{% elif is_chinese %}告诉AI你想要什么样的歌词{% else %}AIにどのような歌詞を作ってほしいか伝えられます{% endif %}
                         </small>
                     </div>
                     
                     <!-- アクションボタン（画像選択時のみ表示） -->
                     <div class="text-center mt-4" id="action-buttons" style="display: none;">
                         <button type="submit" class="btn-gradient-secondary btn-lg">
-                            <i class="bi bi-magic"></i> {% if is_english %}Generate Lyrics{% elif is_chinese %}生成歌词{% else %}歌詞を生成{% endif %}
+                            <i class="bi bi-magic"></i> {% if is_english %}Generate Lyrics{% elif is_spanish %}Generar Letra{% elif is_german %}Text generieren{% elif is_portuguese %}Gerar Letra{% elif is_chinese %}生成歌词{% else %}歌詞を生成{% endif %}
                         </button>
                     </div>
                 </form>
@@ -102,13 +102,28 @@
             <!-- 手動入力ボタン（常に表示） -->
             <div class="text-center mt-4 fade-in">
                 <div class="divider-with-text mb-4">
-                    <span>{% if is_english %}or{% elif is_chinese %}或者{% else %}または{% endif %}</span>
+                    <span>{% if is_english %}or{% elif is_spanish %}o{% elif is_german %}oder{% elif is_portuguese %}ou{% elif is_chinese %}或者{% else %}または{% endif %}</span>
                 </div>
                 <div class="manual-input-options">
                     {% if is_english %}
                     <!-- 英語版：Englishモードのみ -->
                     <a href="{% url 'songs:lyrics_confirmation' %}?manual=true&lang=english" class="btn-outline-modern btn-lg">
                         <i class="bi bi-pencil-square"></i> Manual Input
+                    </a>
+                    {% elif is_spanish %}
+                    <!-- スペイン語版 -->
+                    <a href="{% url 'songs:lyrics_confirmation' %}?manual=true&lang=spanish" class="btn-outline-modern btn-lg">
+                        <i class="bi bi-pencil-square"></i> Entrada Manual
+                    </a>
+                    {% elif is_german %}
+                    <!-- ドイツ語版 -->
+                    <a href="{% url 'songs:lyrics_confirmation' %}?manual=true&lang=german" class="btn-outline-modern btn-lg">
+                        <i class="bi bi-pencil-square"></i> Manuelle Eingabe
+                    </a>
+                    {% elif is_portuguese %}
+                    <!-- ポルトガル語版 -->
+                    <a href="{% url 'songs:lyrics_confirmation' %}?manual=true&lang=portuguese" class="btn-outline-modern btn-lg">
+                        <i class="bi bi-pencil-square"></i> Entrada Manual
                     </a>
                     {% elif is_chinese %}
                     <!-- 中国語版 -->
