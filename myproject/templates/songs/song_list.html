@@ -137,9 +137,21 @@
 <style>
 /* アニメーション無効化 */
 .music-library,
-.music-library * {
+.music-library *,
+.song-item,
+.songs-list,
+.songs-list * {
     animation: none !important;
     animation-delay: 0s !important;
+    opacity: 1 !important;
+    transform: none !important;
+}
+
+.song-item.fade-in,
+.songs-list .fade-in {
+    animation: none !important;
+    opacity: 1 !important;
+    transform: none !important;
 }
 
 /* Apple Music風のスタイル */
@@ -770,6 +782,20 @@
 </style>
 
 <script>
+// ページ読み込み時にアニメーションを即座に無効化
+(function() {
+    const style = document.createElement('style');
+    style.textContent = `
+        .music-library, .music-library *, .songs-list, .songs-list *, .song-item {
+            animation: none !important;
+            animation-delay: 0s !important;
+            opacity: 1 !important;
+            transform: translateY(0) !important;
+        }
+    `;
+    document.head.appendChild(style);
+})();
+
 // 現在再生中のオーディオ
 let currentAudio = null;
 let currentPlayButton = null;
