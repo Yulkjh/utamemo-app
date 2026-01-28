@@ -929,9 +929,6 @@
                     </li>
                     {% else %}
                     <li class="nav-item me-2">
-                        <a class="nav-link-modern" href="{% url 'users:upgrade' %}">{% if is_english %}Plans{% elif is_chinese %}套餐{% elif is_spanish %}Planes{% elif is_german %}Pläne{% elif is_portuguese %}Planos{% else %}料金プラン{% endif %}</a>
-                    </li>
-                    <li class="nav-item me-2">
                         <a class="btn-nav-login" href="{% url 'users:login' %}">{% if is_english %}Login{% elif is_chinese %}登录{% elif is_spanish %}Iniciar sesión{% elif is_german %}Anmelden{% elif is_portuguese %}Entrar{% else %}ログイン{% endif %}</a>
                     </li>
                     <li class="nav-item me-3">
