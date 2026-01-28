@@ -37,4 +37,7 @@ urlpatterns = [
     
     # 音声プロキシ（CORS対策）
     path('songs/<int:pk>/audio-proxy/', views.audio_proxy, name='audio_proxy'),
+    
+    # コンテンツ違反ページ
+    path('content-violation/', views.content_violation_view, name='content_violation'),
 ]

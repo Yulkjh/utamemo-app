@@ -16,6 +16,7 @@ import logging
 from .models import Song, Like, Favorite, Comment, UploadedImage, Lyrics, PlayHistory, Tag
 from .forms import SongCreateForm, ImageUploadForm, CommentForm, SongPrivacyForm
 from .ai_services import GeminiLyricsGenerator, GeminiOCR, MurekaAIGenerator
+from .content_filter import check_text_for_inappropriate_content
 
 # ロガー設定
 logger = logging.getLogger(__name__)
@@ -262,6 +263,15 @@ class CreateSongView(LoginRequiredMixin, CreateView):
         genre = form.cleaned_data.get('genre', 'ポップ')
         vocal_style = form.cleaned_data.get('vocal_style', 'female')
         
+        # タイトルの不適切コンテンツチェック
+        title_check = check_text_for_inappropriate_content(title)
+        if title_check['is_inappropriate']:
+            app_language = self.request.session.get('app_language', 'ja')
+            self.request.session['content_violation'] = True
+            self.request.session['violation_message'] = title_check['message']
+            logger.warning(f"Inappropriate title detected for user {self.request.user.id}: {title_check['detected_words']}")
+            return redirect('songs:content_violation')
+        
         # カスタム音楽プロンプトを取得
         music_prompt = self.request.POST.get('music_prompt', '').strip()
         form.instance.music_prompt = music_prompt
@@ -295,6 +305,15 @@ class CreateSongView(LoginRequiredMixin, CreateView):
             else:
                 messages.error(self.request, '歌詞が入力されていません。')
             return redirect('songs:lyrics_confirmation')
+        
+        # 歌詞の不適切コンテンツチェック
+        content_check = check_text_for_inappropriate_content(generated_lyrics)
+        if content_check['is_inappropriate']:
+            app_language = self.request.session.get('app_language', 'ja')
+            self.request.session['content_violation'] = True
+            self.request.session['violation_message'] = content_check['message']
+            logger.warning(f"Inappropriate lyrics detected for user {self.request.user.id}: {content_check['detected_words']}")
+            return redirect('songs:content_violation')
         
         lyrics_content = generated_lyrics
         
@@ -527,6 +546,17 @@ class UploadImageView(LoginRequiredMixin, FormView):
         
         self.request.session['extracted_texts'] = extracted_texts
         self.request.session['uploaded_image_ids'] = uploaded_image_ids
+        
+        # 不適切コンテンツのチェック
+        combined_text = '\n'.join(extracted_texts)
+        content_check = check_text_for_inappropriate_content(combined_text)
+        
+        if content_check['is_inappropriate']:
+            # 不適切なコンテンツが検出された場合
+            self.request.session['content_violation'] = True
+            self.request.session['violation_message'] = content_check['message']
+            logger.warning(f"Inappropriate content detected for user {user.id}: {content_check['detected_words']}")
+            return redirect('songs:content_violation')
         
         if not extracted_texts:
             if app_language == 'en':
@@ -1643,3 +1673,95 @@ def audio_proxy(request, pk):
     except Exception as e:
         logger.error(f'Audio proxy error: {e}')
         return HttpResponse(f'Error: {e}', status=500)
+
+
+@login_required
+def content_violation_view(request):
+    """利用規約違反ページ"""
+    app_language = request.session.get('app_language', 'ja')
+    
+    # セッションから違反情報を取得
+    is_violation = request.session.get('content_violation', False)
+    violation_message = request.session.get('violation_message', '')
+    
+    # セッションをクリア
+    if 'content_violation' in request.session:
+        del request.session['content_violation']
+    if 'violation_message' in request.session:
+        del request.session['violation_message']
+    if 'extracted_texts' in request.session:
+        del request.session['extracted_texts']
+    if 'uploaded_image_ids' in request.session:
+        del request.session['uploaded_image_ids']
+    
+    # 言語に応じたメッセージを設定
+    if app_language == 'en':
+        title = 'Terms of Service Violation'
+        default_message = (
+            'Content that violates our Terms of Service has been detected.\n\n'
+            'Content containing inappropriate expressions (insults, discriminatory language, '
+            'violent expressions, etc.) cannot be used for song generation.\n\n'
+            'Please review our Terms of Service and use appropriate content.'
+        )
+        terms_link_text = 'View Terms of Service'
+        back_link_text = 'Return to Upload Page'
+    elif app_language == 'zh':
+        title = '违反使用条款'
+        default_message = (
+            '检测到违反使用条款的内容。\n\n'
+            '包含不当表达（侮辱、歧视性语言、暴力表达等）的内容'
+            '不能用于歌曲生成。\n\n'
+            '请查看使用条款并使用适当的内容。'
+        )
+        terms_link_text = '查看使用条款'
+        back_link_text = '返回上传页面'
+    elif app_language == 'es':
+        title = 'Violación de los Términos de Servicio'
+        default_message = (
+            'Se ha detectado contenido que viola nuestros Términos de Servicio.\n\n'
+            'El contenido que contiene expresiones inapropiadas no se puede usar '
+            'para la generación de canciones.\n\n'
+            'Por favor, revise nuestros Términos de Servicio y use contenido apropiado.'
+        )
+        terms_link_text = 'Ver Términos de Servicio'
+        back_link_text = 'Volver a la página de carga'
+    elif app_language == 'de':
+        title = 'Verstoß gegen die Nutzungsbedingungen'
+        default_message = (
+            'Es wurde Inhalt erkannt, der gegen unsere Nutzungsbedingungen verstößt.\n\n'
+            'Inhalte mit unangemessenen Ausdrücken können nicht für die '
+            'Songgenerierung verwendet werden.\n\n'
+            'Bitte überprüfen Sie unsere Nutzungsbedingungen und verwenden Sie angemessene Inhalte.'
+        )
+        terms_link_text = 'Nutzungsbedingungen anzeigen'
+        back_link_text = 'Zurück zur Upload-Seite'
+    elif app_language == 'pt':
+        title = 'Violação dos Termos de Serviço'
+        default_message = (
+            'Foi detectado conteúdo que viola nossos Termos de Serviço.\n\n'
+            'Conteúdo contendo expressões inadequadas não pode ser usado '
+            'para geração de músicas.\n\n'
+            'Por favor, revise nossos Termos de Serviço e use conteúdo apropriado.'
+        )
+        terms_link_text = 'Ver Termos de Serviço'
+        back_link_text = 'Voltar à página de upload'
+    else:
+        title = '利用規約違反'
+        default_message = (
+            '利用規約に違反するコンテンツが検出されました。\n\n'
+            '不適切な表現（悪口、差別用語、暴力的な表現など）を含むコンテンツは'
+            '楽曲生成に使用できません。\n\n'
+            '利用規約をご確認の上、適切なコンテンツでご利用ください。'
+        )
+        terms_link_text = '利用規約を確認する'
+        back_link_text = 'アップロードページに戻る'
+    
+    context = {
+        'title': title,
+        'message': violation_message or default_message,
+        'terms_link_text': terms_link_text,
+        'back_link_text': back_link_text,
+        'app_language': app_language,
+    }
+    
+    return render(request, 'songs/content_violation.html', context)
