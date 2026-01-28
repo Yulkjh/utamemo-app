@@ -28,8 +28,8 @@ class ContentFilter:
         '死ね', 'しね', '殺す', 'ころす', '殺してやる',
         '消えろ', 'きえろ', 'うせろ', 'ウセロ',
         
-        # 性的表現
-        'エロ', 'えろ', 'セックス', 'オナニー',
+        # 性的表現（単独で使われる場合のみ検出するため、別途処理）
+        'セックス', 'オナニー',
         
         # 差別用語
         'チョン', 'シナ', 'ニガー', '土人',
@@ -38,9 +38,18 @@ class ContentFilter:
         
         # いじめ関連
         'いじめ', 'イジメ', '虐め',
-        'ハブ', 'はぶ', 'ハブる', 'はぶる',
+        'ハブる', 'はぶる',
         '無視しろ', '仲間外れ',
     ]
+    
+    # 部分一致で誤検出しやすいワード（特別な処理が必要）
+    # これらは前後の文字をチェックして、単独で使われている場合のみ検出
+    CONTEXT_SENSITIVE_WORDS = {
+        'エロ': ['ピエロ', 'ラファエロ', 'ミケランジェロ', 'エロイカ', 'エロス', 'エローラ', 'カメロ', 'ロメロ'],
+        'えろ': ['ぴえろ', 'らふぁえろ'],
+        'ハブ': ['ハブラシ', 'はぶらし', 'ハブ空港', 'ハブ港'],
+        'はぶ': ['はぶらし'],
+    }
     
     # 禁止ワードリスト（英語）
     PROHIBITED_WORDS_EN = [
@@ -58,7 +67,7 @@ class ContentFilter:
         'kill', 'murder', 'die', 'death threat',
         
         # Sexual content
-        'porn', 'sex', 'nude', 'naked',
+        'porn', 'nude', 'naked',
     ]
     
     # 禁止ワードリスト（中国語）
@@ -143,6 +152,19 @@ class ContentFilter:
         for word in self.prohibited_words:
             if word in text_lower:
                 detected_words.append(word)
+        
+        # 文脈依存ワードのチェック（除外リストを考慮）
+        for sensitive_word, exceptions in self.CONTEXT_SENSITIVE_WORDS.items():
+            if sensitive_word.lower() in text_lower:
+                # 除外リストに含まれる単語がテキストにあるかチェック
+                is_exception = False
+                for exception in exceptions:
+                    if exception.lower() in text_lower:
+                        is_exception = True
+                        break
+                
+                if not is_exception:
+                    detected_words.append(sensitive_word)
         
         # 正規表現パターンのチェック
         for pattern in self.compiled_patterns:
