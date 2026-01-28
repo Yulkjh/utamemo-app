@@ -57,9 +57,6 @@
                             {{ form.email.errors.0|translate_error:app_language }}
                         </div>
                         {% endif %}
-                        <div class="field-hint">
-                            {% if is_english %}Used for password reset, etc.{% elif is_spanish %}Se utiliza para restablecer la contraseña, etc.{% elif is_german %}Wird für Passwort-Zurücksetzung usw. verwendet{% elif is_portuguese %}Usado para redefinição de senha, etc.{% elif is_chinese %}用于密码重置等{% else %}パスワードリセット等に使用します{% endif %}
-                        </div>
                     </div>
                     
                     <!-- Password Field -->
