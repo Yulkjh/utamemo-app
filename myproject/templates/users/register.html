@@ -280,28 +280,24 @@
 }
 
 .divider {
+    display: flex;
+    align-items: center;
     text-align: center;
     margin-bottom: 1.5rem;
-    position: relative;
 }
 
-.divider::before {
+.divider::before,
+.divider::after {
     content: '';
-    position: absolute;
-    top: 50%;
-    left: 0;
-    right: 0;
+    flex: 1;
     height: 1px;
     background: var(--border-color);
 }
 
 .divider span {
-    background: var(--surface);
     color: var(--text-secondary);
     padding: 0 1rem;
     font-size: 0.9rem;
-    position: relative;
-    z-index: 1;
 }
 
 .btn-login-link {
