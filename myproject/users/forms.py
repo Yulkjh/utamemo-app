@@ -4,14 +4,13 @@ from .models import User
 
 
 class UserRegistrationForm(UserCreationForm):
-    """ユーザー登録フォーム（メールアドレス必須）"""
+    """ユーザー登録フォーム（メールアドレス任意）"""
     
     email = forms.EmailField(
-        required=True,
+        required=False,
         widget=forms.EmailInput(attrs={
             'placeholder': 'example@email.com'
-        }),
-        help_text='パスワードリセット等に使用'
+        })
     )
     
     class Meta:
