@@ -268,10 +268,17 @@
                 <i class="bi bi-box-arrow-in-right"></i>
                 {% if is_english %}Join with Code{% elif is_spanish %}Unirse con Código{% elif is_german %}Mit Code beitreten{% elif is_portuguese %}Entrar com Código{% elif is_chinese %}使用代码加入{% else %}コードで参加{% endif %}
             </a>
+            {% if user.is_school %}
             <a href="{% url 'songs:classroom_create' %}" class="action-btn-large btn-secondary-large">
                 <i class="bi bi-plus-lg"></i>
                 {% if is_english %}Create New Class{% elif is_spanish %}Crear Nueva Clase{% elif is_german %}Neue Klasse erstellen{% elif is_portuguese %}Criar Nova Turma{% elif is_chinese %}创建新班级{% else %}新しいクラスを作成{% endif %}
             </a>
+            {% else %}
+            <a href="{% url 'users:upgrade' %}" class="action-btn-large btn-secondary-large" style="opacity: 0.7;">
+                <i class="bi bi-gem"></i>
+                {% if is_english %}School Plan Required{% elif is_spanish %}Plan Escolar Requerido{% elif is_german %}Schulplan erforderlich{% elif is_portuguese %}Plano Escolar Necessário{% elif is_chinese %}需要学校套餐{% else %}スクールプランが必要{% endif %}
+            </a>
+            {% endif %}
         </div>
         
         {% if hosted_classrooms %}

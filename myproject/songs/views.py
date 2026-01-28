@@ -1429,10 +1429,20 @@ def classroom_join(request):
 
 @login_required
 def classroom_create(request):
-    """クラスを作成（先生用）"""
+    """クラスを作成（スクールプラン契約者のみ）"""
     app_language = request.session.get('app_language', 'ja')
     is_english = app_language == 'en'
     is_chinese = app_language == 'zh'
+    
+    # スクールプランのチェック
+    if not request.user.is_school:
+        if is_english:
+            messages.error(request, 'You need a School Plan to create classes.')
+        elif is_chinese:
+            messages.error(request, '创建班级需要订阅学校套餐。')
+        else:
+            messages.error(request, 'クラスを作成するにはスクールプランの契約が必要です。')
+        return redirect('users:upgrade')
     
     if request.method == 'POST':
         name = request.POST.get('name', '').strip()
