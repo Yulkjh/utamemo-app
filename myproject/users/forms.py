@@ -4,10 +4,10 @@ from .models import User
 
 
 class UserRegistrationForm(UserCreationForm):
-    """ユーザー登録フォーム（メールアドレス任意）"""
+    """ユーザー登録フォーム（メールアドレス必須）"""
     
     email = forms.EmailField(
-        required=False,
+        required=True,
         widget=forms.EmailInput(attrs={
             'placeholder': 'example@email.com'
         })
