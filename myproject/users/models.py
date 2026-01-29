@@ -146,6 +146,49 @@ class User(AbstractUser):
         }
         return limits.get(self.plan, limits['free'])
 
+    def get_monthly_model_usage(self):
+        """今月のAIモデル別使用回数を取得"""
+        from django.utils import timezone
+        from songs.models import Song
+        
+        now = timezone.now()
+        first_day = now.replace(day=1, hour=0, minute=0, second=0, microsecond=0)
+        
+        songs = Song.objects.filter(
+            created_by=self,
+            created_at__gte=first_day
+        ).values_list('mureka_model', flat=True)
+        
+        usage = {'v7.5': 0, 'v7.6': 0, 'o2': 0}
+        for model in songs:
+            if model == 'mureka-7.5':
+                usage['v7.5'] += 1
+            elif model == 'mureka-7.6':
+                usage['v7.6'] += 1
+            elif model == 'mureka-o2':
+                usage['o2'] += 1
+        
+        return usage
+
+    def get_remaining_model_usage(self):
+        """今月の残り使用可能回数を取得"""
+        limits = self.get_model_limits()
+        usage = self.get_monthly_model_usage()
+        
+        remaining = {}
+        for model, limit in limits.items():
+            if limit == -1:
+                remaining[model] = -1  # 無制限
+            else:
+                remaining[model] = max(0, limit - usage.get(model, 0))
+        
+        return remaining
+
+    def can_use_model(self, model_key):
+        """指定されたモデルを使用可能かチェック"""
+        remaining = self.get_remaining_model_usage()
+        return remaining.get(model_key, 0) != 0  # -1（無制限）または残りがある場合
+
     class Meta:
         verbose_name = 'ユーザー'
         verbose_name_plural = 'ユーザー'

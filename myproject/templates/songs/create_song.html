@@ -164,11 +164,58 @@
                                 <i class="bi bi-cpu me-1"></i>
                                 {% if is_english %}AI Model{% elif is_spanish %}Modelo de IA{% elif is_german %}KI-Modell{% elif is_portuguese %}Modelo de IA{% elif is_chinese %}AI模型{% else %}AIモデル{% endif %}
                             </label>
-                            <select name="mureka_model" class="form-select">
-                                <option value="mureka-7.5" selected>{% if is_english %}Standard{% elif is_spanish %}Estándar{% elif is_german %}Standard{% elif is_portuguese %}Padrão{% elif is_chinese %}标准{% else %}スタンダード{% endif %}</option>
-                                <option value="mureka-7.6">{% if is_english %}High Quality{% elif is_spanish %}Alta Calidad{% elif is_german %}Hohe Qualität{% elif is_portuguese %}Alta Qualidade{% elif is_chinese %}高品质{% else %}高品質{% endif %}</option>
-                                <option value="mureka-o2">{% if is_english %}Premium{% elif is_spanish %}Premium{% elif is_german %}Premium{% elif is_portuguese %}Premium{% elif is_chinese %}专业{% else %}プレミアム{% endif %}</option>
-                            </select>
+                            <div class="model-selection-cards">
+                                <!-- スタンダード (v7.5) -->
+                                <label class="model-card {% if model_remaining.v7.5 == 0 %}disabled{% endif %}">
+                                    <input type="radio" name="mureka_model" value="mureka-7.5" {% if model_remaining.v7.5 != 0 %}checked{% endif %} {% if model_remaining.v7.5 == 0 %}disabled{% endif %}>
+                                    <div class="model-card-content">
+                                        <div class="model-name">{% if is_english %}Standard{% elif is_spanish %}Estándar{% elif is_german %}Standard{% elif is_portuguese %}Padrão{% elif is_chinese %}标准{% else %}スタンダード{% endif %}</div>
+                                        <div class="model-remaining">
+                                            {% if model_remaining.v7.5 == -1 %}
+                                            <span class="unlimited"><i class="bi bi-infinity"></i> {% if is_english %}Unlimited{% elif is_spanish %}Ilimitado{% elif is_german %}Unbegrenzt{% elif is_portuguese %}Ilimitado{% elif is_chinese %}无限{% else %}無制限{% endif %}</span>
+                                            {% elif model_remaining.v7.5 > 0 %}
+                                            <span class="remaining">{% if is_english %}{{ model_remaining.v7.5 }} left{% elif is_spanish %}{{ model_remaining.v7.5 }} restantes{% elif is_german %}{{ model_remaining.v7.5 }} übrig{% elif is_portuguese %}{{ model_remaining.v7.5 }} restantes{% elif is_chinese %}剩余{{ model_remaining.v7.5 }}次{% else %}残り{{ model_remaining.v7.5 }}回{% endif %}</span>
+                                            {% else %}
+                                            <span class="depleted"><i class="bi bi-x-circle"></i> {% if is_english %}Limit reached{% elif is_spanish %}Límite alcanzado{% elif is_german %}Limit erreicht{% elif is_portuguese %}Limite atingido{% elif is_chinese %}已达上限{% else %}上限に達しました{% endif %}</span>
+                                            {% endif %}
+                                        </div>
+                                    </div>
+                                </label>
+                                
+                                <!-- 高品質 (v7.6) -->
+                                <label class="model-card {% if model_remaining.v7.6 == 0 %}disabled{% endif %}">
+                                    <input type="radio" name="mureka_model" value="mureka-7.6" {% if model_remaining.v7.6 == 0 %}disabled{% endif %}>
+                                    <div class="model-card-content">
+                                        <div class="model-name">{% if is_english %}High Quality{% elif is_spanish %}Alta Calidad{% elif is_german %}Hohe Qualität{% elif is_portuguese %}Alta Qualidade{% elif is_chinese %}高品质{% else %}高品質{% endif %} <span class="badge-starter">Starter+</span></div>
+                                        <div class="model-remaining">
+                                            {% if model_remaining.v7.6 == -1 %}
+                                            <span class="unlimited"><i class="bi bi-infinity"></i> {% if is_english %}Unlimited{% elif is_spanish %}Ilimitado{% elif is_german %}Unbegrenzt{% elif is_portuguese %}Ilimitado{% elif is_chinese %}无限{% else %}無制限{% endif %}</span>
+                                            {% elif model_remaining.v7.6 > 0 %}
+                                            <span class="remaining">{% if is_english %}{{ model_remaining.v7.6 }} left{% elif is_spanish %}{{ model_remaining.v7.6 }} restantes{% elif is_german %}{{ model_remaining.v7.6 }} übrig{% elif is_portuguese %}{{ model_remaining.v7.6 }} restantes{% elif is_chinese %}剩余{{ model_remaining.v7.6 }}次{% else %}残り{{ model_remaining.v7.6 }}回{% endif %}</span>
+                                            {% else %}
+                                            <span class="depleted"><i class="bi bi-x-circle"></i> {% if user.is_starter %}{% if is_english %}Limit reached{% elif is_spanish %}Límite alcanzado{% elif is_german %}Limit erreicht{% elif is_portuguese %}Limite atingido{% elif is_chinese %}已达上限{% else %}上限に達しました{% endif %}{% else %}{% if is_english %}Starter required{% elif is_spanish %}Requiere Starter{% elif is_german %}Starter erforderlich{% elif is_portuguese %}Starter necessário{% elif is_chinese %}需要入门套餐{% else %}スターター以上{% endif %}{% endif %}</span>
+                                            {% endif %}
+                                        </div>
+                                    </div>
+                                </label>
+                                
+                                <!-- プレミアム (O2) -->
+                                <label class="model-card {% if model_remaining.o2 == 0 %}disabled{% endif %}">
+                                    <input type="radio" name="mureka_model" value="mureka-o2" {% if model_remaining.o2 == 0 %}disabled{% endif %}>
+                                    <div class="model-card-content">
+                                        <div class="model-name">{% if is_english %}Premium{% elif is_spanish %}Premium{% elif is_german %}Premium{% elif is_portuguese %}Premium{% elif is_chinese %}专业{% else %}プレミアム{% endif %} <span class="badge-premium">Premium</span></div>
+                                        <div class="model-remaining">
+                                            {% if model_remaining.o2 == -1 %}
+                                            <span class="unlimited"><i class="bi bi-infinity"></i> {% if is_english %}Unlimited{% elif is_spanish %}Ilimitado{% elif is_german %}Unbegrenzt{% elif is_portuguese %}Ilimitado{% elif is_chinese %}无限{% else %}無制限{% endif %}</span>
+                                            {% elif model_remaining.o2 > 0 %}
+                                            <span class="remaining">{% if is_english %}{{ model_remaining.o2 }} left{% elif is_spanish %}{{ model_remaining.o2 }} restantes{% elif is_german %}{{ model_remaining.o2 }} übrig{% elif is_portuguese %}{{ model_remaining.o2 }} restantes{% elif is_chinese %}剩余{{ model_remaining.o2 }}次{% else %}残り{{ model_remaining.o2 }}回{% endif %}</span>
+                                            {% else %}
+                                            <span class="depleted"><i class="bi bi-x-circle"></i> {% if is_english %}Limit reached{% elif is_spanish %}Límite alcanzado{% elif is_german %}Limit erreicht{% elif is_portuguese %}Limite atingido{% elif is_chinese %}已达上限{% else %}上限に達しました{% endif %}</span>
+                                            {% endif %}
+                                        </div>
+                                    </div>
+                                </label>
+                            </div>
                         </div>
                         
                         <!-- カスタマイズ入力欄（自由記述） -->
@@ -182,6 +229,32 @@
                             <small class="text-muted">
                                 {% if is_english %}Tell AI how you want your song to sound{% elif is_spanish %}Dile a la IA cómo quieres que suene tu canción{% elif is_german %}Sag der KI, wie dein Lied klingen soll{% elif is_portuguese %}Diga à IA como você quer que sua música soe{% elif is_chinese %}告诉AI你想要什么样的歌曲{% else %}AIにどのような曲を作ってほしいか自由に伝えられます{% endif %}
                             </small>
+                        </div>
+                        
+                        <!-- リファレンス曲（スターター以上） -->
+                        <div class="form-group mb-4">
+                            <label for="reference_song" class="form-label">
+                                <i class="bi bi-music-note-beamed me-1"></i>
+                                {% if is_english %}Reference Song (Optional){% elif is_spanish %}Canción de Referencia (Opcional){% elif is_german %}Referenzlied (Optional){% elif is_portuguese %}Música de Referência (Opcional){% elif is_chinese %}参考曲（可选）{% else %}リファレンス曲（任意）{% endif %}
+                                {% if not user.is_starter %}
+                                <span class="badge bg-warning text-dark ms-2">
+                                    <i class="bi bi-lock-fill"></i> {% if is_english %}Starter+{% elif is_spanish %}Starter+{% elif is_german %}Starter+{% elif is_portuguese %}Starter+{% elif is_chinese %}入门+{% else %}スターター以上{% endif %}
+                                </span>
+                                {% endif %}
+                            </label>
+                            {% if user.is_starter %}
+                            <input type="text" name="reference_song" id="reference_song" class="form-control" 
+                                placeholder="{% if is_english %}e.g. 'Lemon by Kenshi Yonezu', 'Shape of You style'{% elif is_spanish %}ej. 'Lemon de Kenshi Yonezu', 'Estilo Shape of You'{% elif is_german %}z.B. 'Lemon von Kenshi Yonezu', 'Shape of You Stil'{% elif is_portuguese %}ex. 'Lemon de Kenshi Yonezu', 'Estilo Shape of You'{% elif is_chinese %}例如：'米津玄师的Lemon'、'Shape of You风格'{% else %}例：「米津玄師のLemon」「Shape of You風」{% endif %}">
+                            <small class="text-muted">
+                                {% if is_english %}Enter a song or artist name to use as a style reference{% elif is_spanish %}Ingrese un nombre de canción o artista como referencia de estilo{% elif is_german %}Geben Sie einen Song- oder Künstlernamen als Stilreferenz ein{% elif is_portuguese %}Insira o nome de uma música ou artista como referência de estilo{% elif is_chinese %}输入歌曲或艺术家名称作为风格参考{% else %}スタイルの参考にする曲やアーティスト名を入力できます{% endif %}
+                            </small>
+                            {% else %}
+                            <div class="locked-feature-box">
+                                <i class="bi bi-lock-fill"></i>
+                                <span>{% if is_english %}Upgrade to Starter plan to use reference songs{% elif is_spanish %}Actualiza al plan Starter para usar canciones de referencia{% elif is_german %}Upgrade auf Starter-Plan für Referenzlieder{% elif is_portuguese %}Atualize para o plano Starter para usar músicas de referência{% elif is_chinese %}升级到入门套餐以使用参考曲{% else %}スタータープランにアップグレードするとリファレンス曲を使用できます{% endif %}</span>
+                                <a href="{% url 'users:upgrade' %}" class="btn btn-sm btn-outline-warning">{% if is_english %}Upgrade{% elif is_spanish %}Actualizar{% elif is_german %}Upgrade{% elif is_portuguese %}Atualizar{% elif is_chinese %}升级{% else %}アップグレード{% endif %}</a>
+                            </div>
+                            {% endif %}
                         </div>
                         
                         <!-- 元テキスト（隠しフィールド） -->
@@ -530,6 +603,130 @@
     .btn-create-song {
         width: 100%;
         min-width: auto;
+    }
+}
+
+/* ロックされた機能のスタイル */
+.locked-feature-box {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    padding: 1rem;
+    background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
+    border: 1px dashed #dee2e6;
+    border-radius: 10px;
+    color: #6c757d;
+    font-size: 0.9rem;
+}
+
+.locked-feature-box i {
+    color: #ffc107;
+    font-size: 1.2rem;
+}
+
+.locked-feature-box .btn {
+    margin-left: auto;
+}
+
+/* モデル選択カード */
+.model-selection-cards {
+    display: flex;
+    gap: 1rem;
+    flex-wrap: wrap;
+}
+
+.model-card {
+    flex: 1;
+    min-width: 140px;
+    position: relative;
+    cursor: pointer;
+}
+
+.model-card input[type="radio"] {
+    position: absolute;
+    opacity: 0;
+}
+
+.model-card-content {
+    padding: 1rem;
+    border: 2px solid #e9ecef;
+    border-radius: 12px;
+    background: white;
+    text-align: center;
+    transition: all 0.2s ease;
+}
+
+.model-card input[type="radio"]:checked + .model-card-content {
+    border-color: #ff7940;
+    background: #fff8f5;
+    box-shadow: 0 0 0 3px rgba(255, 121, 64, 0.1);
+}
+
+.model-card:hover .model-card-content {
+    border-color: #ffb08c;
+}
+
+.model-card.disabled {
+    cursor: not-allowed;
+    opacity: 0.6;
+}
+
+.model-card.disabled .model-card-content {
+    background: #f8f9fa;
+}
+
+.model-name {
+    font-weight: 600;
+    color: #333;
+    margin-bottom: 0.5rem;
+    font-size: 0.95rem;
+}
+
+.badge-starter {
+    display: inline-block;
+    background: linear-gradient(135deg, #ffc107, #ff9800);
+    color: white;
+    font-size: 0.65rem;
+    padding: 2px 6px;
+    border-radius: 4px;
+    font-weight: 500;
+    vertical-align: middle;
+}
+
+.badge-premium {
+    display: inline-block;
+    background: linear-gradient(135deg, #9c27b0, #673ab7);
+    color: white;
+    font-size: 0.65rem;
+    padding: 2px 6px;
+    border-radius: 4px;
+    font-weight: 500;
+    vertical-align: middle;
+}
+
+.model-remaining {
+    font-size: 0.85rem;
+}
+
+.model-remaining .unlimited {
+    color: #28a745;
+}
+
+.model-remaining .remaining {
+    color: #17a2b8;
+}
+
+.model-remaining .depleted {
+    color: #dc3545;
+}
+
+@media (max-width: 576px) {
+    .model-selection-cards {
+        flex-direction: column;
+    }
+    
+    .model-card {
+        min-width: 100%;
     }
 }
 </style>

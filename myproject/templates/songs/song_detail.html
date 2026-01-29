@@ -378,7 +378,7 @@
             <div class="karaoke-section fade-in">
                 <h4>{% if is_english %}Karaoke{% elif is_spanish %}Karaoke{% elif is_german %}Karaoke{% elif is_portuguese %}Karaokê{% elif is_chinese %}卡拉OK{% else %}カラオケ{% endif %}</h4>
                 <div class="karaoke-buttons">
-                    {% if user.is_authenticated and user.is_pro %}
+                    {% if user.is_authenticated and user.is_starter %}
                     {% if song.audio_file %}
                     <button class="btn-karaoke" onclick="startKaraokeMode('{{ song.audio_file.url }}')" id="karaoke-btn">
                         <i class="bi bi-mic"></i> {% if is_english %}Karaoke Mode{% elif is_spanish %}Modo Karaoke{% elif is_german %}Karaoke-Modus{% elif is_portuguese %}Modo Karaokê{% elif is_chinese %}卡拉OK模式{% else %}カラオケモード{% endif %}

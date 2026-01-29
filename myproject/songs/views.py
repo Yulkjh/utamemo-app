@@ -231,6 +231,12 @@ class CreateSongView(LoginRequiredMixin, CreateView):
     template_name = 'songs/create_song.html'
     success_url = reverse_lazy('songs:song_list')
     
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        # モデル別の残り使用可能回数を取得
+        context['model_remaining'] = self.request.user.get_remaining_model_usage()
+        return context
+    
     def get_form_kwargs(self):
         kwargs = super().get_form_kwargs()
         
@@ -276,8 +282,10 @@ class CreateSongView(LoginRequiredMixin, CreateView):
         music_prompt = self.request.POST.get('music_prompt', '').strip()
         form.instance.music_prompt = music_prompt
         
-        # リファレンス曲を取得
+        # リファレンス曲を取得（スターター以上のみ）
         reference_song = self.request.POST.get('reference_song', '').strip()
+        if reference_song and not self.request.user.is_starter:
+            reference_song = ''  # スターター未満の場合はリファレンスを無視
         form.instance.reference_song = reference_song
         
         # AIモデルを取得
@@ -285,6 +293,22 @@ class CreateSongView(LoginRequiredMixin, CreateView):
         valid_models = ['mureka-o2', 'mureka-7.6', 'mureka-7.5']
         if mureka_model not in valid_models:
             mureka_model = 'mureka-7.5'
+        
+        # モデル使用制限のチェック
+        model_key = {'mureka-7.5': 'v7.5', 'mureka-7.6': 'v7.6', 'mureka-o2': 'o2'}.get(mureka_model, 'v7.5')
+        if not self.request.user.can_use_model(model_key):
+            # 使用制限に達している場合はスタンダードにフォールバック
+            mureka_model = 'mureka-7.5'
+            if not self.request.user.can_use_model('v7.5'):
+                app_language = self.request.session.get('app_language', 'ja')
+                if app_language == 'en':
+                    messages.error(self.request, 'You have reached your monthly song creation limit.')
+                elif app_language == 'zh':
+                    messages.error(self.request, '您已达到本月歌曲创建上限。')
+                else:
+                    messages.error(self.request, '今月の楽曲作成上限に達しました。')
+                return redirect('users:upgrade')
+        
         form.instance.mureka_model = mureka_model
         
         generated_lyrics = self.request.POST.get('generated_lyrics', '')
