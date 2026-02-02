@@ -832,11 +832,107 @@
                 font-size: 1.2rem;
             }
         }
+        /* DEMOバナー */
+        .demo-banner {
+            background: linear-gradient(135deg, #ff6b35 0%, #ff9a56 100%);
+            color: white;
+            text-align: center;
+            padding: 0.6rem 2.5rem 0.6rem 1rem;
+            font-size: 0.85rem;
+            font-weight: 500;
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            z-index: 1100;
+            box-shadow: 0 2px 10px rgba(255, 107, 53, 0.3);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        
+        .demo-banner.hidden {
+            display: none;
+        }
+        
+        .demo-banner-content {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+        
+        .demo-banner i {
+            font-size: 1rem;
+        }
+        
+        .demo-banner-close {
+            position: absolute;
+            right: 1rem;
+            top: 50%;
+            transform: translateY(-50%);
+            background: rgba(255, 255, 255, 0.2);
+            border: none;
+            color: white;
+            width: 24px;
+            height: 24px;
+            border-radius: 50%;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1rem;
+            transition: background 0.2s;
+            padding: 0;
+            line-height: 1;
+        }
+        
+        .demo-banner-close:hover {
+            background: rgba(255, 255, 255, 0.35);
+        }
+        
+        /* DEMOバナー分のナビゲーション位置調整 */
+        .navbar-modern.fixed-top {
+            top: 36px !important;
+            transition: top 0.3s ease;
+        }
+        
+        .navbar-modern.fixed-top.banner-closed {
+            top: 0 !important;
+        }
+        
+        /* DEMOバナー分のbodyパディング調整 */
+        body {
+            padding-top: 36px;
+            transition: padding-top 0.3s ease;
+        }
+        
+        body.banner-closed {
+            padding-top: 0;
+        }
     </style>
 </head>
 <body>
+    <!-- DEMOバナー -->
+    <div class="demo-banner" id="demoBanner">
+        <div class="demo-banner-content">
+            <i class="bi bi-exclamation-circle"></i>
+            <span>
+            {% if is_english %}DEMO VERSION - Some features may be limited or under development
+            {% elif is_chinese %}演示版 - 部分功能可能受限或正在开发中
+            {% elif is_spanish %}VERSIÓN DEMO - Algunas funciones pueden estar limitadas o en desarrollo
+            {% elif is_german %}DEMO-VERSION - Einige Funktionen können eingeschränkt sein oder sich in Entwicklung befinden
+            {% elif is_portuguese %}VERSÃO DEMO - Alguns recursos podem estar limitados ou em desenvolvimento
+            {% else %}DEMO版 - 一部機能が制限されている場合があります
+            {% endif %}
+            </span>
+        </div>
+        <button class="demo-banner-close" onclick="closeDemoBanner()" aria-label="Close">
+            <i class="bi bi-x"></i>
+        </button>
+    </div>
+
     <!-- ナビゲーション -->
-    <nav class="navbar navbar-expand-lg navbar-modern fixed-top">
+    <nav class="navbar navbar-expand-lg navbar-modern fixed-top" id="mainNavbar">
         <div class="container">
             <a class="navbar-brand-modern" href="{% url 'songs:home' %}">
                 UTAMEMO
@@ -1080,7 +1176,27 @@
                 languageSwitchers.forEach(s => s.classList.remove('open'));
                 userSwitchers.forEach(s => s.classList.remove('open'));
             });
+            
+            // DEMOバナーの状態を復元
+            if (sessionStorage.getItem('demoBannerClosed') === 'true') {
+                const banner = document.getElementById('demoBanner');
+                const navbar = document.getElementById('mainNavbar');
+                if (banner) banner.classList.add('hidden');
+                if (navbar) navbar.classList.add('banner-closed');
+                document.body.classList.add('banner-closed');
+            }
         });
+        
+        // DEMOバナーを閉じる関数
+        function closeDemoBanner() {
+            const banner = document.getElementById('demoBanner');
+            const navbar = document.getElementById('mainNavbar');
+            if (banner) banner.classList.add('hidden');
+            if (navbar) navbar.classList.add('banner-closed');
+            document.body.classList.add('banner-closed');
+            // セッション中は閉じた状態を維持
+            sessionStorage.setItem('demoBannerClosed', 'true');
+        }
     </script>
 </body>
 </html>

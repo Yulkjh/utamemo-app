@@ -182,11 +182,11 @@
                                     </div>
                                 </label>
                                 
-                                <!-- 高品質 (v7.6) -->
+                                <!-- 高音質 (v7.6) -->
                                 <label class="model-card {% if model_remaining.v7.6 == 0 %}disabled{% endif %}">
                                     <input type="radio" name="mureka_model" value="mureka-7.6" {% if model_remaining.v7.6 == 0 %}disabled{% endif %}>
                                     <div class="model-card-content">
-                                        <div class="model-name">{% if is_english %}High Quality{% elif is_spanish %}Alta Calidad{% elif is_german %}Hohe Qualität{% elif is_portuguese %}Alta Qualidade{% elif is_chinese %}高品质{% else %}高品質{% endif %} <span class="badge-starter">Starter+</span></div>
+                                        <div class="model-name">{% if is_english %}High Quality{% elif is_spanish %}Alta Calidad{% elif is_german %}Hohe Qualität{% elif is_portuguese %}Alta Qualidade{% elif is_chinese %}高音质{% else %}高音質{% endif %}</div>
                                         <div class="model-remaining">
                                             {% if model_remaining.v7.6 == -1 %}
                                             <span class="unlimited"><i class="bi bi-infinity"></i> {% if is_english %}Unlimited{% elif is_spanish %}Ilimitado{% elif is_german %}Unbegrenzt{% elif is_portuguese %}Ilimitado{% elif is_chinese %}无限{% else %}無制限{% endif %}</span>
@@ -203,7 +203,7 @@
                                 <label class="model-card {% if model_remaining.o2 == 0 %}disabled{% endif %}">
                                     <input type="radio" name="mureka_model" value="mureka-o2" {% if model_remaining.o2 == 0 %}disabled{% endif %}>
                                     <div class="model-card-content">
-                                        <div class="model-name">{% if is_english %}Premium{% elif is_spanish %}Premium{% elif is_german %}Premium{% elif is_portuguese %}Premium{% elif is_chinese %}专业{% else %}プレミアム{% endif %} <span class="badge-premium">Premium</span></div>
+                                        <div class="model-name">{% if is_english %}Premium{% elif is_spanish %}Premium{% elif is_german %}Premium{% elif is_portuguese %}Premium{% elif is_chinese %}专业{% else %}プレミアム{% endif %}</div>
                                         <div class="model-remaining">
                                             {% if model_remaining.o2 == -1 %}
                                             <span class="unlimited"><i class="bi bi-infinity"></i> {% if is_english %}Unlimited{% elif is_spanish %}Ilimitado{% elif is_german %}Unbegrenzt{% elif is_portuguese %}Ilimitado{% elif is_chinese %}无限{% else %}無制限{% endif %}</span>
