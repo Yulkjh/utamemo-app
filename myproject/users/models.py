@@ -74,6 +74,18 @@ class User(AbstractUser):
         verbose_name='暗号化キー',
         help_text='Reserved for future use'
     )
+    
+    # リマインドメール
+    last_reminder_sent = models.DateTimeField(
+        blank=True,
+        null=True,
+        verbose_name='最終リマインドメール送信日時'
+    )
+    receive_reminder_emails = models.BooleanField(
+        default=True,
+        verbose_name='リマインドメールを受け取る'
+    )
+    
     created_at = models.DateTimeField(
         auto_now_add=True,
         verbose_name='作成日時'
