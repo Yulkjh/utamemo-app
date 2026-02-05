@@ -1383,6 +1383,16 @@ def classroom_list(request):
     is_english = app_language == 'en'
     is_chinese = app_language == 'zh'
     
+    # スクールプラン限定
+    if not request.user.is_school:
+        if is_english:
+            messages.warning(request, 'Classroom feature is available for School Plan subscribers only.')
+        elif is_chinese:
+            messages.warning(request, '教室功能仅限学校计划订阅者使用。')
+        else:
+            messages.warning(request, 'クラス機能はスクールプラン限定です。')
+        return redirect('users:upgrade')
+    
     # ホストしているクラス
     hosted_classrooms = Classroom.objects.filter(host=request.user, is_active=True)
     # 参加しているクラス
@@ -1402,6 +1412,16 @@ def classroom_join(request):
     app_language = request.session.get('app_language', 'ja')
     is_english = app_language == 'en'
     is_chinese = app_language == 'zh'
+    
+    # スクールプラン限定
+    if not request.user.is_school:
+        if is_english:
+            messages.warning(request, 'Classroom feature is available for School Plan subscribers only.')
+        elif is_chinese:
+            messages.warning(request, '教室功能仅限学校计划订阅者使用。')
+        else:
+            messages.warning(request, 'クラス機能はスクールプラン限定です。')
+        return redirect('users:upgrade')
     
     if request.method == 'POST':
         code = request.POST.get('code', '').strip().upper()
@@ -1512,6 +1532,16 @@ def classroom_detail(request, pk):
     app_language = request.session.get('app_language', 'ja')
     is_english = app_language == 'en'
     is_chinese = app_language == 'zh'
+    
+    # スクールプラン限定
+    if not request.user.is_school:
+        if is_english:
+            messages.warning(request, 'Classroom feature is available for School Plan subscribers only.')
+        elif is_chinese:
+            messages.warning(request, '教室功能仅限学校计划订阅者使用。')
+        else:
+            messages.warning(request, 'クラス機能はスクールプラン限定です。')
+        return redirect('users:upgrade')
     
     classroom = get_object_or_404(Classroom, pk=pk, is_active=True)
     

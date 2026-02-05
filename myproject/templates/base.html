@@ -968,7 +968,7 @@
                     <li class="nav-item">
                         <a class="nav-link-modern" href="{% url 'songs:song_list' %}">{% if is_english %}Songs{% elif is_chinese %}歌曲{% elif is_spanish %}Canciones{% elif is_german %}Lieder{% elif is_portuguese %}Músicas{% else %}楽曲一覧{% endif %}</a>
                     </li>
-                    {% if user.is_authenticated %}
+                    {% if user.is_authenticated and user.is_school %}
                     <li class="nav-item">
                         <a class="nav-link-modern" href="{% url 'songs:classroom_list' %}">{% if is_english %}Class{% elif is_chinese %}班级{% elif is_spanish %}Clase{% elif is_german %}Klasse{% elif is_portuguese %}Turma{% else %}クラス{% endif %}</a>
                     </li>
@@ -1084,7 +1084,6 @@
                     <ul class="list-unstyled">
                         <li><a href="{% url 'songs:song_list' %}" class="footer-link">{% if is_english %}Song List{% elif is_chinese %}歌曲列表{% elif is_spanish %}Lista de Canciones{% elif is_german %}Liederliste{% elif is_portuguese %}Lista de Músicas{% else %}楽曲一覧{% endif %}</a></li>
                         <li><a href="{% url 'songs:upload_image' %}" class="footer-link">{% if is_english %}Create Song{% elif is_chinese %}创作歌曲{% elif is_spanish %}Crear Canción{% elif is_german %}Lied erstellen{% elif is_portuguese %}Criar Música{% else %}楽曲作成{% endif %}</a></li>
-                        <li><a href="{% url 'songs:classroom_list' %}" class="footer-link">{% if is_english %}Class{% elif is_chinese %}班级{% elif is_spanish %}Clase{% elif is_german %}Klasse{% elif is_portuguese %}Turma{% else %}クラス{% endif %}</a></li>
                         <li><a href="{% url 'terms' %}" class="footer-link">{% if is_english %}Terms of Service{% elif is_chinese %}服务条款{% elif is_spanish %}Términos de Servicio{% elif is_german %}Nutzungsbedingungen{% elif is_portuguese %}Termos de Serviço{% else %}利用規約{% endif %}</a></li>
                         <li><a href="{% url 'privacy' %}" class="footer-link">{% if is_english %}Privacy Policy{% elif is_chinese %}隐私政策{% elif is_spanish %}Política de Privacidad{% elif is_german %}Datenschutzrichtlinie{% elif is_portuguese %}Política de Privacidade{% else %}プライバシーポリシー{% endif %}</a></li>
                         <li><a href="{% url 'contact' %}" class="footer-link">{% if is_english %}Contact{% elif is_chinese %}联系我们{% elif is_spanish %}Contacto{% elif is_german %}Kontakt{% elif is_portuguese %}Contato{% else %}お問い合わせ{% endif %}</a></li>
