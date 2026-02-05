@@ -266,6 +266,12 @@
             <div class="lyrics-card fade-in">
                 <div class="lyrics-header">
                     <h3>{% if is_english %}Lyrics{% elif is_spanish %}Letra{% elif is_german %}Songtext{% elif is_portuguese %}Letra{% elif is_chinese %}歌词{% else %}歌詞{% endif %}</h3>
+                    {% if user.is_authenticated %}
+                    <a href="{% url 'songs:recreate_with_lyrics' song.pk %}" class="btn-recreate-lyrics">
+                        <i class="bi bi-arrow-repeat"></i>
+                        {% if is_english %}Create New with This Lyrics{% elif is_spanish %}Crear Nueva con Esta Letra{% elif is_german %}Neu erstellen mit diesem Text{% elif is_portuguese %}Criar Nova com Esta Letra{% elif is_chinese %}用这首歌词创建新曲{% else %}この歌詞で新しく作成{% endif %}
+                    </a>
+                    {% endif %}
                 </div>
                 <div class="lyrics-content">
                     {{ lyrics_content|remove_asterisks|linebreaks }}
@@ -782,13 +788,42 @@
     padding: 1.5rem 2rem;
     border-bottom: 1px solid var(--border-color);
     display: flex;
-    justify-content: between;
+    justify-content: space-between;
     align-items: center;
+    flex-wrap: wrap;
+    gap: 1rem;
 }
 
 .lyrics-header h3 {
     margin: 0;
     color: var(--text-primary);
+}
+
+.btn-recreate-lyrics {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 0.5rem 1rem;
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    color: white;
+    border: none;
+    border-radius: var(--radius-md);
+    font-size: 0.85rem;
+    font-weight: 500;
+    text-decoration: none;
+    cursor: pointer;
+    transition: all 0.3s ease;
+}
+
+.btn-recreate-lyrics:hover {
+    background: linear-gradient(135deg, #5a6fd6 0%, #6a4190 100%);
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(102, 126, 234, 0.4);
+    color: white;
+}
+
+.btn-recreate-lyrics i {
+    font-size: 1rem;
 }
 
 .lyrics-badge {

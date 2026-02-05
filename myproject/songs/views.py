@@ -1829,3 +1829,28 @@ def content_violation_view(request):
     }
     
     return render(request, 'songs/content_violation.html', context)
+
+
+@login_required
+def recreate_with_lyrics(request, pk):
+    """同じ歌詞で新しい楽曲を作成（歌詞をセッションに保存して作成画面へ遷移）"""
+    song = get_object_or_404(Song, pk=pk)
+    
+    # 歌詞を取得
+    lyrics = song.lyrics
+    if not lyrics:
+        app_language = request.session.get('app_language', 'ja')
+        if app_language == 'en':
+            messages.error(request, 'This song has no lyrics.')
+        elif app_language == 'zh':
+            messages.error(request, '这首歌曲没有歌词。')
+        else:
+            messages.error(request, 'この楽曲には歌詞がありません。')
+        return redirect('songs:song_detail', pk=pk)
+    
+    # 歌詞をセッションに保存
+    request.session['generated_lyrics'] = lyrics.content
+    request.session['extracted_text'] = ''  # 元テキストはクリア
+    
+    # 楽曲作成画面にリダイレクト（歌詞確認画面をスキップ）
+    return redirect('songs:lyrics_confirmation')

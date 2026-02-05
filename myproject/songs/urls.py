@@ -23,6 +23,7 @@ urlpatterns = [
     path('songs/<int:pk>/update-title/', views.update_song_title, name='update_title'),
     path('songs/<int:pk>/retry/', views.retry_song_generation, name='retry_song'),
     path('songs/<int:pk>/status/', views.check_song_status, name='check_song_status'),
+    path('songs/<int:pk>/recreate/', views.recreate_with_lyrics, name='recreate_with_lyrics'),
     path('admin/api-status/', views.api_status_view, name='api_status'),
     path('set-language/<str:lang>/', views.set_language, name='set_language'),
     
