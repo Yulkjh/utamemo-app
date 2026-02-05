@@ -100,6 +100,21 @@
                             {% if is_english %}Your browser does not support audio playback.{% elif is_spanish %}Su navegador no soporta la reproducción de audio.{% elif is_german %}Ihr Browser unterstützt keine Audiowiedergabe.{% elif is_portuguese %}Seu navegador não suporta reprodução de áudio.{% elif is_chinese %}您的浏览器不支持音频播放。{% else %}お使いのブラウザは音声の再生をサポートしていません。{% endif %}
                         </audio>
                     </div>
+                    {% elif song.generation_status == 'completed' %}
+                    <!-- 生成完了だが音声がない場合（異常状態） -->
+                    <div class="audio-placeholder">
+                        <i class="bi bi-exclamation-triangle text-warning" style="font-size: 2rem;"></i>
+                        <p class="mt-3"><strong>{% if is_english %}Audio file not available{% elif is_spanish %}Archivo de audio no disponible{% elif is_german %}Audiodatei nicht verfügbar{% elif is_portuguese %}Arquivo de áudio não disponível{% elif is_chinese %}音频文件不可用{% else %}音声ファイルが見つかりません{% endif %}</strong></p>
+                        <p class="text-muted">{% if is_english %}The song was created but the audio file is missing.{% elif is_spanish %}La canción fue creada pero falta el archivo de audio.{% elif is_german %}Der Song wurde erstellt, aber die Audiodatei fehlt.{% elif is_portuguese %}A música foi criada, mas o arquivo de áudio está faltando.{% elif is_chinese %}歌曲已创建，但音频文件丢失。{% else %}楽曲は作成されましたが、音声ファイルがありません。{% endif %}</p>
+                        {% if user == song.created_by and song.retry_count < 1 %}
+                        <form method="post" action="{% url 'songs:retry_song' song.pk %}" style="margin-top: 1rem;">
+                            {% csrf_token %}
+                            <button type="submit" class="btn-download" style="background: linear-gradient(135deg, #ff7940 0%, #ff6b35 100%);">
+                                <i class="bi bi-arrow-clockwise"></i> {% if is_english %}Retry{% elif is_spanish %}Reintentar{% elif is_german %}Wiederholen{% elif is_portuguese %}Tentar Novamente{% elif is_chinese %}重试{% else %}再生成する{% endif %}
+                            </button>
+                        </form>
+                        {% endif %}
+                    </div>
                     {% else %}
                     <div class="audio-placeholder" id="generation-status-container">
                         <i class="bi bi-hourglass-split spinning-icon" id="status-icon"></i>
@@ -127,6 +142,16 @@
                                 </form>
                                 {% else %}
                                 <p style="margin-top: 1rem; color: #666;">{% if is_english %}Retry limit (1) reached{% elif is_spanish %}Límite de reintentos (1) alcanzado{% elif is_german %}Wiederholungslimit (1) erreicht{% elif is_portuguese %}Limite de tentativas (1) atingido{% elif is_chinese %}重试次数（1次）已达上限{% else %}再生成の上限（1回）に達しました{% endif %}</p>
+                                <div class="upgrade-prompt mt-3 p-3" style="background: linear-gradient(135deg, #fff4f0 0%, #ffe6d9 100%); border-radius: 12px; border: 1px solid #ffcdb8;">
+                                    <p style="margin-bottom: 0.5rem; color: #d6502d;">
+                                        <i class="bi bi-star-fill"></i>
+                                        {% if is_english %}Want more retries and features?{% elif is_spanish %}¿Quieres más reintentos y funciones?{% elif is_german %}Mehr Wiederholungen und Funktionen?{% elif is_portuguese %}Quer mais tentativas e recursos?{% elif is_chinese %}想要更多重试机会和功能吗？{% else %}もっと再生成したいですか？{% endif %}
+                                    </p>
+                                    <a href="{% url 'users:upgrade' %}" class="btn-gradient-primary btn-sm" style="padding: 0.5rem 1rem; font-size: 0.85rem;">
+                                        <i class="bi bi-rocket-takeoff"></i>
+                                        {% if is_english %}Upgrade Plan{% elif is_spanish %}Mejorar Plan{% elif is_german %}Plan upgraden{% elif is_portuguese %}Atualizar Plano{% elif is_chinese %}升级计划{% else %}プランをアップグレード{% endif %}
+                                    </a>
+                                </div>
                                 {% endif %}
                             {% else %}
                             <p>{% if is_english %}Only the creator can retry.{% elif is_spanish %}Solo el creador puede reintentar.{% elif is_german %}Nur der Ersteller kann wiederholen.{% elif is_portuguese %}Apenas o criador pode tentar novamente.{% elif is_chinese %}只有创作者可以重试。{% else %}作成者のみが再生成できます。{% endif %}</p>
@@ -136,11 +161,14 @@
                         {% endif %}
                         </div>
                         
+                        {% if song.generation_status == 'pending' or song.generation_status == 'generating' %}
                         <p class="auto-refresh-note" id="connection-status">{% if is_english %}Connecting to real-time updates...{% elif is_spanish %}Conectando a actualizaciones en tiempo real...{% elif is_german %}Verbinde mit Echtzeit-Updates...{% elif is_portuguese %}Conectando às atualizações em tempo real...{% elif is_chinese %}正在连接实时更新...{% else %}リアルタイム更新に接続中...{% endif %}</p>
                         <div class="progress mt-3">
                             <div class="progress-bar progress-bar-striped progress-bar-animated" role="progressbar" id="progress-bar" style="width: 10%"></div>
                         </div>
+                        {% endif %}
                     </div>
+                    {% if song.generation_status == 'pending' or song.generation_status == 'generating' %}
                     <script>
                         // Auto-refresh polling for song generation progress
                         const songId = {{ song.pk }};
@@ -185,6 +213,7 @@
                         // 初回チェック
                         checkSongStatus();
                     </script>
+                    {% endif %}
                     {% endif %}
                 </div>
             </div>
