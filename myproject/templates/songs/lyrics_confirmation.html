@@ -126,7 +126,8 @@
                                         </div>
                                     </div>
                                     
-                                    <!-- AIモデル選択 -->
+                                    <!-- AIモデル選択（有料プランのみ） -->
+                                    {% if user.is_starter or user.is_pro or user.is_school %}
                                     <div class="mt-3">
                                         <label class="form-label fw-bold">
                                             <i class="bi bi-cpu me-1"></i>
@@ -138,6 +139,10 @@
                                             <option value="mureka-o2">{% if is_english %}Premium{% elif is_spanish %}Premium{% elif is_german %}Premium{% elif is_chinese %}专业{% else %}プレミアム{% endif %}</option>
                                         </select>
                                     </div>
+                                    {% else %}
+                                    <!-- 無料プランはO2のみ -->
+                                    <input type="hidden" name="mureka_model" value="mureka-o2">
+                                    {% endif %}
                                 </div>
                                 
                                 <!-- カスタマイズ入力欄（自由記述） -->
