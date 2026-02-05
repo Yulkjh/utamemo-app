@@ -138,12 +138,12 @@ class User(AbstractUser):
         if self.is_staff or self.is_superuser:
             return -1
         limits = {
-            'free': 2,  # 月2曲
-            'starter': 80,
+            'free': 15,  # 月15曲
+            'starter': 70,  # 月70曲
             'pro': -1,  # 無制限
             'school': 100,
         }
-        return limits.get(self.plan, 2)
+        return limits.get(self.plan, 15)
     
     def get_model_limits(self):
         """AIモデル別の月間制限を取得（-1は無制限）"""
@@ -151,8 +151,8 @@ class User(AbstractUser):
         if self.is_staff or self.is_superuser:
             return {'v7.5': -1, 'v7.6': -1, 'o2': -1}
         limits = {
-            'free': {'v7.5': 0, 'v7.6': 0, 'o2': 15},  # フリーはO2のみ月2曲
-            'starter': {'v7.5': 40, 'v7.6': 25, 'o2': 15},
+            'free': {'v7.5': 0, 'v7.6': 0, 'o2': 15},  # フリーはO2のみ月15曲
+            'starter': {'v7.5': 15, 'v7.6': 20, 'o2': 35},  # スターター月70曲
             'pro': {'v7.5': -1, 'v7.6': -1, 'o2': -1},  # 無制限
             'school': {'v7.5': 40, 'v7.6': 40, 'o2': 20},
         }
