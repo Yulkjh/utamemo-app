@@ -670,6 +670,9 @@ class LyricsConfirmationView(LoginRequiredMixin, TemplateView):
         custom_request = self.request.session.get('custom_request', '')
         context['custom_request'] = custom_request
         
+        # セッションから既存の歌詞を確認（再生成機能で保存されたもの）
+        existing_lyrics = self.request.session.get('generated_lyrics', '')
+        
         # セッションから抽出されたテキストを取得（複数画像対応）
         extracted_texts = self.request.session.get('extracted_texts', [])
         if extracted_texts and isinstance(extracted_texts, list):
@@ -680,6 +683,11 @@ class LyricsConfirmationView(LoginRequiredMixin, TemplateView):
         if manual_mode:
             generated_lyrics = ""
             context['manual_mode'] = True
+            context['extracted_text'] = ""
+        elif existing_lyrics and not extracted_text:
+            # 再生成機能: 既存の歌詞があり、抽出テキストがない場合はそのまま使用
+            generated_lyrics = existing_lyrics
+            context['manual_mode'] = False
             context['extracted_text'] = ""
         elif extracted_text:
             try:
