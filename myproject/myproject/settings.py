@@ -197,7 +197,7 @@ STRIPE_WEBHOOK_SECRET = os.getenv('STRIPE_WEBHOOK_SECRET', '')
 
 # 各プランの価格ID（Stripe Dashboardで作成後に設定）
 STRIPE_PRICE_IDS = {
-    'starter': os.getenv('STRIPE_STARTER_PRICE_ID', ''),  # ¥660/月
+    'starter': os.getenv('STRIPE_STARTER_PRICE_ID', ''),  # ¥780/月
     'pro': os.getenv('STRIPE_PRO_PRICE_ID', ''),          # ¥1,900/月
     'school': os.getenv('STRIPE_SCHOOL_PRICE_ID', ''),    # ¥450/月（生徒1人あたり）
 }
