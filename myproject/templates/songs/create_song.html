@@ -167,7 +167,7 @@
                             <div class="model-selection-cards">
                                 <!-- スタンダード (v7.5) -->
                                 <label class="model-card {% if model_remaining.v7.5 == 0 %}disabled{% endif %}">
-                                    <input type="radio" name="mureka_model" value="mureka-7.5" {% if model_remaining.v7.5 != 0 %}checked{% endif %} {% if model_remaining.v7.5 == 0 %}disabled{% endif %}>
+                                    <input type="radio" name="mureka_model" value="mureka-7.5" {% if model_remaining.v7.5 != 0 and model_remaining.o2 == 0 %}checked{% endif %} {% if model_remaining.v7.5 == 0 %}disabled{% endif %}>
                                     <div class="model-card-content">
                                         <div class="model-name">{% if is_english %}Standard{% elif is_spanish %}Estándar{% elif is_german %}Standard{% elif is_portuguese %}Padrão{% elif is_chinese %}标准{% else %}スタンダード{% endif %}</div>
                                         <div class="model-remaining">
@@ -176,7 +176,7 @@
                                             {% elif model_remaining.v7.5 > 0 %}
                                             <span class="remaining">{% if is_english %}{{ model_remaining.v7.5 }} left{% elif is_spanish %}{{ model_remaining.v7.5 }} restantes{% elif is_german %}{{ model_remaining.v7.5 }} übrig{% elif is_portuguese %}{{ model_remaining.v7.5 }} restantes{% elif is_chinese %}剩余{{ model_remaining.v7.5 }}次{% else %}残り{{ model_remaining.v7.5 }}回{% endif %}</span>
                                             {% else %}
-                                            <span class="depleted"><i class="bi bi-x-circle"></i> {% if is_english %}Limit reached{% elif is_spanish %}Límite alcanzado{% elif is_german %}Limit erreicht{% elif is_portuguese %}Limite atingido{% elif is_chinese %}已达上限{% else %}上限に達しました{% endif %}</span>
+                                            <span class="depleted"><i class="bi bi-lock"></i> {% if user.is_starter or user.is_pro or user.is_school %}{% if is_english %}Limit reached{% elif is_spanish %}Límite alcanzado{% elif is_german %}Limit erreicht{% elif is_portuguese %}Limite atingido{% elif is_chinese %}已达上限{% else %}上限に達しました{% endif %}{% else %}{% if is_english %}Paid plan only{% elif is_spanish %}Solo plan de pago{% elif is_german %}Nur kostenpflichtig{% elif is_portuguese %}Apenas plano pago{% elif is_chinese %}仅付费套餐{% else %}有料プラン限定{% endif %}{% endif %}</span>
                                             {% endif %}
                                         </div>
                                     </div>
@@ -193,15 +193,15 @@
                                             {% elif model_remaining.v7.6 > 0 %}
                                             <span class="remaining">{% if is_english %}{{ model_remaining.v7.6 }} left{% elif is_spanish %}{{ model_remaining.v7.6 }} restantes{% elif is_german %}{{ model_remaining.v7.6 }} übrig{% elif is_portuguese %}{{ model_remaining.v7.6 }} restantes{% elif is_chinese %}剩余{{ model_remaining.v7.6 }}次{% else %}残り{{ model_remaining.v7.6 }}回{% endif %}</span>
                                             {% else %}
-                                            <span class="depleted"><i class="bi bi-x-circle"></i> {% if user.is_starter %}{% if is_english %}Limit reached{% elif is_spanish %}Límite alcanzado{% elif is_german %}Limit erreicht{% elif is_portuguese %}Limite atingido{% elif is_chinese %}已达上限{% else %}上限に達しました{% endif %}{% else %}{% if is_english %}Starter required{% elif is_spanish %}Requiere Starter{% elif is_german %}Starter erforderlich{% elif is_portuguese %}Starter necessário{% elif is_chinese %}需要入门套餐{% else %}スターター以上{% endif %}{% endif %}</span>
+                                            <span class="depleted"><i class="bi bi-lock"></i> {% if user.is_starter or user.is_pro or user.is_school %}{% if is_english %}Limit reached{% elif is_spanish %}Límite alcanzado{% elif is_german %}Limit erreicht{% elif is_portuguese %}Limite atingido{% elif is_chinese %}已达上限{% else %}上限に達しました{% endif %}{% else %}{% if is_english %}Starter required{% elif is_spanish %}Requiere Starter{% elif is_german %}Starter erforderlich{% elif is_portuguese %}Starter necessário{% elif is_chinese %}需要入门套餐{% else %}スターター以上{% endif %}{% endif %}</span>
                                             {% endif %}
                                         </div>
                                     </div>
                                 </label>
                                 
-                                <!-- プレミアム (O2) -->
+                                <!-- プレミアム (O2) - フリープランはこれのみ -->
                                 <label class="model-card {% if model_remaining.o2 == 0 %}disabled{% endif %}">
-                                    <input type="radio" name="mureka_model" value="mureka-o2" {% if model_remaining.o2 == 0 %}disabled{% endif %}>
+                                    <input type="radio" name="mureka_model" value="mureka-o2" {% if model_remaining.o2 != 0 %}checked{% endif %} {% if model_remaining.o2 == 0 %}disabled{% endif %}>
                                     <div class="model-card-content">
                                         <div class="model-name">{% if is_english %}Premium{% elif is_spanish %}Premium{% elif is_german %}Premium{% elif is_portuguese %}Premium{% elif is_chinese %}专业{% else %}プレミアム{% endif %}</div>
                                         <div class="model-remaining">

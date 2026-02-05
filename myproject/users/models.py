@@ -138,7 +138,7 @@ class User(AbstractUser):
         if self.is_staff or self.is_superuser:
             return -1
         limits = {
-            'free': 2,  # 1日2曲
+            'free': 2,  # 月2曲
             'starter': 80,
             'pro': -1,  # 無制限
             'school': 100,
@@ -151,7 +151,7 @@ class User(AbstractUser):
         if self.is_staff or self.is_superuser:
             return {'v7.5': -1, 'v7.6': -1, 'o2': -1}
         limits = {
-            'free': {'v7.5': 999, 'v7.6': 0, 'o2': 5},  # フリーはv7.5無制限、v7.6は使用不可、O2は月5回
+            'free': {'v7.5': 0, 'v7.6': 0, 'o2': 15},  # フリーはO2のみ月2曲
             'starter': {'v7.5': 40, 'v7.6': 25, 'o2': 15},
             'pro': {'v7.5': -1, 'v7.6': -1, 'o2': -1},  # 無制限
             'school': {'v7.5': 40, 'v7.6': 40, 'o2': 20},
