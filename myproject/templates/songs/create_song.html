@@ -158,7 +158,8 @@
                             {% endif %}
                         </div>
                         
-                        <!-- AIモデル選択 -->
+                        <!-- AIモデル選択（有料プランのみ表示） -->
+                        {% if user.is_starter or user.is_pro or user.is_school %}
                         <div class="form-group mb-4">
                             <label class="form-label">
                                 <i class="bi bi-cpu me-1"></i>
@@ -176,7 +177,7 @@
                                             {% elif model_remaining.v7.5 > 0 %}
                                             <span class="remaining">{% if is_english %}{{ model_remaining.v7.5 }} left{% elif is_spanish %}{{ model_remaining.v7.5 }} restantes{% elif is_german %}{{ model_remaining.v7.5 }} übrig{% elif is_portuguese %}{{ model_remaining.v7.5 }} restantes{% elif is_chinese %}剩余{{ model_remaining.v7.5 }}次{% else %}残り{{ model_remaining.v7.5 }}回{% endif %}</span>
                                             {% else %}
-                                            <span class="depleted"><i class="bi bi-lock"></i> {% if user.is_starter or user.is_pro or user.is_school %}{% if is_english %}Limit reached{% elif is_spanish %}Límite alcanzado{% elif is_german %}Limit erreicht{% elif is_portuguese %}Limite atingido{% elif is_chinese %}已达上限{% else %}上限に達しました{% endif %}{% else %}{% if is_english %}Paid plan only{% elif is_spanish %}Solo plan de pago{% elif is_german %}Nur kostenpflichtig{% elif is_portuguese %}Apenas plano pago{% elif is_chinese %}仅付费套餐{% else %}有料プラン限定{% endif %}{% endif %}</span>
+                                            <span class="depleted"><i class="bi bi-x-circle"></i> {% if is_english %}Limit reached{% elif is_spanish %}Límite alcanzado{% elif is_german %}Limit erreicht{% elif is_portuguese %}Limite atingido{% elif is_chinese %}已达上限{% else %}上限に達しました{% endif %}</span>
                                             {% endif %}
                                         </div>
                                     </div>
@@ -193,13 +194,13 @@
                                             {% elif model_remaining.v7.6 > 0 %}
                                             <span class="remaining">{% if is_english %}{{ model_remaining.v7.6 }} left{% elif is_spanish %}{{ model_remaining.v7.6 }} restantes{% elif is_german %}{{ model_remaining.v7.6 }} übrig{% elif is_portuguese %}{{ model_remaining.v7.6 }} restantes{% elif is_chinese %}剩余{{ model_remaining.v7.6 }}次{% else %}残り{{ model_remaining.v7.6 }}回{% endif %}</span>
                                             {% else %}
-                                            <span class="depleted"><i class="bi bi-lock"></i> {% if user.is_starter or user.is_pro or user.is_school %}{% if is_english %}Limit reached{% elif is_spanish %}Límite alcanzado{% elif is_german %}Limit erreicht{% elif is_portuguese %}Limite atingido{% elif is_chinese %}已达上限{% else %}上限に達しました{% endif %}{% else %}{% if is_english %}Starter required{% elif is_spanish %}Requiere Starter{% elif is_german %}Starter erforderlich{% elif is_portuguese %}Starter necessário{% elif is_chinese %}需要入门套餐{% else %}スターター以上{% endif %}{% endif %}</span>
+                                            <span class="depleted"><i class="bi bi-x-circle"></i> {% if is_english %}Limit reached{% elif is_spanish %}Límite alcanzado{% elif is_german %}Limit erreicht{% elif is_portuguese %}Limite atingido{% elif is_chinese %}已达上限{% else %}上限に達しました{% endif %}</span>
                                             {% endif %}
                                         </div>
                                     </div>
                                 </label>
                                 
-                                <!-- プレミアム (O2) - フリープランはこれのみ -->
+                                <!-- プレミアム (O2) -->
                                 <label class="model-card {% if model_remaining.o2 == 0 %}disabled{% endif %}">
                                     <input type="radio" name="mureka_model" value="mureka-o2" {% if model_remaining.o2 != 0 %}checked{% endif %} {% if model_remaining.o2 == 0 %}disabled{% endif %}>
                                     <div class="model-card-content">
@@ -217,6 +218,10 @@
                                 </label>
                             </div>
                         </div>
+                        {% else %}
+                        <!-- 無料プランはO2のみ（非表示で送信） -->
+                        <input type="hidden" name="mureka_model" value="mureka-o2">
+                        {% endif %}
                         
                         <!-- カスタマイズ入力欄（自由記述） -->
                         <div class="form-group mb-4">
