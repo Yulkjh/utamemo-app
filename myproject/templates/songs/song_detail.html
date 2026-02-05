@@ -121,7 +121,7 @@
                         
                         <div id="status-message">
                         {% if song.generation_status == 'pending' %}
-                            <p><strong>{% if is_english %}⏳ Waiting in queue...{% elif is_spanish %}⏳ Esperando en cola...{% elif is_german %}⏳ In der Warteschlange...{% elif is_portuguese %}⏳ Aguardando na fila...{% elif is_chinese %}⏳ 排队等候中...{% else %}⏳ キューで待機中...{% endif %}</strong></p>
+                            <p><strong>{% if is_english %}Waiting in queue...{% elif is_spanish %}Esperando en cola...{% elif is_german %}In der Warteschlange...{% elif is_portuguese %}Aguardando na fila...{% elif is_chinese %}排队等候中...{% else %}キューで待機中...{% endif %}</strong></p>
                             {% if song.queue_position %}
                                 <div class="queue-info">
                                     <div class="queue-number">{{ song.queue_position }}</div>
@@ -131,7 +131,7 @@
                         {% elif song.generation_status == 'generating' %}
                             <p><strong>{% if is_english %}Generating your song...{% elif is_spanish %}Generando tu canción...{% elif is_german %}Song wird generiert...{% elif is_portuguese %}Gerando sua música...{% elif is_chinese %}正在生成歌曲...{% else %}楽曲を生成中です...{% endif %}</strong><br>{% if is_english %}Usually takes 1-2 minutes.{% elif is_spanish %}Normalmente tarda 1-2 minutos.{% elif is_german %}Dauert normalerweise 1-2 Minuten.{% elif is_portuguese %}Geralmente leva 1-2 minutos.{% elif is_chinese %}通常需要1-2分钟。{% else %}通常1〜2分で完成します。{% endif %}</p>
                         {% elif song.generation_status == 'failed' %}
-                            <p><strong>{% if is_english %}❌ Generation failed{% elif is_spanish %}❌ Generación fallida{% elif is_german %}❌ Generierung fehlgeschlagen{% elif is_portuguese %}❌ Falha na geração{% elif is_chinese %}❌ 生成失败{% else %}❌ 生成に失敗しました{% endif %}</strong></p>
+                            <p><strong>{% if is_english %}Generation failed{% elif is_spanish %}Generación fallida{% elif is_german %}Generierung fehlgeschlagen{% elif is_portuguese %}Falha na geração{% elif is_chinese %}生成失败{% else %}生成に失敗しました{% endif %}</strong></p>
                             {% if user == song.created_by %}
                                 {% if song.retry_count < 1 %}
                                 <form method="post" action="{% url 'songs:retry_song' song.pk %}" style="margin-top: 1rem;">
