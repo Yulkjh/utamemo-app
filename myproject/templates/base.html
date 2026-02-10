@@ -1044,7 +1044,7 @@
                                     {{ user_total_remaining }}/{{ user_total_limit }}
                                 {% endif %}
                             </span>
-                            {% if user_plan == 'free' and user_total_remaining <= 5 %}
+                            {% if user_plan == 'free' and user_total_remaining != -1 and user_total_remaining <= 5 %}
                             <span class="upgrade-hint">
                                 <i class="bi bi-arrow-up-circle-fill"></i>
                             </span>
