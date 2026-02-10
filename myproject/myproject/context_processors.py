@@ -2,6 +2,33 @@
 カスタムコンテキストプロセッサ - 全テンプレートで使用可能な変数を提供
 """
 
+def user_usage_context(request):
+    """ユーザーの利用回数情報をテンプレートに提供"""
+    if not request.user.is_authenticated:
+        return {}
+    
+    user = request.user
+    remaining = user.get_remaining_model_usage()
+    limits = user.get_model_limits()
+    
+    # 合計の残り回数を計算（無制限の場合は-1）
+    if user.plan == 'pro' or user.is_staff or user.is_superuser:
+        total_remaining = -1  # 無制限
+        total_limit = -1
+    else:
+        total_remaining = sum(v for v in remaining.values() if v != -1)
+        total_limit = sum(v for v in limits.values() if v != -1)
+    
+    return {
+        'user_remaining_usage': remaining,
+        'user_usage_limits': limits,
+        'user_total_remaining': total_remaining,
+        'user_total_limit': total_limit,
+        'user_plan': user.plan,
+        'user_is_pro': user.is_pro,
+    }
+
+
 # 対応言語リスト
 AVAILABLE_LANGUAGES = [
     {'code': 'ja', 'name': '日本語'},

@@ -18,11 +18,19 @@ from django.contrib import admin
 from django.urls import path, include, re_path
 from django.conf import settings
 from django.conf.urls.static import static
+from django.contrib.sitemaps.views import sitemap
 from .media_views import serve_protected_media
 from .legal_views import terms, privacy, contact
+from .sitemaps import StaticViewSitemap, SongSitemap
+
+sitemaps = {
+    'static': StaticViewSitemap,
+    'songs': SongSitemap,
+}
 
 urlpatterns = [
     path('admin/', admin.site.urls),
+    path('sitemap.xml', sitemap, {'sitemaps': sitemaps}, name='django.contrib.sitemaps.views.sitemap'),
     path('', include('songs.urls')),
     path('users/', include('users.urls')),
     path('terms/', terms, name='terms'),

@@ -1,4 +1,4 @@
-"""曲生成キュー管理システム"""
+dig utamemo.com NS +short"""曲生成キュー管理システム"""
 import threading
 import time
 import logging

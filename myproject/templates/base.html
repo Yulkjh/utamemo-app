@@ -535,6 +535,53 @@
             text-decoration: none;
         }
         
+        /* 利用回数カウンター */
+        .usage-counter {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            background: var(--surface-elevated);
+            border: 1px solid var(--border-color);
+            border-radius: var(--radius-md);
+            padding: 0.4rem 0.75rem;
+            font-size: 0.85rem;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            text-decoration: none;
+            color: var(--text-primary);
+        }
+        
+        .usage-counter:hover {
+            border-color: var(--primary-color);
+            box-shadow: var(--shadow-sm);
+            text-decoration: none;
+            color: var(--text-primary);
+        }
+        
+        .usage-counter .usage-text {
+            font-weight: 500;
+            white-space: nowrap;
+        }
+        
+        .usage-counter .usage-count {
+            font-weight: 700;
+            color: var(--primary-color);
+        }
+        
+        .usage-counter.usage-low .usage-count {
+            color: #dc3545;
+        }
+        
+        .usage-counter.usage-unlimited .usage-count {
+            color: #28a745;
+        }
+        
+        .usage-counter .upgrade-hint {
+            font-size: 0.7rem;
+            color: var(--primary-color);
+            margin-left: 0.25rem;
+        }
+        
         .hero-section {
             background: var(--dark-gradient);
             color: white;
@@ -796,6 +843,13 @@
                 padding-top: 70px !important;
             }
             
+            /* 利用回数カウンターモバイル対応 */
+            .usage-counter {
+                width: 100%;
+                justify-content: center;
+                margin-bottom: 0.5rem;
+            }
+            
             /* ドロップダウンメニューのモバイル対応 */
             .user-dropdown-menu {
                 position: absolute;
@@ -977,6 +1031,26 @@
                 
                 <ul class="navbar-nav mobile-nav-left" style="align-items: center;">
                     {% if user.is_authenticated %}
+                    <!-- 利用回数カウンター -->
+                    <li class="nav-item me-2 d-none d-md-block">
+                        <a href="{% url 'users:upgrade' %}" class="usage-counter {% if user_total_remaining == -1 %}usage-unlimited{% elif user_total_remaining <= 3 %}usage-low{% endif %}">
+                            <span class="usage-text">
+                                {% if is_english %}Remaining{% elif is_chinese %}剩余{% elif is_spanish %}Restante{% elif is_german %}Verbleibend{% elif is_portuguese %}Restante{% else %}残り{% endif %}:
+                            </span>
+                            <span class="usage-count">
+                                {% if user_total_remaining == -1 %}
+                                    unlimited
+                                {% else %}
+                                    {{ user_total_remaining }}/{{ user_total_limit }}
+                                {% endif %}
+                            </span>
+                            {% if user_plan == 'free' and user_total_remaining <= 5 %}
+                            <span class="upgrade-hint">
+                                <i class="bi bi-arrow-up-circle-fill"></i>
+                            </span>
+                            {% endif %}
+                        </a>
+                    </li>
                     <li class="nav-item me-3">
                         <div class="user-switcher">
                             <div class="user-dropdown-btn">
