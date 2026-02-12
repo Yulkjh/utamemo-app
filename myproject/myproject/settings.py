@@ -99,6 +99,7 @@ MIDDLEWARE = [
     'django.contrib.auth.middleware.AuthenticationMiddleware',
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
+    'myproject.security.SecurityMiddleware',
 ]
 
 ROOT_URLCONF = 'myproject.urls'
@@ -196,6 +197,13 @@ MUREKA_API_URL = os.getenv('MUREKA_API_URL', 'https://platform.mureka.ai')
 STRIPE_PUBLISHABLE_KEY = os.getenv('STRIPE_PUBLISHABLE_KEY', '')
 STRIPE_SECRET_KEY = os.getenv('STRIPE_SECRET_KEY', '')
 STRIPE_WEBHOOK_SECRET = os.getenv('STRIPE_WEBHOOK_SECRET', '')
+
+# ========================================
+# 管理画面セキュリティ設定
+# ========================================
+# 管理画面にアクセス可能なIPアドレス（本番環境でのみ適用）
+# カンマ区切りで複数指定可能。空の場合はIP制限なし（他の制限は有効）
+ADMIN_ALLOWED_IPS = os.getenv('ADMIN_ALLOWED_IPS', '')
 
 # 各プランの価格ID（Stripe Dashboardで作成後に設定）
 STRIPE_PRICE_IDS = {

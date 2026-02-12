@@ -40,9 +40,57 @@ class RegisterView(CreateView):
 
 
 class LoginView(AuthLoginView):
-    """ログインビュー"""
+    """ログインビュー（アカウントロック機能付き）"""
     template_name = 'users/login.html'
     redirect_authenticated_user = True
+    
+    def post(self, request, *args, **kwargs):
+        from myproject.security import (
+            get_client_ip, is_locked_out, record_failed_login,
+            clear_login_attempts, get_login_attempts, MAX_LOGIN_ATTEMPTS
+        )
+        
+        ip_address = get_client_ip(request)
+        username = request.POST.get('username', '')
+        
+        # ユーザー名またはIPがロックアウト中か確認
+        if is_locked_out(username) or is_locked_out(ip_address):
+            app_language = request.session.get('app_language', 'ja')
+            if app_language == 'en':
+                messages.error(request, 'Account is locked due to too many failed attempts. Please try again in 30 minutes.')
+            elif app_language == 'zh':
+                messages.error(request, '登录尝试次数过多，账户已锁定。请30分钟后再试。')
+            else:
+                messages.error(request, 'ログイン試行回数の上限に達しました。30分後にもう一度お試しください。')
+            return self.render_to_response(self.get_context_data())
+        
+        response = super().post(request, *args, **kwargs)
+        
+        # ログイン失敗の場合（フォームが再表示される = ステータス200でリダイレクトなし）
+        if response.status_code == 200:
+            record_failed_login(username, ip_address)
+            attempts = get_login_attempts(username)
+            remaining = MAX_LOGIN_ATTEMPTS - attempts
+            if remaining > 0:
+                app_language = request.session.get('app_language', 'ja')
+                if app_language == 'en':
+                    messages.warning(request, f'Login failed. {remaining} attempts remaining.')
+                elif app_language == 'zh':
+                    messages.warning(request, f'登录失败。剩余 {remaining} 次尝试。')
+                else:
+                    messages.warning(request, f'ログインに失敗しました。残り{remaining}回試行できます。')
+        
+        return response
+    
+    def form_valid(self, form):
+        """ログイン成功時に試行回数をクリア"""
+        from myproject.security import get_client_ip, clear_login_attempts
+        
+        ip_address = get_client_ip(self.request)
+        username = self.request.POST.get('username', '')
+        clear_login_attempts(username, ip_address)
+        
+        return super().form_valid(form)
     
     def get_success_url(self):
         app_language = self.request.session.get('app_language', 'ja')
