@@ -28,10 +28,10 @@
                             
                             <div class="d-flex gap-2 justify-content-center flex-wrap text-center">
                                 <button type="button" class="btn-gradient-primary mobile-only" id="camera-btn">
-                                    <i class="bi bi-camera"></i> {% if is_english %}Take Photo{% elif is_spanish %}Tomar Foto{% elif is_german %}Foto aufnehmen{% elif is_portuguese %}Tirar Foto{% elif is_chinese %}拍照{% else %}カメラで撮影{% endif %}
+                                    {% if is_english %}Take Photo{% elif is_spanish %}Tomar Foto{% elif is_german %}Foto aufnehmen{% elif is_portuguese %}Tirar Foto{% elif is_chinese %}拍照{% else %}カメラで撮影{% endif %}
                                 </button>
                                 <button type="button" class="btn-gradient-primary" id="file-select-btn">
-                                    <i class="bi bi-folder-open"></i> {% if is_english %}Select Photo{% elif is_spanish %}Seleccionar Foto{% elif is_german %}Foto auswählen{% elif is_portuguese %}Selecionar Foto{% elif is_chinese %}选择照片{% else %}写真を選択{% endif %}
+                                    {% if is_english %}Select Photo{% elif is_spanish %}Seleccionar Foto{% elif is_german %}Foto auswählen{% elif is_portuguese %}Selecionar Foto{% elif is_chinese %}选择照片{% else %}写真を選択{% endif %}
                                 </button>
                             </div>
                             
@@ -57,10 +57,10 @@
                                 <div class="preview-overlay">
                                     <div class="d-flex gap-2 justify-content-center">
                                         <button type="button" class="btn-outline-modern btn-sm mobile-only" id="change-camera-btn">
-                                            <i class="bi bi-camera"></i> {% if is_english %}Camera{% elif is_spanish %}Cámara{% elif is_german %}Kamera{% elif is_portuguese %}Câmera{% elif is_chinese %}相机{% else %}カメラ{% endif %}
+                                            {% if is_english %}Camera{% elif is_spanish %}Cámara{% elif is_german %}Kamera{% elif is_portuguese %}Câmera{% elif is_chinese %}相机{% else %}カメラ{% endif %}
                                         </button>
                                         <button type="button" class="btn-outline-modern btn-sm" id="change-file-btn">
-                                            <i class="bi bi-folder-plus"></i> {% if is_english %}Add More{% elif is_spanish %}Añadir Más{% elif is_german %}Mehr hinzufügen{% elif is_portuguese %}Adicionar Mais{% elif is_chinese %}添加更多{% else %}追加{% endif %}
+                                            {% if is_english %}Add More{% elif is_spanish %}Añadir Más{% elif is_german %}Mehr hinzufügen{% elif is_portuguese %}Adicionar Mais{% elif is_chinese %}添加更多{% else %}追加{% endif %}
                                         </button>
                                     </div>
                                 </div>
