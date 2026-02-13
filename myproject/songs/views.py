@@ -225,6 +225,7 @@ class SongDetailView(DetailView):
 
 
 class CreateSongView(LoginRequiredMixin, CreateView):
+
     """楽曲作成ビュー"""
     model = Song
     form_class = SongCreateForm
@@ -1210,29 +1211,36 @@ def update_song_title(request, pk):
 
 @login_required
 def retry_song_generation(request, pk):
-    """失敗した楽曲の再生成（設定された回数まで許可）"""
+    """失敗した楽曲の再生成（1回目は無料、2回目以降は月間生成回数を消費）"""
     from django.conf import settings
     
     song = get_object_or_404(Song, pk=pk, created_by=request.user)
-    max_retries = getattr(settings, 'MAX_GENERATION_RETRIES', 3)
     app_language = request.session.get('app_language', 'ja')
+    user = request.user
     
     if request.method == 'POST':
-        # 再生成回数をチェック
-        if song.retry_count >= max_retries:
-            if app_language == 'en':
-                error_msg = f'Retry limit is {max_retries} times'
-            elif app_language == 'zh':
-                error_msg = f'重试次数上限为{max_retries}次'
-            else:
-                error_msg = f'再生成は{max_retries}回までです'
-            if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
-                return JsonResponse({
-                    'success': False,
-                    'error': error_msg
-                })
-            messages.error(request, error_msg)
-            return redirect('songs:song_detail', pk=song.pk)
+        # 2回目以降の再生成は月間生成回数を消費
+        if song.retry_count >= 1:
+            # モデルの残り回数をチェック
+            model_key = 'o2'  # デフォルト
+            if song.mureka_model == 'mureka-7.5':
+                model_key = 'v7.5'
+            elif song.mureka_model == 'mureka-7.6':
+                model_key = 'v7.6'
+            elif song.mureka_model == 'mureka-o2':
+                model_key = 'o2'
+            
+            if not user.can_use_model(model_key):
+                if app_language == 'en':
+                    error_msg = 'Monthly generation limit reached. Upgrade your plan for more.'
+                elif app_language == 'zh':
+                    error_msg = '本月生成次数已用完。升级计划获取更多。'
+                else:
+                    error_msg = '今月の生成回数の上限に達しました。プランをアップグレードしてください。'
+                if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
+                    return JsonResponse({'success': False, 'error': error_msg})
+                messages.error(request, error_msg)
+                return redirect('songs:song_detail', pk=song.pk)
         
         # 失敗した曲のみ再生成可能
         if song.generation_status == 'failed':
