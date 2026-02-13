@@ -1838,7 +1838,7 @@ def content_violation_view(request):
     
     context = {
         'title': title,
-        'message': violation_message or default_message,
+        'message': default_message,
         'terms_link_text': terms_link_text,
         'back_link_text': back_link_text,
         'app_language': app_language,
