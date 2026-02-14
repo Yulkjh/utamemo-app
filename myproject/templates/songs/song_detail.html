@@ -449,9 +449,6 @@
         </div>
     </div>
 </div>
-        </div>
-    </div>
-</div>
 
 <style>
 /* ダウンロードセクション */
@@ -1093,6 +1090,8 @@
         transform: translateY(0);
     }
 }
+
+/* モバイル：カラオケ・ダウンロードをプレイヤー直後に移動（JSで対応） */
 
 /* レスポンシブ調整 */
 @media (max-width: 768px) {
@@ -2921,6 +2920,49 @@ document.getElementById('karaokeModal').addEventListener('click', function(e) {
         cancelKaraoke();
     }
 });
+</script>
+
+<script>
+// モバイル：カラオケ・ダウンロードをプレイヤー直後に移動
+(function() {
+    function reorderForMobile() {
+        const isMobile = window.innerWidth <= 768;
+        const player = document.querySelector('.music-player-card');
+        const karaoke = document.querySelector('.karaoke-section');
+        const download = document.querySelector('.download-section');
+        const colLeft = document.querySelector('.col-lg-8');
+        
+        if (!player || !colLeft) return;
+        
+        if (isMobile) {
+            // プレイヤーの直後に移動
+            const afterPlayer = player.nextElementSibling;
+            if (download && download.parentElement !== colLeft) {
+                if (afterPlayer) {
+                    colLeft.insertBefore(download, afterPlayer);
+                } else {
+                    colLeft.appendChild(download);
+                }
+            }
+            if (karaoke && karaoke.parentElement !== colLeft) {
+                colLeft.insertBefore(karaoke, download || afterPlayer);
+            }
+        } else {
+            // PC：サイドバーに戻す
+            const colRight = document.querySelector('.col-lg-4');
+            if (!colRight) return;
+            if (karaoke && karaoke.parentElement !== colRight) {
+                colRight.appendChild(karaoke);
+            }
+            if (download && download.parentElement !== colRight) {
+                colRight.appendChild(download);
+            }
+        }
+    }
+    
+    reorderForMobile();
+    window.addEventListener('resize', reorderForMobile);
+})();
 </script>
 
 {% endblock %}

@@ -215,7 +215,12 @@
             <span style="font-size: 0.875rem; opacity: 0.8;">
                 {% if is_english %}Class Code:{% elif is_spanish %}Código de Clase:{% elif is_german %}Klassencode:{% elif is_portuguese %}Código da Turma:{% elif is_chinese %}班级代码:{% else %}クラスコード:{% endif %}
             </span>
-            <span class="classroom-code">{{ classroom.code }}</span>
+            <span class="classroom-code" id="classroom-code" onclick="copyClassCode()" style="cursor: pointer;" title="{% if is_english %}Click to copy{% elif is_chinese %}点击复制{% else %}タップしてコピー{% endif %}">
+                {{ classroom.code }} <i class="bi bi-clipboard" id="copy-icon" style="font-size: 0.9rem; opacity: 0.7;"></i>
+            </span>
+            <span id="copy-toast" style="display: none; margin-left: 0.5rem; font-size: 0.8rem; background: rgba(255,255,255,0.3); padding: 0.2rem 0.6rem; border-radius: 4px;">
+                {% if is_english %}Copied!{% elif is_chinese %}已复制！{% else %}コピーしました！{% endif %}
+            </span>
         </div>
     </div>
     
@@ -297,5 +302,41 @@ document.addEventListener('click', function(event) {
         menu.classList.remove('show');
     }
 });
+
+function copyClassCode() {
+    const code = '{{ classroom.code }}';
+    navigator.clipboard.writeText(code).then(function() {
+        const icon = document.getElementById('copy-icon');
+        const toast = document.getElementById('copy-toast');
+        icon.className = 'bi bi-clipboard-check';
+        icon.style.opacity = '1';
+        toast.style.display = 'inline';
+        setTimeout(function() {
+            icon.className = 'bi bi-clipboard';
+            icon.style.opacity = '0.7';
+            toast.style.display = 'none';
+        }, 2000);
+    }).catch(function() {
+        // フォールバック（古いブラウザ用）
+        const textArea = document.createElement('textarea');
+        textArea.value = code;
+        textArea.style.position = 'fixed';
+        textArea.style.opacity = '0';
+        document.body.appendChild(textArea);
+        textArea.select();
+        document.execCommand('copy');
+        document.body.removeChild(textArea);
+        const icon = document.getElementById('copy-icon');
+        const toast = document.getElementById('copy-toast');
+        icon.className = 'bi bi-clipboard-check';
+        icon.style.opacity = '1';
+        toast.style.display = 'inline';
+        setTimeout(function() {
+            icon.className = 'bi bi-clipboard';
+            icon.style.opacity = '0.7';
+            toast.style.display = 'none';
+        }, 2000);
+    });
+}
 </script>
 {% endblock %}
