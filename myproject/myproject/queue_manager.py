@@ -164,8 +164,18 @@ class SongGenerationQueue:
             raise
     
     def _update_queue_positions(self):
-        """キュー内の曲の位置を更新"""
+        """キュー内の曲の位置を更新（完了/失敗した曲のposition もクリア）"""
         try:
+            # まず完了・失敗した曲のqueue_positionをクリア
+            stale_songs = Song.objects.filter(
+                generation_status__in=['completed', 'failed'],
+                queue_position__isnull=False
+            )
+            if stale_songs.exists():
+                count = stale_songs.update(queue_position=None)
+                print(f"[INFO] Cleared stale queue positions for {count} completed/failed songs")
+            
+            # pending/generating の曲だけ位置を再計算
             pending_songs = Song.objects.filter(
                 generation_status__in=['pending', 'generating']
             ).order_by('created_at')

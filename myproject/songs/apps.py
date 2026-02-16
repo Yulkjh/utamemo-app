@@ -41,5 +41,54 @@ class SongsConfig(AppConfig):
         try:
             from .queue_manager import queue_manager
             print("[INFO] キューマネージャーを初期化しました")
+            
+            # 起動時にスタックしたキューをクリーンアップ
+            self._cleanup_stale_queue()
         except Exception as e:
             print(f"[WARNING] キューマネージャーの初期化エラー: {e}")
+
+    def _cleanup_stale_queue(self):
+        """起動時にスタックしたキューをクリーンアップ"""
+        try:
+            from .models import Song
+            
+            # 完了/失敗なのにqueue_positionが残っている曲をクリア
+            stale = Song.objects.filter(
+                generation_status__in=['completed', 'failed'],
+                queue_position__isnull=False
+            )
+            stale_count = stale.count()
+            if stale_count > 0:
+                stale.update(queue_position=None)
+                print(f"[INFO] 起動時クリーンアップ: {stale_count}曲のスタックしたqueue_positionをクリア")
+            
+            # 1時間以上generating状態の曲をfailedに
+            from django.utils import timezone
+            from datetime import timedelta
+            cutoff = timezone.now() - timedelta(hours=1)
+            
+            stuck_generating = Song.objects.filter(
+                generation_status='generating',
+                started_at__lt=cutoff
+            )
+            stuck_count = stuck_generating.count()
+            if stuck_count > 0:
+                stuck_generating.update(
+                    generation_status='failed',
+                    queue_position=None,
+                    error_message='サーバー再起動によりリセットされました。再生成してください。'
+                )
+                print(f"[INFO] 起動時クリーンアップ: {stuck_count}曲のスタックしたgenerating曲をfailedに変更")
+
+            # queue_positionを再計算
+            active_songs = Song.objects.filter(
+                generation_status__in=['pending', 'generating']
+            ).order_by('created_at')
+            for index, song in enumerate(active_songs, start=1):
+                if song.queue_position != index:
+                    song.queue_position = index
+                    song.save(update_fields=['queue_position'])
+            
+            print(f"[INFO] 起動時クリーンアップ完了（アクティブキュー: {active_songs.count()}曲）")
+        except Exception as e:
+            print(f"[WARNING] 起動時キュークリーンアップエラー: {e}")

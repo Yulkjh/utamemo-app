@@ -162,9 +162,50 @@
                         // Auto-refresh polling for song generation progress
                         const songId = {{ song.pk }};
                         let checkCount = 0;
-                        const maxChecks = 18; // 最大3分間チェック
+                        const maxChecks = 36; // 最大6分間チェック（10秒 x 36）
+                        let currentProgress = 5;
+                        let targetProgress = 5;
+                        let animationFrame = null;
                         
-                        document.getElementById('connection-status').textContent = '{% if is_english %}Auto-refresh active{% elif is_spanish %}Actualización automática activa{% elif is_german %}Automatische Aktualisierung aktiv{% elif is_portuguese %}Atualização automática ativa{% elif is_chinese %}自动更新中{% else %}自動更新中{% endif %}';
+                        const progressBar = document.getElementById('progress-bar');
+                        const statusEl = document.getElementById('connection-status');
+                        
+                        statusEl.textContent = '{% if is_english %}Auto-refresh active{% elif is_spanish %}Actualización automática activa{% elif is_german %}Automatische Aktualisierung aktiv{% elif is_portuguese %}Atualização automática ativa{% elif is_chinese %}自动更新中{% else %}自動更新中{% endif %}';
+                        
+                        // プログレスバーをスムーズにアニメーション
+                        function animateProgress() {
+                            if (currentProgress < targetProgress) {
+                                currentProgress += 0.5;
+                                if (currentProgress > targetProgress) currentProgress = targetProgress;
+                                progressBar.style.width = currentProgress + '%';
+                                animationFrame = requestAnimationFrame(animateProgress);
+                            }
+                        }
+                        
+                        function setProgress(target) {
+                            targetProgress = target;
+                            if (animationFrame) cancelAnimationFrame(animationFrame);
+                            animateProgress();
+                        }
+                        
+                        // フェーズに応じたメッセージ
+                        function getPhaseMessage(phase, queuePos) {
+                            const messages = {
+                                'pending': {% if is_english %}'Waiting in queue...'{% elif is_chinese %}'排队等候中...'{% else %}'キューで待機中...'{% endif %},
+                                'starting': {% if is_english %}'Starting generation...'{% elif is_chinese %}'开始生成...'{% else %}'生成を開始しています...'{% endif %},
+                                'lyrics_processing': {% if is_english %}'Processing lyrics...'{% elif is_chinese %}'处理歌词中...'{% else %}'歌詞を処理中...'{% endif %},
+                                'api_calling': {% if is_english %}'Sending to AI...'{% elif is_chinese %}'发送至AI...'{% else %}'AIに送信中...'{% endif %},
+                                'generating': {% if is_english %}'Generating music...'{% elif is_chinese %}'生成音乐中...'{% else %}'楽曲を生成中...'{% endif %},
+                                'finalizing': {% if is_english %}'Finalizing...'{% elif is_chinese %}'最终处理中...'{% else %}'仕上げ中...'{% endif %},
+                                'completed': {% if is_english %}'Complete!'{% elif is_chinese %}'完成！'{% else %}'完了！'{% endif %},
+                                'failed': {% if is_english %}'Generation failed'{% elif is_chinese %}'生成失败'{% else %}'生成に失敗しました'{% endif %}
+                            };
+                            let msg = messages[phase] || messages['generating'];
+                            if (phase === 'pending' && queuePos && queuePos > 1) {
+                                msg += {% if is_english %}` (${queuePos - 1} ahead)`{% elif is_chinese %}` (前面${queuePos - 1}人)`{% else %}` (あと${queuePos - 1}人待ち)`{% endif %};
+                            }
+                            return msg;
+                        }
                         
                         async function checkSongStatus() {
                             try {
@@ -173,14 +214,17 @@
                                 
                                 if (data.success) {
                                     if (data.completed || data.failed) {
-                                        // 完了または失敗時のみリロード
+                                        // 完了時は100%にしてからリロード
+                                        if (data.completed) {
+                                            setProgress(100);
+                                            statusEl.textContent = getPhaseMessage('completed');
+                                        }
                                         clearInterval(checkInterval);
-                                        document.getElementById('connection-status').textContent = '{% if is_english %}Reloading...{% elif is_spanish %}Recargando...{% elif is_german %}Neu laden...{% elif is_portuguese %}Recarregando...{% elif is_chinese %}正在刷新...{% else %}リロード中...{% endif %}';
-                                        location.reload();
+                                        setTimeout(() => location.reload(), data.completed ? 1000 : 500);
                                     } else {
-                                        // 進捗バーの更新
-                                        const progress = Math.min(10 + (checkCount * 5), 90);
-                                        document.getElementById('progress-bar').style.width = progress + '%';
+                                        // APIから返された実際の進捗を使用
+                                        setProgress(data.progress || 10);
+                                        statusEl.textContent = getPhaseMessage(data.phase, data.queue_position);
                                     }
                                 }
                             } catch (error) {
@@ -192,12 +236,11 @@
                             checkCount++;
                             if (checkCount >= maxChecks) {
                                 clearInterval(checkInterval);
-                                document.getElementById('connection-status').textContent = '{% if is_english %}Check complete{% elif is_spanish %}Verificación completa{% elif is_german %}Überprüfung abgeschlossen{% elif is_portuguese %}Verificação concluída{% elif is_chinese %}检查完成{% else %}チェック完了{% endif %}';
+                                statusEl.textContent = '{% if is_english %}Taking longer than expected. Please refresh the page.{% elif is_chinese %}时间较长，请刷新页面。{% else %}時間がかかっています。ページを更新してください。{% endif %}';
                                 return;
                             }
-                            console.log('楽曲生成状況をチェック中...', checkCount, '/', maxChecks);
                             checkSongStatus();
-                        }, 10000); // 10秒ごと
+                        }, 5000); // 5秒ごと（10秒→5秒に短縮）
                         
                         // 初回チェック
                         checkSongStatus();

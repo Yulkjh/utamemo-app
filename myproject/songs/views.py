@@ -1362,9 +1362,49 @@ def check_song_status(request, pk):
     """楽曲の生成状態をチェックするAPIエンドポイント（言語を変更しない）"""
     try:
         song = Song.objects.get(pk=pk)
+        
+        # 生成フェーズに基づく進捗率を計算
+        progress = 0
+        phase = 'waiting'
+        
+        if song.generation_status == 'pending':
+            progress = 5
+            phase = 'pending'
+        elif song.generation_status == 'generating':
+            # started_atからの経過時間で進捗を推定
+            if song.started_at:
+                from django.utils import timezone
+                elapsed = (timezone.now() - song.started_at).total_seconds()
+                # 典型的な生成時間は60-120秒
+                # 0-10s: 歌詞処理(15-30%), 10-30s: API送信(30-50%), 30-90s: 生成中(50-85%), 90s+: 仕上げ(85-95%)
+                if elapsed < 10:
+                    progress = 15 + int(elapsed * 1.5)  # 15-30%
+                    phase = 'lyrics_processing'
+                elif elapsed < 30:
+                    progress = 30 + int((elapsed - 10) * 1.0)  # 30-50%
+                    phase = 'api_calling'
+                elif elapsed < 90:
+                    progress = 50 + int((elapsed - 30) * 0.58)  # 50-85%
+                    phase = 'generating'
+                else:
+                    progress = min(85 + int((elapsed - 90) * 0.1), 95)  # 85-95%
+                    phase = 'finalizing'
+            else:
+                progress = 20
+                phase = 'starting'
+        elif song.generation_status == 'completed':
+            progress = 100
+            phase = 'completed'
+        elif song.generation_status == 'failed':
+            progress = 0
+            phase = 'failed'
+        
         return JsonResponse({
             'success': True,
             'status': song.generation_status,
+            'progress': progress,
+            'phase': phase,
+            'queue_position': song.queue_position,
             'audio_url': song.audio_url if song.audio_url else None,
             'completed': song.generation_status == 'completed',
             'failed': song.generation_status == 'failed',
