@@ -97,8 +97,10 @@ class MurekaAIGenerator:
             'Content-Type': 'application/json'
         }
         
-        print("Checking for running tasks...")
-        self._cancel_running_tasks(headers)
+        # 注意: 以前は_cancel_running_tasksで前のタスクをキャンセルしていたが、
+        # これが他ユーザーの生成中タスクもキャンセルしてしまう問題があったため削除。
+        # キューマネージャーが1曲ずつ順番に処理するため、並行タスクの心配は不要。
+        logger.info("Preparing to send song generation request...")
         
         # 「auto」または空の場合はジャンルを指定しない（AIに自動選択させる）
         is_auto_genre = not genre or genre.strip() == "" or genre.strip().lower() == "auto" or genre.strip() in ["おまかせ", "自动"]
@@ -158,7 +160,7 @@ class MurekaAIGenerator:
         print(f"[MUREKA] Full payload: {json.dumps(payload_log, ensure_ascii=False)}")
         
         max_retries = 5
-        base_wait_time = 30
+        base_wait_time = 10  # 10秒（30秒→10秒に短縮）
         # タイムアウトを設定から取得（デフォルト60秒）
         api_timeout = getattr(settings, 'MUREKA_API_TIMEOUT', 60)
         
@@ -190,14 +192,14 @@ class MurekaAIGenerator:
                 
                 elif response.status_code == 429:
                     wait_time = base_wait_time * (attempt + 1)
-                    print(f"Rate limit reached (429). Previous task still running.")
-                    print(f"Waiting {wait_time} seconds for previous task to complete...")
+                    logger.warning(f"Mureka API rate limit (429). Waiting {wait_time}s...")
+                    print(f"Rate limit reached (429). Waiting {wait_time} seconds...")
                     
                     if attempt < max_retries - 1:
                         time.sleep(wait_time)
                         continue
                     else:
-                        error_msg = f"Mureka API rate limit exceeded after {max_retries} attempts"
+                        error_msg = f"Mureka API rate limit exceeded after {max_retries} attempts. しばらく待ってから再試行してください。"
                         print(f"{error_msg}")
                         raise Exception(error_msg)
                 

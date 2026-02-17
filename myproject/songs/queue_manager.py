@@ -99,6 +99,9 @@ class SongGenerationQueue:
         
         while self._should_run:
             try:
+                # スタックしたgenerating曲をタイムアウト（5分超過でfailed）
+                self._timeout_stuck_songs()
+                
                 # 処理中フラグをチェック
                 with self._processing_lock:
                     if self._processing:
@@ -164,7 +167,7 @@ class SongGenerationQueue:
         from .ai_services import MurekaAIGenerator
         
         max_retries = getattr(settings, 'MAX_GENERATION_RETRIES', 3)
-        backoff_base = getattr(settings, 'RETRY_BACKOFF_BASE', 30)
+        backoff_base = getattr(settings, 'RETRY_BACKOFF_BASE', 5)  # 5秒（30秒→5秒に短縮）
         retry_count = 0
         last_error = None
         
@@ -327,6 +330,25 @@ class SongGenerationQueue:
             except Exception:
                 pass
     
+    def _timeout_stuck_songs(self):
+        """5分以上generating状態の曲をfailedに変更"""
+        try:
+            from datetime import timedelta
+            cutoff = timezone.now() - timedelta(minutes=5)
+            stuck = Song.objects.filter(
+                generation_status='generating',
+                started_at__lt=cutoff
+            )
+            for song in stuck:
+                elapsed = (timezone.now() - song.started_at).total_seconds()
+                logger.warning(f"Song {song.id}: Stuck in generating for {int(elapsed)}s, marking as failed")
+                song.generation_status = 'failed'
+                song.queue_position = None
+                song.error_message = f'生成がタイムアウトしました（{int(elapsed)}秒経過）。再生成してください。'
+                song.save()
+        except Exception as e:
+            logger.warning(f"Timeout check error: {e}")
+
     def _update_queue_positions(self):
         """キューの位置を更新（完了/失敗した曲のposition もクリア）"""
         try:

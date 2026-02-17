@@ -132,6 +132,21 @@
                             <p><strong>{% if is_english %}Generating your song...{% elif is_spanish %}Generando tu canción...{% elif is_german %}Song wird generiert...{% elif is_portuguese %}Gerando sua música...{% elif is_chinese %}正在生成歌曲...{% else %}楽曲を生成中です...{% endif %}</strong><br>{% if is_english %}Usually takes 1-2 minutes.{% elif is_spanish %}Normalmente tarda 1-2 minutos.{% elif is_german %}Dauert normalerweise 1-2 Minuten.{% elif is_portuguese %}Geralmente leva 1-2 minutos.{% elif is_chinese %}通常需要1-2分钟。{% else %}通常1〜2分で完成します。{% endif %}</p>
                         {% elif song.generation_status == 'failed' %}
                             <p><strong>{% if is_english %}Generation failed{% elif is_spanish %}Generación fallida{% elif is_german %}Generierung fehlgeschlagen{% elif is_portuguese %}Falha na geração{% elif is_chinese %}生成失败{% else %}生成に失敗しました{% endif %}</strong></p>
+                            {% if song.error_message %}
+                            <p style="font-size: 0.8rem; color: #999; margin-top: 0.5rem;">
+                                {% if 'rate limit' in song.error_message or '429' in song.error_message %}
+                                    {% if is_english %}Server was busy. Please retry.{% elif is_chinese %}服务器繁忙，请重试。{% else %}サーバーが混雑していました。再試行してください。{% endif %}
+                                {% elif 'timeout' in song.error_message or 'Timeout' in song.error_message %}
+                                    {% if is_english %}Generation timed out. Please retry.{% elif is_chinese %}生成超时，请重试。{% else %}生成がタイムアウトしました。再試行してください。{% endif %}
+                                {% elif 'connection' in song.error_message or 'Connection' in song.error_message %}
+                                    {% if is_english %}Connection error. Please retry.{% elif is_chinese %}连接错误，请重试。{% else %}接続エラーが発生しました。再試行してください。{% endif %}
+                                {% elif '歌詞' in song.error_message or 'Lyrics' in song.error_message or 'lyrics' in song.error_message %}
+                                    {% if is_english %}There was an issue with the lyrics. Try editing and retrying.{% elif is_chinese %}歌词有问题，请编辑后重试。{% else %}歌詞に問題がありました。内容を確認して再試行してください。{% endif %}
+                                {% else %}
+                                    {% if is_english %}An unexpected error occurred. Please retry.{% elif is_chinese %}发生意外错误，请重试。{% else %}予期しないエラーが発生しました。再試行してください。{% endif %}
+                                {% endif %}
+                            </p>
+                            {% endif %}
                             {% if user == song.created_by %}
                                 <form method="post" action="{% url 'songs:retry_song' song.pk %}" style="margin-top: 1rem;">
                                     {% csrf_token %}
