@@ -49,11 +49,13 @@ def _get_gemini_model():
 def detect_lyrics_language(lyrics):
     """歌詞の主要言語を判定する
     
+    ひらがな変換が必要なのは日本語のみ。
+    それ以外の言語（中国語、英語、韓国語、スペイン語、ポルトガル語、
+    ドイツ語、アラビア語、タイ語等）はすべてそのまま送信する。
+    
     Returns:
-        'ja' - 日本語（ひらがな・カタカナを含む）
-        'zh' - 中国語（漢字のみ、ひらがな・カタカナなし）
-        'en' - 英語（ラテン文字主体）
-        'other' - その他
+        'ja' - 日本語（ひらがな・カタカナを含む → ひらがな変換する）
+        'other' - 日本語以外（そのまま送信）
     """
     if not lyrics:
         return 'ja'
@@ -67,8 +69,6 @@ def detect_lyrics_language(lyrics):
     
     hiragana_count = 0
     katakana_count = 0
-    cjk_count = 0  # 漢字（日中共通）
-    latin_count = 0
     
     for char in clean:
         cp = ord(char)
@@ -76,27 +76,18 @@ def detect_lyrics_language(lyrics):
             hiragana_count += 1
         elif 0x30A0 <= cp <= 0x30FF:
             katakana_count += 1
-        elif (0x4E00 <= cp <= 0x9FFF) or (0x3400 <= cp <= 0x4DBF) or (0xF900 <= cp <= 0xFAFF):
-            cjk_count += 1
-        elif (0x0041 <= cp <= 0x005A) or (0x0061 <= cp <= 0x007A):
-            latin_count += 1
     
-    total = len(clean)
     japanese_kana = hiragana_count + katakana_count
     
-    # ひらがな・カタカナが1文字でもあれば日本語
+    # ひらがな・カタカナが含まれていれば日本語
+    # （日本語の歌詞には必ず助詞やひらがな表記が含まれる）
     if japanese_kana > 0:
         return 'ja'
     
-    # ラテン文字が過半数なら英語
-    if latin_count > total * 0.5:
-        return 'en'
-    
-    # 漢字のみ（ひらがな・カタカナなし）なら中国語
-    if cjk_count > 0 and japanese_kana == 0:
-        return 'zh'
-    
-    return 'ja'  # デフォルトは日本語
+    # ひらがな・カタカナが一切ない場合は日本語以外
+    # （中国語、英語、韓国語、スペイン語、ポルトガル語、ドイツ語、
+    #   アラビア語、タイ語、ヒンディー語、フランス語など全て該当）
+    return 'other'
 
 
 class MurekaAIGenerator:
