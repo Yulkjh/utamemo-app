@@ -592,12 +592,14 @@ class UploadImageView(LoginRequiredMixin, FormView):
                     uploaded = UploadedImage.objects.create(user=user, image=file)
                     try:
                         ocr_processor = GeminiOCR()
+                        logger.info(f"OCR starting for {file.name} (size={file.size}, type={file.content_type}, model={ocr_processor.model})")
                         extracted_text = ocr_processor.extract_text_from_image(uploaded.image)
                         uploaded.extracted_text = extracted_text or ''
                         uploaded.processed = True
                         uploaded.save()
                         if extracted_text:
                             extracted_texts.append(extracted_text)
+                            logger.info(f"OCR success for {file.name}: {len(extracted_text)} chars")
                         else:
                             logger.warning(f"OCR returned empty for {file.name} (language_mode={language_mode})")
                         uploaded_image_ids.append(uploaded.id)

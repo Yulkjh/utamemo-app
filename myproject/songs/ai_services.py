@@ -80,8 +80,9 @@ def _get_gemini_model():
     if api_key:
         try:
             genai.configure(api_key=api_key)
-            _GEMINI_MODEL = genai.GenerativeModel('gemini-3-flash-preview')
-            logger.info("Gemini APIの設定が完了しました")
+            # gemini-2.5-flash（安定版）を使用
+            _GEMINI_MODEL = genai.GenerativeModel('gemini-2.5-flash')
+            logger.info("Gemini APIの設定が完了しました (model: gemini-2.5-flash)")
         except Exception as e:
             logger.error(f"Gemini API設定エラー: {e}")
             _GEMINI_MODEL = None
@@ -786,26 +787,48 @@ class GeminiOCR:
         """画像ファイルからテキストを抽出"""
         
         if not self.model:
-            print("GeminiOCR: Gemini API not configured")
+            logger.error("GeminiOCR: Gemini API not configured (model is None)")
             return ""  # APIが設定されていない場合は空文字を返す
         
         try:
+            import io
+            
+            # 画像を読み込む（複数の方法を試行）
+            img = None
             if isinstance(image_file, str):
+                logger.info(f"GeminiOCR: Opening image from path string: {image_file}")
                 img = Image.open(image_file)
             elif hasattr(image_file, 'path'):
-                img = Image.open(image_file.path)
+                try:
+                    logger.info(f"GeminiOCR: Opening image from file path: {image_file.path}")
+                    img = Image.open(image_file.path)
+                except (FileNotFoundError, OSError) as path_error:
+                    logger.warning(f"GeminiOCR: path access failed ({path_error}), trying .open()")
+                    # path でファイルが見つからない場合、ストレージの .open() を使用
+                    if hasattr(image_file, 'open'):
+                        image_file.open('rb')
+                        img = Image.open(image_file)
+                    elif hasattr(image_file, 'read'):
+                        image_file.seek(0)
+                        img = Image.open(image_file)
             elif hasattr(image_file, 'read'):
+                logger.info("GeminiOCR: Opening image from file-like object")
                 img = Image.open(image_file)
             else:
-                print(f"GeminiOCR: Unsupported image_file type: {type(image_file)}")
+                logger.error(f"GeminiOCR: Unsupported image_file type: {type(image_file)}")
                 return ""
+            
+            if img is None:
+                logger.error("GeminiOCR: Failed to open image (img is None)")
+                return ""
+            
+            logger.info(f"GeminiOCR: Image opened successfully. Size: {img.size}, Mode: {img.mode}")
             
             # MPO形式（iPhoneの写真など）をRGBに変換してJPEG互換にする
             if img.mode != 'RGB':
                 img = img.convert('RGB')
             
             # 画像をJPEG形式でメモリに保存し直す（MPO対策）
-            import io
             img_buffer = io.BytesIO()
             img.save(img_buffer, format='JPEG', quality=95)
             img_buffer.seek(0)
@@ -814,18 +837,23 @@ class GeminiOCR:
             prompt = """この画像に含まれているテキストをすべて抽出してください。
 改行や段落の構造も保持してください。"""
             
+            logger.info("GeminiOCR: Calling Gemini API for OCR...")
             response = self.model.generate_content([prompt, img])
             
             if response and response.text:
                 extracted_text = response.text.strip()
-                print(f"Gemini OCR successful! Extracted {len(extracted_text)} characters")
+                logger.info(f"GeminiOCR: Success! Extracted {len(extracted_text)} characters")
                 return extracted_text
             else:
-                print("No text detected in image")
+                # レスポンスの詳細をログ
+                if response:
+                    logger.warning(f"GeminiOCR: Empty response. prompt_feedback={getattr(response, 'prompt_feedback', 'N/A')}, candidates={getattr(response, 'candidates', 'N/A')}")
+                else:
+                    logger.warning("GeminiOCR: Response is None")
                 return ""
                 
         except Exception as e:
-            print(f"Gemini OCR error: {e}")
+            logger.error(f"GeminiOCR: OCR error: {e}", exc_info=True)
             return ""  # エラー時も空文字を返してクラッシュを防ぐ
 
 
