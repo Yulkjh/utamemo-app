@@ -72,7 +72,7 @@
             </div>
             {% else %}
             <div class="empty-state">
-                <div class="empty-icon"><i class="bi bi-bookmark-heart"></i></div>
+                <div class="empty-icon"><i class="bi bi-bookmark"></i></div>
                 <h3>{% if is_english %}No favorites yet{% elif is_spanish %}Aún no hay favoritos{% elif is_german %}Noch keine Favoriten{% elif is_portuguese %}Ainda não há favoritos{% elif is_chinese %}还没有收藏{% else %}お気に入りがありません{% endif %}</h3>
                 <p>{% if is_english %}Browse songs and add your favorites!{% elif is_spanish %}¡Explora canciones y añade tus favoritos!{% elif is_german %}Durchsuchen Sie Lieder und fügen Sie Ihre Favoriten hinzu!{% elif is_portuguese %}Navegue pelas músicas e adicione seus favoritos!{% elif is_chinese %}浏览歌曲并添加您的收藏！{% else %}楽曲を探して、お気に入りに追加しましょう！{% endif %}</p>
                 <a href="{% url 'songs:song_list' %}" class="btn-primary">{% if is_english %}Browse Songs{% elif is_spanish %}Explorar Canciones{% elif is_german %}Lieder Durchsuchen{% elif is_portuguese %}Navegar Músicas{% elif is_chinese %}浏览歌曲{% else %}楽曲を探す{% endif %}</a>
