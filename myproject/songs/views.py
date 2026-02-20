@@ -459,7 +459,7 @@ class CreateSongView(LoginRequiredMixin, CreateView):
         return response
     
     def get_success_url(self):
-        return reverse_lazy('songs:song_detail', kwargs={'pk': self.object.pk})
+        return reverse_lazy('songs:song_generating', kwargs={'pk': self.object.pk})
 
 
 def validate_uploaded_file(file, app_language='ja'):
@@ -1317,7 +1317,7 @@ def retry_song_generation(request, pk):
                     return JsonResponse({
                         'success': True,
                         'message': msg,
-                        'redirect_url': reverse_lazy('songs:song_detail', kwargs={'pk': song.pk})
+                        'redirect_url': reverse_lazy('songs:song_generating', kwargs={'pk': song.pk})
                     })
                 
                 if app_language == 'en':
@@ -1326,7 +1326,7 @@ def retry_song_generation(request, pk):
                     messages.success(request, '歌曲重新生成已开始。')
                 else:
                     messages.success(request, '楽曲の再生成を開始しました。')
-                return redirect('songs:song_detail', pk=song.pk)
+                return redirect('songs:song_generating', pk=song.pk)
                 
             except Exception as e:
                 if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
@@ -1399,6 +1399,24 @@ def set_language(request, lang):
     response['Expires'] = '0'
     response['Vary'] = 'Cookie'
     return response
+
+
+@login_required
+def song_generating(request, pk):
+    """楽曲生成中のローディング画面"""
+    song = get_object_or_404(Song, pk=pk)
+    
+    # 本人の楽曲のみアクセス可能
+    if song.created_by != request.user:
+        return redirect('songs:song_detail', pk=pk)
+    
+    # 既に完了している場合はsong_detailへ
+    if song.generation_status == 'completed':
+        return redirect('songs:song_detail', pk=pk)
+    
+    return render(request, 'songs/song_generating.html', {
+        'song': song,
+    })
 
 
 def check_song_status(request, pk):

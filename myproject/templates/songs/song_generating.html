@@ -532,6 +532,7 @@
 document.addEventListener('DOMContentLoaded', function() {
     const songId = {{ song.pk }};
     const songDetailUrl = '{% url "songs:song_detail" song.pk %}';
+    const statusUrl = '{% url "songs:check_song_status" song.pk %}';
     let checkCount = 0;
     const maxChecks = 72; // 最大6分（5秒 × 72）
     
@@ -695,7 +696,7 @@ document.addEventListener('DOMContentLoaded', function() {
     // ステータスチェック
     async function checkSongStatus() {
         try {
-            const response = await fetch('/songs/' + songId + '/status/');
+            const response = await fetch(statusUrl);
             const data = await response.json();
             
             if (data.success) {
