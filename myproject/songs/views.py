@@ -258,7 +258,7 @@ class CreateSongView(LoginRequiredMixin, CreateView):
                 v == 0 for v in model_remaining.values()
             )
             context['free_plan_limit_reached'] = all_exhausted
-            context['free_plan_remaining'] = model_remaining.get('o2', 0)
+            context['free_plan_remaining'] = model_remaining.get('v8', 0)
         else:
             # 有料プランで全モデルの残りが0の場合（Proの-1は除く）
             all_exhausted = all(
@@ -320,13 +320,13 @@ class CreateSongView(LoginRequiredMixin, CreateView):
         form.instance.reference_song = reference_song
         
         # AIモデルを取得
-        mureka_model = self.request.POST.get('mureka_model', 'mureka-o2').strip()
-        valid_models = ['mureka-v8', 'mureka-o2', 'mureka-7.6', 'mureka-7.5']
+        mureka_model = self.request.POST.get('mureka_model', 'mureka-v8').strip()
+        valid_models = ['mureka-v8', 'mureka-o2', 'mureka-7.6']
         if mureka_model not in valid_models:
-            mureka_model = 'mureka-o2'
+            mureka_model = 'mureka-v8'
         
         # モデル使用制限のチェック
-        model_key = {'mureka-v8': 'v8', 'mureka-o2': 'o2', 'mureka-7.6': 'v7.6', 'mureka-7.5': 'v7.5'}.get(mureka_model, 'o2')
+        model_key = {'mureka-v8': 'v8', 'mureka-o2': 'o2', 'mureka-7.6': 'v7.6'}.get(mureka_model, 'v8')
         if not self.request.user.can_use_model(model_key):
             # 使用制限に達している場合はO2にフォールバック
             mureka_model = 'mureka-o2'
@@ -1255,15 +1255,15 @@ def retry_song_generation(request, pk):
         # 2回目以降の再生成は月間生成回数を消費
         if song.retry_count >= 1:
             # モデルの残り回数をチェック
-            model_key = 'o2'  # デフォルト
+            model_key = 'v8'  # デフォルト
             if song.mureka_model == 'mureka-v8':
                 model_key = 'v8'
             elif song.mureka_model == 'mureka-o2':
                 model_key = 'o2'
             elif song.mureka_model == 'mureka-7.6':
                 model_key = 'v7.6'
-            elif song.mureka_model == 'mureka-7.5':
-                model_key = 'v7.5'
+            else:
+                model_key = 'v8'  # レガシーモデル(v7.5等)はV8としてカウント
             
             if not user.can_use_model(model_key):
                 if app_language == 'en':

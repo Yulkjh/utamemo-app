@@ -59,7 +59,7 @@ class MurekaAIGenerator:
         else:
             print("MurekaAIGenerator: API key not set or disabled.")
     
-    def generate_song(self, lyrics, title="", genre="pop", vocal_style="female", model="mureka-o2", music_prompt="", reference_song=""):
+    def generate_song(self, lyrics, title="", genre="pop", vocal_style="female", model="mureka-v8", music_prompt="", reference_song=""):
         """歌詞から楽曲を生成（Mureka API使用）
         
         Args:
@@ -67,7 +67,7 @@ class MurekaAIGenerator:
             title: 楽曲タイトル
             genre: ジャンル
             vocal_style: ボーカルスタイル (female/male)
-            model: Murekaモデルバージョン (mureka-v8, mureka-o2, mureka-7.6, mureka-7.5, auto)
+            model: Murekaモデルバージョン (mureka-v8, mureka-o2, mureka-7.6)
             music_prompt: ユーザー指定の音楽スタイルプロンプト
             reference_song: リファレンス曲名（例：YOASOBIの夜に駆ける）
         """
@@ -77,7 +77,7 @@ class MurekaAIGenerator:
         
         return self._generate_with_mureka_api(lyrics, title, genre, vocal_style, model, music_prompt, reference_song)
     
-    def _generate_with_mureka_api(self, lyrics, title, genre, vocal_style, model="mureka-o2", music_prompt="", reference_song=""):
+    def _generate_with_mureka_api(self, lyrics, title, genre, vocal_style, model="mureka-v8", music_prompt="", reference_song=""):
         """Mureka APIを使用して楽曲を生成
         
         Args:
@@ -85,7 +85,7 @@ class MurekaAIGenerator:
             title: 楽曲タイトル  
             genre: ジャンル
             vocal_style: ボーカルスタイル
-            model: Murekaモデル (mureka-v8, mureka-o2, mureka-7.6, mureka-7.5, auto)
+            model: Murekaモデル (mureka-v8, mureka-o2, mureka-7.6)
             music_prompt: ユーザー指定の音楽スタイルプロンプト
             reference_song: リファレンス曲名
         """
@@ -121,10 +121,10 @@ class MurekaAIGenerator:
             raise Exception("Lyrics too short for song generation (minimum 50 characters)")
         
         # モデルバージョンの検証と設定
-        valid_models = ['mureka-v8', 'mureka-o2', 'mureka-7.6', 'mureka-7.5']
+        valid_models = ['mureka-v8', 'mureka-o2', 'mureka-7.6']
         if model not in valid_models:
-            logger.warning(f"Invalid model '{model}', defaulting to mureka-o2")
-            model = 'mureka-o2'
+            logger.warning(f"Invalid model '{model}', defaulting to mureka-v8")
+            model = 'mureka-v8'
         
         # プロンプトを組み立て（ジャンル + ボーカルスタイル + ユーザーのカスタムプロンプト）
         prompt_parts = []

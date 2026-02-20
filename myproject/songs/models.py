@@ -59,7 +59,7 @@ class Song(models.Model):
             ('mureka-7.6', 'V7.6 - スタンダード'),
             ('mureka-7.5', 'V7.5 - レガシー'),
         ],
-        default='mureka-o2',
+        default='mureka-v8',
         verbose_name='Murekaモデル'
     )
     music_prompt = models.TextField(

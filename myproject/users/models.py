@@ -149,12 +149,12 @@ class User(AbstractUser):
         """AIモデル別の月間制限を取得（-1は無制限）"""
         # 管理者は無制限
         if self.is_staff or self.is_superuser:
-            return {'v8': -1, 'o2': -1, 'v7.6': -1, 'v7.5': -1}
+            return {'v8': -1, 'o2': -1, 'v7.6': -1}
         limits = {
-            'free': {'v8': 0, 'o2': 15, 'v7.6': 0, 'v7.5': 0},  # フリーはO2のみ月15曲
-            'starter': {'v8': 10, 'o2': 25, 'v7.6': 35, 'v7.5': 0},  # スターター月70曲
-            'pro': {'v8': -1, 'o2': -1, 'v7.6': -1, 'v7.5': -1},  # 無制限
-            'school': {'v8': 15, 'o2': 25, 'v7.6': 40, 'v7.5': 20},
+            'free': {'v8': 15, 'o2': 0, 'v7.6': 0},  # フリーはV8のみ月15曲
+            'starter': {'v8': 35, 'o2': 20, 'v7.6': 15},  # スターター月70曲
+            'pro': {'v8': -1, 'o2': -1, 'v7.6': -1},  # 無制限
+            'school': {'v8': 40, 'o2': 25, 'v7.6': 35},
         }
         return limits.get(self.plan, limits['free'])
 
@@ -171,7 +171,7 @@ class User(AbstractUser):
             created_at__gte=first_day
         ).values_list('mureka_model', flat=True)
         
-        usage = {'v8': 0, 'o2': 0, 'v7.6': 0, 'v7.5': 0}
+        usage = {'v8': 0, 'o2': 0, 'v7.6': 0}
         for model in songs:
             if model == 'mureka-v8':
                 usage['v8'] += 1
@@ -179,8 +179,7 @@ class User(AbstractUser):
                 usage['o2'] += 1
             elif model == 'mureka-7.6':
                 usage['v7.6'] += 1
-            elif model == 'mureka-7.5':
-                usage['v7.5'] += 1
+            # mureka-7.5のレガシーデータはカウントしない（制限なし）
         
         return usage
 
