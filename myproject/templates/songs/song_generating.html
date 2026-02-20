@@ -1,0 +1,773 @@
+{% extends 'base.html' %}
+
+{% block title %}{% if is_english %}Generating Song...{% elif is_chinese %}生成中...{% else %}楽曲を生成中...{% endif %} - UTAMEMO{% endblock %}
+
+{% block content %}
+<div class="generating-page">
+    <!-- 背景アニメーション -->
+    <div class="generating-bg">
+        <div class="bg-circle bg-circle-1"></div>
+        <div class="bg-circle bg-circle-2"></div>
+        <div class="bg-circle bg-circle-3"></div>
+    </div>
+
+    <div class="generating-container">
+        <!-- メインビジュアル -->
+        <div class="generating-visual">
+            <div class="music-icon-wrapper" id="music-icon-wrapper">
+                <div class="music-pulse"></div>
+                <div class="music-pulse music-pulse-2"></div>
+                <i class="bi bi-music-note-beamed" id="main-icon"></i>
+            </div>
+        </div>
+
+        <!-- タイトル -->
+        <h1 class="generating-title" id="generating-title">
+            {% if is_english %}Creating Your Song{% elif is_chinese %}正在创作您的歌曲{% else %}あなたの楽曲を作成中{% endif %}
+        </h1>
+        <p class="generating-song-name">「{{ song.title }}」</p>
+
+        <!-- プログレスバー -->
+        <div class="generating-progress-wrapper">
+            <div class="generating-progress-bar">
+                <div class="generating-progress-fill" id="progress-fill" style="width: 5%"></div>
+            </div>
+            <div class="generating-progress-text">
+                <span id="progress-percent">5%</span>
+            </div>
+        </div>
+
+        <!-- ステップインジケーター -->
+        <div class="generating-steps" id="generating-steps">
+            <div class="step active" id="step-1">
+                <div class="step-icon">
+                    <i class="bi bi-hourglass-split"></i>
+                </div>
+                <div class="step-label">
+                    {% if is_english %}Queued{% elif is_chinese %}排队中{% else %}待機中{% endif %}
+                </div>
+            </div>
+            <div class="step-line" id="step-line-1"></div>
+            <div class="step" id="step-2">
+                <div class="step-icon">
+                    <i class="bi bi-file-text"></i>
+                </div>
+                <div class="step-label">
+                    {% if is_english %}Processing Lyrics{% elif is_chinese %}处理歌词{% else %}歌詞処理{% endif %}
+                </div>
+            </div>
+            <div class="step-line" id="step-line-2"></div>
+            <div class="step" id="step-3">
+                <div class="step-icon">
+                    <i class="bi bi-cpu"></i>
+                </div>
+                <div class="step-label">
+                    {% if is_english %}AI Composing{% elif is_chinese %}AI作曲{% else %}AI作曲中{% endif %}
+                </div>
+            </div>
+            <div class="step-line" id="step-line-3"></div>
+            <div class="step" id="step-4">
+                <div class="step-icon">
+                    <i class="bi bi-check-circle"></i>
+                </div>
+                <div class="step-label">
+                    {% if is_english %}Complete{% elif is_chinese %}完成{% else %}完了{% endif %}
+                </div>
+            </div>
+        </div>
+
+        <!-- ステータスメッセージ -->
+        <div class="generating-status" id="generating-status">
+            <p class="status-main" id="status-main">
+                {% if song.generation_status == 'pending' %}
+                    {% if is_english %}Waiting in queue...{% elif is_chinese %}排队等候中...{% else %}キューで待機中...{% endif %}
+                {% elif song.generation_status == 'generating' %}
+                    {% if is_english %}Generating your song...{% elif is_chinese %}正在生成歌曲...{% else %}楽曲を生成中です...{% endif %}
+                {% else %}
+                    {% if is_english %}Preparing...{% elif is_chinese %}准备中...{% else %}準備中...{% endif %}
+                {% endif %}
+            </p>
+            <p class="status-sub" id="status-sub">
+                {% if is_english %}Usually takes 1-2 minutes{% elif is_chinese %}通常需要1-2分钟{% else %}通常1〜2分で完成します{% endif %}
+            </p>
+        </div>
+
+        <!-- ヒント（ランダム表示） -->
+        <div class="generating-tip" id="generating-tip">
+            <i class="bi bi-lightbulb"></i>
+            <span id="tip-text">
+                {% if is_english %}Tip: You can share your song on the detail page after it's generated!{% elif is_chinese %}提示：生成后可以在详情页分享歌曲！{% else %}ヒント：完成した楽曲は詳細ページから共有できます！{% endif %}
+            </span>
+        </div>
+
+        <!-- キュー情報（pending時のみ表示） -->
+        {% if song.queue_position and song.queue_position > 1 %}
+        <div class="generating-queue-info" id="queue-info">
+            <div class="queue-badge">
+                <span class="queue-number" id="queue-number">{{ song.queue_position }}</span>
+                <span class="queue-label">{% if is_english %}in queue{% elif is_chinese %}排队位置{% else %}番目{% endif %}</span>
+            </div>
+        </div>
+        {% endif %}
+    </div>
+</div>
+
+<style>
+/* ===== Generating Page Styles ===== */
+.generating-page {
+    min-height: 100vh;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    position: relative;
+    overflow: hidden;
+    padding: 2rem 1rem;
+    background: linear-gradient(135deg, #0d0d1a 0%, #1a1a2e 50%, #16213e 100%);
+}
+
+/* 背景アニメーション */
+.generating-bg {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    pointer-events: none;
+    z-index: 0;
+}
+
+.bg-circle {
+    position: absolute;
+    border-radius: 50%;
+    filter: blur(80px);
+    opacity: 0.15;
+}
+
+.bg-circle-1 {
+    width: 400px;
+    height: 400px;
+    background: #ff7940;
+    top: -100px;
+    right: -100px;
+    animation: float-1 8s ease-in-out infinite;
+}
+
+.bg-circle-2 {
+    width: 300px;
+    height: 300px;
+    background: #7c3aed;
+    bottom: -50px;
+    left: -50px;
+    animation: float-2 10s ease-in-out infinite;
+}
+
+.bg-circle-3 {
+    width: 200px;
+    height: 200px;
+    background: #06b6d4;
+    top: 50%;
+    left: 50%;
+    animation: float-3 12s ease-in-out infinite;
+}
+
+@keyframes float-1 {
+    0%, 100% { transform: translate(0, 0); }
+    50% { transform: translate(-30px, 30px); }
+}
+
+@keyframes float-2 {
+    0%, 100% { transform: translate(0, 0); }
+    50% { transform: translate(20px, -20px); }
+}
+
+@keyframes float-3 {
+    0%, 100% { transform: translate(-50%, -50%); }
+    50% { transform: translate(-40%, -60%); }
+}
+
+/* メインコンテナ */
+.generating-container {
+    position: relative;
+    z-index: 1;
+    text-align: center;
+    max-width: 520px;
+    width: 100%;
+}
+
+/* 音符アイコン */
+.generating-visual {
+    margin-bottom: 2rem;
+}
+
+.music-icon-wrapper {
+    position: relative;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 100px;
+    height: 100px;
+}
+
+.music-icon-wrapper i {
+    font-size: 3rem;
+    color: #ff7940;
+    z-index: 2;
+    animation: bounce-icon 2s ease-in-out infinite;
+}
+
+.music-pulse {
+    position: absolute;
+    width: 100%;
+    height: 100%;
+    border-radius: 50%;
+    border: 2px solid rgba(255, 121, 64, 0.3);
+    animation: pulse-ring 2s ease-out infinite;
+}
+
+.music-pulse-2 {
+    animation-delay: 1s;
+}
+
+@keyframes pulse-ring {
+    0% { transform: scale(0.8); opacity: 0.8; }
+    100% { transform: scale(1.8); opacity: 0; }
+}
+
+@keyframes bounce-icon {
+    0%, 100% { transform: translateY(0); }
+    50% { transform: translateY(-8px); }
+}
+
+/* タイトル */
+.generating-title {
+    font-size: 1.5rem;
+    font-weight: 700;
+    color: #fff;
+    margin-bottom: 0.5rem;
+}
+
+.generating-song-name {
+    font-size: 1.1rem;
+    color: rgba(255, 255, 255, 0.6);
+    margin-bottom: 2rem;
+    font-weight: 500;
+}
+
+/* プログレスバー */
+.generating-progress-wrapper {
+    margin-bottom: 2.5rem;
+    padding: 0 1rem;
+}
+
+.generating-progress-bar {
+    width: 100%;
+    height: 8px;
+    background: rgba(255, 255, 255, 0.1);
+    border-radius: 4px;
+    overflow: hidden;
+    position: relative;
+}
+
+.generating-progress-fill {
+    height: 100%;
+    border-radius: 4px;
+    background: linear-gradient(90deg, #ff7940, #ff9a6c, #ff7940);
+    background-size: 200% 100%;
+    animation: shimmer 2s linear infinite;
+    transition: width 0.8s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+@keyframes shimmer {
+    0% { background-position: -200% 0; }
+    100% { background-position: 200% 0; }
+}
+
+.generating-progress-text {
+    display: flex;
+    justify-content: flex-end;
+    margin-top: 0.5rem;
+}
+
+#progress-percent {
+    font-size: 0.85rem;
+    color: rgba(255, 255, 255, 0.6);
+    font-weight: 600;
+    font-variant-numeric: tabular-nums;
+}
+
+/* ステップインジケーター */
+.generating-steps {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0;
+    margin-bottom: 2rem;
+    padding: 0 0.5rem;
+}
+
+.step {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 0.5rem;
+    opacity: 0.3;
+    transition: all 0.5s ease;
+}
+
+.step.active {
+    opacity: 1;
+}
+
+.step.completed {
+    opacity: 0.7;
+}
+
+.step.completed .step-icon {
+    background: rgba(34, 197, 94, 0.2);
+    border-color: #22c55e;
+    color: #22c55e;
+}
+
+.step-icon {
+    width: 40px;
+    height: 40px;
+    border-radius: 50%;
+    background: rgba(255, 255, 255, 0.05);
+    border: 2px solid rgba(255, 255, 255, 0.15);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: rgba(255, 255, 255, 0.5);
+    font-size: 1rem;
+    transition: all 0.5s ease;
+}
+
+.step.active .step-icon {
+    background: rgba(255, 121, 64, 0.15);
+    border-color: #ff7940;
+    color: #ff7940;
+    box-shadow: 0 0 20px rgba(255, 121, 64, 0.2);
+    animation: step-glow 2s ease-in-out infinite;
+}
+
+@keyframes step-glow {
+    0%, 100% { box-shadow: 0 0 15px rgba(255, 121, 64, 0.15); }
+    50% { box-shadow: 0 0 25px rgba(255, 121, 64, 0.3); }
+}
+
+.step-label {
+    font-size: 0.7rem;
+    color: rgba(255, 255, 255, 0.4);
+    white-space: nowrap;
+    transition: color 0.5s ease;
+}
+
+.step.active .step-label {
+    color: rgba(255, 255, 255, 0.8);
+}
+
+.step-line {
+    width: 30px;
+    height: 2px;
+    background: rgba(255, 255, 255, 0.1);
+    margin: 0 4px;
+    margin-bottom: 1.5rem;
+    transition: background 0.5s ease;
+}
+
+.step-line.active {
+    background: linear-gradient(90deg, #ff7940, rgba(255, 121, 64, 0.3));
+}
+
+/* ステータスメッセージ */
+.generating-status {
+    margin-bottom: 2rem;
+}
+
+.status-main {
+    font-size: 1rem;
+    font-weight: 600;
+    color: rgba(255, 255, 255, 0.9);
+    margin-bottom: 0.3rem;
+}
+
+.status-sub {
+    font-size: 0.8rem;
+    color: rgba(255, 255, 255, 0.4);
+    margin-bottom: 0;
+}
+
+/* ヒント */
+.generating-tip {
+    background: rgba(255, 255, 255, 0.05);
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    border-radius: 12px;
+    padding: 0.8rem 1.2rem;
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+    margin-bottom: 1.5rem;
+}
+
+.generating-tip i {
+    color: #fbbf24;
+    font-size: 1rem;
+}
+
+.generating-tip span {
+    font-size: 0.8rem;
+    color: rgba(255, 255, 255, 0.5);
+}
+
+/* キュー情報 */
+.generating-queue-info {
+    margin-top: 1rem;
+}
+
+.queue-badge {
+    display: inline-flex;
+    align-items: baseline;
+    gap: 0.3rem;
+    background: rgba(255, 121, 64, 0.1);
+    border: 1px solid rgba(255, 121, 64, 0.2);
+    border-radius: 20px;
+    padding: 0.4rem 1rem;
+}
+
+.queue-number {
+    font-size: 1.2rem;
+    font-weight: 700;
+    color: #ff7940;
+}
+
+.queue-label {
+    font-size: 0.8rem;
+    color: rgba(255, 255, 255, 0.5);
+}
+
+/* 完了アニメーション */
+.generating-page.completed .music-icon-wrapper i {
+    color: #22c55e;
+    animation: none;
+}
+
+.generating-page.completed .music-pulse {
+    border-color: rgba(34, 197, 94, 0.3);
+}
+
+.generating-page.completed .generating-progress-fill {
+    background: linear-gradient(90deg, #22c55e, #4ade80, #22c55e);
+}
+
+/* 失敗状態 */
+.generating-page.failed .music-icon-wrapper i {
+    color: #ef4444;
+    animation: none;
+}
+
+.generating-page.failed .music-pulse {
+    animation: none;
+    opacity: 0;
+}
+
+.retry-button {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 0.7rem 1.5rem;
+    background: linear-gradient(135deg, #ff7940 0%, #ff6b35 100%);
+    color: #fff;
+    border: none;
+    border-radius: 12px;
+    font-size: 0.9rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    text-decoration: none;
+    margin-top: 1rem;
+}
+
+.retry-button:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 15px rgba(255, 121, 64, 0.4);
+    color: #fff;
+}
+
+/* モバイル対応 */
+@media (max-width: 576px) {
+    .generating-title {
+        font-size: 1.2rem;
+    }
+    
+    .generating-song-name {
+        font-size: 0.95rem;
+    }
+    
+    .step-label {
+        font-size: 0.6rem;
+    }
+    
+    .step-icon {
+        width: 34px;
+        height: 34px;
+        font-size: 0.85rem;
+    }
+    
+    .step-line {
+        width: 20px;
+    }
+    
+    .music-icon-wrapper {
+        width: 80px;
+        height: 80px;
+    }
+    
+    .music-icon-wrapper i {
+        font-size: 2.5rem;
+    }
+}
+</style>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const songId = {{ song.pk }};
+    const songDetailUrl = '{% url "songs:song_detail" song.pk %}';
+    let checkCount = 0;
+    const maxChecks = 72; // 最大6分（5秒 × 72）
+    
+    // DOM要素
+    const progressFill = document.getElementById('progress-fill');
+    const progressPercent = document.getElementById('progress-percent');
+    const statusMain = document.getElementById('status-main');
+    const statusSub = document.getElementById('status-sub');
+    const mainIcon = document.getElementById('main-icon');
+    const page = document.querySelector('.generating-page');
+    const tipText = document.getElementById('tip-text');
+    
+    // 現在の進捗
+    let currentProgress = 5;
+    let targetProgress = 5;
+    
+    // ヒントのローテーション
+    const tips = [
+        {% if is_english %}
+        'Tip: You can share your song on the detail page after it\'s generated!',
+        'Tip: Add tags to help others discover your song.',
+        'Tip: Try different genres to find the perfect sound for your study material!',
+        'Tip: Songs are a great way to memorize vocabulary and formulas.',
+        'Tip: You can download songs for offline listening with Starter plan.'
+        {% elif is_chinese %}
+        '提示：生成后可以在详情页分享歌曲！',
+        '提示：添加标签让更多人发现你的歌曲。',
+        '提示：尝试不同的风格，找到最适合你学习内容的音乐！',
+        '提示：歌曲是记忆词汇和公式的好方法。',
+        '提示：升级到Starter计划可以下载歌曲离线收听。'
+        {% else %}
+        'ヒント：完成した楽曲は詳細ページから共有できます！',
+        'ヒント：タグを追加すると他のユーザーが見つけやすくなります。',
+        'ヒント：ジャンルを変えると、同じ内容でも全く違う曲に！',
+        'ヒント：歌で覚えると、テスト前の復習が楽しくなります♪',
+        'ヒント：スタータープランなら楽曲をダウンロードできます。'
+        {% endif %}
+    ];
+    let tipIndex = 0;
+    
+    // ヒントを定期的に切り替え
+    setInterval(function() {
+        tipIndex = (tipIndex + 1) % tips.length;
+        tipText.style.opacity = '0';
+        setTimeout(function() {
+            tipText.textContent = tips[tipIndex];
+            tipText.style.opacity = '1';
+        }, 300);
+    }, 8000);
+    tipText.style.transition = 'opacity 0.3s ease';
+    
+    // フェーズに応じたステップをアクティブに
+    function updateSteps(phase) {
+        const steps = [
+            document.getElementById('step-1'),
+            document.getElementById('step-2'),
+            document.getElementById('step-3'),
+            document.getElementById('step-4')
+        ];
+        const lines = [
+            document.getElementById('step-line-1'),
+            document.getElementById('step-line-2'),
+            document.getElementById('step-line-3')
+        ];
+        
+        let activeIndex = 0;
+        switch(phase) {
+            case 'pending': activeIndex = 0; break;
+            case 'starting':
+            case 'lyrics_processing': activeIndex = 1; break;
+            case 'api_calling':
+            case 'generating':
+            case 'finalizing': activeIndex = 2; break;
+            case 'completed': activeIndex = 3; break;
+            default: activeIndex = 0;
+        }
+        
+        steps.forEach(function(step, i) {
+            step.classList.remove('active', 'completed');
+            if (i < activeIndex) {
+                step.classList.add('completed');
+            } else if (i === activeIndex) {
+                step.classList.add('active');
+            }
+        });
+        
+        lines.forEach(function(line, i) {
+            line.classList.toggle('active', i < activeIndex);
+        });
+    }
+    
+    // フェーズに応じたメッセージ
+    function getPhaseMessage(phase, queuePos) {
+        const messages = {
+            {% if is_english %}
+            'pending': ['Waiting in queue...', 'Your song will be processed soon'],
+            'starting': ['Starting generation...', 'Preparing the AI composer'],
+            'lyrics_processing': ['Processing lyrics...', 'Converting text for the AI'],
+            'api_calling': ['Sending to AI...', 'The AI is getting ready to compose'],
+            'generating': ['AI is composing...', 'Creating melody, rhythm, and vocals'],
+            'finalizing': ['Almost done!', 'Finishing up the final touches'],
+            'completed': ['Complete!', 'Redirecting to your song...'],
+            'failed': ['Generation failed', 'Something went wrong']
+            {% elif is_chinese %}
+            'pending': ['排队等候中...', '您的歌曲即将被处理'],
+            'starting': ['开始生成...', '正在准备AI作曲'],
+            'lyrics_processing': ['处理歌词中...', '正在为AI转换文本'],
+            'api_calling': ['发送至AI...', 'AI正在准备作曲'],
+            'generating': ['AI正在作曲...', '正在创建旋律、节奏和人声'],
+            'finalizing': ['即将完成！', '正在进行最后的处理'],
+            'completed': ['完成！', '正在跳转到歌曲页面...'],
+            'failed': ['生成失败', '出了一些问题']
+            {% else %}
+            'pending': ['キューで待機中...', 'まもなく処理が始まります'],
+            'starting': ['生成を開始しています...', 'AI作曲家を準備中'],
+            'lyrics_processing': ['歌詞を処理中...', 'テキストをAI用に変換しています'],
+            'api_calling': ['AIに送信中...', 'AIが作曲の準備をしています'],
+            'generating': ['AIが作曲中...', 'メロディ・リズム・ボーカルを生成中'],
+            'finalizing': ['もうすぐ完成！', '最終仕上げをしています'],
+            'completed': ['完了！', '楽曲ページに移動します...'],
+            'failed': ['生成に失敗しました', '問題が発生しました']
+            {% endif %}
+        };
+        
+        let msgs = messages[phase] || messages['generating'];
+        let mainMsg = msgs[0];
+        let subMsg = msgs[1];
+        
+        if (phase === 'pending' && queuePos && queuePos > 1) {
+            {% if is_english %}
+            subMsg = (queuePos - 1) + ' people ahead of you';
+            {% elif is_chinese %}
+            subMsg = '前面有' + (queuePos - 1) + '人在等待';
+            {% else %}
+            subMsg = 'あと' + (queuePos - 1) + '人待ちです';
+            {% endif %}
+        }
+        
+        return { main: mainMsg, sub: subMsg };
+    }
+    
+    // プログレスバーのスムーズアニメーション
+    function animateProgress() {
+        if (currentProgress < targetProgress) {
+            currentProgress += 0.5;
+            if (currentProgress > targetProgress) currentProgress = targetProgress;
+        }
+        progressFill.style.width = currentProgress + '%';
+        progressPercent.textContent = Math.round(currentProgress) + '%';
+        
+        if (currentProgress < targetProgress) {
+            requestAnimationFrame(animateProgress);
+        }
+    }
+    
+    function setProgress(target) {
+        targetProgress = Math.min(target, 100);
+        animateProgress();
+    }
+    
+    // ステータスチェック
+    async function checkSongStatus() {
+        try {
+            const response = await fetch('/songs/' + songId + '/status/');
+            const data = await response.json();
+            
+            if (data.success) {
+                const msgs = getPhaseMessage(data.phase, data.queue_position);
+                statusMain.textContent = msgs.main;
+                statusSub.textContent = msgs.sub;
+                updateSteps(data.phase);
+                
+                // キュー番号更新
+                const queueNumEl = document.getElementById('queue-number');
+                if (queueNumEl && data.queue_position) {
+                    queueNumEl.textContent = data.queue_position;
+                }
+                // キュー通過後はキュー情報を隠す
+                const queueInfo = document.getElementById('queue-info');
+                if (queueInfo && data.phase !== 'pending') {
+                    queueInfo.style.display = 'none';
+                }
+                
+                if (data.completed) {
+                    // 完了！
+                    setProgress(100);
+                    page.classList.add('completed');
+                    mainIcon.className = 'bi bi-check-circle-fill';
+                    clearInterval(checkInterval);
+                    
+                    // 1.5秒後にsong_detailへ遷移
+                    setTimeout(function() {
+                        window.location.href = songDetailUrl;
+                    }, 1500);
+                    
+                } else if (data.failed) {
+                    // 失敗
+                    page.classList.add('failed');
+                    mainIcon.className = 'bi bi-exclamation-triangle-fill';
+                    clearInterval(checkInterval);
+                    
+                    // リトライボタンを表示
+                    const statusEl = document.getElementById('generating-status');
+                    statusEl.innerHTML = '<p class="status-main" style="color: #ef4444;">' + msgs.main + '</p>' +
+                        '<p class="status-sub">' + msgs.sub + '</p>' +
+                        '<a href="{% url "songs:retry_song" song.pk %}" class="retry-button" onclick="event.preventDefault(); document.getElementById(\'retry-form\').submit();">' +
+                        '<i class="bi bi-arrow-clockwise"></i> {% if is_english %}Retry{% elif is_chinese %}重试{% else %}再生成する{% endif %}</a>' +
+                        '<form id="retry-form" method="post" action="{% url "songs:retry_song" song.pk %}" style="display:none;">{% csrf_token %}</form>' +
+                        '<br><a href="' + songDetailUrl + '" style="color: rgba(255,255,255,0.4); font-size: 0.8rem; margin-top: 0.5rem; display: inline-block;">{% if is_english %}Go to song detail{% elif is_chinese %}前往歌曲详情{% else %}楽曲ページへ{% endif %}</a>';
+                    
+                } else {
+                    // 進行中
+                    setProgress(data.progress || 10);
+                }
+            }
+        } catch (error) {
+            console.error('Status check error:', error);
+        }
+    }
+    
+    // 5秒ごとにチェック
+    const checkInterval = setInterval(function() {
+        checkCount++;
+        if (checkCount >= maxChecks) {
+            clearInterval(checkInterval);
+            statusSub.textContent = {% if is_english %}'Taking longer than expected. Please refresh the page.'{% elif is_chinese %}'时间较长，请刷新页面。'{% else %}'時間がかかっています。ページを更新してください。'{% endif %};
+            return;
+        }
+        checkSongStatus();
+    }, 5000);
+    
+    // 初回チェック
+    checkSongStatus();
+    
+    // 初期ステップ設定
+    updateSteps('{{ song.generation_status }}');
+});
+</script>
+{% endblock %}

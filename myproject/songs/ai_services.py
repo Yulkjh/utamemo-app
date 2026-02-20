@@ -22,6 +22,53 @@ except ImportError:
 _GEMINI_CONFIGURED = False
 _GEMINI_MODEL = None
 
+
+def remove_circled_numbers(text):
+    """丸数字・囲み数字・特殊番号記号を除去する
+    
+    教材画像に含まれる ❶❷❸ ①②③ ⑴⑵⑶ Ⅰ Ⅱ Ⅲ 等を歌詞から削除。
+    除去後に残る余分なスペースも整理する。
+    """
+    if not text:
+        return text
+    
+    # 丸数字・囲み数字のUnicode範囲を網羅的に除去
+    # ① - ⑳ (U+2460 - U+2473)
+    # ⑴ - ⒇ (U+2474 - U+2487)  括弧付き数字
+    # ⒈ - ⒛ (U+2488 - U+249B)  ピリオド付き数字
+    # ❶ - ❿ (U+2776 - U+277F)  黒丸数字(Dingbat)
+    # ➀ - ➉ (U+2780 - U+2789)  二重丸数字
+    # ➊ - ➓ (U+278A - U+2793)  黒二重丸数字
+    # ㉑ - ㉟ (U+3251 - U+325F)  丸数字21-35
+    # ㊱ - ㊿ (U+32B1 - U+32BF)  丸数字36-50
+    # ⓪ - ⓿ (U+24EA - U+24FF)  その他の囲み数字
+    circled_pattern = re.compile(
+        r'[\u2460-\u2473'   # ① - ⑳
+        r'\u2474-\u2487'    # ⑴ - ⒇
+        r'\u2488-\u249B'    # ⒈ - ⒛
+        r'\u24EA-\u24FF'    # ⓪ 等
+        r'\u2776-\u277F'    # ❶ - ❿
+        r'\u2780-\u2789'    # ➀ - ➉
+        r'\u278A-\u2793'    # ➊ - ➓
+        r'\u3251-\u325F'    # ㉑ - ㉟
+        r'\u32B1-\u32BF'    # ㊱ - ㊿
+        r'\u24B6-\u24E9'    # Ⓐ - ⓩ（丸囲みアルファベット）
+        r']'
+    )
+    text = circled_pattern.sub('', text)
+    
+    # 除去後の余分なスペースを整理（行頭/行末のスペース、連続スペース）
+    lines = text.split('\n')
+    cleaned_lines = []
+    for line in lines:
+        # 連続スペースを1つに
+        line = re.sub(r'  +', ' ', line)
+        # 行頭・行末のスペースを除去
+        line = line.strip()
+        cleaned_lines.append(line)
+    
+    return '\n'.join(cleaned_lines)
+
 def _get_gemini_model():
     """Geminiモデルを取得（初回のみ設定）"""
     global _GEMINI_CONFIGURED, _GEMINI_MODEL
@@ -108,6 +155,9 @@ def generate_lrc_timestamps(lyrics_text, duration_seconds):
     
     if not lyrics_text or not duration_seconds:
         return None
+    
+    # 丸数字を除去してからLRC生成
+    lyrics_text = remove_circled_numbers(lyrics_text)
     
     # 歌詞の行を取得（空行やセクションラベルも含む）
     lines = lyrics_text.strip().split('\n')
@@ -892,6 +942,8 @@ class GeminiLyricsGenerator:
 ■ 厳守事項
 ・歌詞のみを出力すること
 ・説明文、コメント、解説は一切書かない
+・丸数字（①②③、❶❷❸など）や番号記号は絶対に使わない
+・元テキストにある番号記号は歌詞に含めず、内容だけを使う
 """
 
     def _get_english_prompt(self, extracted_text, genre, custom_request=""):
@@ -982,6 +1034,8 @@ class GeminiLyricsGenerator:
 ・Output lyrics ONLY
 ・100% English - absolutely no other languages
 ・No explanations, no comments, no bullet points
+・Do NOT use circled numbers (①②③, ❶❷❸, etc.) or any special numbering symbols
+・If the source text has numbering symbols, use only the content, not the symbols
 ・Sound like a professional English pop song
 ・Only use information from the provided text
 """
@@ -1074,6 +1128,8 @@ class GeminiLyricsGenerator:
 ・只输出歌词
 ・100%中文 - 绝对不能使用其他语言
 ・不要解释、不要评论、不要项目符号
+・禁止使用圆圈数字（①②③、❶❷❸等）或任何特殊编号符号
+・如果原文有编号符号，只使用内容，不要使用符号
 ・听起来像专业的中文流行歌曲
 ・只使用提供的文本中的信息
 """
@@ -1166,6 +1222,8 @@ class GeminiLyricsGenerator:
 ・只输出歌词
 ・100%中文 - 绝对不能使用其他语言
 ・不要解释、不要评论、不要项目符号
+・禁止使用圆圈数字（①②③、❶❷❸等）或任何特殊编号符号
+・如果原文有编号符号，只使用内容，不要使用符号
 ・听起来像专业的中文流行歌曲
 ・只使用提供的文本中的信息
 """
@@ -1247,6 +1305,8 @@ class GeminiLyricsGenerator:
 ・「といった」「組み込み」「工夫」「意識」などの制作過程の言及は不要
 ・応答文（「はい」「承知しました」）も不要
 ・箇条書き（*や-で始まる行）は含めない
+・丸数字（①②③、❶❷❸など）や番号記号は絶対に使わない
+・元テキストにある番号記号は歌詞に含めず、内容だけを使う
 ・セクションラベルと歌詞本文のみを出力
 ・漢字は漢字のまま使用する（ひらがなに変換しない）
 ・専門用語・人物名・地名は漢字表記を維持
@@ -1308,6 +1368,9 @@ class GeminiLyricsGenerator:
     def _extract_clean_lyrics(self, raw_text):
         """AIのレスポンスから純粋な歌詞部分だけを抽出"""
         import re
+        
+        # 丸数字・囲み数字・特殊記号を除去（教材画像由来の番号記号）
+        raw_text = remove_circled_numbers(raw_text)
         
         first_section = re.search(r'\[(Verse|Chorus|Bridge|Intro|Outro)', raw_text)
         

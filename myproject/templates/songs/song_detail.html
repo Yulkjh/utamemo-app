@@ -315,10 +315,17 @@
                     <h3>{% if is_english %}Lyrics{% elif is_spanish %}Letra{% elif is_german %}Songtext{% elif is_portuguese %}Letra{% elif is_chinese %}歌词{% else %}歌詞{% endif %}</h3>
                     <div class="lyrics-header-actions">
                         {% if song.audio_url or song.audio_file %}
+                        {% if user.is_authenticated and user.is_starter %}
                         <button class="btn-karaoke-mode" id="btn-karaoke-toggle" onclick="toggleKaraokeMode()">
                             <i class="bi bi-music-note-beamed"></i>
                             <span id="karaoke-btn-text">{% if is_english %}Karaoke{% elif is_chinese %}卡拉OK{% else %}カラオケ{% endif %}</span>
                         </button>
+                        {% else %}
+                        <a href="{% url 'users:upgrade' %}" class="btn-karaoke-mode btn-karaoke-locked-mini">
+                            <i class="bi bi-lock"></i>
+                            <span>{% if is_english %}Karaoke{% elif is_chinese %}卡拉OK{% else %}カラオケ{% endif %}</span>
+                        </a>
+                        {% endif %}
                         {% endif %}
                         {% if user.is_authenticated %}
                         <a href="{% url 'songs:recreate_with_lyrics' song.pk %}" class="btn-recreate-lyrics">
@@ -330,9 +337,10 @@
                 </div>
                 <!-- 通常歌詞表示 -->
                 <div class="lyrics-content" id="lyrics-normal">
-                    {{ lyrics_content|remove_asterisks|linebreaks }}
+                    {{ lyrics_content|remove_asterisks|remove_circled_numbers|linebreaks }}
                 </div>
-                <!-- カラオケモード表示 -->
+                <!-- カラオケモード表示（スターター以上のみ） -->
+                {% if user.is_authenticated and user.is_starter %}
                 <div class="karaoke-container" id="karaoke-container" style="display: none;">
                     <div class="karaoke-loading" id="karaoke-loading">
                         <div class="karaoke-spinner"></div>
@@ -340,6 +348,7 @@
                     </div>
                     <div class="karaoke-lyrics" id="karaoke-lyrics"></div>
                 </div>
+                {% endif %}
             </div>
             {% endif %}
 
@@ -1210,6 +1219,19 @@
     box-shadow: 0 4px 12px rgba(255, 68, 68, 0.4);
 }
 
+.btn-karaoke-locked-mini {
+    background: linear-gradient(135deg, #6b7280 0%, #4b5563 100%) !important;
+    opacity: 0.8;
+    text-decoration: none;
+    color: white !important;
+}
+
+.btn-karaoke-locked-mini:hover {
+    opacity: 1;
+    color: white !important;
+    text-decoration: none;
+}
+
 .karaoke-container {
     padding: 0;
     position: relative;
@@ -1483,7 +1505,7 @@ function toggleFavorite(songId) {
                 <div class="card-body">
                     {% if decrypted_lyrics %}
                     <div style="white-space: pre-line; font-size: 0.95rem; line-height: 1.6;">
-                        {{ lyrics_content|remove_asterisks }}
+                        {{ lyrics_content|remove_asterisks|remove_circled_numbers }}
                     </div>
                     {% else %}
                     <div class="text-muted">
@@ -3284,6 +3306,11 @@ document.getElementById('karaokeModal').addEventListener('click', function(e) {
         });
     }
     
+    function removeCircledNumbers(text) {
+        // 丸数字・囲み数字・特殊番号記号を除去
+        return text.replace(/[\u2460-\u2473\u2474-\u2487\u2488-\u249B\u24EA-\u24FF\u2776-\u277F\u2780-\u2789\u278A-\u2793\u3251-\u325F\u32B1-\u32BF\u24B6-\u24E9]/g, '').replace(/\s{2,}/g, ' ').trim();
+    }
+
     function parseLRC(lrcText) {
         const lines = lrcText.split('\n');
         const result = [];
@@ -3294,7 +3321,7 @@ document.getElementById('karaokeModal').addEventListener('click', function(e) {
                 const seconds = parseInt(match[2]);
                 const hundredths = parseInt(match[3]);
                 const time = minutes * 60 + seconds + hundredths / 100;
-                const text = match[4].trim();
+                const text = removeCircledNumbers(match[4].trim());
                 if (text) {
                     result.push({ time, text });
                 }

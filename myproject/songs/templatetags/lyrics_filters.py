@@ -24,6 +24,40 @@ def remove_asterisks(value):
 
 
 @register.filter
+def remove_circled_numbers(value):
+    """歌詞から丸数字・囲み数字・特殊番号記号を除去するフィルター
+    
+    教材画像由来の ❶❷❸ ①②③ 等を表示から削除する。
+    """
+    if not value:
+        return value
+    
+    circled_pattern = re.compile(
+        r'[\u2460-\u2473'   # ① - ⑳
+        r'\u2474-\u2487'    # ⑴ - ⒇
+        r'\u2488-\u249B'    # ⒈ - ⒛
+        r'\u24EA-\u24FF'    # ⓪ 等
+        r'\u2776-\u277F'    # ❶ - ❿
+        r'\u2780-\u2789'    # ➀ - ➉
+        r'\u278A-\u2793'    # ➊ - ➓
+        r'\u3251-\u325F'    # ㉑ - ㉟
+        r'\u32B1-\u32BF'    # ㊱ - ㊿
+        r'\u24B6-\u24E9'    # Ⓐ - ⓩ
+        r']'
+    )
+    value = circled_pattern.sub('', value)
+    
+    # 余分なスペースを整理
+    lines = value.split('\n')
+    cleaned_lines = []
+    for line in lines:
+        line = re.sub(r'  +', ' ', line).strip()
+        cleaned_lines.append(line)
+    
+    return '\n'.join(cleaned_lines)
+
+
+@register.filter
 def get_item(dictionary, key):
     """辞書から指定したキーの値を取得するフィルター"""
     if dictionary is None:
