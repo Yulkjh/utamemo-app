@@ -320,25 +320,28 @@ class CreateSongView(LoginRequiredMixin, CreateView):
         form.instance.reference_song = reference_song
         
         # AIモデルを取得
-        mureka_model = self.request.POST.get('mureka_model', 'mureka-7.5').strip()
-        valid_models = ['mureka-o2', 'mureka-7.6', 'mureka-7.5']
+        mureka_model = self.request.POST.get('mureka_model', 'mureka-o2').strip()
+        valid_models = ['mureka-v8', 'mureka-o2', 'mureka-7.6', 'mureka-7.5']
         if mureka_model not in valid_models:
-            mureka_model = 'mureka-7.5'
+            mureka_model = 'mureka-o2'
         
         # モデル使用制限のチェック
-        model_key = {'mureka-7.5': 'v7.5', 'mureka-7.6': 'v7.6', 'mureka-o2': 'o2'}.get(mureka_model, 'v7.5')
+        model_key = {'mureka-v8': 'v8', 'mureka-o2': 'o2', 'mureka-7.6': 'v7.6', 'mureka-7.5': 'v7.5'}.get(mureka_model, 'o2')
         if not self.request.user.can_use_model(model_key):
-            # 使用制限に達している場合はスタンダードにフォールバック
-            mureka_model = 'mureka-7.5'
-            if not self.request.user.can_use_model('v7.5'):
-                app_language = self.request.session.get('app_language', 'ja')
-                if app_language == 'en':
-                    messages.error(self.request, 'You have reached your monthly song creation limit.')
-                elif app_language == 'zh':
-                    messages.error(self.request, '您已达到本月歌曲创建上限。')
-                else:
-                    messages.error(self.request, '今月の楽曲作成上限に達しました。')
-                return redirect('users:upgrade')
+            # 使用制限に達している場合はO2にフォールバック
+            mureka_model = 'mureka-o2'
+            if not self.request.user.can_use_model('o2'):
+                # O2もダメならv7.6にフォールバック
+                mureka_model = 'mureka-7.6'
+                if not self.request.user.can_use_model('v7.6'):
+                    app_language = self.request.session.get('app_language', 'ja')
+                    if app_language == 'en':
+                        messages.error(self.request, 'You have reached your monthly song creation limit.')
+                    elif app_language == 'zh':
+                        messages.error(self.request, '您已达到本月歌曲创建上限。')
+                    else:
+                        messages.error(self.request, '今月の楽曲作成上限に達しました。')
+                    return redirect('users:upgrade')
         
         form.instance.mureka_model = mureka_model
         
@@ -1253,12 +1256,14 @@ def retry_song_generation(request, pk):
         if song.retry_count >= 1:
             # モデルの残り回数をチェック
             model_key = 'o2'  # デフォルト
-            if song.mureka_model == 'mureka-7.5':
-                model_key = 'v7.5'
-            elif song.mureka_model == 'mureka-7.6':
-                model_key = 'v7.6'
+            if song.mureka_model == 'mureka-v8':
+                model_key = 'v8'
             elif song.mureka_model == 'mureka-o2':
                 model_key = 'o2'
+            elif song.mureka_model == 'mureka-7.6':
+                model_key = 'v7.6'
+            elif song.mureka_model == 'mureka-7.5':
+                model_key = 'v7.5'
             
             if not user.can_use_model(model_key):
                 if app_language == 'en':

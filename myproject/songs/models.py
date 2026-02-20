@@ -54,11 +54,12 @@ class Song(models.Model):
     mureka_model = models.CharField(
         max_length=20,
         choices=[
-            ('mureka-7.5', 'V7.5 - クリアボーカル・安定'),
-            ('mureka-7.6', 'V7.6 - 高品質・細かい調整可'),
-            ('mureka-o2', 'O2 - 最高品質・プロ向け'),
+            ('mureka-v8', 'V8 - 最高品質・感情表現豊か'),
+            ('mureka-o2', 'O2 - 高品質・プロ向け'),
+            ('mureka-7.6', 'V7.6 - スタンダード'),
+            ('mureka-7.5', 'V7.5 - レガシー'),
         ],
-        default='mureka-7.5',
+        default='mureka-o2',
         verbose_name='Murekaモデル'
     )
     music_prompt = models.TextField(

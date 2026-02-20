@@ -218,19 +218,19 @@
                         <div class="form-group mb-4">
                             <label class="form-label">
                                 <i class="bi bi-cpu me-1"></i>
-                                {% if is_english %}AI Model{% elif is_spanish %}Modelo de IA{% elif is_german %}KI-Modell{% elif is_portuguese %}Modelo de IA{% elif is_chinese %}AI模型{% else %}AIモデル{% endif %}
+                                {% if is_english %}Sound Quality{% elif is_spanish %}Calidad de Sonido{% elif is_german %}Klangqualität{% elif is_portuguese %}Qualidade de Som{% elif is_chinese %}音质{% else %}音質{% endif %}
                             </label>
                             <div class="model-selection-cards">
-                                <!-- スタンダード (v7.5) -->
-                                <label class="model-card {% if model_remaining.v7.5 == 0 %}disabled{% endif %}">
-                                    <input type="radio" name="mureka_model" value="mureka-7.5" {% if model_remaining.v7.5 != 0 and model_remaining.o2 == 0 %}checked{% endif %} {% if model_remaining.v7.5 == 0 %}disabled{% endif %}>
+                                <!-- プレミアム (V8) -->
+                                <label class="model-card {% if model_remaining.v8 == 0 %}disabled{% endif %}">
+                                    <input type="radio" name="mureka_model" value="mureka-v8" {% if model_remaining.v8 != 0 %}checked{% endif %} {% if model_remaining.v8 == 0 %}disabled{% endif %}>
                                     <div class="model-card-content">
-                                        <div class="model-name">{% if is_english %}Standard{% elif is_spanish %}Estándar{% elif is_german %}Standard{% elif is_portuguese %}Padrão{% elif is_chinese %}标准{% else %}スタンダード{% endif %}</div>
+                                        <div class="model-name">{% if is_english %}Premium{% elif is_spanish %}Premium{% elif is_german %}Premium{% elif is_portuguese %}Premium{% elif is_chinese %}高级{% else %}プレミアム{% endif %}</div>
                                         <div class="model-remaining">
-                                            {% if model_remaining.v7.5 == -1 %}
+                                            {% if model_remaining.v8 == -1 %}
                                             <span class="unlimited"><i class="bi bi-infinity"></i> {% if is_english %}Unlimited{% elif is_spanish %}Ilimitado{% elif is_german %}Unbegrenzt{% elif is_portuguese %}Ilimitado{% elif is_chinese %}无限{% else %}無制限{% endif %}</span>
-                                            {% elif model_remaining.v7.5 > 0 %}
-                                            <span class="remaining">{% if is_english %}{{ model_remaining.v7.5 }} left{% elif is_spanish %}{{ model_remaining.v7.5 }} restantes{% elif is_german %}{{ model_remaining.v7.5 }} übrig{% elif is_portuguese %}{{ model_remaining.v7.5 }} restantes{% elif is_chinese %}剩余{{ model_remaining.v7.5 }}次{% else %}残り{{ model_remaining.v7.5 }}回{% endif %}</span>
+                                            {% elif model_remaining.v8 > 0 %}
+                                            <span class="remaining">{% if is_english %}{{ model_remaining.v8 }} left{% elif is_spanish %}{{ model_remaining.v8 }} restantes{% elif is_german %}{{ model_remaining.v8 }} übrig{% elif is_portuguese %}{{ model_remaining.v8 }} restantes{% elif is_chinese %}剩余{{ model_remaining.v8 }}次{% else %}残り{{ model_remaining.v8 }}回{% endif %}</span>
                                             {% else %}
                                             <span class="depleted"><i class="bi bi-x-circle"></i> {% if is_english %}Limit reached{% elif is_spanish %}Límite alcanzado{% elif is_german %}Limit erreicht{% elif is_portuguese %}Limite atingido{% elif is_chinese %}已达上限{% else %}上限に達しました{% endif %}</span>
                                             {% endif %}
@@ -238,33 +238,33 @@
                                     </div>
                                 </label>
                                 
-                                <!-- 高音質 (v7.6) -->
-                                <label class="model-card {% if model_remaining.v7.6 == 0 %}disabled{% endif %}">
-                                    <input type="radio" name="mureka_model" value="mureka-7.6" {% if model_remaining.v7.6 == 0 %}disabled{% endif %}>
+                                <!-- 高音質 (O2) -->
+                                <label class="model-card {% if model_remaining.o2 == 0 %}disabled{% endif %}">
+                                    <input type="radio" name="mureka_model" value="mureka-o2" {% if model_remaining.v8 == 0 and model_remaining.o2 != 0 %}checked{% endif %} {% if model_remaining.o2 == 0 %}disabled{% endif %}>
                                     <div class="model-card-content">
                                         <div class="model-name">{% if is_english %}High Quality{% elif is_spanish %}Alta Calidad{% elif is_german %}Hohe Qualität{% elif is_portuguese %}Alta Qualidade{% elif is_chinese %}高音质{% else %}高音質{% endif %}</div>
-                                        <div class="model-remaining">
-                                            {% if model_remaining.v7.6 == -1 %}
-                                            <span class="unlimited"><i class="bi bi-infinity"></i> {% if is_english %}Unlimited{% elif is_spanish %}Ilimitado{% elif is_german %}Unbegrenzt{% elif is_portuguese %}Ilimitado{% elif is_chinese %}无限{% else %}無制限{% endif %}</span>
-                                            {% elif model_remaining.v7.6 > 0 %}
-                                            <span class="remaining">{% if is_english %}{{ model_remaining.v7.6 }} left{% elif is_spanish %}{{ model_remaining.v7.6 }} restantes{% elif is_german %}{{ model_remaining.v7.6 }} übrig{% elif is_portuguese %}{{ model_remaining.v7.6 }} restantes{% elif is_chinese %}剩余{{ model_remaining.v7.6 }}次{% else %}残り{{ model_remaining.v7.6 }}回{% endif %}</span>
-                                            {% else %}
-                                            <span class="depleted"><i class="bi bi-x-circle"></i> {% if is_english %}Limit reached{% elif is_spanish %}Límite alcanzado{% elif is_german %}Limit erreicht{% elif is_portuguese %}Limite atingido{% elif is_chinese %}已达上限{% else %}上限に達しました{% endif %}</span>
-                                            {% endif %}
-                                        </div>
-                                    </div>
-                                </label>
-                                
-                                <!-- プレミアム (O2) -->
-                                <label class="model-card {% if model_remaining.o2 == 0 %}disabled{% endif %}">
-                                    <input type="radio" name="mureka_model" value="mureka-o2" {% if model_remaining.o2 != 0 %}checked{% endif %} {% if model_remaining.o2 == 0 %}disabled{% endif %}>
-                                    <div class="model-card-content">
-                                        <div class="model-name">{% if is_english %}Premium{% elif is_spanish %}Premium{% elif is_german %}Premium{% elif is_portuguese %}Premium{% elif is_chinese %}专业{% else %}プレミアム{% endif %}</div>
                                         <div class="model-remaining">
                                             {% if model_remaining.o2 == -1 %}
                                             <span class="unlimited"><i class="bi bi-infinity"></i> {% if is_english %}Unlimited{% elif is_spanish %}Ilimitado{% elif is_german %}Unbegrenzt{% elif is_portuguese %}Ilimitado{% elif is_chinese %}无限{% else %}無制限{% endif %}</span>
                                             {% elif model_remaining.o2 > 0 %}
                                             <span class="remaining">{% if is_english %}{{ model_remaining.o2 }} left{% elif is_spanish %}{{ model_remaining.o2 }} restantes{% elif is_german %}{{ model_remaining.o2 }} übrig{% elif is_portuguese %}{{ model_remaining.o2 }} restantes{% elif is_chinese %}剩余{{ model_remaining.o2 }}次{% else %}残り{{ model_remaining.o2 }}回{% endif %}</span>
+                                            {% else %}
+                                            <span class="depleted"><i class="bi bi-x-circle"></i> {% if is_english %}Limit reached{% elif is_spanish %}Límite alcanzado{% elif is_german %}Limit erreicht{% elif is_portuguese %}Limite atingido{% elif is_chinese %}已达上限{% else %}上限に達しました{% endif %}</span>
+                                            {% endif %}
+                                        </div>
+                                    </div>
+                                </label>
+                                
+                                <!-- スタンダード (v7.6) -->
+                                <label class="model-card {% if model_remaining.v7.6 == 0 %}disabled{% endif %}">
+                                    <input type="radio" name="mureka_model" value="mureka-7.6" {% if model_remaining.v8 == 0 and model_remaining.o2 == 0 and model_remaining.v7.6 != 0 %}checked{% endif %} {% if model_remaining.v7.6 == 0 %}disabled{% endif %}>
+                                    <div class="model-card-content">
+                                        <div class="model-name">{% if is_english %}Standard{% elif is_spanish %}Estándar{% elif is_german %}Standard{% elif is_portuguese %}Padrão{% elif is_chinese %}标准{% else %}スタンダード{% endif %}</div>
+                                        <div class="model-remaining">
+                                            {% if model_remaining.v7.6 == -1 %}
+                                            <span class="unlimited"><i class="bi bi-infinity"></i> {% if is_english %}Unlimited{% elif is_spanish %}Ilimitado{% elif is_german %}Unbegrenzt{% elif is_portuguese %}Ilimitado{% elif is_chinese %}无限{% else %}無制限{% endif %}</span>
+                                            {% elif model_remaining.v7.6 > 0 %}
+                                            <span class="remaining">{% if is_english %}{{ model_remaining.v7.6 }} left{% elif is_spanish %}{{ model_remaining.v7.6 }} restantes{% elif is_german %}{{ model_remaining.v7.6 }} übrig{% elif is_portuguese %}{{ model_remaining.v7.6 }} restantes{% elif is_chinese %}剩余{{ model_remaining.v7.6 }}次{% else %}残り{{ model_remaining.v7.6 }}回{% endif %}</span>
                                             {% else %}
                                             <span class="depleted"><i class="bi bi-x-circle"></i> {% if is_english %}Limit reached{% elif is_spanish %}Límite alcanzado{% elif is_german %}Limit erreicht{% elif is_portuguese %}Limite atingido{% elif is_chinese %}已达上限{% else %}上限に達しました{% endif %}</span>
                                             {% endif %}
