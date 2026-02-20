@@ -216,6 +216,12 @@ class Lyrics(models.Model):
         verbose_name='元のテキスト',
         help_text='OCRで抽出された元のテキスト'
     )
+    lrc_data = models.TextField(
+        blank=True,
+        null=True,
+        verbose_name='LRC歌詞データ',
+        help_text='タイムスタンプ付き歌詞（LRC形式）'
+    )
     created_at = models.DateTimeField(
         auto_now_add=True,
         verbose_name='作成日時'

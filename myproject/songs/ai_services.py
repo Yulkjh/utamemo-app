@@ -90,6 +90,86 @@ def detect_lyrics_language(lyrics):
     return 'other'
 
 
+def generate_lrc_timestamps(lyrics_text, duration_seconds):
+    """
+    Gemini AIを使って歌詞にタイムスタンプを推定し、LRC形式で返す
+    
+    Args:
+        lyrics_text: 歌詞テキスト
+        duration_seconds: 曲の長さ（秒）
+    
+    Returns:
+        str: LRC形式のタイムスタンプ付き歌詞、失敗時はNone
+    """
+    model = _get_gemini_model()
+    if not model:
+        logger.warning("Gemini APIが利用できないため、LRC生成をスキップします")
+        return None
+    
+    if not lyrics_text or not duration_seconds:
+        return None
+    
+    # 歌詞の行を取得（空行やセクションラベルも含む）
+    lines = lyrics_text.strip().split('\n')
+    non_empty_lines = [l for l in lines if l.strip()]
+    
+    if len(non_empty_lines) == 0:
+        return None
+    
+    minutes = int(duration_seconds) // 60
+    seconds = int(duration_seconds) % 60
+    
+    prompt = f"""あなたは音楽のタイミング専門家です。以下の歌詞と曲の長さから、各行が歌われるタイミングをLRC形式で推定してください。
+
+【曲の長さ】{minutes}分{seconds}秒（{int(duration_seconds)}秒）
+
+【歌詞】
+{lyrics_text}
+
+【ルール】
+1. LRC形式: [MM:SS.xx]歌詞テキスト （xxは100分の1秒）
+2. 一般的なポップス/ロックの曲構成を想定してください
+3. イントロ（曲の冒頭）は通常5〜15秒程度あります
+4. 間奏（セクション間）は通常5〜10秒あります
+5. アウトロ（曲の終わり）は通常5〜15秒程度あります
+6. 空行やセクションラベル（[Verse]、[Chorus]など）は含めないでください
+7. 歌詞の行のみにタイムスタンプを付けてください
+8. 曲の長さ内に全ての行が収まるようにしてください
+9. LRC行のみを出力し、他の説明は一切不要です
+
+【出力例】
+[00:12.00]最初の歌詞行
+[00:16.50]2番目の歌詞行
+[00:21.00]3番目の歌詞行
+"""
+    
+    try:
+        response = model.generate_content(prompt)
+        if response and response.text:
+            lrc_text = response.text.strip()
+            
+            # LRC行のみを抽出（不要なテキストを除去）
+            lrc_lines = []
+            for line in lrc_text.split('\n'):
+                line = line.strip()
+                # [MM:SS.xx] 形式の行のみを抽出
+                if re.match(r'\[\d{2}:\d{2}\.\d{2}\]', line):
+                    lrc_lines.append(line)
+            
+            if lrc_lines:
+                result = '\n'.join(lrc_lines)
+                logger.info(f"LRC生成成功: {len(lrc_lines)}行")
+                return result
+            else:
+                logger.warning("LRC生成: 有効なLRC行が見つかりませんでした")
+                return None
+        
+        return None
+    except Exception as e:
+        logger.error(f"LRC生成エラー: {e}")
+        return None
+
+
 class MurekaAIGenerator:
     """Mureka AI を使用した楽曲生成クラス"""
     

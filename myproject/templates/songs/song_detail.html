@@ -310,18 +310,35 @@
 
             <!-- 歌詞セクション -->
             {% if song.lyrics %}
-            <div class="lyrics-card fade-in">
+            <div class="lyrics-card fade-in" id="lyrics-card">
                 <div class="lyrics-header">
                     <h3>{% if is_english %}Lyrics{% elif is_spanish %}Letra{% elif is_german %}Songtext{% elif is_portuguese %}Letra{% elif is_chinese %}歌词{% else %}歌詞{% endif %}</h3>
-                    {% if user.is_authenticated %}
-                    <a href="{% url 'songs:recreate_with_lyrics' song.pk %}" class="btn-recreate-lyrics">
-                        <i class="bi bi-arrow-repeat"></i>
-                        {% if is_english %}Create New with This Lyrics{% elif is_spanish %}Crear Nueva con Esta Letra{% elif is_german %}Neu erstellen mit diesem Text{% elif is_portuguese %}Criar Nova com Esta Letra{% elif is_chinese %}用这首歌词创建新曲{% else %}この歌詞で新しく作成{% endif %}
-                    </a>
-                    {% endif %}
+                    <div class="lyrics-header-actions">
+                        {% if song.audio_url or song.audio_file %}
+                        <button class="btn-karaoke-mode" id="btn-karaoke-toggle" onclick="toggleKaraokeMode()">
+                            <i class="bi bi-music-note-beamed"></i>
+                            <span id="karaoke-btn-text">{% if is_english %}Karaoke{% elif is_chinese %}卡拉OK{% else %}カラオケ{% endif %}</span>
+                        </button>
+                        {% endif %}
+                        {% if user.is_authenticated %}
+                        <a href="{% url 'songs:recreate_with_lyrics' song.pk %}" class="btn-recreate-lyrics">
+                            <i class="bi bi-arrow-repeat"></i>
+                            {% if is_english %}Create New with This Lyrics{% elif is_spanish %}Crear Nueva con Esta Letra{% elif is_german %}Neu erstellen mit diesem Text{% elif is_portuguese %}Criar Nova com Esta Letra{% elif is_chinese %}用这首歌词创建新曲{% else %}この歌詞で新しく作成{% endif %}
+                        </a>
+                        {% endif %}
+                    </div>
                 </div>
-                <div class="lyrics-content">
+                <!-- 通常歌詞表示 -->
+                <div class="lyrics-content" id="lyrics-normal">
                     {{ lyrics_content|remove_asterisks|linebreaks }}
+                </div>
+                <!-- カラオケモード表示 -->
+                <div class="karaoke-container" id="karaoke-container" style="display: none;">
+                    <div class="karaoke-loading" id="karaoke-loading">
+                        <div class="karaoke-spinner"></div>
+                        <p>{% if is_english %}Generating timing data...{% elif is_chinese %}正在生成时间数据...{% else %}タイミングデータを生成中...{% endif %}</p>
+                    </div>
+                    <div class="karaoke-lyrics" id="karaoke-lyrics"></div>
                 </div>
             </div>
             {% endif %}
@@ -1156,6 +1173,142 @@
 }
 
 /* モバイル：カラオケ・ダウンロードをプレイヤー直後に移動（JSで対応） */
+
+/* カラオケモード */
+.lyrics-header-actions {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    flex-wrap: wrap;
+}
+
+.btn-karaoke-mode {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 0.5rem 1rem;
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    color: white;
+    border: none;
+    border-radius: var(--radius-md);
+    font-size: 0.85rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.3s ease;
+}
+
+.btn-karaoke-mode:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(102, 126, 234, 0.4);
+}
+
+.btn-karaoke-mode.active {
+    background: linear-gradient(135deg, #ff4444 0%, #cc0000 100%);
+}
+
+.btn-karaoke-mode.active:hover {
+    box-shadow: 0 4px 12px rgba(255, 68, 68, 0.4);
+}
+
+.karaoke-container {
+    padding: 0;
+    position: relative;
+    background: linear-gradient(135deg, #1a1a2e 0%, #16213e 50%, #0f3460 100%);
+    border-radius: 0 0 var(--radius-xl) var(--radius-xl);
+    min-height: 350px;
+    overflow: hidden;
+}
+
+.karaoke-loading {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: 3rem;
+    color: rgba(255, 255, 255, 0.8);
+    gap: 1rem;
+}
+
+.karaoke-spinner {
+    width: 40px;
+    height: 40px;
+    border: 3px solid rgba(255, 255, 255, 0.2);
+    border-top-color: #667eea;
+    border-radius: 50%;
+    animation: karaoke-spin 0.8s linear infinite;
+}
+
+@keyframes karaoke-spin {
+    to { transform: rotate(360deg); }
+}
+
+.karaoke-lyrics {
+    padding: 2rem 2rem;
+    max-height: 400px;
+    overflow-y: auto;
+    scroll-behavior: smooth;
+    -webkit-overflow-scrolling: touch;
+}
+
+.karaoke-lyrics::-webkit-scrollbar {
+    width: 4px;
+}
+
+.karaoke-lyrics::-webkit-scrollbar-track {
+    background: transparent;
+}
+
+.karaoke-lyrics::-webkit-scrollbar-thumb {
+    background: rgba(255, 255, 255, 0.2);
+    border-radius: 4px;
+}
+
+.karaoke-line {
+    padding: 0.6rem 1rem;
+    margin: 0.3rem 0;
+    border-radius: 8px;
+    font-size: 1.15rem;
+    line-height: 1.7;
+    color: rgba(255, 255, 255, 0.35);
+    transition: all 0.4s cubic-bezier(0.25, 0.46, 0.45, 0.94);
+    transform: scale(0.95);
+    transform-origin: left center;
+}
+
+.karaoke-line.active {
+    color: #ffffff;
+    font-weight: 700;
+    font-size: 1.3rem;
+    transform: scale(1);
+    text-shadow: 0 0 20px rgba(102, 126, 234, 0.6);
+    background: rgba(102, 126, 234, 0.15);
+}
+
+.karaoke-line.passed {
+    color: rgba(255, 255, 255, 0.5);
+    transform: scale(0.95);
+}
+
+@media (max-width: 768px) {
+    .karaoke-lyrics {
+        padding: 1.5rem 1rem;
+        max-height: 300px;
+    }
+    
+    .karaoke-line {
+        font-size: 1rem;
+        padding: 0.5rem 0.75rem;
+    }
+    
+    .karaoke-line.active {
+        font-size: 1.15rem;
+    }
+    
+    .lyrics-header-actions {
+        width: 100%;
+        justify-content: flex-end;
+    }
+}
 
 /* レスポンシブ調整 */
 @media (max-width: 768px) {
@@ -3050,6 +3203,194 @@ document.getElementById('karaokeModal').addEventListener('click', function(e) {
     
     reorderForMobile();
     window.addEventListener('resize', reorderForMobile);
+})();
+</script>
+
+<!-- カラオケモード JavaScript -->
+<script>
+(function() {
+    let karaokeActive = false;
+    let lrcData = null; // [{time: seconds, text: "..."}]
+    let lrcLoaded = false;
+    let lrcLoading = false;
+    
+    const songId = {{ song.pk }};
+    
+    window.toggleKaraokeMode = function() {
+        const btn = document.getElementById('btn-karaoke-toggle');
+        const btnText = document.getElementById('karaoke-btn-text');
+        const normalLyrics = document.getElementById('lyrics-normal');
+        const karaokeContainer = document.getElementById('karaoke-container');
+        const audio = document.getElementById('main-audio-player');
+        
+        if (!audio) return;
+        
+        karaokeActive = !karaokeActive;
+        
+        if (karaokeActive) {
+            btn.classList.add('active');
+            btnText.textContent = '{% if is_english %}Close{% elif is_chinese %}关闭{% else %}閉じる{% endif %}';
+            normalLyrics.style.display = 'none';
+            karaokeContainer.style.display = 'block';
+            
+            if (!lrcLoaded && !lrcLoading) {
+                loadLRC();
+            } else if (lrcLoaded) {
+                startKaraokeSync();
+            }
+        } else {
+            btn.classList.remove('active');
+            btnText.textContent = '{% if is_english %}Karaoke{% elif is_chinese %}卡拉OK{% else %}カラオケ{% endif %}';
+            normalLyrics.style.display = 'block';
+            karaokeContainer.style.display = 'none';
+            stopKaraokeSync();
+        }
+    };
+    
+    function loadLRC() {
+        lrcLoading = true;
+        const loading = document.getElementById('karaoke-loading');
+        const lyricsDiv = document.getElementById('karaoke-lyrics');
+        loading.style.display = 'flex';
+        lyricsDiv.style.display = 'none';
+        
+        const csrfToken = document.querySelector('[name=csrfmiddlewaretoken]');
+        
+        fetch(`/songs/${songId}/generate-lrc/`, {
+            method: 'POST',
+            headers: {
+                'X-CSRFToken': csrfToken ? csrfToken.value : '',
+                'Content-Type': 'application/json',
+            },
+        })
+        .then(res => res.json())
+        .then(data => {
+            lrcLoading = false;
+            if (data.lrc) {
+                lrcData = parseLRC(data.lrc);
+                lrcLoaded = true;
+                renderKaraokeLyrics();
+                loading.style.display = 'none';
+                lyricsDiv.style.display = 'block';
+                startKaraokeSync();
+            } else {
+                loading.innerHTML = '<p style="color: rgba(255,255,255,0.6);">{% if is_english %}Could not generate timing data. Please try again.{% elif is_chinese %}无法生成时间数据，请重试。{% else %}タイミングデータを生成できませんでした。もう一度お試しください。{% endif %}</p>';
+            }
+        })
+        .catch(err => {
+            lrcLoading = false;
+            console.error('LRC load error:', err);
+            loading.innerHTML = '<p style="color: rgba(255,255,255,0.6);">{% if is_english %}Error loading timing data.{% elif is_chinese %}加载时间数据出错。{% else %}タイミングデータの読み込みエラー{% endif %}</p>';
+        });
+    }
+    
+    function parseLRC(lrcText) {
+        const lines = lrcText.split('\n');
+        const result = [];
+        for (const line of lines) {
+            const match = line.match(/\[(\d{2}):(\d{2})\.(\d{2})\](.*)/);
+            if (match) {
+                const minutes = parseInt(match[1]);
+                const seconds = parseInt(match[2]);
+                const hundredths = parseInt(match[3]);
+                const time = minutes * 60 + seconds + hundredths / 100;
+                const text = match[4].trim();
+                if (text) {
+                    result.push({ time, text });
+                }
+            }
+        }
+        return result;
+    }
+    
+    function renderKaraokeLyrics() {
+        const container = document.getElementById('karaoke-lyrics');
+        if (!lrcData || lrcData.length === 0) return;
+        
+        // 上部に空白を追加（最初の行がスクロールの中心に来るように）
+        let html = '<div class="karaoke-spacer" style="height: 120px;"></div>';
+        lrcData.forEach((item, index) => {
+            html += `<div class="karaoke-line" data-index="${index}" data-time="${item.time}">${item.text}</div>`;
+        });
+        html += '<div class="karaoke-spacer" style="height: 200px;"></div>';
+        container.innerHTML = html;
+    }
+    
+    let syncInterval = null;
+    
+    function startKaraokeSync() {
+        const audio = document.getElementById('main-audio-player');
+        if (!audio || !lrcData) return;
+        
+        // timeupdateイベントで同期
+        audio.addEventListener('timeupdate', onTimeUpdate);
+    }
+    
+    function stopKaraokeSync() {
+        const audio = document.getElementById('main-audio-player');
+        if (audio) {
+            audio.removeEventListener('timeupdate', onTimeUpdate);
+        }
+    }
+    
+    let lastActiveIndex = -1;
+    
+    function onTimeUpdate() {
+        const audio = document.getElementById('main-audio-player');
+        if (!audio || !lrcData || !karaokeActive) return;
+        
+        const currentTime = audio.currentTime;
+        let activeIndex = -1;
+        
+        // 現在の時間に対応する行を見つける
+        for (let i = lrcData.length - 1; i >= 0; i--) {
+            if (currentTime >= lrcData[i].time) {
+                activeIndex = i;
+                break;
+            }
+        }
+        
+        if (activeIndex === lastActiveIndex) return;
+        lastActiveIndex = activeIndex;
+        
+        // 全行のスタイルを更新
+        const lines = document.querySelectorAll('.karaoke-line');
+        lines.forEach((el, idx) => {
+            el.classList.remove('active', 'passed');
+            if (idx === activeIndex) {
+                el.classList.add('active');
+            } else if (idx < activeIndex) {
+                el.classList.add('passed');
+            }
+        });
+        
+        // アクティブ行にスクロール
+        if (activeIndex >= 0) {
+            const activeLine = lines[activeIndex];
+            if (activeLine) {
+                const container = document.getElementById('karaoke-lyrics');
+                const containerRect = container.getBoundingClientRect();
+                const lineRect = activeLine.getBoundingClientRect();
+                const offset = lineRect.top - containerRect.top - (containerRect.height / 3);
+                container.scrollTop += offset;
+            }
+        }
+    }
+    
+    // カラオケ行クリックでその位置にシーク
+    document.addEventListener('click', function(e) {
+        const line = e.target.closest('.karaoke-line');
+        if (line && karaokeActive) {
+            const time = parseFloat(line.dataset.time);
+            const audio = document.getElementById('main-audio-player');
+            if (audio && !isNaN(time)) {
+                audio.currentTime = time;
+                if (audio.paused) {
+                    audio.play();
+                }
+            }
+        }
+    });
 })();
 </script>
 

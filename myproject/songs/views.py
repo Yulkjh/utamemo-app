@@ -15,7 +15,7 @@ import logging
 
 from .models import Song, Like, Favorite, Comment, UploadedImage, Lyrics, PlayHistory, Tag
 from .forms import SongCreateForm, ImageUploadForm, CommentForm, SongPrivacyForm
-from .ai_services import GeminiLyricsGenerator, GeminiOCR, MurekaAIGenerator
+from .ai_services import GeminiLyricsGenerator, GeminiOCR, MurekaAIGenerator, generate_lrc_timestamps
 from .content_filter import check_text_for_inappropriate_content
 
 # ロガー設定
@@ -1952,3 +1952,35 @@ def recreate_with_lyrics(request, pk):
     
     # 楽曲作成画面にリダイレクト（歌詞確認画面をスキップ）
     return redirect('songs:lyrics_confirmation')
+
+
+@login_required
+@require_POST
+def generate_lrc_view(request, pk):
+    """LRC（タイムスタンプ付き歌詞）を生成するAPIエンドポイント"""
+    song = get_object_or_404(Song, pk=pk)
+    
+    # 音声と歌詞が必要
+    if not hasattr(song, 'lyrics') or not song.lyrics:
+        return JsonResponse({'error': 'No lyrics found'}, status=400)
+    
+    if not song.duration:
+        return JsonResponse({'error': 'No duration info'}, status=400)
+    
+    # 既にLRCデータがある場合はそのまま返す
+    if song.lyrics.lrc_data:
+        return JsonResponse({'lrc': song.lyrics.lrc_data})
+    
+    # durationを秒に変換
+    duration_seconds = song.duration.total_seconds()
+    
+    # Gemini AIでLRC生成
+    lrc_data = generate_lrc_timestamps(song.lyrics.content, duration_seconds)
+    
+    if lrc_data:
+        # DBに保存
+        song.lyrics.lrc_data = lrc_data
+        song.lyrics.save(update_fields=['lrc_data'])
+        return JsonResponse({'lrc': lrc_data})
+    else:
+        return JsonResponse({'error': 'LRC generation failed'}, status=500)
