@@ -199,23 +199,31 @@ class SongGenerationQueue:
             music_prompt = getattr(song, 'music_prompt', '') or ''
             reference_song = getattr(song, 'reference_song', '') or ''
 
-            from .ai_services import convert_lyrics_to_hiragana_with_context
+            from .ai_services import convert_lyrics_to_hiragana_with_context, detect_lyrics_language
             logger.info(f"Song {song_id}: Original lyrics length: {len(lyrics_content)} chars")
             
-            # 文脈を考慮したひらがな変換（Gemini AI使用）
-            send_progress_update(song_id, 'generating', 25, '歌詞を処理中...')
+            # 歌詞の言語を判定
+            lyrics_language = detect_lyrics_language(lyrics_content)
+            logger.info(f"Song {song_id}: Detected lyrics language: {lyrics_language}")
             
-            try:
-                hiragana_lyrics = convert_lyrics_to_hiragana_with_context(lyrics_content)
-            except Exception as e:
-                logger.warning(f"Song {song_id}: Hiragana conversion failed: {e}")
-                hiragana_lyrics = lyrics_content
+            # 日本語の場合のみひらがな変換（中国語・英語等はそのまま送信）
+            if lyrics_language == 'ja':
+                send_progress_update(song_id, 'generating', 25, '歌詞を処理中...')
+                try:
+                    hiragana_lyrics = convert_lyrics_to_hiragana_with_context(lyrics_content)
+                except Exception as e:
+                    logger.warning(f"Song {song_id}: Hiragana conversion failed: {e}")
+                    hiragana_lyrics = lyrics_content
+                    
+                logger.info(f"Song {song_id}: After hiragana conversion: {len(hiragana_lyrics)} chars")
                 
-            logger.info(f"Song {song_id}: After hiragana conversion: {len(hiragana_lyrics)} chars")
-            
-            # 変換後の長さが大幅に増加した場合は警告
-            if len(hiragana_lyrics) > len(lyrics_content) * 1.5:
-                logger.warning(f"Song {song_id}: Lyrics expanded significantly after hiragana conversion")
+                # 変換後の長さが大幅に増加した場合は警告
+                if len(hiragana_lyrics) > len(lyrics_content) * 1.5:
+                    logger.warning(f"Song {song_id}: Lyrics expanded significantly after hiragana conversion")
+            else:
+                logger.info(f"Song {song_id}: Skipping hiragana conversion for {lyrics_language} lyrics")
+                send_progress_update(song_id, 'generating', 25, '歌詞を処理中...')
+                hiragana_lyrics = lyrics_content
 
             while retry_count < max_retries:
                 try:
