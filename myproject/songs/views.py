@@ -306,6 +306,7 @@ class CreateSongView(LoginRequiredMixin, CreateView):
             app_language = self.request.session.get('app_language', 'ja')
             self.request.session['content_violation'] = True
             self.request.session['violation_message'] = title_check['message']
+            self.request.session['detected_words'] = title_check['detected_words']
             logger.warning(f"Inappropriate title detected for user {self.request.user.id}: {title_check['detected_words']}")
             return redirect('songs:content_violation')
         
@@ -370,6 +371,7 @@ class CreateSongView(LoginRequiredMixin, CreateView):
             app_language = self.request.session.get('app_language', 'ja')
             self.request.session['content_violation'] = True
             self.request.session['violation_message'] = content_check['message']
+            self.request.session['detected_words'] = content_check['detected_words']
             logger.warning(f"Inappropriate lyrics detected for user {self.request.user.id}: {content_check['detected_words']}")
             return redirect('songs:content_violation')
         
@@ -613,6 +615,7 @@ class UploadImageView(LoginRequiredMixin, FormView):
             # 不適切なコンテンツが検出された場合
             self.request.session['content_violation'] = True
             self.request.session['violation_message'] = content_check['message']
+            self.request.session['detected_words'] = content_check['detected_words']
             logger.warning(f"Inappropriate content detected for user {user.id}: {content_check['detected_words']}")
             return redirect('songs:content_violation')
         
@@ -1838,12 +1841,15 @@ def content_violation_view(request):
     # セッションから違反情報を取得
     is_violation = request.session.get('content_violation', False)
     violation_message = request.session.get('violation_message', '')
+    detected_words = request.session.get('detected_words', [])
     
     # セッションをクリア
     if 'content_violation' in request.session:
         del request.session['content_violation']
     if 'violation_message' in request.session:
         del request.session['violation_message']
+    if 'detected_words' in request.session:
+        del request.session['detected_words']
     if 'extracted_texts' in request.session:
         del request.session['extracted_texts']
     if 'uploaded_image_ids' in request.session:
@@ -1914,6 +1920,7 @@ def content_violation_view(request):
     context = {
         'title': title,
         'message': default_message,
+        'detected_words': detected_words,
         'terms_link_text': terms_link_text,
         'back_link_text': back_link_text,
         'app_language': app_language,

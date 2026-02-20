@@ -62,6 +62,37 @@
         border-left: 4px solid #cc0000;
     }
     
+    .detected-words {
+        margin-top: 1rem;
+        margin-bottom: 1.5rem;
+        padding: 1rem 1.5rem;
+        background: #fff0f0;
+        border-radius: 12px;
+        border: 1px solid #ffcccc;
+    }
+    
+    .detected-words-label {
+        font-size: 0.85rem;
+        color: #999;
+        margin-bottom: 0.5rem;
+    }
+    
+    .detected-words-list {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 0.5rem;
+    }
+    
+    .detected-word-tag {
+        display: inline-block;
+        background: #cc0000;
+        color: white;
+        padding: 0.25rem 0.75rem;
+        border-radius: 20px;
+        font-size: 0.9rem;
+        font-weight: 600;
+    }
+    
     .violation-actions {
         display: flex;
         flex-direction: column;
@@ -140,6 +171,17 @@
         <h1 class="violation-title">{{ title }}</h1>
         
         <div class="violation-message">{{ message }}</div>
+        
+        {% if detected_words %}
+        <div class="detected-words">
+            <div class="detected-words-label">{% if app_language == 'en' %}Detected words:{% elif app_language == 'zh' %}检测到的词语:{% elif app_language == 'es' %}Palabras detectadas:{% elif app_language == 'de' %}Erkannte Wörter:{% elif app_language == 'pt' %}Palavras detectadas:{% else %}検出されたワード:{% endif %}</div>
+            <div class="detected-words-list">
+                {% for word in detected_words %}
+                <span class="detected-word-tag">{{ word }}</span>
+                {% endfor %}
+            </div>
+        </div>
+        {% endif %}
         
         <div class="violation-actions">
             <a href="{% url 'terms' %}" class="btn-terms">
