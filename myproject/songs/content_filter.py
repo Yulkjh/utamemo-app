@@ -24,8 +24,8 @@ class ContentFilter:
         'キモい', 'きもい', 'キモイ', 'ウザい', 'うざい', 'ウザイ',
         'きしょい', 'キショい', 'キショイ',
         
-        # 暴力・脅迫表現
-        '死ね', 'しね', '殺す', 'ころす', '殺してやる',
+        # 暴力・脅迫表現（直接的な脅迫のみ）
+        '死ね', 'しね', '殺してやる', 'ころしてやる',
         '消えろ', 'きえろ', 'うせろ', 'ウセロ',
         
         # 性的表現（単独で使われる場合のみ検出するため、別途処理）
@@ -40,6 +40,41 @@ class ContentFilter:
         'いじめ', 'イジメ', '虐め',
         'ハブる', 'はぶる',
         '無視しろ', '仲間外れ',
+    ]
+    
+    # 文脈に応じて判定する暴力系ワード（日本語）
+    # 歴史・学術・文学的文脈では許可する
+    ACADEMIC_CONTEXT_WORDS_JA = {
+        '殺す': [],
+        'ころす': [],
+        '殺した': [],
+        '殺される': [],
+        '殺された': [],
+        '死': [],
+    }
+    
+    # 学術的・歴史的文脈を示すキーワード（これらが同じテキストにあれば暴力系ワードを許可）
+    ACADEMIC_CONTEXT_INDICATORS_JA = [
+        # 歴史
+        '時代', '世紀', '年代', '歴史', '戦国', '幕府', '明治', '大正', '昭和',
+        '平成', '令和', '江戸', '鎌倉', '室町', '奈良', '平安', '縄文', '弥生',
+        '天皇', '将軍', '武将', '大名', '藩', '城', '合戦', '戦い', '戦争',
+        '革命', '維新', '開国', '条約', '改革',
+        '信長', '秀吉', '家康', '義元', '光秀', '謙信', '信玄',
+        '本能寺', '関ヶ原', '応仁', '壬申', '承久',
+        # 人物・偉人
+        'の変', 'の乱', 'の役', 'の戦い', 'の死',
+        '暗殺', '討伐', '征伐', '滅亡', '崩御', '没',
+        # 科学・医学
+        '細胞', '生物', '化学', '実験', 'DNA', 'RNA',
+        '医学', '解剖', '手術', '治療', '疾患', '病気',
+        'アポトーシス', '壊死', '細胞死',
+        # 文学
+        '小説', '文学', '物語', '作品', '著者', '作者',
+        '太宰治', '芥川', '夏目漱石', '三島由紀夫',
+        # 教科書・学習
+        '教科書', '問題', '試験', 'テスト', '学習', '勉強',
+        '授業', '講義', '解説', 'ページ', '章',
     ]
     
     # 部分一致で誤検出しやすいワード（特別な処理が必要）
@@ -57,17 +92,44 @@ class ContentFilter:
         'fuck', 'shit', 'bitch', 'asshole', 'bastard',
         'damn', 'crap', 'dick', 'cock', 'pussy',
         'whore', 'slut', 'retard', 'retarded',
-        'idiot', 'moron', 'stupid',
         
         # Hate speech
         'nigger', 'nigga', 'faggot', 'fag',
         'chink', 'spic', 'kike',
         
-        # Violence
-        'kill', 'murder', 'die', 'death threat',
+        # Direct threats
+        'death threat',
         
         # Sexual content
         'porn', 'nude', 'naked',
+    ]
+    
+    # 文脈に応じて判定する暴力系ワード（英語）
+    ACADEMIC_CONTEXT_WORDS_EN = {
+        'kill': [],
+        'killed': [],
+        'murder': [],
+        'murdered': [],
+        'die': [],
+        'died': [],
+        'death': [],
+    }
+    
+    # 学術的・歴史的文脈を示すキーワード（英語）
+    ACADEMIC_CONTEXT_INDICATORS_EN = [
+        # History
+        'century', 'era', 'period', 'history', 'historical', 'ancient',
+        'medieval', 'dynasty', 'empire', 'kingdom', 'civilization',
+        'war', 'battle', 'revolution', 'treaty', 'independence',
+        'emperor', 'king', 'queen', 'ruler', 'general',
+        'napoleon', 'caesar', 'lincoln', 'gandhi',
+        # Science/Medicine
+        'cell', 'biology', 'chemistry', 'experiment', 'species',
+        'medical', 'disease', 'treatment', 'surgery', 'anatomy',
+        'apoptosis', 'necrosis',
+        # Literature
+        'novel', 'literature', 'story', 'author', 'shakespeare',
+        'chapter', 'textbook', 'lesson', 'study', 'exam',
     ]
     
     # 禁止ワードリスト（中国語）
@@ -77,12 +139,11 @@ class ContentFilter:
         '去死', '杀了你',
     ]
     
-    # 禁止パターン（正規表現）
+    # 禁止パターン（正規表現）- 脅迫的な強調表現のみ
     PROHIBITED_PATTERNS = [
         r'死ね+',           # 「死ねええ」など
         r'きも+い',         # 「きもーい」など
         r'うざ+い',         # 「うざーい」など
-        r'ころ+す',         # 「ころーす」など
         r'f+u+c+k+',        # 「fuuuck」など
         r's+h+i+t+',        # 「shiiiit」など
     ]
@@ -148,7 +209,7 @@ class ContentFilter:
         detected_words = []
         text_lower = text.lower()
         
-        # 禁止ワードのチェック
+        # 禁止ワードのチェック（無条件でブロック）
         for word in self.prohibited_words:
             if word in text_lower:
                 detected_words.append(word)
@@ -165,6 +226,15 @@ class ContentFilter:
                 
                 if not is_exception:
                     detected_words.append(sensitive_word)
+        
+        # 学術的文脈チェック（暴力系ワードが含まれていても学術文脈なら許可）
+        academic_detected = self._check_academic_context_words(text_lower)
+        if academic_detected:
+            # 学術的文脈の指標があるかチェック
+            has_academic_context = self._has_academic_context(text_lower)
+            if not has_academic_context:
+                # 学術的文脈がないのに暴力系ワードがある → ブロック
+                detected_words.extend(academic_detected)
         
         # 正規表現パターンのチェック
         for pattern in self.compiled_patterns:
@@ -187,6 +257,37 @@ class ContentFilter:
             'detected_words': [],
             'message': ''
         }
+    
+    def _check_academic_context_words(self, text_lower):
+        """テキストに学術文脈ワード（暴力系）が含まれるかチェック"""
+        detected = []
+        
+        # 日本語
+        for word in self.ACADEMIC_CONTEXT_WORDS_JA:
+            if word in text_lower:
+                detected.append(word)
+        
+        # 英語（単語境界でチェックして部分一致を防ぐ）
+        for word in self.ACADEMIC_CONTEXT_WORDS_EN:
+            pattern = r'\b' + re.escape(word) + r'\b'
+            if re.search(pattern, text_lower):
+                detected.append(word)
+        
+        return detected
+    
+    def _has_academic_context(self, text_lower):
+        """テキストに学術的・歴史的文脈の指標があるかチェック"""
+        # 日本語の文脈指標
+        for indicator in self.ACADEMIC_CONTEXT_INDICATORS_JA:
+            if indicator.lower() in text_lower:
+                return True
+        
+        # 英語の文脈指標
+        for indicator in self.ACADEMIC_CONTEXT_INDICATORS_EN:
+            if indicator.lower() in text_lower:
+                return True
+        
+        return False
     
     def _get_violation_message(self, detected_words, language='ja'):
         """違反メッセージを生成"""
