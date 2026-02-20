@@ -487,6 +487,7 @@
             <div class="download-section fade-in">
                 <h4>{% if is_english %}Download{% elif is_spanish %}Descargar{% elif is_german %}Herunterladen{% elif is_portuguese %}Download{% elif is_chinese %}下载{% else %}ダウンロード{% endif %}</h4>
                 <div class="download-buttons">
+                    {% if user.is_authenticated and user.is_starter %}
                     {% if song.audio_file %}
                     <a href="{{ song.audio_file.url }}" download="{{ song.title }}.mp3" class="btn-download">
                         <i class="bi bi-download"></i> {% if is_english %}Download MP3{% elif is_spanish %}Descargar MP3{% elif is_german %}MP3 herunterladen{% elif is_portuguese %}Baixar MP3{% elif is_chinese %}下载MP3{% else %}MP3ダウンロード{% endif %}
@@ -500,6 +501,11 @@
                         <i class="bi bi-cloud-download"></i> {% if is_english %}HD Download{% elif is_spanish %}Descarga HD{% elif is_german %}HD-Download{% elif is_portuguese %}Download HD{% elif is_chinese %}高清下载{% else %}高音質ダウンロード{% endif %}
                     </button>
                     {% endif %}
+                    {% endif %}
+                    {% else %}
+                    <a href="{% url 'users:upgrade' %}" class="btn-download-locked">
+                        <i class="bi bi-lock"></i> {% if is_english %}Starter Plan Required{% elif is_spanish %}Plan Starter Requerido{% elif is_german %}Starter-Plan erforderlich{% elif is_portuguese %}Plano Iniciante Necessário{% elif is_chinese %}需要入门套餐{% else %}スターター以上で利用可能{% endif %}
+                    </a>
                     {% endif %}
                 </div>
             </div>
@@ -2525,6 +2531,30 @@ document.getElementById('tagModal').addEventListener('click', function(e) {
 }
 
 .btn-karaoke-locked:hover {
+    background: #ff6b35;
+    color: white;
+    transform: translateY(-2px);
+}
+
+.btn-download-locked {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.5rem;
+    background: #e0e0e0;
+    color: #888;
+    border: none;
+    border-radius: var(--radius-md);
+    padding: 0.875rem 1.5rem;
+    font-size: 0.95rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    width: 100%;
+    text-decoration: none;
+}
+
+.btn-download-locked:hover {
     background: #ff6b35;
     color: white;
     transform: translateY(-2px);
