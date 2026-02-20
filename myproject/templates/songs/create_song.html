@@ -39,6 +39,61 @@
                     <p class="mb-0">{% if is_english %}Enter the information below to create your own learning song{% elif is_spanish %}Ingresa la información a continuación para crear tu propia canción de aprendizaje{% elif is_german %}Gib die Informationen unten ein, um dein eigenes Lernlied zu erstellen{% elif is_portuguese %}Insira as informações abaixo para criar sua própria música de aprendizado{% elif is_chinese %}输入以下信息，创建您的专属学习歌曲{% else %}以下の情報を入力して、あなただけの学習楽曲を作成しましょう{% endif %}</p>
                 </div>
                 
+                {% if free_plan_limit_reached %}
+                <!-- 無料プラン上限到達時 -->
+                <div class="form-body">
+                    <div class="text-center py-5">
+                        <h4 class="fw-bold mb-3">
+                            {% if is_english %}Monthly Limit Reached
+                            {% elif is_spanish %}Límite Mensual Alcanzado
+                            {% elif is_german %}Monatliches Limit Erreicht
+                            {% elif is_portuguese %}Limite Mensal Atingido
+                            {% elif is_chinese %}已达月度上限
+                            {% else %}今月の作成上限に達しました
+                            {% endif %}
+                        </h4>
+                        <p class="text-secondary mb-4">
+                            {% if is_english %}You have used all 15 free songs this month.<br>Upgrade to create more songs!
+                            {% elif is_spanish %}Has usado las 15 canciones gratuitas de este mes.<br>¡Actualiza para crear más canciones!
+                            {% elif is_german %}Du hast alle 15 kostenlosen Lieder dieses Monats verbraucht.<br>Upgrade, um mehr Lieder zu erstellen!
+                            {% elif is_portuguese %}Você usou todas as 15 músicas gratuitas deste mês.<br>Faça upgrade para criar mais músicas!
+                            {% elif is_chinese %}您已使用完本月15首免费歌曲。<br>升级以创建更多歌曲！
+                            {% else %}今月の無料枠15曲をすべて使い切りました。<br>アップグレードしてもっと楽曲を作成しましょう。
+                            {% endif %}
+                        </p>
+                        <div class="d-flex justify-content-center gap-3 flex-wrap">
+                            <a href="{% url 'users:upgrade' %}" class="btn btn-primary btn-lg px-4">
+                                {% if is_english %}Upgrade Plan
+                                {% elif is_spanish %}Mejorar Plan
+                                {% elif is_german %}Plan Upgraden
+                                {% elif is_portuguese %}Atualizar Plano
+                                {% elif is_chinese %}升级计划
+                                {% else %}プランをアップグレード
+                                {% endif %}
+                            </a>
+                            <a href="{% url 'songs:my_songs' %}" class="btn btn-outline-secondary btn-lg px-4">
+                                {% if is_english %}My Songs
+                                {% elif is_spanish %}Mis Canciones
+                                {% elif is_german %}Meine Lieder
+                                {% elif is_portuguese %}Minhas Músicas
+                                {% elif is_chinese %}我的歌曲
+                                {% else %}マイ楽曲
+                                {% endif %}
+                            </a>
+                        </div>
+                        <p class="text-muted mt-4 small">
+                            {% if is_english %}Free song count resets on {{ next_reset_date|date:"F j" }} ({{ days_until_reset }} days left).
+                            {% elif is_spanish %}El conteo de canciones gratuitas se reinicia el {{ next_reset_date|date:"j \d\e F" }} ({{ days_until_reset }} días restantes).
+                            {% elif is_german %}Der kostenlose Liederzähler wird am {{ next_reset_date|date:"j. F" }} zurückgesetzt (noch {{ days_until_reset }} Tage).
+                            {% elif is_portuguese %}A contagem de músicas gratuitas será reiniciada em {{ next_reset_date|date:"j \d\e F" }} ({{ days_until_reset }} dias restantes).
+                            {% elif is_chinese %}免费歌曲数量将在{{ next_reset_date|date:"n月j日" }}重置（还有{{ days_until_reset }}天）。
+                            {% else %}無料枠は{{ next_reset_date|date:"n月j日" }}にリセットされます（あと{{ days_until_reset }}日）。
+                            {% endif %}
+                        </p>
+                    </div>
+                </div>
+                {% else %}
+                <!-- 通常のフォーム表示 -->
                 <div class="form-body">
                     <form method="post" id="create-song-form">
                         {% csrf_token %}
@@ -221,6 +276,28 @@
                         {% else %}
                         <!-- 無料プランはO2のみ（非表示で送信） -->
                         <input type="hidden" name="mureka_model" value="mureka-o2">
+                        {% if free_plan_remaining is not None %}
+                        <div class="form-group mb-4">
+                            <div class="free-plan-remaining-info">
+                                {% if is_english %}Free songs remaining this month: <strong>{{ free_plan_remaining }} / 15</strong>
+                                {% elif is_spanish %}Canciones gratuitas restantes este mes: <strong>{{ free_plan_remaining }} / 15</strong>
+                                {% elif is_german %}Verbleibende kostenlose Lieder diesen Monat: <strong>{{ free_plan_remaining }} / 15</strong>
+                                {% elif is_portuguese %}Músicas gratuitas restantes este mês: <strong>{{ free_plan_remaining }} / 15</strong>
+                                {% elif is_chinese %}本月剩余免费歌曲: <strong>{{ free_plan_remaining }} / 15</strong>
+                                {% else %}今月の残り無料枠: <strong>{{ free_plan_remaining }} / 15曲</strong>
+                                {% endif %}
+                                <span class="free-plan-reset-date">
+                                    {% if is_english %}Resets {{ next_reset_date|date:"F j" }}
+                                    {% elif is_spanish %}Se restablece el {{ next_reset_date|date:"j \d\e F" }}
+                                    {% elif is_german %}Zurücksetzung am {{ next_reset_date|date:"j. F" }}
+                                    {% elif is_portuguese %}Redefinido em {{ next_reset_date|date:"j \d\e F" }}
+                                    {% elif is_chinese %}{{ next_reset_date|date:"n月j日" }}重置
+                                    {% else %}{{ next_reset_date|date:"n月j日" }}にリセット
+                                    {% endif %}
+                                </span>
+                            </div>
+                        </div>
+                        {% endif %}
                         {% endif %}
                         
                         <!-- カスタマイズ入力欄（自由記述） -->
@@ -268,13 +345,53 @@
                         </div>
                         
                         <!-- 送信ボタン -->
+                        {% if paid_plan_all_exhausted %}
+                        <!-- 有料プラン全モデル上限到達アラート -->
+                        <div class="limit-reached-alert mb-4">
+                            <div class="limit-alert-content">
+                                <strong>
+                                    {% if is_english %}All model limits reached
+                                    {% elif is_spanish %}Se alcanzaron los límites de todos los modelos
+                                    {% elif is_german %}Alle Modell-Limits erreicht
+                                    {% elif is_portuguese %}Todos os limites de modelos atingidos
+                                    {% elif is_chinese %}所有模型已达上限
+                                    {% else %}すべてのモデルが上限に達しました
+                                    {% endif %}
+                                </strong>
+                                <p class="mb-1">
+                                    {% if is_english %}Your monthly limit resets on {{ next_reset_date|date:"F j" }} ({{ days_until_reset }} days left).
+                                    {% elif is_spanish %}Tu límite mensual se restablece el {{ next_reset_date|date:"j \d\e F" }} ({{ days_until_reset }} días restantes).
+                                    {% elif is_german %}Dein monatliches Limit wird am {{ next_reset_date|date:"j. F" }} zurückgesetzt (noch {{ days_until_reset }} Tage).
+                                    {% elif is_portuguese %}Seu limite mensal será redefinido em {{ next_reset_date|date:"j \d\e F" }} ({{ days_until_reset }} dias restantes).
+                                    {% elif is_chinese %}您的月度限额将在{{ next_reset_date|date:"n月j日" }}重置（还有{{ days_until_reset }}天）。
+                                    {% else %}月間の使用回数は{{ next_reset_date|date:"n月j日" }}にリセットされます（あと{{ days_until_reset }}日）。
+                                    {% endif %}
+                                </p>
+                                <a href="{% url 'users:upgrade' %}" class="btn btn-sm btn-warning mt-1">
+                                    {% if is_english %}Upgrade for more
+                                    {% elif is_spanish %}Actualizar para más
+                                    {% elif is_german %}Upgrade für mehr
+                                    {% elif is_portuguese %}Atualize para mais
+                                    {% elif is_chinese %}升级获取更多
+                                    {% else %}アップグレードで回数を増やす
+                                    {% endif %}
+                                </a>
+                            </div>
+                        </div>
+                        {% endif %}
                         <div class="form-actions">
-                            <button type="submit" class="btn-create-song">
+                            <button type="submit" class="btn-create-song {% if paid_plan_all_exhausted %}btn-disabled{% endif %}" {% if paid_plan_all_exhausted %}disabled{% endif %}>
+                                {% if paid_plan_all_exhausted %}
+                                <span class="btn-text">
+                                    {% if is_english %}Limit Reached{% elif is_spanish %}Límite Alcanzado{% elif is_german %}Limit Erreicht{% elif is_chinese %}已达上限{% else %}上限に達しました{% endif %}
+                                </span>
+                                {% else %}
                                 <span class="btn-text">{% if is_english %}Generate AI Song{% elif is_spanish %}Generar Canción con IA{% elif is_german %}KI-Lied generieren{% elif is_chinese %}AI生成歌曲{% else %}AI楽曲を生成{% endif %}</span>
                                 <span class="btn-loading" style="display: none;">
                                     <span class="spinner-border spinner-border-sm"></span>
                                     {% if is_english %}Generating...{% elif is_spanish %}Generando...{% elif is_german %}Generiere...{% elif is_chinese %}生成中...{% else %}楽曲を生成中...{% endif %}
                                 </span>
+                                {% endif %}
                             </button>
                             <a href="{% url 'songs:upload_image' %}" class="btn-secondary-action">
                                 {% if is_english %}Back to Upload{% elif is_spanish %}Volver a Subir{% elif is_german %}Zurück zum Hochladen{% elif is_chinese %}返回上传{% else %}画像アップロードに戻る{% endif %}
@@ -282,6 +399,7 @@
                         </div>
                     </form>
                 </div>
+                {% endif %}
             </div>
         </div>
     </div>
@@ -294,6 +412,54 @@
     box-shadow: var(--shadow-lg);
     overflow: hidden;
     border: 1px solid rgba(255, 121, 64, 0.1);
+}
+
+.free-plan-remaining-info {
+    background: linear-gradient(135deg, rgba(255, 121, 64, 0.08), rgba(255, 179, 71, 0.08));
+    border: 1px solid rgba(255, 121, 64, 0.2);
+    border-radius: var(--radius-lg, 12px);
+    padding: 0.85rem 1.2rem;
+    color: var(--text-primary);
+    font-size: 0.95rem;
+    display: flex;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+}
+
+.free-plan-reset-date {
+    margin-left: auto;
+    font-size: 0.82rem;
+    color: var(--text-secondary, #888);
+    white-space: nowrap;
+}
+
+/* 有料プラン全モデル上限到達アラート */
+.limit-reached-alert {
+    background: linear-gradient(135deg, rgba(255, 107, 107, 0.08), rgba(255, 166, 77, 0.08));
+    border: 1px solid rgba(255, 107, 107, 0.3);
+    border-radius: var(--radius-lg, 12px);
+    padding: 1.25rem 1.5rem;
+}
+
+.limit-alert-content strong {
+    display: block;
+    margin-bottom: 0.35rem;
+    color: var(--text-primary);
+}
+
+.limit-alert-content p {
+    font-size: 0.88rem;
+    color: var(--text-secondary, #888);
+    margin-bottom: 0;
+}
+
+/* 無効化ボタン */
+.btn-create-song.btn-disabled {
+    background: var(--text-secondary, #888) !important;
+    opacity: 0.6;
+    cursor: not-allowed;
+    pointer-events: none;
 }
 
 .form-header {

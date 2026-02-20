@@ -235,7 +235,37 @@ class CreateSongView(LoginRequiredMixin, CreateView):
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
         # モデル別の残り使用可能回数を取得
-        context['model_remaining'] = self.request.user.get_remaining_model_usage()
+        model_remaining = self.request.user.get_remaining_model_usage()
+        context['model_remaining'] = model_remaining
+        
+        # 次月1日のリセット日を計算
+        from django.utils import timezone
+        import calendar
+        now = timezone.now()
+        _, last_day = calendar.monthrange(now.year, now.month)
+        if now.month == 12:
+            next_reset = now.replace(year=now.year + 1, month=1, day=1)
+        else:
+            next_reset = now.replace(month=now.month + 1, day=1)
+        days_until_reset = (next_reset.date() - now.date()).days
+        context['next_reset_date'] = next_reset
+        context['days_until_reset'] = days_until_reset
+        
+        user = self.request.user
+        if not (user.is_starter or user.is_pro or user.is_school):
+            # 無料プランで全モデルの残りが0の場合、上限到達フラグを立てる
+            all_exhausted = all(
+                v == 0 for v in model_remaining.values()
+            )
+            context['free_plan_limit_reached'] = all_exhausted
+            context['free_plan_remaining'] = model_remaining.get('o2', 0)
+        else:
+            # 有料プランで全モデルの残りが0の場合（Proの-1は除く）
+            all_exhausted = all(
+                v == 0 for v in model_remaining.values()
+            )
+            context['paid_plan_all_exhausted'] = all_exhausted
+        
         return context
     
     def get_form_kwargs(self):
