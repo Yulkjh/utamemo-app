@@ -244,6 +244,7 @@ class SongGenerationQueue:
                         title=title,
                         genre=genre.lower() if genre else 'pop',
                         vocal_style=vocal_style,
+                        model=song.mureka_model or 'mureka-v8',
                         music_prompt=music_prompt,
                         reference_song=reference_song
                     )
