@@ -245,10 +245,22 @@ class MurekaAIGenerator:
             raise Exception("Lyrics too short for song generation (minimum 50 characters)")
         
         # モデルバージョンの検証と設定
-        valid_models = ['mureka-v8', 'mureka-o2', 'mureka-7.6']
+        # DB/UI上の値 → 実際のMureka APIモデル名にマッピング
+        # Mureka APIの有効なモデル名: "auto", "mureka-6", "mureka-5.5" 等
+        # "auto" は最新モデル（現在はV8）を自動選択する
+        MODEL_API_MAPPING = {
+            'mureka-v8': 'auto',       # V8 = 最新モデル → autoで自動選択
+            'mureka-o2': 'mureka-o2',   # O2はそのまま送信
+            'mureka-7.6': 'mureka-7.6', # 7.6はそのまま送信
+        }
+        valid_models = list(MODEL_API_MAPPING.keys())
         if model not in valid_models:
-            logger.warning(f"Invalid model '{model}', defaulting to mureka-v8")
+            logger.warning(f"Invalid model '{model}', defaulting to auto (V8)")
             model = 'mureka-v8'
+        
+        # APIに送信するモデル名に変換
+        api_model = MODEL_API_MAPPING.get(model, 'auto')
+        logger.info(f"Model mapping: DB='{model}' → API='{api_model}'")
         
         # プロンプトを組み立て（ジャンル + ボーカルスタイル + ユーザーのカスタムプロンプト）
         prompt_parts = []
@@ -269,11 +281,11 @@ class MurekaAIGenerator:
         
         payload = {
             "lyrics": lyrics,
-            "model": model,
+            "model": api_model,
             "prompt": full_prompt
         }
         
-        logger.info(f"Using Mureka model: {model}")
+        logger.info(f"Using Mureka model: {api_model} (from DB: {model})")
         logger.info(f"Music prompt: {payload['prompt']}")
         logger.info(f"Lyrics length: {len(lyrics)} chars")
         
