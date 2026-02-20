@@ -750,8 +750,9 @@ class PDFTextExtractor:
                 img = Image.frombytes("RGB", [pix.width, pix.height], pix.samples)
                 
                 # Geminiで OCR
-                prompt = """この画像に含まれているテキストをすべて抽出してください。
-改行や段落の構造も保持してください。"""
+                prompt = """Extract ALL text contained in this image.
+Preserve the line breaks and paragraph structure.
+Output only the extracted text without any additional explanation."""
                 
                 try:
                     response = model.generate_content([prompt, img])

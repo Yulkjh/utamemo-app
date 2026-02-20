@@ -585,6 +585,8 @@ class UploadImageView(LoginRequiredMixin, FormView):
                     extracted_text = pdf_extractor.extract_text_from_pdf(file)
                     if extracted_text:
                         extracted_texts.append(extracted_text)
+                    else:
+                        logger.warning(f"PDF extraction returned empty for {file.name}")
                 else:
                     # 画像ファイルの処理
                     uploaded = UploadedImage.objects.create(user=user, image=file)
@@ -596,10 +598,12 @@ class UploadImageView(LoginRequiredMixin, FormView):
                         uploaded.save()
                         if extracted_text:
                             extracted_texts.append(extracted_text)
+                        else:
+                            logger.warning(f"OCR returned empty for {file.name} (language_mode={language_mode})")
                         uploaded_image_ids.append(uploaded.id)
                     except Exception as e:
                         errors.append(f'{file.name}: OCR処理に失敗しました')
-                        logger.error(f"OCR error for {file.name}: {e}")
+                        logger.error(f"OCR error for {file.name} (language_mode={language_mode}): {e}")
             except Exception as e:
                 errors.append(f'{file.name}: 処理に失敗しました')
                 logger.error(f"File processing error for {file.name}: {e}")
@@ -620,13 +624,14 @@ class UploadImageView(LoginRequiredMixin, FormView):
             return redirect('songs:content_violation')
         
         if not extracted_texts:
+            logger.warning(f"No text extracted from {len(valid_files)} files for user {user.id} (language_mode={language_mode})")
             if app_language == 'en':
-                messages.error(self.request, 'Could not extract text. Please try another file.')
+                messages.warning(self.request, 'Could not extract text from the uploaded file. You can enter lyrics manually.')
             elif app_language == 'zh':
-                messages.error(self.request, '无法提取文字。请尝试其他文件。')
+                messages.warning(self.request, '无法从上传的文件中提取文字。您可以手动输入歌词。')
             else:
-                messages.error(self.request, 'テキストを抽出できませんでした。別のファイルを試してください。')
-            return redirect('songs:upload_image')
+                messages.warning(self.request, 'アップロードされたファイルからテキストを抽出できませんでした。手動で歌詞を入力できます。')
+            return redirect(f"{reverse_lazy('songs:lyrics_confirmation')}?manual=true&lang={language_mode}")
         
         pdf_count = sum(1 for f in valid_files if f.name.lower().endswith('.pdf'))
         image_count = len(valid_files) - pdf_count
