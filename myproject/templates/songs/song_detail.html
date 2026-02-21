@@ -479,7 +479,6 @@
                         <i class="bi bi-music-note-beamed"></i>
                         <span id="karaoke-btn-text">{% if is_english %}Start Karaoke{% elif is_chinese %}开始卡拉OK{% else %}カラオケを始める{% endif %}</span>
                     </button>
-                    <p class="karaoke-description">{% if is_english %}Lyrics sync + vocal reduction{% elif is_chinese %}歌词同步 + 人声降低{% else %}歌詞同期＋ボーカル低減{% endif %}</p>
                     {% else %}
                     <a href="{% url 'users:upgrade' %}" class="btn-karaoke-locked">
                         <i class="bi bi-lock"></i>
@@ -2632,13 +2631,6 @@ document.getElementById('tagModal').addEventListener('click', function(e) {
     background: #a0745a;
     color: white;
     transform: translateY(-2px);
-}
-
-.karaoke-description {
-    font-size: 0.8rem;
-    color: var(--text-muted);
-    text-align: center;
-    margin: 0;
 }
 
 /* カラオケモーダル */
