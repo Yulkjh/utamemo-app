@@ -314,18 +314,6 @@
                 <div class="lyrics-header">
                     <h3>{% if is_english %}Lyrics{% elif is_spanish %}Letra{% elif is_german %}Songtext{% elif is_portuguese %}Letra{% elif is_chinese %}歌词{% else %}歌詞{% endif %}</h3>
                     <div class="lyrics-header-actions">
-                        {% if song.audio_url or song.audio_file %}
-                        {% if user.is_authenticated and user.is_starter %}
-                        <button class="btn-karaoke-mode" id="btn-karaoke-toggle" onclick="toggleKaraokeMode()">
-                            <span id="karaoke-btn-text">{% if is_english %}Karaoke{% elif is_chinese %}卡拉OK{% else %}カラオケ{% endif %}</span>
-                        </button>
-                        {% else %}
-                        <a href="{% url 'users:upgrade' %}" class="btn-karaoke-mode btn-karaoke-locked-mini">
-                            <i class="bi bi-lock"></i>
-                            <span>{% if is_english %}Karaoke{% elif is_chinese %}卡拉OK{% else %}カラオケ{% endif %}</span>
-                        </a>
-                        {% endif %}
-                        {% endif %}
                         {% if user.is_authenticated %}
                         <a href="{% url 'songs:recreate_with_lyrics' song.pk %}" class="btn-recreate-lyrics">
                             <i class="bi bi-arrow-repeat"></i>
@@ -480,7 +468,28 @@
                 </div>
             </div>
 
-            <!-- カラオケセクション（削除: 歌詞ヘッダーのカラオケボタンに統合済み） -->
+            <!-- カラオケセクション -->
+            {% if song.audio_url or song.audio_file %}
+            {% if song.lyrics %}
+            <div class="karaoke-section fade-in">
+                <h4><i class="bi bi-mic"></i> {% if is_english %}Karaoke{% elif is_chinese %}卡拉OK{% else %}カラオケ{% endif %}</h4>
+                <div class="karaoke-buttons">
+                    {% if user.is_authenticated and user.is_starter %}
+                    <button class="btn-karaoke-start" id="btn-karaoke-toggle" onclick="toggleKaraokeMode()">
+                        <i class="bi bi-music-note-beamed"></i>
+                        <span id="karaoke-btn-text">{% if is_english %}Start Karaoke{% elif is_chinese %}开始卡拉OK{% else %}カラオケを始める{% endif %}</span>
+                    </button>
+                    <p class="karaoke-description">{% if is_english %}Lyrics sync + vocal reduction{% elif is_chinese %}歌词同步 + 人声降低{% else %}歌詞同期＋ボーカル低減{% endif %}</p>
+                    {% else %}
+                    <a href="{% url 'users:upgrade' %}" class="btn-karaoke-locked">
+                        <i class="bi bi-lock"></i>
+                        {% if is_english %}Starter Plan Required{% elif is_chinese %}需要入门套餐{% else %}スターター以上で利用可能{% endif %}
+                    </a>
+                    {% endif %}
+                </div>
+            </div>
+            {% endif %}
+            {% endif %}
 
             <!-- ダウンロードセクション -->
             {% if song.audio_file or song.audio_url %}
@@ -1163,47 +1172,6 @@
     align-items: center;
     gap: 0.75rem;
     flex-wrap: wrap;
-}
-
-.btn-karaoke-mode {
-    display: inline-flex;
-    align-items: center;
-    gap: 0.5rem;
-    padding: 0.5rem 1rem;
-    background: linear-gradient(135deg, #a0745a 0%, #7b5b3a 100%);
-    color: white;
-    border: none;
-    border-radius: var(--radius-md);
-    font-size: 0.85rem;
-    font-weight: 600;
-    cursor: pointer;
-    transition: all 0.3s ease;
-}
-
-.btn-karaoke-mode:hover {
-    transform: translateY(-2px);
-    box-shadow: 0 4px 12px rgba(123, 91, 58, 0.4);
-}
-
-.btn-karaoke-mode.active {
-    background: linear-gradient(135deg, #ff4444 0%, #cc0000 100%);
-}
-
-.btn-karaoke-mode.active:hover {
-    box-shadow: 0 4px 12px rgba(255, 68, 68, 0.4);
-}
-
-.btn-karaoke-locked-mini {
-    background: linear-gradient(135deg, #6b7280 0%, #4b5563 100%) !important;
-    opacity: 0.8;
-    text-decoration: none;
-    color: white !important;
-}
-
-.btn-karaoke-locked-mini:hover {
-    opacity: 1;
-    color: white !important;
-    text-decoration: none;
 }
 
 .karaoke-container {
@@ -2586,6 +2554,93 @@ document.getElementById('tagModal').addEventListener('click', function(e) {
 </div>
 
 <style>
+/* カラオケセクション（サイドバー） */
+.karaoke-section {
+    background: var(--surface);
+    border-radius: var(--radius-lg);
+    padding: 1.5rem;
+    box-shadow: var(--shadow-md);
+    margin-bottom: 1.5rem;
+}
+
+.karaoke-section h4 {
+    font-size: 1.1rem;
+    font-weight: 700;
+    color: var(--text-primary);
+    margin-bottom: 1rem;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+}
+
+.karaoke-buttons {
+    display: flex;
+    flex-direction: column;
+    gap: 0.75rem;
+}
+
+.btn-karaoke-start {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.5rem;
+    background: linear-gradient(135deg, #a0745a 0%, #7b5b3a 100%);
+    color: white;
+    border: none;
+    border-radius: var(--radius-md);
+    padding: 0.875rem 1.5rem;
+    font-size: 0.95rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    box-shadow: 0 4px 15px rgba(160, 116, 90, 0.3);
+    width: 100%;
+}
+
+.btn-karaoke-start:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 6px 20px rgba(160, 116, 90, 0.4);
+}
+
+.btn-karaoke-start.active {
+    background: linear-gradient(135deg, #7b5b3a 0%, #5a4028 100%);
+}
+
+.btn-karaoke-start i {
+    font-size: 1.1rem;
+}
+
+.btn-karaoke-locked {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.5rem;
+    background: #e0e0e0;
+    color: #888;
+    border: none;
+    border-radius: var(--radius-md);
+    padding: 0.875rem 1.5rem;
+    font-size: 0.95rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    width: 100%;
+    text-decoration: none;
+}
+
+.btn-karaoke-locked:hover {
+    background: #a0745a;
+    color: white;
+    transform: translateY(-2px);
+}
+
+.karaoke-description {
+    font-size: 0.8rem;
+    color: var(--text-muted);
+    text-align: center;
+    margin: 0;
+}
+
 /* カラオケモーダル */
 .karaoke-modal {
     display: none;
@@ -2769,18 +2824,6 @@ document.getElementById('tagModal').addEventListener('click', function(e) {
     0%, 100% { opacity: 1; }
     50% { opacity: 0.7; }
 }
-
-@media (max-width: 480px) {
-    .karaoke-mode-section {
-        flex-direction: column;
-    }
-    
-    .btn-karaoke-mode,
-    .btn-normal-mode {
-        width: 100%;
-        justify-content: center;
-    }
-}
 </style>
 
 <script>
@@ -2815,7 +2858,7 @@ document.getElementById('tagModal').addEventListener('click', function(e) {
         if (karaokeActive) {
             // カラオケON
             btn.classList.add('active');
-            btnText.textContent = '{% if is_english %}Close{% elif is_chinese %}关闭{% else %}閉じる{% endif %}';
+            btnText.textContent = '{% if is_english %}Stop Karaoke{% elif is_chinese %}停止卡拉OK{% else %}カラオケをやめる{% endif %}';
             normalLyrics.style.display = 'none';
             karaokeContainer.style.display = 'block';
             
@@ -2840,7 +2883,7 @@ document.getElementById('tagModal').addEventListener('click', function(e) {
         } else {
             // カラオケOFF
             btn.classList.remove('active');
-            btnText.textContent = '{% if is_english %}Karaoke{% elif is_chinese %}卡拉OK{% else %}カラオケ{% endif %}';
+            btnText.textContent = '{% if is_english %}Start Karaoke{% elif is_chinese %}开始卡拉OK{% else %}カラオケを始める{% endif %}';
             normalLyrics.style.display = 'block';
             karaokeContainer.style.display = 'none';
             stopKaraokeSync();
@@ -3203,10 +3246,11 @@ document.getElementById('tagModal').addEventListener('click', function(e) {
         }
     });
     
-    // === モバイル：ダウンロードセクション移動 ===
+    // === モバイル：カラオケ・ダウンロードセクション移動 ===
     function reorderForMobile() {
         const isMobile = window.innerWidth <= 768;
         const player = document.querySelector('.music-player-card');
+        const karaoke = document.querySelector('.karaoke-section');
         const download = document.querySelector('.download-section');
         const colLeft = document.querySelector('.col-lg-8');
         
@@ -3221,9 +3265,15 @@ document.getElementById('tagModal').addEventListener('click', function(e) {
                     colLeft.appendChild(download);
                 }
             }
+            if (karaoke && karaoke.parentElement !== colLeft) {
+                colLeft.insertBefore(karaoke, download || afterPlayer);
+            }
         } else {
             const colRight = document.querySelector('.col-lg-4');
             if (!colRight) return;
+            if (karaoke && karaoke.parentElement !== colRight) {
+                colRight.appendChild(karaoke);
+            }
             if (download && download.parentElement !== colRight) {
                 colRight.appendChild(download);
             }
