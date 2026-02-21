@@ -235,6 +235,17 @@ PASSWORD_RESET_TIMEOUT = int(os.getenv('PASSWORD_RESET_TIMEOUT', 3600))  # 1時�
 
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 
+
+def _is_suspicious_404(record):
+    """WordPress脆弱性スキャン等の不審な404リクエストを判定"""
+    msg = record.getMessage() if hasattr(record, 'getMessage') else str(getattr(record, 'msg', ''))
+    # .php, wp-admin, wp-content, wp-includes 等のパターン
+    suspicious = ('.php', '/wp-admin', '/wp-content', '/wp-includes',
+                  '/wp-login', '/.env', '/xmlrpc', '/admin/config',
+                  '/cgi-bin', '/.git', '/phpmyadmin', '/vendor/')
+    return any(s in msg.lower() for s in suspicious)
+
+
 LOGGING = {
     'version': 1,
     'disable_existing_loggers': False,
@@ -248,6 +259,12 @@ LOGGING = {
             'style': '{',
         },
     },
+    'filters': {
+        'skip_suspicious_404': {
+            '()': 'django.utils.log.CallbackFilter',
+            'callback': lambda record: not _is_suspicious_404(record),
+        },
+    },
     'handlers': {
         'console': {
             'class': 'logging.StreamHandler',
@@ -255,6 +272,12 @@ LOGGING = {
         },
     },
     'loggers': {
+        'django.request': {
+            'handlers': ['console'],
+            'level': 'WARNING',
+            'filters': ['skip_suspicious_404'],
+            'propagate': False,
+        },
         'songs': {
             'handlers': ['console'],
             'level': 'INFO',
