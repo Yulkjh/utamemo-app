@@ -1,0 +1,749 @@
+{% extends 'base.html' %}
+
+{% block title %}{% if is_english %}Generating Lyrics...{% elif is_chinese %}生成歌词中...{% else %}歌詞を生成中...{% endif %} - UTAMEMO{% endblock %}
+
+{% block content %}
+<div class="lyrics-generating-page">
+    <!-- 背景アニメーション -->
+    <div class="generating-bg">
+        <div class="bg-circle bg-circle-1"></div>
+        <div class="bg-circle bg-circle-2"></div>
+        <div class="bg-circle bg-circle-3"></div>
+    </div>
+
+    <div class="generating-container">
+        <!-- メインビジュアル -->
+        <div class="generating-visual">
+            <div class="lyrics-icon-wrapper" id="lyrics-icon-wrapper">
+                <div class="lyrics-pulse"></div>
+                <div class="lyrics-pulse lyrics-pulse-2"></div>
+                <i class="bi bi-pencil-square" id="main-icon"></i>
+            </div>
+        </div>
+
+        <!-- タイトル -->
+        <h1 class="generating-title" id="generating-title">
+            {% if is_english %}Creating Your Lyrics{% elif is_chinese %}正在生成歌词{% else %}歌詞を生成中{% endif %}
+        </h1>
+        <p class="generating-subtitle" id="generating-subtitle">
+            {% if is_english %}AI is composing lyrics from your content{% elif is_chinese %}AI正在根据您的内容创作歌词{% else %}AIがあなたのコンテンツから歌詞を作成しています{% endif %}
+        </p>
+
+        <!-- プログレスバー -->
+        <div class="generating-progress-wrapper">
+            <div class="generating-progress-bar">
+                <div class="generating-progress-fill" id="progress-fill" style="width: 5%"></div>
+            </div>
+            <div class="generating-progress-text">
+                <span id="progress-percent">5%</span>
+            </div>
+        </div>
+
+        <!-- ステップインジケーター -->
+        <div class="generating-steps" id="generating-steps">
+            <div class="step active" id="step-1">
+                <div class="step-icon">
+                    <i class="bi bi-file-text"></i>
+                </div>
+                <div class="step-label">
+                    {% if is_english %}Reading{% elif is_chinese %}读取中{% else %}テキスト読取{% endif %}
+                </div>
+            </div>
+            <div class="step-line" id="step-line-1"></div>
+            <div class="step" id="step-2">
+                <div class="step-icon">
+                    <i class="bi bi-cpu"></i>
+                </div>
+                <div class="step-label">
+                    {% if is_english %}AI Writing{% elif is_chinese %}AI创作{% else %}AI作詞中{% endif %}
+                </div>
+            </div>
+            <div class="step-line" id="step-line-2"></div>
+            <div class="step" id="step-3">
+                <div class="step-icon">
+                    <i class="bi bi-check-circle"></i>
+                </div>
+                <div class="step-label">
+                    {% if is_english %}Complete{% elif is_chinese %}完成{% else %}完了{% endif %}
+                </div>
+            </div>
+        </div>
+
+        <!-- ステータスメッセージ -->
+        <div class="generating-status" id="generating-status">
+            <p class="status-main" id="status-main">
+                {% if is_english %}Analyzing your content...{% elif is_chinese %}正在分析您的内容...{% else %}コンテンツを解析中...{% endif %}
+            </p>
+            <p class="status-sub" id="status-sub">
+                {% if is_english %}Usually takes 10-30 seconds{% elif is_chinese %}通常需要10-30秒{% else %}通常10〜30秒で完成します{% endif %}
+            </p>
+        </div>
+
+        <!-- ヒント -->
+        <div class="generating-tip" id="generating-tip">
+            <i class="bi bi-lightbulb"></i>
+            <span id="tip-text">
+                {% if is_english %}Tip: You can freely edit the lyrics after they're generated!{% elif is_chinese %}提示：生成后可以自由编辑歌词！{% else %}ヒント：生成された歌詞は自由に編集できます！{% endif %}
+            </span>
+        </div>
+
+        <!-- テキスト量の表示 -->
+        {% if text_length %}
+        <div class="generating-info">
+            <span class="info-badge">
+                <i class="bi bi-file-earmark-text"></i>
+                {% if is_english %}{{ text_length }} chars detected{% elif is_chinese %}检测到{{ text_length }}个字符{% else %}{{ text_length }}文字のテキストを検出{% endif %}
+            </span>
+        </div>
+        {% endif %}
+    </div>
+</div>
+
+<style>
+/* ===== Lyrics Generating Page Styles ===== */
+.lyrics-generating-page {
+    min-height: 100vh;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    position: relative;
+    overflow: hidden;
+    padding: 2rem 1rem;
+    background: linear-gradient(135deg, #0d0d1a 0%, #1a1a2e 50%, #16213e 100%);
+}
+
+/* 背景アニメーション */
+.generating-bg {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    pointer-events: none;
+    z-index: 0;
+}
+
+.bg-circle {
+    position: absolute;
+    border-radius: 50%;
+    filter: blur(80px);
+    opacity: 0.15;
+}
+
+.bg-circle-1 {
+    width: 400px;
+    height: 400px;
+    background: #7c3aed;
+    top: -100px;
+    right: -100px;
+    animation: float-1 8s ease-in-out infinite;
+}
+
+.bg-circle-2 {
+    width: 300px;
+    height: 300px;
+    background: #06b6d4;
+    bottom: -50px;
+    left: -50px;
+    animation: float-2 10s ease-in-out infinite;
+}
+
+.bg-circle-3 {
+    width: 200px;
+    height: 200px;
+    background: #f59e0b;
+    top: 50%;
+    left: 50%;
+    animation: float-3 12s ease-in-out infinite;
+}
+
+@keyframes float-1 {
+    0%, 100% { transform: translate(0, 0); }
+    50% { transform: translate(-30px, 30px); }
+}
+
+@keyframes float-2 {
+    0%, 100% { transform: translate(0, 0); }
+    50% { transform: translate(20px, -20px); }
+}
+
+@keyframes float-3 {
+    0%, 100% { transform: translate(-50%, -50%); }
+    50% { transform: translate(-40%, -60%); }
+}
+
+/* メインコンテナ */
+.generating-container {
+    position: relative;
+    z-index: 1;
+    text-align: center;
+    max-width: 520px;
+    width: 100%;
+}
+
+/* 鉛筆アイコン */
+.generating-visual {
+    margin-bottom: 2rem;
+}
+
+.lyrics-icon-wrapper {
+    position: relative;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 100px;
+    height: 100px;
+}
+
+.lyrics-icon-wrapper i {
+    font-size: 3rem;
+    color: #7c3aed;
+    z-index: 2;
+    animation: writing-bounce 2s ease-in-out infinite;
+}
+
+.lyrics-pulse {
+    position: absolute;
+    width: 100%;
+    height: 100%;
+    border-radius: 50%;
+    border: 2px solid rgba(124, 58, 237, 0.3);
+    animation: pulse-ring 2s ease-out infinite;
+}
+
+.lyrics-pulse-2 {
+    animation-delay: 1s;
+}
+
+@keyframes pulse-ring {
+    0% { transform: scale(0.8); opacity: 0.8; }
+    100% { transform: scale(1.8); opacity: 0; }
+}
+
+@keyframes writing-bounce {
+    0%, 100% { transform: translateY(0) rotate(0deg); }
+    25% { transform: translateY(-5px) rotate(-3deg); }
+    75% { transform: translateY(-3px) rotate(3deg); }
+}
+
+/* タイトル */
+.generating-title {
+    font-size: 1.5rem;
+    font-weight: 700;
+    color: #fff;
+    margin-bottom: 0.5rem;
+}
+
+.generating-subtitle {
+    font-size: 0.95rem;
+    color: rgba(255, 255, 255, 0.5);
+    margin-bottom: 2rem;
+    font-weight: 400;
+}
+
+/* プログレスバー */
+.generating-progress-wrapper {
+    margin-bottom: 2.5rem;
+    padding: 0 1rem;
+}
+
+.generating-progress-bar {
+    width: 100%;
+    height: 8px;
+    background: rgba(255, 255, 255, 0.1);
+    border-radius: 4px;
+    overflow: hidden;
+    position: relative;
+}
+
+.generating-progress-fill {
+    height: 100%;
+    border-radius: 4px;
+    background: linear-gradient(90deg, #7c3aed, #a78bfa, #7c3aed);
+    background-size: 200% 100%;
+    animation: shimmer 2s linear infinite;
+    transition: width 0.8s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+@keyframes shimmer {
+    0% { background-position: -200% 0; }
+    100% { background-position: 200% 0; }
+}
+
+.generating-progress-text {
+    display: flex;
+    justify-content: flex-end;
+    margin-top: 0.5rem;
+}
+
+#progress-percent {
+    font-size: 0.85rem;
+    color: rgba(255, 255, 255, 0.6);
+    font-weight: 600;
+    font-variant-numeric: tabular-nums;
+}
+
+/* ステップインジケーター */
+.generating-steps {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0;
+    margin-bottom: 2rem;
+    padding: 0 0.5rem;
+}
+
+.step {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 0.5rem;
+    opacity: 0.3;
+    transition: all 0.5s ease;
+}
+
+.step.active {
+    opacity: 1;
+}
+
+.step.completed {
+    opacity: 0.7;
+}
+
+.step.completed .step-icon {
+    background: rgba(34, 197, 94, 0.2);
+    border-color: #22c55e;
+    color: #22c55e;
+}
+
+.step-icon {
+    width: 40px;
+    height: 40px;
+    border-radius: 50%;
+    background: rgba(255, 255, 255, 0.05);
+    border: 2px solid rgba(255, 255, 255, 0.15);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: rgba(255, 255, 255, 0.5);
+    font-size: 1rem;
+    transition: all 0.5s ease;
+}
+
+.step.active .step-icon {
+    background: rgba(124, 58, 237, 0.15);
+    border-color: #7c3aed;
+    color: #7c3aed;
+    box-shadow: 0 0 20px rgba(124, 58, 237, 0.2);
+    animation: step-glow 2s ease-in-out infinite;
+}
+
+@keyframes step-glow {
+    0%, 100% { box-shadow: 0 0 15px rgba(124, 58, 237, 0.15); }
+    50% { box-shadow: 0 0 25px rgba(124, 58, 237, 0.3); }
+}
+
+.step-label {
+    font-size: 0.7rem;
+    color: rgba(255, 255, 255, 0.4);
+    white-space: nowrap;
+    transition: color 0.5s ease;
+}
+
+.step.active .step-label {
+    color: rgba(255, 255, 255, 0.8);
+}
+
+.step-line {
+    width: 40px;
+    height: 2px;
+    background: rgba(255, 255, 255, 0.1);
+    margin: 0 6px;
+    margin-bottom: 1.5rem;
+    transition: background 0.5s ease;
+}
+
+.step-line.active {
+    background: linear-gradient(90deg, #7c3aed, rgba(124, 58, 237, 0.3));
+}
+
+/* ステータスメッセージ */
+.generating-status {
+    margin-bottom: 2rem;
+}
+
+.status-main {
+    font-size: 1rem;
+    font-weight: 600;
+    color: rgba(255, 255, 255, 0.9);
+    margin-bottom: 0.3rem;
+}
+
+.status-sub {
+    font-size: 0.8rem;
+    color: rgba(255, 255, 255, 0.4);
+    margin-bottom: 0;
+}
+
+/* ヒント */
+.generating-tip {
+    background: rgba(255, 255, 255, 0.05);
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    border-radius: 12px;
+    padding: 0.8rem 1.2rem;
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+    margin-bottom: 1.5rem;
+}
+
+.generating-tip i {
+    color: #fbbf24;
+    font-size: 1rem;
+}
+
+.generating-tip span {
+    font-size: 0.8rem;
+    color: rgba(255, 255, 255, 0.5);
+}
+
+/* テキスト量表示 */
+.generating-info {
+    margin-top: 1rem;
+}
+
+.info-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.4rem;
+    background: rgba(124, 58, 237, 0.1);
+    border: 1px solid rgba(124, 58, 237, 0.2);
+    border-radius: 20px;
+    padding: 0.4rem 1rem;
+    font-size: 0.8rem;
+    color: rgba(255, 255, 255, 0.5);
+}
+
+.info-badge i {
+    color: #a78bfa;
+}
+
+/* 完了アニメーション */
+.lyrics-generating-page.completed .lyrics-icon-wrapper i {
+    color: #22c55e;
+    animation: none;
+}
+
+.lyrics-generating-page.completed .lyrics-pulse {
+    border-color: rgba(34, 197, 94, 0.3);
+}
+
+.lyrics-generating-page.completed .generating-progress-fill {
+    background: linear-gradient(90deg, #22c55e, #4ade80, #22c55e);
+}
+
+/* 失敗状態 */
+.lyrics-generating-page.failed .lyrics-icon-wrapper i {
+    color: #ef4444;
+    animation: none;
+}
+
+.lyrics-generating-page.failed .lyrics-pulse {
+    animation: none;
+    opacity: 0;
+}
+
+.retry-button {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 0.7rem 1.5rem;
+    background: linear-gradient(135deg, #7c3aed 0%, #6d28d9 100%);
+    color: #fff;
+    border: none;
+    border-radius: 12px;
+    font-size: 0.9rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    text-decoration: none;
+    margin-top: 1rem;
+}
+
+.retry-button:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 15px rgba(124, 58, 237, 0.4);
+    color: #fff;
+}
+
+.manual-button {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 0.5rem 1.2rem;
+    background: transparent;
+    color: rgba(255, 255, 255, 0.4);
+    border: 1px solid rgba(255, 255, 255, 0.15);
+    border-radius: 12px;
+    font-size: 0.8rem;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    text-decoration: none;
+    margin-top: 0.8rem;
+}
+
+.manual-button:hover {
+    color: rgba(255, 255, 255, 0.7);
+    border-color: rgba(255, 255, 255, 0.3);
+}
+
+/* モバイル対応 */
+@media (max-width: 576px) {
+    .generating-title {
+        font-size: 1.2rem;
+    }
+
+    .generating-subtitle {
+        font-size: 0.85rem;
+    }
+    
+    .step-label {
+        font-size: 0.6rem;
+    }
+    
+    .step-icon {
+        width: 34px;
+        height: 34px;
+        font-size: 0.85rem;
+    }
+    
+    .step-line {
+        width: 25px;
+    }
+    
+    .lyrics-icon-wrapper {
+        width: 80px;
+        height: 80px;
+    }
+    
+    .lyrics-icon-wrapper i {
+        font-size: 2.5rem;
+    }
+}
+</style>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const lyricsConfirmationUrl = '{% url "songs:lyrics_confirmation" %}';
+    const manualUrl = lyricsConfirmationUrl + '?manual=true&lang={{ language_mode }}';
+    const generateUrl = '{% url "songs:generate_lyrics_api" %}';
+    const csrfToken = '{{ csrf_token }}';
+    
+    // DOM要素
+    const progressFill = document.getElementById('progress-fill');
+    const progressPercent = document.getElementById('progress-percent');
+    const statusMain = document.getElementById('status-main');
+    const statusSub = document.getElementById('status-sub');
+    const mainIcon = document.getElementById('main-icon');
+    const page = document.querySelector('.lyrics-generating-page');
+    const tipText = document.getElementById('tip-text');
+    
+    // 現在の進捗
+    let currentProgress = 5;
+    let targetProgress = 5;
+    
+    // ヒントのローテーション
+    const tips = [
+        {% if is_english %}
+        'Tip: You can freely edit the lyrics after they\'re generated!',
+        'Tip: Try different genres to match the mood of your study material.',
+        'Tip: The AI preserves key terms from your content for effective learning.',
+        'Tip: Songs help you memorize content 2-3x faster than reading alone!',
+        'Tip: You can regenerate lyrics with different styles anytime.'
+        {% elif is_chinese %}
+        '提示：生成后可以自由编辑歌词！',
+        '提示：尝试不同的风格来配合你的学习内容。',
+        '提示：AI会保留你内容中的关键术语以便有效学习。',
+        '提示：唱歌记忆比单纯阅读快2-3倍！',
+        '提示：你可以随时用不同的风格重新生成歌词。'
+        {% else %}
+        'ヒント：生成された歌詞は自由に編集できます！',
+        'ヒント：ジャンルを変えると、同じ内容でも全く違う歌詞に！',
+        'ヒント：AIがコンテンツの重要ポイントを歌詞に組み込みます。',
+        'ヒント：歌で覚えると、テスト前の復習が楽しくなります♪',
+        'ヒント：気に入らなければ何度でも再生成できます。'
+        {% endif %}
+    ];
+    let tipIndex = 0;
+    
+    // ヒントを定期的に切り替え
+    setInterval(function() {
+        tipIndex = (tipIndex + 1) % tips.length;
+        tipText.style.opacity = '0';
+        setTimeout(function() {
+            tipText.textContent = tips[tipIndex];
+            tipText.style.opacity = '1';
+        }, 300);
+    }, 6000);
+    tipText.style.transition = 'opacity 0.3s ease';
+    
+    // ステップをアクティブに
+    function updateSteps(activeIndex) {
+        const steps = [
+            document.getElementById('step-1'),
+            document.getElementById('step-2'),
+            document.getElementById('step-3')
+        ];
+        const lines = [
+            document.getElementById('step-line-1'),
+            document.getElementById('step-line-2')
+        ];
+        
+        steps.forEach(function(step, i) {
+            step.classList.remove('active', 'completed');
+            if (i < activeIndex) {
+                step.classList.add('completed');
+            } else if (i === activeIndex) {
+                step.classList.add('active');
+            }
+        });
+        
+        lines.forEach(function(line, i) {
+            line.classList.toggle('active', i < activeIndex);
+        });
+    }
+    
+    // プログレスバーのスムーズアニメーション
+    function animateProgress() {
+        if (currentProgress < targetProgress) {
+            currentProgress += 0.5;
+            if (currentProgress > targetProgress) currentProgress = targetProgress;
+        }
+        progressFill.style.width = currentProgress + '%';
+        progressPercent.textContent = Math.round(currentProgress) + '%';
+        
+        if (currentProgress < targetProgress) {
+            requestAnimationFrame(animateProgress);
+        }
+    }
+    
+    function setProgress(target) {
+        targetProgress = Math.min(target, 100);
+        animateProgress();
+    }
+    
+    // フェーズごとのメッセージとアイコン更新
+    function setPhase(phase) {
+        const phases = {
+            {% if is_english %}
+            'reading': { main: 'Reading your content...', sub: 'Analyzing text structure', step: 0, progress: 15, icon: 'bi-file-text' },
+            'generating': { main: 'AI is writing lyrics...', sub: 'Composing verses and chorus', step: 1, progress: 50, icon: 'bi-pencil-square' },
+            'polishing': { main: 'Polishing the lyrics...', sub: 'Almost done!', step: 1, progress: 80, icon: 'bi-stars' },
+            'completed': { main: 'Lyrics ready!', sub: 'Redirecting...', step: 2, progress: 100, icon: 'bi-check-circle-fill' },
+            'failed': { main: 'Generation failed', sub: 'Please try again or enter lyrics manually', step: 1, progress: 0, icon: 'bi-exclamation-triangle-fill' }
+            {% elif is_chinese %}
+            'reading': { main: '正在阅读您的内容...', sub: '分析文本结构', step: 0, progress: 15, icon: 'bi-file-text' },
+            'generating': { main: 'AI正在创作歌词...', sub: '正在编写歌词和副歌', step: 1, progress: 50, icon: 'bi-pencil-square' },
+            'polishing': { main: '正在润色歌词...', sub: '即将完成！', step: 1, progress: 80, icon: 'bi-stars' },
+            'completed': { main: '歌词生成完成！', sub: '正在跳转...', step: 2, progress: 100, icon: 'bi-check-circle-fill' },
+            'failed': { main: '生成失败', sub: '请重试或手动输入歌词', step: 1, progress: 0, icon: 'bi-exclamation-triangle-fill' }
+            {% else %}
+            'reading': { main: 'コンテンツを読み込み中...', sub: 'テキスト構造を解析しています', step: 0, progress: 15, icon: 'bi-file-text' },
+            'generating': { main: 'AIが歌詞を作成中...', sub: 'メロディに乗せやすい歌詞を生成中', step: 1, progress: 50, icon: 'bi-pencil-square' },
+            'polishing': { main: '歌詞を仕上げています...', sub: 'もうすぐ完成！', step: 1, progress: 80, icon: 'bi-stars' },
+            'completed': { main: '歌詞が完成しました！', sub: '歌詞編集ページへ移動します...', step: 2, progress: 100, icon: 'bi-check-circle-fill' },
+            'failed': { main: '生成に失敗しました', sub: '再試行するか、手動で入力してください', step: 1, progress: 0, icon: 'bi-exclamation-triangle-fill' }
+            {% endif %}
+        };
+        
+        const p = phases[phase];
+        if (!p) return;
+        
+        statusMain.textContent = p.main;
+        statusSub.textContent = p.sub;
+        updateSteps(p.step);
+        setProgress(p.progress);
+        mainIcon.className = 'bi ' + p.icon;
+    }
+    
+    // メイン処理: 歌詞生成APIを呼ぶ
+    async function generateLyrics() {
+        try {
+            // フェーズ1: 読み込み
+            setPhase('reading');
+            
+            // 少し待ってからAPI呼び出し（UXのため）
+            await new Promise(r => setTimeout(r, 1200));
+            
+            // フェーズ2: 生成中
+            setPhase('generating');
+            
+            // 進捗を徐々に上げるタイマー
+            let fakeProgress = 50;
+            const progressTimer = setInterval(function() {
+                fakeProgress += Math.random() * 3;
+                if (fakeProgress > 85) {
+                    fakeProgress = 85;
+                    clearInterval(progressTimer);
+                }
+                setProgress(fakeProgress);
+            }, 2000);
+            
+            // API呼び出し
+            const response = await fetch(generateUrl, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRFToken': csrfToken,
+                    'X-Requested-With': 'XMLHttpRequest'
+                },
+                body: JSON.stringify({})
+            });
+            
+            clearInterval(progressTimer);
+            
+            const data = await response.json();
+            
+            if (data.success) {
+                // フェーズ3: 仕上げ
+                setPhase('polishing');
+                await new Promise(r => setTimeout(r, 800));
+                
+                // フェーズ4: 完了
+                setPhase('completed');
+                page.classList.add('completed');
+                
+                // 歌詞確認ページへ遷移
+                setTimeout(function() {
+                    window.location.href = lyricsConfirmationUrl;
+                }, 1200);
+            } else {
+                // 失敗
+                setPhase('failed');
+                page.classList.add('failed');
+                showErrorActions(data.error || '{% if is_english %}An unexpected error occurred{% elif is_chinese %}发生意外错误{% else %}予期しないエラーが発生しました{% endif %}');
+            }
+        } catch (error) {
+            console.error('Lyrics generation error:', error);
+            setPhase('failed');
+            page.classList.add('failed');
+            showErrorActions('{% if is_english %}Network error. Please try again.{% elif is_chinese %}网络错误，请重试。{% else %}通信エラーが発生しました。再試行してください。{% endif %}');
+        }
+    }
+    
+    function showErrorActions(errorMsg) {
+        const statusEl = document.getElementById('generating-status');
+        statusEl.innerHTML = 
+            '<p class="status-main" style="color: #ef4444;">' + statusMain.textContent + '</p>' +
+            '<p class="status-sub">' + errorMsg + '</p>' +
+            '<button onclick="location.reload()" class="retry-button">' +
+            '<i class="bi bi-arrow-clockwise"></i> {% if is_english %}Retry{% elif is_chinese %}重试{% else %}再試行{% endif %}</button>' +
+            '<br><a href="' + manualUrl + '" class="manual-button">' +
+            '<i class="bi bi-pencil"></i> {% if is_english %}Enter lyrics manually{% elif is_chinese %}手动输入歌词{% else %}手動で歌詞を入力{% endif %}</a>';
+    }
+    
+    // 開始
+    generateLyrics();
+});
+</script>
+{% endblock %}

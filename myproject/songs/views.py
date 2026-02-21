@@ -671,7 +671,7 @@ class UploadImageView(LoginRequiredMixin, FormView):
         return super().form_valid(form)
 
     def get_success_url(self):
-        return reverse_lazy('songs:lyrics_confirmation')
+        return reverse_lazy('songs:lyrics_generating')
 
 
 class TextExtractionResultView(LoginRequiredMixin, TemplateView):
@@ -694,6 +694,71 @@ class TextExtractionResultView(LoginRequiredMixin, TemplateView):
                 pass
         
         return context
+
+
+class LyricsGeneratingView(LoginRequiredMixin, TemplateView):
+    """歌詞生成中のローディング画面"""
+    template_name = 'songs/lyrics_generating.html'
+    
+    def get(self, request, *args, **kwargs):
+        # セッションに抽出テキストがない場合はアップロード画面へ
+        extracted_texts = request.session.get('extracted_texts', [])
+        if not extracted_texts:
+            return redirect('songs:upload_image')
+        return super().get(request, *args, **kwargs)
+    
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        language_mode = self.request.session.get('language_mode', 'japanese')
+        context['language_mode'] = language_mode
+        
+        extracted_texts = self.request.session.get('extracted_texts', [])
+        if extracted_texts and isinstance(extracted_texts, list):
+            text_length = sum(len(t) for t in extracted_texts)
+        else:
+            text_length = 0
+        context['text_length'] = text_length
+        return context
+
+
+@login_required
+def generate_lyrics_api(request):
+    """歌詞生成API（AJAXで呼ばれる）"""
+    if request.method != 'POST':
+        return JsonResponse({'success': False, 'error': 'POST only'}, status=405)
+    
+    extracted_texts = request.session.get('extracted_texts', [])
+    if extracted_texts and isinstance(extracted_texts, list):
+        extracted_text = '\n\n'.join(extracted_texts)
+    else:
+        extracted_text = request.session.get('extracted_text', '')
+    
+    if not extracted_text:
+        return JsonResponse({'success': False, 'error': 'No text found'})
+    
+    language_mode = request.session.get('language_mode', 'japanese')
+    custom_request = request.session.get('custom_request', '')
+    
+    try:
+        lyrics_generator = GeminiLyricsGenerator()
+        generated_lyrics = lyrics_generator.generate_lyrics(
+            extracted_text, 
+            language_mode=language_mode, 
+            custom_request=custom_request
+        )
+        
+        if generated_lyrics:
+            # セッションに保存（LyricsConfirmationViewで使う）
+            request.session['generated_lyrics'] = generated_lyrics
+            request.session['extracted_text'] = extracted_text
+            logger.info(f"Lyrics generated via API: {len(generated_lyrics)} chars for user {request.user.id}")
+            return JsonResponse({'success': True, 'length': len(generated_lyrics)})
+        else:
+            logger.warning(f"Lyrics generation returned empty for user {request.user.id}")
+            return JsonResponse({'success': False, 'error': 'Generated lyrics was empty'})
+    except Exception as e:
+        logger.error(f"Lyrics generation API error: {e}", exc_info=True)
+        return JsonResponse({'success': False, 'error': str(e)})
 
 
 class LyricsConfirmationView(LoginRequiredMixin, TemplateView):
@@ -728,12 +793,13 @@ class LyricsConfirmationView(LoginRequiredMixin, TemplateView):
             generated_lyrics = ""
             context['manual_mode'] = True
             context['extracted_text'] = ""
-        elif existing_lyrics and not extracted_text:
-            # 再生成機能: 既存の歌詞があり、抽出テキストがない場合はそのまま使用
+        elif existing_lyrics:
+            # ローディング画面や再生成機能でセッションに保存された歌詞をそのまま使用
             generated_lyrics = existing_lyrics
             context['manual_mode'] = False
-            context['extracted_text'] = ""
+            context['extracted_text'] = extracted_text
         elif extracted_text:
+            # セッションに歌詞がない場合のみGemini呼び出し（直接アクセス時のフォールバック）
             try:
                 lyrics_generator = GeminiLyricsGenerator()
                 generated_lyrics = lyrics_generator.generate_lyrics(extracted_text, language_mode=language_mode, custom_request=custom_request)
@@ -775,6 +841,7 @@ class LyricsConfirmationView(LoginRequiredMixin, TemplateView):
                 try:
                     lyrics_generator = GeminiLyricsGenerator()
                     new_lyrics = lyrics_generator.generate_lyrics(extracted_text, language_mode=language_mode, custom_request=custom_request)
+                    request.session['generated_lyrics'] = new_lyrics
                     return JsonResponse({
                         'success': True,
                         'lyrics': new_lyrics
