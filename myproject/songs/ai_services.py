@@ -1095,24 +1095,27 @@ class GeminiLyricsGenerator:
 ・日本語がメインで、英単語が自然に混ざる
 ・リズムに乗せやすいシンプルな構成
 ・耳に残りやすいフレーズ
-・全体として60〜120秒相当の分量（歌詞行数20〜35行を目安に）
+・全体として約180秒（3分）相当の分量（歌詞行数40〜60行を目安に）
 ・韻を踏むことを意識する
 
-■ 出力フォーマット（厳守）
+■ 出力フォーマット（厳守 — 3分の楽曲に十分な量を書くこと）
 [Verse 1]
-（英単語と日本語訳を含む歌詞）
+（英単語と日本語訳を含む歌詞、6〜10行）
 
 [Chorus]
-（最重要英単語を繰り返す）
+（最重要英単語を繰り返す、4〜6行）
 
 [Verse 2]
-（歌詞）
+（歌詞、6〜10行）
 
 [Chorus]
 （繰り返し）
 
+[Verse 3]
+（さらに英単語を追加、6〜10行）
+
 [Bridge]
-（補足）
+（補足、4〜6行）
 
 [Chorus]
 （最終）
@@ -1185,26 +1188,29 @@ class GeminiLyricsGenerator:
 ・Sound like a real pop/rock song
 
 【Song Style】
-・60-120 seconds length (aim for 20-35 lyric lines total)
+・About 180 seconds (3 minutes) length (aim for 40-60 lyric lines total)
 ・Repeat keywords 2-4 times
 ・Clear pronunciation and ear-catching phrases
 ・Use rhyming patterns to make lines memorable
 
-■ Output Format (Strict)
+■ Output Format (Strict — write enough for a 3-minute song)
 [Verse 1]
-(English lyrics with spaces between meaning units)
+(English lyrics, 6-10 lines)
 
 [Chorus]
-(catchy hook with key info repeated)
+(catchy hook with key info repeated, 4-6 lines)
 
 [Verse 2]
-(continue the story)
+(continue the story, 6-10 lines)
 
 [Chorus]
 (repeat the hook)
 
+[Verse 3]
+(deeper content or additional info, 6-10 lines)
+
 [Bridge]
-(summary or twist)
+(summary or twist, 4-6 lines)
 
 [Chorus]
 (final memorable hook)
@@ -1280,26 +1286,29 @@ class GeminiLyricsGenerator:
 ・听起来像真正的中文流行歌曲
 
 【歌曲风格】
-・60-120秒长度（歌词行数20-35行为目标）
+・约180秒（3分钟）长度（歌词行数40-60行为目标）
 ・关键词重复2-4次
 ・发音清晰，短语令人印象深刻
 ・注意押韵以增强记忆效果
 
-■ 输出格式（严格遵守）
+■ 输出格式（严格遵守 — 写出足够3分钟歌曲的内容）
 [Verse 1]
-（中文歌词，意义单位之间留空格）
+（中文歌词，意义单位之间留空格，6-10行）
 
 [Chorus]
-（带有重复关键信息的朗朗上口的钩子）
+（带有重复关键信息的朗朗上口的钩子，4-6行）
 
 [Verse 2]
-（继续故事）
+（继续故事，6-10行）
 
 [Chorus]
 （重复钩子）
 
+[Verse 3]
+（更深入的内容或补充信息，6-10行）
+
 [Bridge]
-（总结或转折）
+（总结或转折，4-6行）
 
 [Chorus]
 （最终令人难忘的钩子）
@@ -1375,26 +1384,29 @@ class GeminiLyricsGenerator:
 ・听起来像真正的中文流行歌曲
 
 【歌曲风格】
-・60-120秒长度（歌词行数20-35行为目标）
+・约180秒（3分钟）长度（歌词行数40-60行为目标）
 ・关键词重复2-4次
 ・发音清晰，短语令人印象深刻
 ・注意押韵以增强记忆效果
 
-■ 输出格式（严格遵守）
+■ 输出格式（严格遵守 — 写出足够3分钟歌曲的内容）
 [Verse 1]
-（纯中文歌词，意义单位之间留空格）
+（纯中文歌词，意义单位之间留空格，6-10行）
 
 [Chorus]
-（重复最重要的词汇 - 纯中文）
+（重复最重要的词汇 - 纯中文，4-6行）
 
 [Verse 2]
-（纯中文歌词）
+（纯中文歌词，6-10行）
 
 [Chorus]
 （重复 - 纯中文）
 
+[Verse 3]
+（更深入的内容 - 纯中文，6-10行）
+
 [Bridge]
-（总结 - 纯中文）
+（总结 - 纯中文，4-6行）
 
 [Chorus]
 （最终 - 纯中文）
@@ -1473,24 +1485,27 @@ class GeminiLyricsGenerator:
 【楽曲スタイル要件】
 ・キーワードを2〜4回繰り返す
 ・耳に残りやすいフレーズと明瞭な発音
-・全体として60〜120秒相当の適切な分量（長すぎず短すぎず）
-・歌詞行数は20〜35行を目安にする
+・全体として約180秒（3分）相当の適切な分量
+・歌詞行数は40〜60行を目安にする
 
-■ 出力フォーマット（厳守）
+■ 出力フォーマット（厳守 — 3分の楽曲に十分な量を書くこと）
 [Verse 1]
-（歌詞のみ、単語間にスペースを入れる）
+（歌詞のみ、単語間にスペースを入れる、6〜10行）
 
 [Chorus]
-（最重要単語を繰り返すキャッチーな歌詞のみ）
+（最重要単語を繰り返すキャッチーな歌詞のみ、4〜6行）
 
 [Verse 2]
-（歌詞のみ）
+（歌詞のみ、6〜10行）
 
 [Chorus]
 （最重要単語を再度繰り返す歌詞のみ）
 
+[Verse 3]
+（さらに深い内容や追加情報、6〜10行）
+
 [Bridge]
-（補足・まとめの歌詞のみ）
+（補足・まとめ・対比の歌詞のみ、4〜6行）
 
 [Chorus]
 （最終Chorusの歌詞のみ）
