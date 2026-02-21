@@ -317,7 +317,6 @@
                         {% if song.audio_url or song.audio_file %}
                         {% if user.is_authenticated and user.is_starter %}
                         <button class="btn-karaoke-mode" id="btn-karaoke-toggle" onclick="toggleKaraokeMode()">
-                            <i class="bi bi-music-note-beamed"></i>
                             <span id="karaoke-btn-text">{% if is_english %}Karaoke{% elif is_chinese %}卡拉OK{% else %}カラオケ{% endif %}</span>
                         </button>
                         {% else %}
