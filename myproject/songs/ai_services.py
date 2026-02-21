@@ -69,6 +69,48 @@ def remove_circled_numbers(text):
     
     return '\n'.join(cleaned_lines)
 
+
+# Gemini安全性設定（全カテゴリでブロックなし）
+GEMINI_SAFETY_SETTINGS = [
+    {"category": "HARM_CATEGORY_HARASSMENT", "threshold": "BLOCK_NONE"},
+    {"category": "HARM_CATEGORY_HATE_SPEECH", "threshold": "BLOCK_NONE"},
+    {"category": "HARM_CATEGORY_SEXUALLY_EXPLICIT", "threshold": "BLOCK_NONE"},
+    {"category": "HARM_CATEGORY_DANGEROUS_CONTENT", "threshold": "BLOCK_NONE"},
+]
+
+
+def _safe_get_response_text(response):
+    """Gemini APIレスポンスからテキストを安全に取得する。
+    
+    response.textは安全性フィルタでブロックされた場合にValueErrorを投げるため、
+    candidatesを直接チェックする安全なアクセサ。
+    
+    Returns:
+        str or None: 抽出されたテキスト、取得できない場合はNone
+    """
+    if not response:
+        return None
+    try:
+        # まず直接 response.text を試す（正常レスポンスの場合最も速い）
+        if response.text:
+            return response.text.strip()
+    except (ValueError, AttributeError):
+        pass
+    
+    # candidatesから直接抽出を試みる
+    try:
+        if response.candidates:
+            candidate = response.candidates[0]
+            if candidate.content and candidate.content.parts:
+                text = candidate.content.parts[0].text.strip()
+                if text:
+                    return text
+    except (AttributeError, IndexError):
+        pass
+    
+    return None
+
+
 def _get_gemini_model():
     """Geminiモデルを取得（初回のみ設定）"""
     global _GEMINI_CONFIGURED, _GEMINI_MODEL
@@ -202,9 +244,9 @@ def generate_lrc_timestamps(lyrics_text, duration_seconds):
 """
     
     try:
-        response = model.generate_content(prompt)
-        if response and response.text:
-            lrc_text = response.text.strip()
+        response = model.generate_content(prompt, safety_settings=GEMINI_SAFETY_SETTINGS)
+        lrc_text = _safe_get_response_text(response)
+        if lrc_text:
             
             # LRC行のみを抽出（不要なテキストを除去）
             lrc_lines = []
@@ -572,8 +614,8 @@ Only output the English translation, nothing else.
 
 Text: {text}"""
             
-            response = model.generate_content(prompt)
-            translated = response.text.strip()
+            response = model.generate_content(prompt, safety_settings=GEMINI_SAFETY_SETTINGS)
+            translated = _safe_get_response_text(response) or ''
             
             # 翻訳結果が空や異常に長い場合は元テキストを使用
             if not translated or len(translated) > len(text) * 5:
@@ -902,10 +944,11 @@ If text is underlined, bold, or highlighted, wrap it with **double asterisks**.
 Output only the extracted text without any additional explanation."""
                 
                 try:
-                    response = model.generate_content([prompt, img])
-                    if response and response.text:
-                        extracted_texts.append(response.text.strip())
-                        print(f"OCR Page {page_num + 1}: Extracted {len(response.text)} chars")
+                    response = model.generate_content([prompt, img], safety_settings=GEMINI_SAFETY_SETTINGS)
+                    text = _safe_get_response_text(response)
+                    if text:
+                        extracted_texts.append(text)
+                        print(f"OCR Page {page_num + 1}: Extracted {len(text)} chars")
                 except Exception as e:
                     print(f"OCR error on page {page_num + 1}: {e}")
             
@@ -992,20 +1035,42 @@ CRITICAL RULES:
 7. If handwritten text is present, transcribe it as accurately as possible.
 8. Output ONLY the extracted text — no explanations or commentary."""
             
-            logger.info("GeminiOCR: Calling Gemini API for OCR...")
-            response = self.model.generate_content([prompt, img])
+            # リトライロジック（最大3回）
+            max_retries = 3
+            last_error = None
+            for attempt in range(max_retries):
+                try:
+                    logger.info(f"GeminiOCR: Calling Gemini API for OCR (attempt {attempt + 1}/{max_retries})...")
+                    response = self.model.generate_content(
+                        [prompt, img],
+                        safety_settings=GEMINI_SAFETY_SETTINGS,
+                    )
+                    
+                    extracted_text = _safe_get_response_text(response)
+                    if extracted_text:
+                        logger.info(f"GeminiOCR: Success! Extracted {len(extracted_text)} characters")
+                        return extracted_text
+                    
+                    # テキストが取得できなかった場合の詳細ログ
+                    block_reason = getattr(getattr(response, 'prompt_feedback', None), 'block_reason', None)
+                    finish_reason = None
+                    if response and response.candidates:
+                        finish_reason = getattr(response.candidates[0], 'finish_reason', None)
+                    
+                    logger.warning(f"GeminiOCR: Empty response on attempt {attempt + 1}. block_reason={block_reason}, finish_reason={finish_reason}")
+                    last_error = f"Empty response (block_reason={block_reason}, finish_reason={finish_reason})"
+                    
+                except Exception as api_error:
+                    last_error = str(api_error)
+                    logger.warning(f"GeminiOCR: API error on attempt {attempt + 1}: {api_error}")
+                
+                # リトライ前に少し待つ
+                if attempt < max_retries - 1:
+                    import time as _time
+                    _time.sleep(2 * (attempt + 1))
             
-            if response and response.text:
-                extracted_text = response.text.strip()
-                logger.info(f"GeminiOCR: Success! Extracted {len(extracted_text)} characters")
-                return extracted_text
-            else:
-                # レスポンスの詳細をログ
-                if response:
-                    logger.warning(f"GeminiOCR: Empty response. prompt_feedback={getattr(response, 'prompt_feedback', 'N/A')}, candidates={getattr(response, 'candidates', 'N/A')}")
-                else:
-                    logger.warning("GeminiOCR: Response is None")
-                return ""
+            logger.error(f"GeminiOCR: All {max_retries} attempts failed. Last error: {last_error}")
+            return ""
                 
         except Exception as e:
             logger.error(f"GeminiOCR: OCR error: {e}", exc_info=True)
@@ -1048,10 +1113,11 @@ class GeminiLyricsGenerator:
             else:
                 prompt = self._get_japanese_prompt(extracted_text, genre, custom_request)
             
-            response = self.model.generate_content(prompt)
+            response = self.model.generate_content(prompt, safety_settings=GEMINI_SAFETY_SETTINGS)
             
-            if response and response.text:
-                raw_lyrics = response.text.strip()
+            raw_lyrics = _safe_get_response_text(response)
+            
+            if raw_lyrics:
                 
                 lyrics = self._extract_clean_lyrics(raw_lyrics)
                 
@@ -1568,10 +1634,10 @@ class GeminiLyricsGenerator:
 
 タグのみを出力してください（説明や前置きは不要）:"""
             
-            response = self.model.generate_content(prompt)
+            response = self.model.generate_content(prompt, safety_settings=GEMINI_SAFETY_SETTINGS)
             
-            if response and response.text:
-                tags_text = response.text.strip()
+            tags_text = _safe_get_response_text(response)
+            if tags_text:
                 tags = [tag.strip() for tag in tags_text.split(',') if tag.strip()]
                 tags = list(dict.fromkeys(tags))[:10]
                 print(f"Generated tags: {tags}")
@@ -1817,10 +1883,10 @@ def convert_lyrics_to_hiragana_with_context(lyrics):
 
 【出力】（変換後の歌詞のみを出力）"""
 
-        response = model.generate_content(prompt)
+        response = model.generate_content(prompt, safety_settings=GEMINI_SAFETY_SETTINGS)
         
-        if response and response.text:
-            converted = response.text.strip()
+        converted = _safe_get_response_text(response)
+        if converted:
             # 余計な説明を削除
             if converted.startswith('```'):
                 lines = converted.split('\n')
