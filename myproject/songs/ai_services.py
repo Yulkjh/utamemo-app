@@ -254,6 +254,7 @@ def _ensure_intro_offset(lrc_lines, min_start_seconds, max_end_seconds):
     
     # 秒をLRCタイムスタンプに変換するヘルパー
     def seconds_to_lrc(secs):
+        secs = max(0, secs)  # 負の値を防止
         m = int(secs) // 60
         s = int(secs) % 60
         cs = int((secs - int(secs)) * 100)
@@ -275,9 +276,10 @@ def _ensure_intro_offset(lrc_lines, min_start_seconds, max_end_seconds):
     last_ts = parsed[-1][0]
     
     # ケース1: 最初のタイムスタンプがイントロより早い → 全体をシフト
-    if first_ts < min_start_seconds:
+    # 余裕をもたせるため、min_start_secondsの80%未満なら補正
+    if first_ts < min_start_seconds * 0.8:
         shift = min_start_seconds - first_ts
-        logger.info(f"LRC補正: 全体を{shift:.1f}秒シフト（イントロオフセット保証）")
+        logger.info(f"LRC補正: 全体を{shift:.1f}秒シフト（イントロオフセット保証: {first_ts:.1f}s → {min_start_seconds}s）")
         parsed = [(ts + shift, text) for ts, text in parsed]
     
     # ケース2: 最後のタイムスタンプがアウトロに食い込む → 全体をスケーリング
@@ -289,8 +291,14 @@ def _ensure_intro_offset(lrc_lines, min_start_seconds, max_end_seconds):
         available_span = max_end_seconds - first_ts
         if original_span > 0 and available_span > 0:
             scale = available_span / original_span
-            logger.info(f"LRC補正: スケーリング {scale:.2f}x（アウトロ保護）")
+            logger.info(f"LRC補正: スケーリング {scale:.2f}x（アウトロ保護: {last_ts:.1f}s → {max_end_seconds}s）")
             parsed = [(first_ts + (ts - first_ts) * scale, text) for ts, text in parsed]
+    
+    # ケース3: 行間が不自然に詰まっている箇所を修正（最低1.5秒間隔を保証）
+    MIN_GAP = 1.5
+    for i in range(1, len(parsed)):
+        if parsed[i][0] - parsed[i-1][0] < MIN_GAP:
+            parsed[i] = (parsed[i-1][0] + MIN_GAP, parsed[i][1])
     
     # 再構築
     result = [f"{seconds_to_lrc(ts)}{text}" for ts, text in parsed]
