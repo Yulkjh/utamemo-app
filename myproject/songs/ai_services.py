@@ -162,36 +162,43 @@ def generate_lrc_timestamps(lyrics_text, duration_seconds):
     
     # 歌詞の行を取得（空行やセクションラベルも含む）
     lines = lyrics_text.strip().split('\n')
-    non_empty_lines = [l for l in lines if l.strip()]
+    # 実際に歌われる歌詞行のみカウント（セクションラベルと空行を除外）
+    lyric_lines = [l for l in lines if l.strip() and not re.match(r'^\[.*\]$', l.strip())]
     
-    if len(non_empty_lines) == 0:
+    if len(lyric_lines) == 0:
         return None
     
-    minutes = int(duration_seconds) // 60
-    seconds = int(duration_seconds) % 60
+    total_seconds = int(duration_seconds)
     
-    prompt = f"""あなたは音楽のタイミング専門家です。以下の歌詞と曲の長さから、各行が歌われるタイミングをLRC形式で推定してください。
+    # イントロ長を曲の長さに応じて動的に計算（10〜20秒）
+    intro_seconds = min(20, max(10, total_seconds // 10))
+    # アウトロ長（5〜15秒）
+    outro_seconds = min(15, max(5, total_seconds // 12))
+    
+    prompt = f"""You are a professional music timing expert. Estimate when each lyric line is sung and output in LRC format.
 
-【曲の長さ】{minutes}分{seconds}秒（{int(duration_seconds)}秒）
+【Song Duration】{total_seconds} seconds
 
-【歌詞】
+【Lyrics】
 {lyrics_text}
 
-【ルール】
-1. LRC形式: [MM:SS.xx]歌詞テキスト （xxは100分の1秒）
-2. 一般的なポップス/ロックの曲構成を想定してください
-3. イントロ（曲の冒頭）は通常5〜15秒程度あります
-4. 間奏（セクション間）は通常5〜10秒あります
-5. アウトロ（曲の終わり）は通常5〜15秒程度あります
-6. 空行やセクションラベル（[Verse]、[Chorus]など）は含めないでください
-7. 歌詞の行のみにタイムスタンプを付けてください
-8. 曲の長さ内に全ての行が収まるようにしてください
-9. LRC行のみを出力し、他の説明は一切不要です
+【CRITICAL RULES — Follow Exactly】
+1. Format: [MM:SS.xx]lyric text (xx = hundredths of a second)
+2. INTRO: The song has an instrumental intro of approximately {intro_seconds} seconds.
+   ★ The FIRST lyric line MUST start at [{intro_seconds // 60:02d}:{intro_seconds % 60:02d}.00] or later. NEVER before [{intro_seconds // 60:02d}:{intro_seconds % 60:02d}.00].
+3. INTERLUDE: Between sections (Verse→Chorus, Chorus→Verse, etc.) add 5-10 seconds of instrumental gap.
+4. OUTRO: Reserve the last {outro_seconds} seconds for instrumental outro. No lyrics after [{(total_seconds - outro_seconds) // 60:02d}:{(total_seconds - outro_seconds) % 60:02d}.00].
+5. EXCLUDE section labels like [Verse], [Chorus], [Bridge] — only timestamp actual lyric lines.
+6. EXCLUDE empty lines — only lines with actual lyrics.
+7. ALL lines must fit within the song duration ({total_seconds} seconds).
+8. Space lyrics EVENLY across the available singing time ({intro_seconds}s to {total_seconds - outro_seconds}s).
+9. Each line typically takes 3-5 seconds to sing. Minimum gap between lines: 2 seconds.
+10. Output ONLY LRC lines. No explanations, no comments, no other text.
 
-【出力例】
-[00:12.00]最初の歌詞行
-[00:16.50]2番目の歌詞行
-[00:21.00]3番目の歌詞行
+【Output Example】
+[00:{intro_seconds:02d}.00]First lyric line here
+[00:{intro_seconds + 4:02d}.50]Second lyric line here
+[00:{intro_seconds + 9:02d}.00]Third lyric line here
 """
     
     try:
@@ -208,8 +215,10 @@ def generate_lrc_timestamps(lyrics_text, duration_seconds):
                     lrc_lines.append(line)
             
             if lrc_lines:
+                # ポストプロセス: イントロオフセットを保証
+                lrc_lines = _ensure_intro_offset(lrc_lines, intro_seconds, total_seconds - outro_seconds)
                 result = '\n'.join(lrc_lines)
-                logger.info(f"LRC生成成功: {len(lrc_lines)}行")
+                logger.info(f"LRC生成成功: {len(lrc_lines)}行 (intro={intro_seconds}s, outro={outro_seconds}s)")
                 return result
             else:
                 logger.warning("LRC生成: 有効なLRC行が見つかりませんでした")
@@ -219,6 +228,73 @@ def generate_lrc_timestamps(lyrics_text, duration_seconds):
     except Exception as e:
         logger.error(f"LRC生成エラー: {e}")
         return None
+
+
+def _ensure_intro_offset(lrc_lines, min_start_seconds, max_end_seconds):
+    """LRCタイムスタンプのポストプロセス: イントロオフセットを保証し、全体を曲の範囲内に収める
+    
+    Args:
+        lrc_lines: LRC行のリスト
+        min_start_seconds: 最初の歌詞が始まる最低秒数（イントロ長）
+        max_end_seconds: 最後の歌詞が終わる最大秒数（アウトロ開始前）
+    
+    Returns:
+        list: 補正されたLRC行のリスト
+    """
+    if not lrc_lines:
+        return lrc_lines
+    
+    # タイムスタンプを秒に変換するヘルパー
+    def lrc_to_seconds(lrc_time):
+        match = re.match(r'\[(\d{2}):(\d{2})\.(\d{2})\]', lrc_time)
+        if match:
+            m, s, cs = int(match.group(1)), int(match.group(2)), int(match.group(3))
+            return m * 60 + s + cs / 100.0
+        return 0
+    
+    # 秒をLRCタイムスタンプに変換するヘルパー
+    def seconds_to_lrc(secs):
+        m = int(secs) // 60
+        s = int(secs) % 60
+        cs = int((secs - int(secs)) * 100)
+        return f"[{m:02d}:{s:02d}.{cs:02d}]"
+    
+    # タイムスタンプと歌詞テキストを分離
+    parsed = []
+    for line in lrc_lines:
+        match = re.match(r'(\[\d{2}:\d{2}\.\d{2}\])(.*)', line)
+        if match:
+            ts = lrc_to_seconds(match.group(1))
+            text = match.group(2)
+            parsed.append((ts, text))
+    
+    if not parsed:
+        return lrc_lines
+    
+    first_ts = parsed[0][0]
+    last_ts = parsed[-1][0]
+    
+    # ケース1: 最初のタイムスタンプがイントロより早い → 全体をシフト
+    if first_ts < min_start_seconds:
+        shift = min_start_seconds - first_ts
+        logger.info(f"LRC補正: 全体を{shift:.1f}秒シフト（イントロオフセット保証）")
+        parsed = [(ts + shift, text) for ts, text in parsed]
+    
+    # ケース2: 最後のタイムスタンプがアウトロに食い込む → 全体をスケーリング
+    last_ts = parsed[-1][0]
+    first_ts = parsed[0][0]
+    if last_ts > max_end_seconds and len(parsed) > 1:
+        # 利用可能な時間内にスケーリング
+        original_span = last_ts - first_ts
+        available_span = max_end_seconds - first_ts
+        if original_span > 0 and available_span > 0:
+            scale = available_span / original_span
+            logger.info(f"LRC補正: スケーリング {scale:.2f}x（アウトロ保護）")
+            parsed = [(first_ts + (ts - first_ts) * scale, text) for ts, text in parsed]
+    
+    # 再構築
+    result = [f"{seconds_to_lrc(ts)}{text}" for ts, text in parsed]
+    return result
 
 
 class MurekaAIGenerator:
@@ -812,8 +888,9 @@ class PDFTextExtractor:
                 img = Image.frombytes("RGB", [pix.width, pix.height], pix.samples)
                 
                 # Geminiで OCR
-                prompt = """Extract ALL text contained in this image.
-Preserve the line breaks and paragraph structure.
+                prompt = """Extract ALL text from this image accurately and completely.
+Preserve line breaks, paragraph structure, and logical reading order.
+If text is underlined, bold, or highlighted, wrap it with **double asterisks**.
 Output only the extracted text without any additional explanation."""
                 
                 try:
@@ -895,8 +972,17 @@ class GeminiOCR:
             img_buffer.seek(0)
             img = Image.open(img_buffer)
             
-            prompt = """この画像に含まれているテキストをすべて抽出してください。
-改行や段落の構造も保持してください。"""
+            prompt = """Extract ALL text from this image accurately and completely.
+
+CRITICAL RULES:
+1. Preserve the original line breaks, paragraph structure, and logical flow.
+2. If text is underlined, bold, highlighted, or marked in any way, wrap it with **double asterisks** like **this**.
+3. Maintain the reading order (top to bottom, left to right for horizontal text; top to bottom, right to left for vertical Japanese text).
+4. Include ALL text: headings, body text, captions, labels, footnotes, annotations.
+5. For tables or structured content, preserve the structure as clearly as possible.
+6. Ignore watermarks, page numbers, and decorative elements.
+7. If handwritten text is present, transcribe it as accurately as possible.
+8. Output ONLY the extracted text — no explanations or commentary."""
             
             logger.info("GeminiOCR: Calling Gemini API for OCR...")
             response = self.model.generate_content([prompt, img])
@@ -1009,6 +1095,8 @@ class GeminiLyricsGenerator:
 ・日本語がメインで、英単語が自然に混ざる
 ・リズムに乗せやすいシンプルな構成
 ・耳に残りやすいフレーズ
+・全体として60〜120秒相当の分量（歌詞行数20〜35行を目安に）
+・韻を踏むことを意識する
 
 ■ 出力フォーマット（厳守）
 [Verse 1]
@@ -1097,9 +1185,10 @@ class GeminiLyricsGenerator:
 ・Sound like a real pop/rock song
 
 【Song Style】
-・30-180 seconds length
+・60-120 seconds length (aim for 20-35 lyric lines total)
 ・Repeat keywords 2-4 times
 ・Clear pronunciation and ear-catching phrases
+・Use rhyming patterns to make lines memorable
 
 ■ Output Format (Strict)
 [Verse 1]
@@ -1191,9 +1280,10 @@ class GeminiLyricsGenerator:
 ・听起来像真正的中文流行歌曲
 
 【歌曲风格】
-・30-180秒长度
+・60-120秒长度（歌词行数20-35行为目标）
 ・关键词重复2-4次
 ・发音清晰，短语令人印象深刻
+・注意押韵以增强记忆效果
 
 ■ 输出格式（严格遵守）
 [Verse 1]
@@ -1285,9 +1375,10 @@ class GeminiLyricsGenerator:
 ・听起来像真正的中文流行歌曲
 
 【歌曲风格】
-・30-180秒长度
+・60-120秒长度（歌词行数20-35行为目标）
 ・关键词重复2-4次
 ・发音清晰，短语令人印象深刻
+・注意押韵以增强记忆效果
 
 ■ 输出格式（严格遵守）
 [Verse 1]
@@ -1331,6 +1422,9 @@ class GeminiLyricsGenerator:
 ■ テキスト内容
 {extracted_text}
 {custom_section}
+■ 歌詞の書き方ルール
+
+【表記ルール】
 ・意味の区切りごとにスペースを入れる
 ・1行は短めに、7〜15文字程度を目安に
 ・助詞（の、を、が、は、に）の前後にもスペースを入れて区切る
@@ -1339,12 +1433,23 @@ class GeminiLyricsGenerator:
 ・漢字をひらがなに変換しない
 ・数字や年号：「794年」はそのまま「794年」
 ・外来語・カタカナ語はそのまま使用
+
 【つなぎ言葉の禁止】
 ・「それは」「それで」「これは」「つまり」「すなわち」「要するに」は使用禁止
 ・「〜とは」「〜である」「〜という」も最小限に
 ・用語と説明を直接つなげる
 ・シンプルに単語＋説明の形で並べる
-・テキスト内で「下線」「太字」「マーカー」などで強調されている語句は必ず歌詞に含める
+
+【★ 歌としてのクオリティ（最重要）】
+・韻を踏むことを意識する（行末の母音を揃える）
+・リズムに乗せやすいテンポ感を重視
+・口ずさみやすいメロディアスな言葉選び
+・Chorusは一度聞いたら覚えてしまうキャッチーなフレーズに
+・「〜だよ」「〜さ」「〜ね」など歌詞らしい語尾を使う
+・小学生〜中学生でも口ずさみやすい音感を重視
+
+【テキスト情報の取り込み】
+・テキスト内で「下線」「太字」「マーカー」「**強調**」されている語句は必ず歌詞に含める
 ・最重要単語はChorusで最低2〜3回以上繰り返す
 ・重要な専門用語が出たら、その直後または次の行でその意味・定義・特徴を説明する
 ・「AはBである」形式ではなく「A B」のようにシンプルに並べる
@@ -1355,11 +1460,11 @@ class GeminiLyricsGenerator:
 ・装飾的な表現や余計なストーリーは不要
 ・テキストに書かれていない情報は一切追加しない
 ・事実とデータのみを歌詞にする
+
 【構造と記憶定着】
 ・Chorusに最重要語句とその説明を集中させる
 ・Verseで用語とその定義・特徴・違いを明確に述べる
 ・Bridgeで関連用語の対比や補足説明を入れる
-・小学生〜中学生でも口ずさみやすい音感を重視する
 ・テキストに書かれている情報のみを使用
 ・事実関係・用語の意味を正確に
 ・要点を過不足なく含める
@@ -1368,14 +1473,15 @@ class GeminiLyricsGenerator:
 【楽曲スタイル要件】
 ・キーワードを2〜4回繰り返す
 ・耳に残りやすいフレーズと明瞭な発音
-・全体として30〜180秒相当の適切な分量
+・全体として60〜120秒相当の適切な分量（長すぎず短すぎず）
+・歌詞行数は20〜35行を目安にする
 
 ■ 出力フォーマット（厳守）
 [Verse 1]
 （歌詞のみ、単語間にスペースを入れる）
 
 [Chorus]
-（最重要単語を繰り返す歌詞のみ）
+（最重要単語を繰り返すキャッチーな歌詞のみ）
 
 [Verse 2]
 （歌詞のみ）

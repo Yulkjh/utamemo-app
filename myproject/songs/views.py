@@ -2059,8 +2059,9 @@ def generate_lrc_view(request, pk):
     if not song.duration:
         return JsonResponse({'error': 'No duration info'}, status=400)
     
-    # 既にLRCデータがある場合はそのまま返す
-    if song.lyrics.lrc_data:
+    # 既にLRCデータがある場合はそのまま返す（force=trueで再生成可能）
+    force_regenerate = request.POST.get('force', '').lower() == 'true'
+    if song.lyrics.lrc_data and not force_regenerate:
         return JsonResponse({'lrc': song.lyrics.lrc_data})
     
     # durationを秒に変換
