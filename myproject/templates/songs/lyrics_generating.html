@@ -4,13 +4,6 @@
 
 {% block content %}
 <div class="lyrics-generating-page">
-    <!-- 背景アニメーション -->
-    <div class="generating-bg">
-        <div class="bg-circle bg-circle-1"></div>
-        <div class="bg-circle bg-circle-2"></div>
-        <div class="bg-circle bg-circle-3"></div>
-    </div>
-
     <div class="generating-container">
         <!-- メインビジュアル -->
         <div class="generating-visual">
@@ -100,7 +93,7 @@
 </div>
 
 <style>
-/* ===== Lyrics Generating Page Styles ===== */
+/* ===== Lyrics Generating Page Styles (Light Theme) ===== */
 .lyrics-generating-page {
     min-height: 100vh;
     display: flex;
@@ -109,67 +102,7 @@
     position: relative;
     overflow: hidden;
     padding: 2rem 1rem;
-    background: linear-gradient(135deg, #0d0d1a 0%, #1a1a2e 50%, #16213e 100%);
-}
-
-/* 背景アニメーション */
-.generating-bg {
-    position: fixed;
-    top: 0;
-    left: 0;
-    width: 100%;
-    height: 100%;
-    pointer-events: none;
-    z-index: 0;
-}
-
-.bg-circle {
-    position: absolute;
-    border-radius: 50%;
-    filter: blur(80px);
-    opacity: 0.15;
-}
-
-.bg-circle-1 {
-    width: 400px;
-    height: 400px;
-    background: #7c3aed;
-    top: -100px;
-    right: -100px;
-    animation: float-1 8s ease-in-out infinite;
-}
-
-.bg-circle-2 {
-    width: 300px;
-    height: 300px;
-    background: #06b6d4;
-    bottom: -50px;
-    left: -50px;
-    animation: float-2 10s ease-in-out infinite;
-}
-
-.bg-circle-3 {
-    width: 200px;
-    height: 200px;
-    background: #f59e0b;
-    top: 50%;
-    left: 50%;
-    animation: float-3 12s ease-in-out infinite;
-}
-
-@keyframes float-1 {
-    0%, 100% { transform: translate(0, 0); }
-    50% { transform: translate(-30px, 30px); }
-}
-
-@keyframes float-2 {
-    0%, 100% { transform: translate(0, 0); }
-    50% { transform: translate(20px, -20px); }
-}
-
-@keyframes float-3 {
-    0%, 100% { transform: translate(-50%, -50%); }
-    50% { transform: translate(-40%, -60%); }
+    background: linear-gradient(135deg, #fff4f0 0%, #ffe6d9 50%, #ffd4c4 100%);
 }
 
 /* メインコンテナ */
@@ -181,7 +114,7 @@
     width: 100%;
 }
 
-/* 鉛筆アイコン */
+/* アイコン */
 .generating-visual {
     margin-bottom: 2rem;
 }
@@ -197,7 +130,7 @@
 
 .lyrics-icon-wrapper i {
     font-size: 3rem;
-    color: #7c3aed;
+    color: #ff7940;
     z-index: 2;
     animation: writing-bounce 2s ease-in-out infinite;
 }
@@ -207,7 +140,7 @@
     width: 100%;
     height: 100%;
     border-radius: 50%;
-    border: 2px solid rgba(124, 58, 237, 0.3);
+    border: 2px solid rgba(255, 121, 64, 0.25);
     animation: pulse-ring 2s ease-out infinite;
 }
 
@@ -230,13 +163,13 @@
 .generating-title {
     font-size: 1.5rem;
     font-weight: 700;
-    color: #fff;
+    color: #2d1b13;
     margin-bottom: 0.5rem;
 }
 
 .generating-subtitle {
     font-size: 0.95rem;
-    color: rgba(255, 255, 255, 0.5);
+    color: #8a6b5a;
     margin-bottom: 2rem;
     font-weight: 400;
 }
@@ -250,7 +183,7 @@
 .generating-progress-bar {
     width: 100%;
     height: 8px;
-    background: rgba(255, 255, 255, 0.1);
+    background: rgba(255, 121, 64, 0.12);
     border-radius: 4px;
     overflow: hidden;
     position: relative;
@@ -259,7 +192,7 @@
 .generating-progress-fill {
     height: 100%;
     border-radius: 4px;
-    background: linear-gradient(90deg, #7c3aed, #a78bfa, #7c3aed);
+    background: linear-gradient(90deg, #ff7940, #ff9a6c, #ff7940);
     background-size: 200% 100%;
     animation: shimmer 2s linear infinite;
     transition: width 0.8s cubic-bezier(0.4, 0, 0.2, 1);
@@ -278,7 +211,7 @@
 
 #progress-percent {
     font-size: 0.85rem;
-    color: rgba(255, 255, 255, 0.6);
+    color: #5c3a2a;
     font-weight: 600;
     font-variant-numeric: tabular-nums;
 }
@@ -298,7 +231,7 @@
     flex-direction: column;
     align-items: center;
     gap: 0.5rem;
-    opacity: 0.3;
+    opacity: 0.35;
     transition: all 0.5s ease;
 }
 
@@ -311,7 +244,7 @@
 }
 
 .step.completed .step-icon {
-    background: rgba(34, 197, 94, 0.2);
+    background: rgba(34, 197, 94, 0.1);
     border-color: #22c55e;
     color: #22c55e;
 }
@@ -320,51 +253,52 @@
     width: 40px;
     height: 40px;
     border-radius: 50%;
-    background: rgba(255, 255, 255, 0.05);
-    border: 2px solid rgba(255, 255, 255, 0.15);
+    background: #ffffff;
+    border: 2px solid #f0e6e0;
     display: flex;
     align-items: center;
     justify-content: center;
-    color: rgba(255, 255, 255, 0.5);
+    color: #8a6b5a;
     font-size: 1rem;
     transition: all 0.5s ease;
 }
 
 .step.active .step-icon {
-    background: rgba(124, 58, 237, 0.15);
-    border-color: #7c3aed;
-    color: #7c3aed;
-    box-shadow: 0 0 20px rgba(124, 58, 237, 0.2);
+    background: rgba(255, 121, 64, 0.08);
+    border-color: #ff7940;
+    color: #ff7940;
+    box-shadow: 0 0 16px rgba(255, 121, 64, 0.15);
     animation: step-glow 2s ease-in-out infinite;
 }
 
 @keyframes step-glow {
-    0%, 100% { box-shadow: 0 0 15px rgba(124, 58, 237, 0.15); }
-    50% { box-shadow: 0 0 25px rgba(124, 58, 237, 0.3); }
+    0%, 100% { box-shadow: 0 0 12px rgba(255, 121, 64, 0.1); }
+    50% { box-shadow: 0 0 20px rgba(255, 121, 64, 0.2); }
 }
 
 .step-label {
     font-size: 0.7rem;
-    color: rgba(255, 255, 255, 0.4);
+    color: #8a6b5a;
     white-space: nowrap;
     transition: color 0.5s ease;
 }
 
 .step.active .step-label {
-    color: rgba(255, 255, 255, 0.8);
+    color: #2d1b13;
+    font-weight: 600;
 }
 
 .step-line {
     width: 40px;
     height: 2px;
-    background: rgba(255, 255, 255, 0.1);
+    background: #f0e6e0;
     margin: 0 6px;
     margin-bottom: 1.5rem;
     transition: background 0.5s ease;
 }
 
 .step-line.active {
-    background: linear-gradient(90deg, #7c3aed, rgba(124, 58, 237, 0.3));
+    background: linear-gradient(90deg, #ff7940, rgba(255, 121, 64, 0.3));
 }
 
 /* ステータスメッセージ */
@@ -375,36 +309,37 @@
 .status-main {
     font-size: 1rem;
     font-weight: 600;
-    color: rgba(255, 255, 255, 0.9);
+    color: #2d1b13;
     margin-bottom: 0.3rem;
 }
 
 .status-sub {
     font-size: 0.8rem;
-    color: rgba(255, 255, 255, 0.4);
+    color: #8a6b5a;
     margin-bottom: 0;
 }
 
 /* ヒント */
 .generating-tip {
-    background: rgba(255, 255, 255, 0.05);
-    border: 1px solid rgba(255, 255, 255, 0.08);
+    background: #ffffff;
+    border: 1px solid #f0e6e0;
     border-radius: 12px;
     padding: 0.8rem 1.2rem;
     display: inline-flex;
     align-items: center;
     gap: 0.5rem;
     margin-bottom: 1.5rem;
+    box-shadow: 0 2px 8px rgba(45, 27, 19, 0.04);
 }
 
 .generating-tip i {
-    color: #fbbf24;
+    color: #ff7940;
     font-size: 1rem;
 }
 
 .generating-tip span {
     font-size: 0.8rem;
-    color: rgba(255, 255, 255, 0.5);
+    color: #5c3a2a;
 }
 
 /* テキスト量表示 */
@@ -416,16 +351,16 @@
     display: inline-flex;
     align-items: center;
     gap: 0.4rem;
-    background: rgba(124, 58, 237, 0.1);
-    border: 1px solid rgba(124, 58, 237, 0.2);
+    background: rgba(255, 121, 64, 0.08);
+    border: 1px solid rgba(255, 121, 64, 0.15);
     border-radius: 20px;
     padding: 0.4rem 1rem;
     font-size: 0.8rem;
-    color: rgba(255, 255, 255, 0.5);
+    color: #5c3a2a;
 }
 
 .info-badge i {
-    color: #a78bfa;
+    color: #ff7940;
 }
 
 /* 完了アニメーション */
@@ -435,11 +370,12 @@
 }
 
 .lyrics-generating-page.completed .lyrics-pulse {
-    border-color: rgba(34, 197, 94, 0.3);
+    border-color: rgba(34, 197, 94, 0.25);
 }
 
 .lyrics-generating-page.completed .generating-progress-fill {
     background: linear-gradient(90deg, #22c55e, #4ade80, #22c55e);
+    background-size: 200% 100%;
 }
 
 /* 失敗状態 */
@@ -458,7 +394,7 @@
     align-items: center;
     gap: 0.5rem;
     padding: 0.7rem 1.5rem;
-    background: linear-gradient(135deg, #7c3aed 0%, #6d28d9 100%);
+    background: linear-gradient(135deg, #ff7940 0%, #ff6b35 100%);
     color: #fff;
     border: none;
     border-radius: 12px;
@@ -472,7 +408,7 @@
 
 .retry-button:hover {
     transform: translateY(-2px);
-    box-shadow: 0 4px 15px rgba(124, 58, 237, 0.4);
+    box-shadow: 0 4px 15px rgba(255, 121, 64, 0.4);
     color: #fff;
 }
 
@@ -482,8 +418,8 @@
     gap: 0.5rem;
     padding: 0.5rem 1.2rem;
     background: transparent;
-    color: rgba(255, 255, 255, 0.4);
-    border: 1px solid rgba(255, 255, 255, 0.15);
+    color: #8a6b5a;
+    border: 1px solid #f0e6e0;
     border-radius: 12px;
     font-size: 0.8rem;
     cursor: pointer;
@@ -493,8 +429,8 @@
 }
 
 .manual-button:hover {
-    color: rgba(255, 255, 255, 0.7);
-    border-color: rgba(255, 255, 255, 0.3);
+    color: #5c3a2a;
+    border-color: #d4c4ba;
 }
 
 /* モバイル対応 */
@@ -735,7 +671,7 @@ document.addEventListener('DOMContentLoaded', function() {
         const statusEl = document.getElementById('generating-status');
         statusEl.innerHTML = 
             '<p class="status-main" style="color: #ef4444;">' + statusMain.textContent + '</p>' +
-            '<p class="status-sub">' + errorMsg + '</p>' +
+            '<p class="status-sub" style="color: #8a6b5a;">' + errorMsg + '</p>' +
             '<button onclick="location.reload()" class="retry-button">' +
             '<i class="bi bi-arrow-clockwise"></i> {% if is_english %}Retry{% elif is_chinese %}重试{% else %}再試行{% endif %}</button>' +
             '<br><a href="' + manualUrl + '" class="manual-button">' +
