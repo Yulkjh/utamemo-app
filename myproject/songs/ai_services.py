@@ -313,22 +313,46 @@ class MurekaAIGenerator:
         api_model = MODEL_API_MAPPING.get(model, 'auto')
         logger.info(f"Model mapping: DB='{model}' → API='{api_model}'")
         
-        # プロンプトを組み立て（ジャンル + ボーカルスタイル + ユーザーのカスタムプロンプト）
-        prompt_parts = []
-        if genre:  # ジャンルが指定されている場合のみ追加
-            prompt_parts.append(genre)
-        prompt_parts.append(vocal_style)
+        # ジャンルを英語に変換（Mureka APIは英語プロンプトのほうが精度が高い）
+        GENRE_TO_ENGLISH = {
+            # 日本語
+            'ポップ': 'Pop', 'ロック': 'Rock', 'バラード': 'Ballad',
+            'ラップ': 'Rap', '電子音楽': 'Electronic', 'クラシック': 'Classical',
+            'ジャズ': 'Jazz', 'おまかせ': '',
+            # 中国語
+            '流行': 'Pop', '摇滚': 'Rock', '抒情': 'Ballad',
+            '说唱': 'Rap', '电子': 'Electronic', '古典': 'Classical', '爵士': 'Jazz',
+            '自动': '',
+            # スペイン語
+            'Balada': 'Ballad', 'Electrónica': 'Electronic', 'Clásica': 'Classical',
+            # ドイツ語
+            'Ballade': 'Ballad', 'Elektronisch': 'Electronic', 'Klassik': 'Classical',
+            # ポルトガル語
+            'Eletrônica': 'Electronic', 'Clássica': 'Classical',
+        }
+        genre_en = GENRE_TO_ENGLISH.get(genre, genre)  # マッピングになければそのまま使用
+        
+        # music_prompt を英語に翻訳（日本語等の場合）
+        music_prompt_en = ''
         if music_prompt and music_prompt.strip():
-            prompt_parts.append(music_prompt.strip())
+            music_prompt_en = self._translate_prompt_to_english(music_prompt.strip())
+        
+        # プロンプトを組み立て（すべて英語で）
+        prompt_parts = []
+        if genre_en:  # ジャンルが指定されている場合のみ追加
+            prompt_parts.append(genre_en)
+        prompt_parts.append(vocal_style)
+        if music_prompt_en:
+            prompt_parts.append(music_prompt_en)
         full_prompt = ", ".join(prompt_parts)
         
-        # リファレンス曲をプロンプトに追加（テキストのみ）
+        # リファレンス曲をプロンプトに追加（英語で）
         if reference_song and reference_song.strip():
             ref = reference_song.strip()
             # URLでない場合はプロンプトに追加
             if not ref.startswith('http://') and not ref.startswith('https://'):
-                full_prompt = f"{full_prompt}, {ref}風のスタイル"
-                logger.info(f"リファレンス曲をプロンプトに追加: {ref}")
+                full_prompt = f"{full_prompt}, in the style of {ref}"
+                logger.info(f"Reference song added to prompt: {ref}")
         
         payload = {
             "lyrics": lyrics,
@@ -440,6 +464,43 @@ class MurekaAIGenerator:
                     continue
                 else:
                     raise
+    
+    def _translate_prompt_to_english(self, text):
+        """音楽スタイルプロンプトを英語に翻訳する（Gemini使用）
+        
+        既に英語の場合はそのまま返す。日本語や他言語の場合は英語に翻訳する。
+        翻訳に失敗した場合は元のテキストをそのまま返す。
+        """
+        # ASCII文字が大部分なら既に英語と判定
+        ascii_count = sum(1 for c in text if ord(c) < 128)
+        if len(text) > 0 and ascii_count / len(text) > 0.8:
+            return text
+        
+        try:
+            model = _get_gemini_model()
+            if not model:
+                logger.warning("Gemini model not available for prompt translation, using original text")
+                return text
+            
+            prompt = f"""Translate the following music style description to English. 
+Keep it concise and natural for a music generation AI prompt. 
+Only output the English translation, nothing else.
+
+Text: {text}"""
+            
+            response = model.generate_content(prompt)
+            translated = response.text.strip()
+            
+            # 翻訳結果が空や異常に長い場合は元テキストを使用
+            if not translated or len(translated) > len(text) * 5:
+                return text
+            
+            logger.info(f"Prompt translated: '{text}' → '{translated}'")
+            return translated
+            
+        except Exception as e:
+            logger.warning(f"Prompt translation failed: {e}, using original text")
+            return text
     
     def _truncate_lyrics_by_section(self, lyrics, max_length):
         """歌詞をセクション単位で切り詰める（完全なセクションで終わるように）"""
