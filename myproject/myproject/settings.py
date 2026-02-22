@@ -338,8 +338,8 @@ if PRODUCTION:
 MAX_IMAGE_SIZE = int(os.getenv('MAX_IMAGE_SIZE', 10 * 1024 * 1024))
 # PDFファイルの最大サイズ（25MB）
 MAX_PDF_SIZE = int(os.getenv('MAX_PDF_SIZE', 25 * 1024 * 1024))
-# 許可する画像形式
-ALLOWED_IMAGE_TYPES = ['image/jpeg', 'image/png', 'image/gif', 'image/webp']
+# 許可する画像形式（HEIC/HEIFはiPhoneのデフォルト形式）
+ALLOWED_IMAGE_TYPES = ['image/jpeg', 'image/png', 'image/gif', 'image/webp', 'image/heic', 'image/heif']
 # 許可するドキュメント形式
 ALLOWED_DOCUMENT_TYPES = ['application/pdf']
 # 歌詞の最大文字数

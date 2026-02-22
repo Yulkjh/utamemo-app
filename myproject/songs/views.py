@@ -473,7 +473,7 @@ def validate_uploaded_file(file, app_language='ja'):
     
     # ファイルタイプの確認
     is_pdf = file_name.endswith('.pdf')
-    is_image = any(file_name.endswith(ext) for ext in ['.jpg', '.jpeg', '.png', '.gif', '.webp'])
+    is_image = any(file_name.endswith(ext) for ext in ['.jpg', '.jpeg', '.png', '.gif', '.webp', '.heic', '.heif'])
     
     if not is_pdf and not is_image:
         if app_language == 'en':
@@ -498,7 +498,7 @@ def validate_uploaded_file(file, app_language='ja'):
     
     # MIMEタイプの確認（追加のセキュリティ）
     content_type = file.content_type
-    allowed_image_types = getattr(settings, 'ALLOWED_IMAGE_TYPES', ['image/jpeg', 'image/png', 'image/gif', 'image/webp'])
+    allowed_image_types = getattr(settings, 'ALLOWED_IMAGE_TYPES', ['image/jpeg', 'image/png', 'image/gif', 'image/webp', 'image/heic', 'image/heif'])
     allowed_doc_types = getattr(settings, 'ALLOWED_DOCUMENT_TYPES', ['application/pdf'])
     
     if is_pdf and content_type not in allowed_doc_types:
@@ -509,12 +509,16 @@ def validate_uploaded_file(file, app_language='ja'):
         else:
             errors.append(f'{file.name}: 無効なPDFファイルです')
     elif is_image and content_type not in allowed_image_types:
-        if app_language == 'en':
-            errors.append(f'{file.name}: Invalid image file')
-        elif app_language == 'zh':
-            errors.append(f'{file.name}：无效的图片文件')
-        else:
-            errors.append(f'{file.name}: 無効な画像ファイルです')
+        # スマホ（iOS Safari等）ではHEIC画像のMIMEタイプが空や
+        # application/octet-streamで送信されることがあるため、
+        # 拡張子で画像と判定済みの場合はMIMEタイプチェックをスキップ
+        if content_type and content_type != 'application/octet-stream':
+            if app_language == 'en':
+                errors.append(f'{file.name}: Invalid image file')
+            elif app_language == 'zh':
+                errors.append(f'{file.name}：无效的图片文件')
+            else:
+                errors.append(f'{file.name}: 無効な画像ファイルです')
     
     return errors
 

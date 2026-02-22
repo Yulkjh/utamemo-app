@@ -608,17 +608,29 @@ document.addEventListener('DOMContentLoaded', function() {
     function handleFileSelect(files, addToExisting = false) {
         console.log('handleFileSelect called with', files.length, 'files');
         
+        // 拡張子で画像を判定するヘルパー（スマホではfile.typeが空の場合がある）
+        const imageExtensions = ['.jpg', '.jpeg', '.png', '.gif', '.webp', '.heic', '.heif'];
+        function isImageFile(file) {
+            if (file.type && file.type.match('image.*')) return true;
+            const name = file.name.toLowerCase();
+            return imageExtensions.some(ext => name.endsWith(ext));
+        }
+        function isPDFFile(file) {
+            if (file.type === 'application/pdf') return true;
+            return file.name.toLowerCase().endsWith('.pdf');
+        }
+        
         // 新しいファイルを追加
         const newFiles = Array.from(files);
         
         // バリデーション
         const validFiles = [];
         for (const file of newFiles) {
-            const isImage = file.type.match('image.*');
-            const isPDF = file.type === 'application/pdf' || file.name.toLowerCase().endsWith('.pdf');
+            const isImage = isImageFile(file);
+            const isPDF = isPDFFile(file);
             
             if (!isImage && !isPDF) {
-                console.log('File type check failed:', file.type);
+                console.log('File type check failed:', file.type, file.name);
                 continue;
             }
 
@@ -672,7 +684,7 @@ document.addEventListener('DOMContentLoaded', function() {
 
         // ファイル数の表示
         const totalSize = selectedFiles.reduce((sum, f) => sum + f.size, 0);
-        const imageCount = selectedFiles.filter(f => f.type.match('image.*')).length;
+        const imageCount = selectedFiles.filter(f => isImageFile(f)).length;
         const pdfCount = selectedFiles.length - imageCount;
         
         let fileInfo = '';
@@ -709,9 +721,9 @@ document.addEventListener('DOMContentLoaded', function() {
             multiPreview.style.display = 'none';
             
             const file = selectedFiles[0];
-            const isPDF = file.type === 'application/pdf' || file.name.toLowerCase().endsWith('.pdf');
+            const filePDF = isPDFFile(file);
             
-            if (isPDF) {
+            if (filePDF) {
                 previewImage.src = 'data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSIxMjgiIGhlaWdodD0iMTI4IiB2aWV3Qm94PSIwIDAgMjQgMjQiIGZpbGw9Im5vbmUiIHN0cm9rZT0iI2RjMzU0NSIgc3Ryb2tlLXdpZHRoPSIyIiBzdHJva2UtbGluZWNhcD0icm91bmQiIHN0cm9rZS1saW5lam9pbj0icm91bmQiPjxwYXRoIGQ9Ik0xNCAySDZhMiAyIDAgMCAwLTIgMnYxNmEyIDIgMCAwIDAgMiAyaDEyYTIgMiAwIDAgMCAyLTJWOHoiPjwvcGF0aD48cG9seWxpbmUgcG9pbnRzPSIxNCAyIDE0IDggMjAgOCI+PC9wb2x5bGluZT48bGluZSB4MT0iMTYiIHkxPSIxMyIgeDI9IjgiIHkyPSIxMyI+PC9saW5lPjxsaW5lIHgxPSIxNiIgeTE9IjE3IiB4Mj0iOCIgeTI9IjE3Ij48L2xpbmU+PC9zdmc+';
             } else {
                 const reader = new FileReader();
@@ -730,9 +742,9 @@ document.addEventListener('DOMContentLoaded', function() {
                 const item = document.createElement('div');
                 item.className = 'multi-preview-item';
                 
-                const isPDF = file.type === 'application/pdf' || file.name.toLowerCase().endsWith('.pdf');
+                const fileIsPDF = isPDFFile(file);
                 
-                if (isPDF) {
+                if (fileIsPDF) {
                     item.innerHTML = `
                         <div class="pdf-icon"><i class="bi bi-file-pdf"></i></div>
                         <button type="button" class="remove-btn" data-index="${index}"><i class="bi bi-x"></i></button>

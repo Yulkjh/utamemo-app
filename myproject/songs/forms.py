@@ -63,7 +63,7 @@ class ImageUploadForm(forms.Form):
     images = MultipleFileField(
         required=False,
         widget=MultipleFileInput(attrs={
-            'accept': 'image/*,.pdf,application/pdf',
+            'accept': 'image/*,.pdf,application/pdf,.heic,.heif,image/heic,image/heif',
             'class': 'form-control',
             'style': 'display: none !important;',
             'multiple': 'multiple'
@@ -86,22 +86,28 @@ class ImageUploadForm(forms.Form):
         max_image_size = getattr(settings, 'MAX_IMAGE_SIZE', 10 * 1024 * 1024)
         max_pdf_size = getattr(settings, 'MAX_PDF_SIZE', 25 * 1024 * 1024)
         allowed_image_types = getattr(settings, 'ALLOWED_IMAGE_TYPES', 
-            ['image/jpeg', 'image/png', 'image/gif', 'image/webp'])
+            ['image/jpeg', 'image/png', 'image/gif', 'image/webp', 'image/heic', 'image/heif'])
         allowed_doc_types = getattr(settings, 'ALLOWED_DOCUMENT_TYPES', 
             ['application/pdf'])
+        # 拡張子ベースでも画像と判定する（スマホではMIMEが空の場合がある）
+        image_extensions = {'.jpg', '.jpeg', '.png', '.gif', '.webp', '.heic', '.heif'}
         
         errors = []
         for f in files:
             content_type = getattr(f, 'content_type', '')
             file_size = getattr(f, 'size', 0)
             file_name = getattr(f, 'name', 'file')
+            file_ext = '.' + file_name.rsplit('.', 1)[-1].lower() if '.' in file_name else ''
             
-            # タイプチェック
-            if content_type in allowed_image_types:
+            # MIMEタイプまたは拡張子で画像/PDFを判定
+            is_image = content_type in allowed_image_types or file_ext in image_extensions
+            is_pdf = content_type in allowed_doc_types or file_ext == '.pdf'
+            
+            if is_image:
                 if file_size > max_image_size:
                     size_mb = max_image_size / (1024 * 1024)
                     errors.append(f'{file_name}: 画像は{size_mb:.0f}MB以下にしてください')
-            elif content_type in allowed_doc_types:
+            elif is_pdf:
                 if file_size > max_pdf_size:
                     size_mb = max_pdf_size / (1024 * 1024)
                     errors.append(f'{file_name}: PDFは{size_mb:.0f}MB以下にしてください')
