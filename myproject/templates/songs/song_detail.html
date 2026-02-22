@@ -2928,7 +2928,7 @@ document.getElementById('tagModal').addEventListener('click', function(e) {
                     if (response.ok) break;
                     
                     // 音声URLが期限切れ・無効の場合はリトライしない
-                    if (response.status === 410) {
+                    if ([410, 502, 504].includes(response.status)) {
                         throw new Error(`{% if is_english %}This audio has expired and is no longer available. Please recreate the song.{% elif is_chinese %}此音频已过期，不再可用。请重新创建歌曲。{% else %}この音声の有効期限が切れました。楽曲を再作成してください。{% endif %}`);
                     }
                     
@@ -2945,7 +2945,14 @@ document.getElementById('tagModal').addEventListener('click', function(e) {
                 } catch (fetchErr) {
                     if (fetchErr.name === 'AbortError') {
                         lastFetchError = new Error('{% if is_english %}Connection timed out{% elif is_chinese %}连接超时{% else %}接続がタイムアウトしました{% endif %}');
-                    } else if (fetchErr.message && (fetchErr.message.includes('Audio not available') || fetchErr.message.includes('音声が利用できません') || fetchErr.message.includes('音频不可用'))) {
+                    } else if (fetchErr.message && (
+                        fetchErr.message.includes('Audio not available') || 
+                        fetchErr.message.includes('音声が利用できません') || 
+                        fetchErr.message.includes('音频不可用') ||
+                        fetchErr.message.includes('expired') || 
+                        fetchErr.message.includes('有効期限') || 
+                        fetchErr.message.includes('已过期')
+                    )) {
                         throw fetchErr;
                     } else {
                         lastFetchError = fetchErr;
