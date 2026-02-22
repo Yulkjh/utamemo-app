@@ -175,6 +175,23 @@ class Song(models.Model):
         related_name='songs',
         verbose_name='元画像'
     )
+    karaoke_audio_url = models.URLField(
+        blank=True,
+        null=True,
+        verbose_name='カラオケ音源URL',
+        help_text='Demucsで生成されたインストゥルメンタル音源のURL'
+    )
+    karaoke_status = models.CharField(
+        max_length=20,
+        choices=[
+            ('none', '未処理'),
+            ('processing', '処理中'),
+            ('completed', '完了'),
+            ('failed', '失敗'),
+        ],
+        default='none',
+        verbose_name='カラオケ処理ステータス'
+    )
     created_at = models.DateTimeField(
         auto_now_add=True,
         verbose_name='作成日時'
