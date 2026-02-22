@@ -227,7 +227,7 @@
             <span class="song-genre">{{ song.genre }}</span>
             {% endif %}
             {% if song.audio_url %}
-            <audio controls class="song-audio">
+            <audio controls controlsList="nodownload" class="song-audio">
                 <source src="{{ song.audio_url }}" type="audio/mpeg">
             </audio>
             {% endif %}

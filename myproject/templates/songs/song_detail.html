@@ -87,7 +87,7 @@
                     {% if song.audio_file %}
                     <!-- ローカル音声ファイル -->
                     <div class="audio-controls">
-                        <audio controls class="custom-audio-player" id="main-audio-player">
+                        <audio controls controlsList="nodownload" class="custom-audio-player" id="main-audio-player">
                             <source src="{{ song.audio_file.url }}" type="audio/mpeg">
                             {% if is_english %}Your browser does not support audio playback.{% elif is_spanish %}Su navegador no soporta la reproducción de audio.{% elif is_german %}Ihr Browser unterstützt keine Audiowiedergabe.{% elif is_portuguese %}Seu navegador não suporta reprodução de áudio.{% elif is_chinese %}您的浏览器不支持音频播放。{% else %}お使いのブラウザは音声の再生をサポートしていません。{% endif %}
                         </audio>
@@ -95,7 +95,7 @@
                     {% elif song.audio_url %}
                     <!-- 外部音声URL (Mureka等) -->
                     <div class="audio-controls">
-                        <audio controls class="custom-audio-player" id="main-audio-player" preload="none">
+                        <audio controls controlsList="nodownload" class="custom-audio-player" id="main-audio-player" preload="none">
                             <source src="{{ song.audio_url }}" type="audio/mpeg">
                             {% if is_english %}Your browser does not support audio playback.{% elif is_spanish %}Su navegador no soporta la reproducción de audio.{% elif is_german %}Ihr Browser unterstützt keine Audiowiedergabe.{% elif is_portuguese %}Seu navegador não suporta reprodução de áudio.{% elif is_chinese %}您的浏览器不支持音频播放。{% else %}お使いのブラウザは音声の再生をサポートしていません。{% endif %}
                         </audio>
