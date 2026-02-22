@@ -499,13 +499,42 @@ document.addEventListener('DOMContentLoaded', function() {
 
     // 選択されたファイルを保持
     let selectedFiles = [];
+    
+    // 追加モードフラグ（「追加」ボタン経由の場合のみtrue）
+    let isAddingMore = false;
 
     // ファイル入力にmultiple属性を追加
     if (fileInput) {
         fileInput.setAttribute('multiple', 'multiple');
     }
 
-    console.log('File input element:', fileInput);
+    // ============================
+    // ヘルパー関数（グローバルスコープ）
+    // ============================
+    const imageExtensions = ['.jpg', '.jpeg', '.png', '.gif', '.webp', '.heic', '.heif'];
+    
+    function isImageFile(file) {
+        if (file.type && file.type.match('image.*')) return true;
+        const name = file.name.toLowerCase();
+        return imageExtensions.some(ext => name.endsWith(ext));
+    }
+    
+    function isPDFFile(file) {
+        if (file.type === 'application/pdf') return true;
+        return file.name.toLowerCase().endsWith('.pdf');
+    }
+
+    function formatFileSize(bytes) {
+        if (bytes === 0) return '0 Bytes';
+        const k = 1024;
+        const sizes = ['Bytes', 'KB', 'MB', 'GB'];
+        const i = Math.floor(Math.log(bytes) / Math.log(k));
+        return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
+    }
+
+    // ============================
+    // UI状態管理
+    // ============================
 
     // 単一ファイル削除ボタン
     if (singleRemoveBtn) {
@@ -513,7 +542,7 @@ document.addEventListener('DOMContentLoaded', function() {
             e.preventDefault();
             e.stopPropagation();
             selectedFiles = [];
-            updateFileInput();
+            syncFileInput();
             resetToUploadState();
         });
     }
@@ -526,55 +555,59 @@ document.addEventListener('DOMContentLoaded', function() {
         document.getElementById('custom-request-section').style.display = 'none';
         previewImage.src = '';
         multiPreview.innerHTML = '';
+        // 同じファイルを再選択できるようにリセット
         fileInput.value = '';
     }
 
-    // カメラボタンクリック（モバイルデバイスでカメラを起動）
+    // ============================
+    // ファイル選択トリガー
+    // ============================
+
+    // カメラボタン（モバイル）
     if (cameraBtn) {
         cameraBtn.addEventListener('click', () => {
+            isAddingMore = false;
             fileInput.removeAttribute('multiple');
             fileInput.setAttribute('capture', 'environment');
             fileInput.click();
-            setTimeout(() => {
-                fileInput.removeAttribute('capture');
-                fileInput.setAttribute('multiple', 'multiple');
-            }, 100);
         });
     }
 
-    // ファイル選択ボタンクリック
+    // ファイル選択ボタン
     if (fileSelectBtn) {
         fileSelectBtn.addEventListener('click', (e) => {
             e.preventDefault();
             e.stopPropagation();
-            console.log('File select button clicked');
+            isAddingMore = false;
             fileInput.removeAttribute('capture');
+            fileInput.setAttribute('multiple', 'multiple');
             fileInput.click();
         });
     }
 
-    // 変更カメラボタンクリック
+    // 変更カメラボタン（プレビュー表示中）
     if (changeCameraBtn) {
         changeCameraBtn.addEventListener('click', () => {
+            isAddingMore = true;
             fileInput.removeAttribute('multiple');
             fileInput.setAttribute('capture', 'environment');
             fileInput.click();
-            setTimeout(() => {
-                fileInput.removeAttribute('capture');
-                fileInput.setAttribute('multiple', 'multiple');
-            }, 100);
         });
     }
 
-    // ファイル追加ボタンクリック
+    // ファイル追加ボタン（プレビュー表示中）
     if (changeFileBtn) {
         changeFileBtn.addEventListener('click', () => {
+            isAddingMore = true;
             fileInput.removeAttribute('capture');
+            fileInput.setAttribute('multiple', 'multiple');
             fileInput.click();
         });
     }
 
+    // ============================
     // ドラッグ&ドロップ
+    // ============================
     uploadArea.addEventListener('dragover', (e) => {
         e.preventDefault();
         uploadArea.classList.add('drag-over');
@@ -591,56 +624,40 @@ document.addEventListener('DOMContentLoaded', function() {
         
         const files = e.dataTransfer.files;
         if (files.length > 0) {
-            handleFileSelect(files, true);
+            // ドロップは常に追加
+            processFiles(files, true);
         }
     });
 
-    // ファイル選択
+    // ============================
+    // ファイル入力のchangeイベント
+    // ============================
     fileInput.addEventListener('change', (e) => {
-        console.log('File input change event fired');
         const files = e.target.files;
         if (files && files.length > 0) {
-            handleFileSelect(files, true);
+            processFiles(files, isAddingMore);
         }
+        // 次回の選択に備えてリセット（同じファイルを再選択可能にする）
+        // ※ selectedFiles配列は保持されているので問題なし
+        isAddingMore = false;
     });
 
-    // ファイル処理（複数対応）
-    function handleFileSelect(files, addToExisting = false) {
-        console.log('handleFileSelect called with', files.length, 'files');
-        
-        // 拡張子で画像を判定するヘルパー（スマホではfile.typeが空の場合がある）
-        const imageExtensions = ['.jpg', '.jpeg', '.png', '.gif', '.webp', '.heic', '.heif'];
-        function isImageFile(file) {
-            if (file.type && file.type.match('image.*')) return true;
-            const name = file.name.toLowerCase();
-            return imageExtensions.some(ext => name.endsWith(ext));
-        }
-        function isPDFFile(file) {
-            if (file.type === 'application/pdf') return true;
-            return file.name.toLowerCase().endsWith('.pdf');
-        }
-        
-        // 新しいファイルを追加
+    // ============================
+    // ファイル処理
+    // ============================
+    function processFiles(files, addToExisting) {
         const newFiles = Array.from(files);
         
         // バリデーション
         const validFiles = [];
         for (const file of newFiles) {
-            const isImage = isImageFile(file);
-            const isPDF = isPDFFile(file);
-            
-            if (!isImage && !isPDF) {
-                console.log('File type check failed:', file.type, file.name);
+            if (!isImageFile(file) && !isPDFFile(file)) {
                 continue;
             }
-
-            // ファイルサイズチェック
-            const maxSize = isPDF ? 25 * 1024 * 1024 : 10 * 1024 * 1024;
+            const maxSize = isPDFFile(file) ? 25 * 1024 * 1024 : 10 * 1024 * 1024;
             if (file.size > maxSize) {
-                console.log('File size check failed:', file.size);
                 continue;
             }
-            
             validFiles.push(file);
         }
 
@@ -661,17 +678,30 @@ document.addEventListener('DOMContentLoaded', function() {
             selectedFiles = validFiles;
         }
 
-        console.log('Total selected files:', selectedFiles.length);
+        syncFileInput();
         updatePreview();
     }
 
+    // ============================
+    // FileInputとselectedFilesの同期
+    // ============================
+    function syncFileInput() {
+        try {
+            const dt = new DataTransfer();
+            selectedFiles.forEach(file => dt.items.add(file));
+            fileInput.files = dt.files;
+        } catch (e) {
+            // DataTransferをサポートしない古いブラウザのフォールバック
+            console.warn('DataTransfer not supported:', e);
+        }
+    }
+
+    // ============================
     // プレビュー更新
+    // ============================
     function updatePreview() {
         if (selectedFiles.length === 0) {
-            uploadContent.style.display = 'block';
-            uploadPreview.style.display = 'none';
-            actionButtons.style.display = 'none';
-            document.getElementById('custom-request-section').style.display = 'none';
+            resetToUploadState();
             return;
         }
 
@@ -721,9 +751,8 @@ document.addEventListener('DOMContentLoaded', function() {
             multiPreview.style.display = 'none';
             
             const file = selectedFiles[0];
-            const filePDF = isPDFFile(file);
             
-            if (filePDF) {
+            if (isPDFFile(file)) {
                 previewImage.src = 'data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSIxMjgiIGhlaWdodD0iMTI4IiB2aWV3Qm94PSIwIDAgMjQgMjQiIGZpbGw9Im5vbmUiIHN0cm9rZT0iI2RjMzU0NSIgc3Ryb2tlLXdpZHRoPSIyIiBzdHJva2UtbGluZWNhcD0icm91bmQiIHN0cm9rZS1saW5lam9pbj0icm91bmQiPjxwYXRoIGQ9Ik0xNCAySDZhMiAyIDAgMCAwLTIgMnYxNmEyIDIgMCAwIDAgMiAyaDEyYTIgMiAwIDAgMCAyLTJWOHoiPjwvcGF0aD48cG9seWxpbmUgcG9pbnRzPSIxNCAyIDE0IDggMjAgOCI+PC9wb2x5bGluZT48bGluZSB4MT0iMTYiIHkxPSIxMyIgeDI9IjgiIHkyPSIxMyI+PC9saW5lPjxsaW5lIHgxPSIxNiIgeTE9IjE3IiB4Mj0iOCIgeTI9IjE3Ij48L2xpbmU+PC9zdmc+';
             } else {
                 const reader = new FileReader();
@@ -742,9 +771,7 @@ document.addEventListener('DOMContentLoaded', function() {
                 const item = document.createElement('div');
                 item.className = 'multi-preview-item';
                 
-                const fileIsPDF = isPDFFile(file);
-                
-                if (fileIsPDF) {
+                if (isPDFFile(file)) {
                     item.innerHTML = `
                         <div class="pdf-icon"><i class="bi bi-file-pdf"></i></div>
                         <button type="button" class="remove-btn" data-index="${index}"><i class="bi bi-x"></i></button>
@@ -769,54 +796,32 @@ document.addEventListener('DOMContentLoaded', function() {
                 multiPreview.appendChild(item);
             });
             
-            // 削除ボタンのイベント
+            // 削除ボタンのイベント（クロージャでインデックスをキャプチャ）
             multiPreview.querySelectorAll('.remove-btn').forEach(btn => {
                 btn.addEventListener('click', (e) => {
+                    e.preventDefault();
                     e.stopPropagation();
                     const idx = parseInt(btn.dataset.index);
-                    selectedFiles.splice(idx, 1);
-                    updateFileInput();
-                    if (selectedFiles.length === 0) {
-                        resetToUploadState();
-                    } else {
-                        updatePreview();
+                    if (idx >= 0 && idx < selectedFiles.length) {
+                        selectedFiles.splice(idx, 1);
+                        syncFileInput();
+                        if (selectedFiles.length === 0) {
+                            resetToUploadState();
+                        } else {
+                            updatePreview();
+                        }
                     }
                 });
             });
         }
-
-        // アニメーション
-        uploadPreview.style.opacity = '0';
-        uploadPreview.style.transform = 'translateY(20px)';
-        setTimeout(() => {
-            uploadPreview.style.transition = 'all 0.3s ease';
-            uploadPreview.style.opacity = '1';
-            uploadPreview.style.transform = 'translateY(0)';
-        }, 50);
     }
 
-    // DataTransferでファイル入力を更新
-    function updateFileInput() {
-        const dt = new DataTransfer();
-        selectedFiles.forEach(file => dt.items.add(file));
-        fileInput.files = dt.files;
-    }
-
-    // ファイルサイズフォーマット
-    function formatFileSize(bytes) {
-        if (bytes === 0) return '0 Bytes';
-        const k = 1024;
-        const sizes = ['Bytes', 'KB', 'MB', 'GB'];
-        const i = Math.floor(Math.log(bytes) / Math.log(k));
-        return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
-    }
-
-    // フォーム送信時のローディング
+    // ============================
+    // フォーム送信
+    // ============================
     document.getElementById('upload-form').addEventListener('submit', function(e) {
-        console.log('Form submission started');
-        
-        // DataTransferでファイルを設定
-        updateFileInput();
+        // 送信前にファイル入力を最新に同期
+        syncFileInput();
         
         if (selectedFiles.length === 0) {
             e.preventDefault();
