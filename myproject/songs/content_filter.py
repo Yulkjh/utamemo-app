@@ -71,17 +71,32 @@ class ContentFilter:
     }
     
     # 禁止ワードリスト（英語）
-    # 本当に悪質なもの（ヘイト・直接的脅迫・性的コンテンツ）のみ
+    # 本当に悪質なもの（ヘイト・直接的脅迫・性的コンテンツ・卑語）のみ
     PROHIBITED_WORDS_EN = [
         # Hate speech / Slurs
         'nigger', 'nigga', 'faggot', 'fag',
         'chink', 'spic', 'kike',
+        'retard', 'retarded',
+        
+        # Profanity / Vulgar language
+        'fuck', 'fucking', 'fucked', 'fucker', 'motherfucker',
+        'fuck you', 'fuck off', 'wtf',
+        'shit', 'shitty', 'bullshit',
+        'bitch', 'bitches',
+        'asshole', 'ass hole',
+        'cunt', 'dick', 'cock', 'pussy',
+        'bastard',
+        'damn you', 'goddamn',
+        'stfu', 'gtfo',
         
         # Direct threats
         'death threat',
+        'i will kill you', 'gonna kill you',
         
         # Sexual content
-        'porn', 'nude', 'naked',
+        'porn', 'porno', 'pornography',
+        'nude', 'naked', 'xxx',
+        'hentai', 'blowjob', 'handjob',
     ]
     
     # 文脈に応じて判定する暴力系ワード（英語）
@@ -122,6 +137,95 @@ class ContentFilter:
     # 禁止パターン（正規表現）- 脅迫的な強調表現のみ
     PROHIBITED_PATTERNS = [
         r'死ね+',           # 「死ねええ」など
+        r'f+u+c+k+',       # 「fuuuck」など伸ばし表現
+    ]
+    
+    # 有名人・著名人の名前（権利侵害防止）
+    # 現代の芸能人・アーティスト・政治家・スポーツ選手等
+    # ※歴史上の人物は ACADEMIC_CONTEXT_INDICATORS に含まれ、学術文脈で許可される
+    CELEBRITY_NAMES = [
+        # 日本の芸能人・アーティスト
+        '米津玄師', 'よねづけんし', 'ヨネヅケンシ',
+        'YOASOBI', 'yoasobi', 'ヨアソビ',
+        'Ado', 'ado', 'アド',
+        '藤井風', 'ふじいかぜ',
+        'あいみょん', 'アイミョン',
+        'ヒゲダン', 'Official髭男dism',
+        'King Gnu', 'キングヌー',
+        'ARASHI',
+        'SMAP', 'スマップ',
+        '宇多田ヒカル', 'うただひかる',
+        '浜崎あゆみ', 'はまさきあゆみ',
+        '安室奈美恵', 'あむろなみえ',
+        'Mr.Children', 'ミスチル',
+        'B\'z', 'ビーズ',
+        'サザンオールスターズ', 'サザン',
+        '桑田佳祐', 'くわたけいすけ',
+        'back number', 'バックナンバー',
+        'Mrs. GREEN APPLE', 'ミセスグリーンアップル',
+        'Creepy Nuts', 'クリーピーナッツ',
+        'TWICE', 'トゥワイス',
+        'BTS', 'ビーティーエス', '防弾少年団',
+        'BLACKPINK', 'ブラックピンク',
+        'NiziU', 'ニジュー',
+        'ジャニーズ',
+        '乃木坂46', '乃木坂',
+        '櫻坂46', '欅坂46',
+        'AKB48', 'AKB',
+        
+        # 日本の俳優・タレント
+        '大谷翔平', 'おおたにしょうへい',
+        '木村拓哉', 'きむらたくや', 'キムタク',
+        '松本人志', 'まつもとひとし',
+        '明石家さんま', 'あかしやさんま',
+        'ビートたけし', '北野武',
+        'タモリ',
+        
+        # 日本の政治家
+        '岸田文雄', 'きしだふみお',
+        '安倍晋三', 'あべしんぞう',
+        '菅義偉', 'すがよしひで',
+        '小泉進次郎', 'こいずみしんじろう',
+        '石破茂', 'いしばしげる',
+        
+        # 海外アーティスト
+        'Taylor Swift', 'テイラースウィフト', 'テイラー・スウィフト',
+        'Beyonce', 'ビヨンセ',
+        'Ariana Grande', 'アリアナグランデ', 'アリアナ・グランデ',
+        'Ed Sheeran', 'エドシーラン', 'エド・シーラン',
+        'Billie Eilish', 'ビリーアイリッシュ', 'ビリー・アイリッシュ',
+        'Drake', 'ドレイク',
+        'Justin Bieber', 'ジャスティンビーバー', 'ジャスティン・ビーバー',
+        'Lady Gaga', 'レディーガガ', 'レディー・ガガ',
+        'Bruno Mars', 'ブルーノマーズ', 'ブルーノ・マーズ',
+        'The Weeknd', 'ザウィークエンド',
+        'Dua Lipa', 'デュアリパ', 'デュア・リパ',
+        'Olivia Rodrigo', 'オリヴィアロドリゴ',
+        'Bad Bunny', 'バッドバニー',
+        'Eminem', 'エミネム',
+        'Kanye West', 'カニエウェスト', 'カニエ・ウェスト',
+        'Rihanna', 'リアーナ',
+        'Adele', 'アデル',
+        
+        # 海外俳優
+        'Tom Cruise', 'トムクルーズ', 'トム・クルーズ',
+        'Leonardo DiCaprio', 'レオナルドディカプリオ',
+        'Brad Pitt', 'ブラッドピット', 'ブラッド・ピット',
+        'Johnny Depp', 'ジョニーデップ', 'ジョニー・デップ',
+        
+        # 海外政治家
+        'Donald Trump', 'ドナルドトランプ', 'トランプ大統領',
+        'Joe Biden', 'ジョーバイデン', 'バイデン大統領',
+        'Barack Obama', 'バラクオバマ', 'オバマ大統領',
+        'Elon Musk', 'イーロンマスク', 'イーロン・マスク',
+        
+        # 韓国芸能人
+        'BLACKPINK', '블랙핑크',
+        '손흥민', 'ソンフンミン',
+        
+        # 中国芸能人
+        '周杰伦', 'ジェイチョウ',
+        '成龙', 'ジャッキーチェン', 'ジャッキー・チェン', 'Jackie Chan',
     ]
     
     def __init__(self):
@@ -140,6 +244,11 @@ class ContentFilter:
         
         for word in self.PROHIBITED_WORDS_ZH:
             self.prohibited_words.add(word.lower())
+        
+        # 有名人名を小文字でセット化
+        self.celebrity_names = set()
+        for name in self.CELEBRITY_NAMES:
+            self.celebrity_names.add(name.lower())
         
         # 正規表現パターンをコンパイル
         self.compiled_patterns = [
@@ -217,6 +326,11 @@ class ContentFilter:
             matches = pattern.findall(text_lower)
             detected_words.extend(matches)
         
+        # 有名人・著名人の名前チェック
+        celebrity_detected = self._check_celebrity_names(text_lower)
+        if celebrity_detected:
+            detected_words.extend(celebrity_detected)
+        
         # 重複を除去
         detected_words = list(set(detected_words))
         
@@ -265,8 +379,34 @@ class ContentFilter:
         
         return False
     
+    def _check_celebrity_names(self, text_lower):
+        """テキストに有名人・著名人の名前が含まれるかチェック"""
+        detected = []
+        for name in self.celebrity_names:
+            if len(name) <= 2:
+                # 短い名前（2文字以下）は単語境界チェック（誤検出防止）
+                # 日本語の場合は前後の文字を考慮
+                idx = text_lower.find(name)
+                if idx >= 0:
+                    # 英字の場合は単語境界チェック
+                    if name.isascii():
+                        pattern = r'\b' + re.escape(name) + r'\b'
+                        if re.search(pattern, text_lower):
+                            detected.append(name)
+                    # 日本語2文字の場合はスキップ（誤検出が多い）
+            else:
+                if name in text_lower:
+                    detected.append(name)
+        return detected
+    
     def _get_violation_message(self, detected_words, language='ja'):
         """違反メッセージを生成"""
+        # 有名人名が検出されたかチェック
+        has_celebrity = any(w in self.celebrity_names for w in detected_words)
+        
+        if has_celebrity:
+            return self._get_celebrity_violation_message(language)
+        
         messages = {
             'ja': (
                 '利用規約違反のコンテンツが検出されました。\n\n'
@@ -303,6 +443,48 @@ class ContentFilter:
                 'Conteúdo contendo expressões inadequadas (insultos, linguagem discriminatória, '
                 'expressões violentas, etc.) não pode ser usado para geração de músicas.\n\n'
                 'Por favor, aceite os Termos de Serviço e use conteúdo apropriado.'
+            ),
+        }
+        return messages.get(language, messages['ja'])
+    
+    def _get_celebrity_violation_message(self, language='ja'):
+        """有名人名検出時の違反メッセージを生成"""
+        messages = {
+            'ja': (
+                '著名人・有名人の名前が検出されました。\n\n'
+                '実在する人物の名前を含むコンテンツは、肖像権・パブリシティ権の'
+                '侵害となる可能性があるため、楽曲生成に使用できません。\n\n'
+                '人物名を含まないコンテンツでご利用ください。'
+            ),
+            'en': (
+                'Celebrity or public figure names have been detected.\n\n'
+                'Content containing names of real people cannot be used for song generation '
+                'due to potential violations of personality rights and publicity rights.\n\n'
+                'Please use content that does not include personal names.'
+            ),
+            'zh': (
+                '检测到名人姓名。\n\n'
+                '包含真实人物姓名的内容可能侵犯肖像权和公开权，'
+                '不能用于歌曲生成。\n\n'
+                '请使用不包含人物姓名的内容。'
+            ),
+            'es': (
+                'Se han detectado nombres de celebridades o figuras públicas.\n\n'
+                'El contenido que contiene nombres de personas reales no se puede usar para la generación '
+                'de canciones debido a posibles violaciones de derechos de imagen.\n\n'
+                'Por favor, use contenido que no incluya nombres personales.'
+            ),
+            'de': (
+                'Es wurden Namen von Prominenten oder öffentlichen Personen erkannt.\n\n'
+                'Inhalte mit Namen realer Personen können aufgrund möglicher Verletzungen von '
+                'Persönlichkeitsrechten nicht für die Songgenerierung verwendet werden.\n\n'
+                'Bitte verwenden Sie Inhalte ohne Personennamen.'
+            ),
+            'pt': (
+                'Foram detectados nomes de celebridades ou figuras públicas.\n\n'
+                'Conteúdo contendo nomes de pessoas reais não pode ser usado para geração de músicas '
+                'devido a possíveis violações de direitos de imagem.\n\n'
+                'Por favor, use conteúdo que não inclua nomes pessoais.'
             ),
         }
         return messages.get(language, messages['ja'])
