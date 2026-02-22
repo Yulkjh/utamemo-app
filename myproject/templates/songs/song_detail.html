@@ -2905,13 +2905,56 @@ document.getElementById('tagModal').addEventListener('click', function(e) {
         try {
             updateKaraokeStatus('{% if is_english %}Loading audio...{% elif is_chinese %}正在加载音频...{% else %}音声を読み込み中...{% endif %}', 10);
             
+            // プロキシURLを使用（CORS対策）
             let fetchUrl = audioUrl;
             if (audioUrl.startsWith('http') && !audioUrl.includes(window.location.host)) {
                 fetchUrl = `/songs/${songId}/audio-proxy/`;
             }
             
-            const response = await fetch(fetchUrl);
-            if (!response.ok) throw new Error('Failed to fetch audio');
+            // リトライ付きフェッチ（最大3回）
+            let response = null;
+            let lastFetchError = null;
+            for (let attempt = 0; attempt < 3; attempt++) {
+                try {
+                    const controller = new AbortController();
+                    const timeoutId = setTimeout(() => controller.abort(), 120000); // 120秒タイムアウト
+                    
+                    response = await fetch(fetchUrl, {
+                        signal: controller.signal,
+                        cache: 'no-cache',
+                    });
+                    clearTimeout(timeoutId);
+                    
+                    if (response.ok) break;
+                    
+                    // 404/403/410はリトライしない
+                    if ([403, 404, 410].includes(response.status)) {
+                        throw new Error(`{% if is_english %}Audio not available (${response.status}){% elif is_chinese %}音频不可用 (${response.status}){% else %}音声が利用できません (${response.status}){% endif %}`);
+                    }
+                    
+                    lastFetchError = new Error(`HTTP ${response.status}`);
+                    if (attempt < 2) {
+                        updateKaraokeStatus(`{% if is_english %}Retrying... (${attempt + 2}/3){% elif is_chinese %}正在重试... (${attempt + 2}/3){% else %}再試行中... (${attempt + 2}/3){% endif %}`, 10);
+                        await new Promise(r => setTimeout(r, 2000));
+                    }
+                } catch (fetchErr) {
+                    if (fetchErr.name === 'AbortError') {
+                        lastFetchError = new Error('{% if is_english %}Connection timed out{% elif is_chinese %}连接超时{% else %}接続がタイムアウトしました{% endif %}');
+                    } else if (fetchErr.message && (fetchErr.message.includes('Audio not available') || fetchErr.message.includes('音声が利用できません') || fetchErr.message.includes('音频不可用'))) {
+                        throw fetchErr;
+                    } else {
+                        lastFetchError = fetchErr;
+                    }
+                    if (attempt < 2) {
+                        updateKaraokeStatus(`{% if is_english %}Retrying... (${attempt + 2}/3){% elif is_chinese %}正在重试... (${attempt + 2}/3){% else %}再試行中... (${attempt + 2}/3){% endif %}`, 10);
+                        await new Promise(r => setTimeout(r, 2000));
+                    }
+                }
+            }
+            
+            if (!response || !response.ok) {
+                throw lastFetchError || new Error('{% if is_english %}Failed to load audio. Please try again later.{% elif is_chinese %}加载音频失败。请稍后重试。{% else %}音声の読み込みに失敗しました。しばらくしてからお試しください。{% endif %}');
+            }
             
             updateKaraokeStatus('{% if is_english %}Decoding audio...{% elif is_chinese %}正在解码音频...{% else %}音声をデコード中...{% endif %}', 30);
             
@@ -3086,10 +3129,11 @@ document.getElementById('tagModal').addEventListener('click', function(e) {
     };
     
     window.retryKaraoke = function() {
-        if (originalAudioUrl) {
+        const retryUrl = originalAudioUrl || audioSourceUrl;
+        if (retryUrl) {
             document.getElementById('karaoke-processing').style.display = 'block';
             document.getElementById('karaoke-error').style.display = 'none';
-            startVocalRemoval(originalAudioUrl);
+            startVocalRemoval(retryUrl);
         }
     };
     

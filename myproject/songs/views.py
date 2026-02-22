@@ -1906,8 +1906,9 @@ def classroom_delete(request, pk):
 
 def audio_proxy(request, pk):
     """外部音声URLをプロキシして返す（CORS対策）"""
-    from django.http import HttpResponse
+    from django.http import StreamingHttpResponse, HttpResponse
     import requests as req
+    import time
     
     song = get_object_or_404(Song, pk=pk)
     
@@ -1916,21 +1917,81 @@ def audio_proxy(request, pk):
     if not audio_url:
         return HttpResponse('No audio URL', status=404)
     
-    try:
-        # 外部URLから音声をダウンロード
-        response = req.get(audio_url, timeout=30)
-        response.raise_for_status()
-        
-        # Content-Typeを取得
-        content_type = response.headers.get('Content-Type', 'audio/mpeg')
-        
-        return HttpResponse(
-            response.content,
-            content_type=content_type
-        )
-    except Exception as e:
-        logger.error(f'Audio proxy error: {e}')
-        return HttpResponse(f'Error: {e}', status=500)
+    # リトライロジック（最大3回）
+    max_retries = 3
+    last_error = None
+    
+    for attempt in range(max_retries):
+        try:
+            # ストリーミングで外部URLから音声を取得
+            response = req.get(
+                audio_url,
+                timeout=(10, 120),  # (connect_timeout, read_timeout)
+                stream=True,
+                headers={
+                    'User-Agent': 'Mozilla/5.0 (compatible; UtamemoProxy/1.0)',
+                    'Accept': 'audio/*,*/*',
+                }
+            )
+            response.raise_for_status()
+            
+            # レスポンスヘッダーを設定
+            content_type = response.headers.get('Content-Type', 'audio/mpeg')
+            content_length = response.headers.get('Content-Length')
+            
+            # ストリーミングレスポンスを作成
+            def stream_content():
+                try:
+                    for chunk in response.iter_content(chunk_size=8192):
+                        if chunk:
+                            yield chunk
+                finally:
+                    response.close()
+            
+            streaming_response = StreamingHttpResponse(
+                stream_content(),
+                content_type=content_type,
+            )
+            
+            # 必要なヘッダーを設定
+            if content_length:
+                streaming_response['Content-Length'] = content_length
+            streaming_response['Accept-Ranges'] = 'bytes'
+            streaming_response['Cache-Control'] = 'public, max-age=3600'
+            streaming_response['Access-Control-Allow-Origin'] = '*'
+            
+            return streaming_response
+            
+        except req.exceptions.Timeout as e:
+            last_error = e
+            logger.warning(f'Audio proxy timeout (attempt {attempt + 1}/{max_retries}): {e}')
+            if attempt < max_retries - 1:
+                time.sleep(1)
+        except req.exceptions.ConnectionError as e:
+            last_error = e
+            logger.warning(f'Audio proxy connection error (attempt {attempt + 1}/{max_retries}): {e}')
+            if attempt < max_retries - 1:
+                time.sleep(2)
+        except req.exceptions.HTTPError as e:
+            # HTTPエラー（404、403等）はリトライしない
+            logger.error(f'Audio proxy HTTP error: {e}')
+            status_code = e.response.status_code if e.response else 502
+            return HttpResponse(
+                f'Audio source returned error: {status_code}',
+                status=status_code if status_code in (403, 404, 410) else 502
+            )
+        except Exception as e:
+            last_error = e
+            logger.error(f'Audio proxy unexpected error (attempt {attempt + 1}/{max_retries}): {e}')
+            if attempt < max_retries - 1:
+                time.sleep(1)
+    
+    # 全リトライ失敗
+    logger.error(f'Audio proxy failed after {max_retries} retries for song {pk}: {last_error}')
+    return HttpResponse(
+        'Audio temporarily unavailable. Please try again.',
+        status=504
+    )
 
 
 @login_required
