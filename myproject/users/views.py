@@ -18,7 +18,7 @@ from songs.models import Song, Favorite, Like, Classroom
 import json
 import base64
 from io import BytesIO
-from PIL import Image
+from PIL import Image, ImageOps
 
 
 class RegisterView(CreateView):
@@ -217,6 +217,10 @@ class ProfileEditView(LoginRequiredMixin, UpdateView):
             
             # PILで画像を開いてリサイズ（最大300x300）
             img = Image.open(image_file)
+            
+            # EXIF Orientationに基づいて画像を正しい向きに回転
+            img = ImageOps.exif_transpose(img)
+            
             img.thumbnail((300, 300), Image.Resampling.LANCZOS)
             
             # RGBAの場合はRGBに変換
