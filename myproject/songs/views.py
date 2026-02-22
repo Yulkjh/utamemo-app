@@ -92,7 +92,7 @@ class SongListView(ListView):
                 Q(tags__name__icontains=katakana_query)
             ).distinct()
         
-        return queryset.order_by('-created_at')
+        return queryset.order_by('-likes_count', '-created_at')
     
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
