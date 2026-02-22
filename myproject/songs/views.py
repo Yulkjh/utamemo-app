@@ -266,6 +266,10 @@ class CreateSongView(LoginRequiredMixin, CreateView):
             )
             context['paid_plan_all_exhausted'] = all_exhausted
         
+        # セッションからプリフィルデータを取得（再生成時）
+        context['prefill_music_prompt'] = self.request.session.pop('prefill_music_prompt', '')
+        context['prefill_reference_song'] = self.request.session.pop('prefill_reference_song', '')
+        
         return context
     
     def get_form_kwargs(self):
@@ -2038,9 +2042,11 @@ def recreate_with_lyrics(request, pk):
             messages.error(request, 'この楽曲には歌詞がありません。')
         return redirect('songs:song_detail', pk=pk)
     
-    # 歌詞をセッションに保存
+    # 歌詞とプロンプトをセッションに保存
     request.session['generated_lyrics'] = lyrics.content
     request.session['extracted_text'] = ''  # 元テキストはクリア
+    request.session['prefill_music_prompt'] = song.music_prompt or ''
+    request.session['prefill_reference_song'] = getattr(song, 'reference_song', '') or ''
     
     # 楽曲作成画面にリダイレクト（歌詞確認画面をスキップ）
     return redirect('songs:lyrics_confirmation')

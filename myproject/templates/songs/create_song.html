@@ -307,7 +307,7 @@
                                 {% if is_english %}Customize (Optional){% elif is_spanish %}Personalizar (Opcional){% elif is_german %}Anpassen (Optional){% elif is_portuguese %}Personalizar (Opcional){% elif is_chinese %}自定义（可选）{% else %}カスタマイズ（任意）{% endif %}
                             </label>
                             <textarea name="music_prompt" id="music_prompt" class="form-control custom-request-input" rows="2" 
-                                placeholder="{% if is_english %}e.g. 'Make it upbeat', 'Add piano', 'Emotional ballad style', 'Like a J-pop song'{% elif is_spanish %}ej. 'Hazlo animado', 'Añade piano', 'Estilo balada emocional', 'Como una canción de J-pop'{% elif is_german %}z.B. 'Mach es fröhlich', 'Füge Klavier hinzu', 'Emotionaler Balladenstil', 'Wie ein J-Pop-Song'{% elif is_portuguese %}ex. 'Faça animado', 'Adicione piano', 'Estilo balada emocional', 'Como uma música de J-pop'{% elif is_chinese %}例如：'轻快一点'、'加钢琴'、'抒情风格'、'像日本流行歌曲'{% else %}例：「アップテンポで」「ピアノを入れて」「感動的なバラード調」「J-POPっぽく」{% endif %}"></textarea>
+                                placeholder="{% if is_english %}e.g. 'Make it upbeat', 'Add piano', 'Emotional ballad style', 'Like a J-pop song'{% elif is_spanish %}ej. 'Hazlo animado', 'Añade piano', 'Estilo balada emocional', 'Como una canción de J-pop'{% elif is_german %}z.B. 'Mach es fröhlich', 'Füge Klavier hinzu', 'Emotionaler Balladenstil', 'Wie ein J-Pop-Song'{% elif is_portuguese %}ex. 'Faça animado', 'Adicione piano', 'Estilo balada emocional', 'Como uma música de J-pop'{% elif is_chinese %}例如：'轻快一点'、'加钢琴'、'抒情风格'、'像日本流行歌曲'{% else %}例：「アップテンポで」「ピアノを入れて」「感動的なバラード調」「J-POPっぽく」{% endif %}">{{ prefill_music_prompt }}</textarea>
                             <small class="text-muted">
                                 {% if is_english %}Tell AI how you want your song to sound{% elif is_spanish %}Dile a la IA cómo quieres que suene tu canción{% elif is_german %}Sag der KI, wie dein Lied klingen soll{% elif is_portuguese %}Diga à IA como você quer que sua música soe{% elif is_chinese %}告诉AI你想要什么样的歌曲{% else %}AIにどのような曲を作ってほしいか自由に伝えられます{% endif %}
                             </small>
@@ -326,6 +326,7 @@
                             </label>
                             {% if user.is_starter %}
                             <input type="text" name="reference_song" id="reference_song" class="form-control" 
+                                value="{{ prefill_reference_song }}"
                                 placeholder="{% if is_english %}e.g. 'Lemon by Kenshi Yonezu', 'Shape of You style'{% elif is_spanish %}ej. 'Lemon de Kenshi Yonezu', 'Estilo Shape of You'{% elif is_german %}z.B. 'Lemon von Kenshi Yonezu', 'Shape of You Stil'{% elif is_portuguese %}ex. 'Lemon de Kenshi Yonezu', 'Estilo Shape of You'{% elif is_chinese %}例如：'米津玄师的Lemon'、'Shape of You风格'{% else %}例：「米津玄師のLemon」「Shape of You風」{% endif %}">
                             <small class="text-muted">
                                 {% if is_english %}Enter a song or artist name to use as a style reference{% elif is_spanish %}Ingrese un nombre de canción o artista como referencia de estilo{% elif is_german %}Geben Sie einen Song- oder Künstlernamen als Stilreferenz ein{% elif is_portuguese %}Insira o nome de uma música ou artista como referência de estilo{% elif is_chinese %}输入歌曲或艺术家名称作为风格参考{% else %}スタイルの参考にする曲やアーティスト名を入力できます{% endif %}
@@ -880,7 +881,7 @@
 }
 
 .model-remaining .unlimited {
-    color: #b8860b;
+    color: #d4a017;
     font-weight: 700;
 }
 
