@@ -1976,9 +1976,16 @@ def audio_proxy(request, pk):
             # HTTPエラー（404、403等）はリトライしない
             logger.error(f'Audio proxy HTTP error: {e}')
             status_code = e.response.status_code if e.response else 502
+            
+            # 音声URLが期限切れ・無効の場合のメッセージ
+            if status_code in (403, 404, 410, 424):
+                return HttpResponse(
+                    'Audio expired or unavailable',
+                    status=410  # Gone
+                )
             return HttpResponse(
                 f'Audio source returned error: {status_code}',
-                status=status_code if status_code in (403, 404, 410) else 502
+                status=502
             )
         except Exception as e:
             last_error = e

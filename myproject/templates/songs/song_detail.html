@@ -2927,8 +2927,13 @@ document.getElementById('tagModal').addEventListener('click', function(e) {
                     
                     if (response.ok) break;
                     
-                    // 404/403/410はリトライしない
-                    if ([403, 404, 410].includes(response.status)) {
+                    // 音声URLが期限切れ・無効の場合はリトライしない
+                    if (response.status === 410) {
+                        throw new Error(`{% if is_english %}This audio has expired and is no longer available. Please recreate the song.{% elif is_chinese %}此音频已过期，不再可用。请重新创建歌曲。{% else %}この音声の有効期限が切れました。楽曲を再作成してください。{% endif %}`);
+                    }
+                    
+                    // 404/403はリトライしない
+                    if ([403, 404].includes(response.status)) {
                         throw new Error(`{% if is_english %}Audio not available (${response.status}){% elif is_chinese %}音频不可用 (${response.status}){% else %}音声が利用できません (${response.status}){% endif %}`);
                     }
                     
@@ -2991,6 +2996,18 @@ document.getElementById('tagModal').addEventListener('click', function(e) {
             document.getElementById('karaoke-error').style.display = 'block';
             document.getElementById('karaoke-error-message').textContent = 
                 error.message || '{% if is_english %}Failed to process audio. Please try again.{% elif is_chinese %}音频处理失败。请重试。{% else %}音声処理に失敗しました。もう一度お試しください。{% endif %}';
+            
+            // 期限切れエラーの場合は再試行ボタンを隠す
+            const retryBtn = document.querySelector('.btn-karaoke-retry');
+            if (retryBtn) {
+                const isExpired = error.message && (
+                    error.message.includes('expired') || 
+                    error.message.includes('有効期限') || 
+                    error.message.includes('已过期')
+                );
+                retryBtn.style.display = isExpired ? 'none' : '';
+            }
+            
             karaokeProcessing = false;
         }
     }
