@@ -443,15 +443,15 @@ class CreateSongView(LoginRequiredMixin, CreateView):
                 )
         else:
             if app_language == 'en':
-                messages.success(self.request, 'Song generation started. Will be ready in 1-2 minutes. Please refresh the page when complete.')
+                messages.success(self.request, 'Song generation started. Will be ready in 1-2 minutes.')
             elif app_language == 'zh':
-                messages.success(self.request, '歌曲生成已开始。1-2分钟后完成。完成后请刷新页面。')
+                messages.success(self.request, '歌曲生成已开始。1-2分钟后完成。')
             elif app_language == 'es':
-                messages.success(self.request, 'La generación de la canción ha comenzado. Estará lista en 1-2 minutos. Por favor actualice la página cuando esté completa.')
+                messages.success(self.request, 'La generación de la canción ha comenzado. Estará lista en 1-2 minutos.')
             elif app_language == 'de':
-                messages.success(self.request, 'Liederstellung gestartet. In 1-2 Minuten fertig. Bitte aktualisieren Sie die Seite, wenn es fertig ist.')
+                messages.success(self.request, 'Liederstellung gestartet. In 1-2 Minuten fertig.')
             else:
-                messages.success(self.request, '楽曲の生成を開始しました。1〜2分で完成します。完成したらページを更新してください。')
+                messages.success(self.request, '楽曲の生成を開始しました。1〜2分で完成します。')
         
         if 'extracted_text' in self.request.session:
             del self.request.session['extracted_text']
