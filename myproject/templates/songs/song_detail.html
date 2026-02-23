@@ -329,6 +329,14 @@
                 <!-- カラオケモード表示（スターター以上のみ） -->
                 {% if user.is_authenticated and user.is_starter %}
                 <div class="karaoke-container" id="karaoke-container" style="display: none;">
+                    <div class="karaoke-timing-controls" id="karaoke-timing-controls">
+                        <button onclick="adjustKaraokeOffset(-0.5)" title="-0.5s">◀ 0.5s</button>
+                        <button onclick="adjustKaraokeOffset(-0.2)" title="-0.2s">◀</button>
+                        <span class="timing-label" id="karaoke-offset-label">±0.0s</span>
+                        <button onclick="adjustKaraokeOffset(0.2)" title="+0.2s">▶</button>
+                        <button onclick="adjustKaraokeOffset(0.5)" title="+0.5s">0.5s ▶</button>
+                        <button onclick="resetKaraokeOffset()" title="{% if is_english %}Reset{% elif is_chinese %}重置{% else %}リセット{% endif %}" style="margin-left: 0.3rem;">↺</button>
+                    </div>
                     <div class="karaoke-loading" id="karaoke-loading">
                         <div class="karaoke-spinner"></div>
                         <p>{% if is_english %}Generating timing data...{% elif is_chinese %}正在生成时间数据...{% else %}タイミングデータを生成中...{% endif %}</p>
@@ -1250,6 +1258,46 @@
 .karaoke-line.passed {
     color: rgba(0, 0, 0, 0.35);
     transform: scale(0.95);
+}
+
+.karaoke-line.next-line {
+    color: rgba(0, 0, 0, 0.45);
+    transform: scale(0.97);
+}
+
+/* タイミング調整コントロール */
+.karaoke-timing-controls {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.5rem;
+    padding: 0.5rem 1rem;
+    background: rgba(0, 0, 0, 0.05);
+    border-radius: 8px;
+    margin-bottom: 0.5rem;
+}
+
+.karaoke-timing-controls button {
+    background: rgba(255, 121, 64, 0.15);
+    border: 1px solid rgba(255, 121, 64, 0.3);
+    border-radius: 6px;
+    padding: 0.25rem 0.6rem;
+    font-size: 0.8rem;
+    font-weight: 600;
+    color: #e0600a;
+    cursor: pointer;
+    transition: background 0.2s;
+}
+
+.karaoke-timing-controls button:hover {
+    background: rgba(255, 121, 64, 0.25);
+}
+
+.karaoke-timing-controls .timing-label {
+    font-size: 0.75rem;
+    color: rgba(0, 0, 0, 0.5);
+    min-width: 60px;
+    text-align: center;
 }
 
 @media (max-width: 768px) {
@@ -2831,6 +2879,8 @@ document.getElementById('tagModal').addEventListener('click', function(e) {
     let isVocalRemoved = false;
     let karaokeProcessing = false;
     let lastActiveIndex = -1;
+    let karaokeSyncRAF = null;
+    let karaokeOffset = 0; // ユーザー調整用タイミングオフセット（秒）
     
     const songId = {{ song.pk }};
     const audioSourceUrl = '{% if song.audio_file %}{{ song.audio_file.url }}{% elif song.audio_url %}{{ song.audio_url }}{% endif %}';
@@ -3167,6 +3217,24 @@ document.getElementById('tagModal').addEventListener('click', function(e) {
         }
     });
     
+    // === タイミング調整 ===
+    window.adjustKaraokeOffset = function(delta) {
+        karaokeOffset = Math.max(-5, Math.min(5, karaokeOffset + delta));
+        lastActiveIndex = -1; // 強制再描画
+        const label = document.getElementById('karaoke-offset-label');
+        if (label) {
+            const sign = karaokeOffset >= 0 ? '+' : '';
+            label.textContent = `${sign}${karaokeOffset.toFixed(1)}s`;
+        }
+    };
+    
+    window.resetKaraokeOffset = function() {
+        karaokeOffset = 0;
+        lastActiveIndex = -1;
+        const label = document.getElementById('karaoke-offset-label');
+        if (label) label.textContent = '±0.0s';
+    };
+    
     // === LRC歌詞表示 ===
     function loadLRC() {
         lrcLoading = true;
@@ -3243,13 +3311,20 @@ document.getElementById('tagModal').addEventListener('click', function(e) {
     function startKaraokeSync() {
         const audio = document.getElementById('main-audio-player');
         if (!audio || !lrcData) return;
-        audio.addEventListener('timeupdate', onTimeUpdate);
+        
+        // requestAnimationFrameで高精度同期（60fps）
+        function syncLoop() {
+            if (!karaokeActive) return;
+            onTimeUpdate();
+            karaokeSyncRAF = requestAnimationFrame(syncLoop);
+        }
+        karaokeSyncRAF = requestAnimationFrame(syncLoop);
     }
     
     function stopKaraokeSync() {
-        const audio = document.getElementById('main-audio-player');
-        if (audio) {
-            audio.removeEventListener('timeupdate', onTimeUpdate);
+        if (karaokeSyncRAF) {
+            cancelAnimationFrame(karaokeSyncRAF);
+            karaokeSyncRAF = null;
         }
         lastActiveIndex = -1;
     }
@@ -3258,7 +3333,9 @@ document.getElementById('tagModal').addEventListener('click', function(e) {
         const audio = document.getElementById('main-audio-player');
         if (!audio || !lrcData || !karaokeActive) return;
         
-        const currentTime = audio.currentTime;
+        // 先読みオフセット: 歌詞を少し早めに表示することで体感のズレを軽減
+        const LOOKAHEAD = 0.3; // 0.3秒先読み
+        const currentTime = audio.currentTime + LOOKAHEAD + karaokeOffset;
         let activeIndex = -1;
         
         for (let i = lrcData.length - 1; i >= 0; i--) {
@@ -3281,14 +3358,24 @@ document.getElementById('tagModal').addEventListener('click', function(e) {
             }
         });
         
+        // 次の歌詞行もプレハイライト（薄く強調して準備感を出す）
+        if (activeIndex >= 0 && activeIndex + 1 < lines.length) {
+            lines[activeIndex + 1].classList.add('next-line');
+        }
+        // 前回のnext-lineを消す
+        lines.forEach((el, idx) => {
+            if (idx !== activeIndex + 1) el.classList.remove('next-line');
+        });
+        
         if (activeIndex >= 0) {
             const activeLine = lines[activeIndex];
             if (activeLine) {
                 const container = document.getElementById('karaoke-lyrics');
                 const containerRect = container.getBoundingClientRect();
                 const lineRect = activeLine.getBoundingClientRect();
-                const offset = lineRect.top - containerRect.top - (containerRect.height / 3);
-                container.scrollTop += offset;
+                const targetOffset = lineRect.top - containerRect.top - (containerRect.height / 3);
+                // スムーズスクロール
+                container.scrollTop += targetOffset * 0.15;
             }
         }
     }

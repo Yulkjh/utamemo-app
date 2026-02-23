@@ -2140,15 +2140,26 @@ def generate_lrc_view(request, pk):
     # 既にLRCデータがある場合はそのまま返す（force=trueで再生成可能）
     force_regenerate = request.POST.get('force', '').lower() == 'true'
     
-    # 既存LRCの品質チェック: 最初のタイムスタンプが5秒未満なら自動再生成
+    # 既存LRCの品質チェック
     if song.lyrics.lrc_data and not force_regenerate:
         import re
-        first_match = re.search(r'\[(\d{2}):(\d{2})\.(\d{2})\]', song.lyrics.lrc_data)
-        if first_match:
-            first_ts = int(first_match.group(1)) * 60 + int(first_match.group(2)) + int(first_match.group(3)) / 100.0
+        lrc_timestamps = re.findall(r'\[(\d{2}):(\d{2})\.(\d{2})\]', song.lyrics.lrc_data)
+        if lrc_timestamps:
+            first_ts = int(lrc_timestamps[0][0]) * 60 + int(lrc_timestamps[0][1]) + int(lrc_timestamps[0][2]) / 100.0
+            # 最初のタイムスタンプが5秒未満 → イントロが考慮されていない古いデータ
             if first_ts < 5.0:
-                # イントロが考慮されていない古いデータ → 再生成
                 force_regenerate = True
+            
+            # 行間のタイミングが均一すぎる（旧プロンプトの問題）→ 再生成
+            if not force_regenerate and len(lrc_timestamps) >= 3:
+                times = [int(t[0]) * 60 + int(t[1]) + int(t[2]) / 100.0 for t in lrc_timestamps]
+                gaps = [times[i+1] - times[i] for i in range(len(times)-1)]
+                if gaps:
+                    avg_gap = sum(gaps) / len(gaps)
+                    variance = sum((g - avg_gap) ** 2 for g in gaps) / len(gaps)
+                    # 分散が非常に小さい = 機械的に等間隔 → 再生成
+                    if variance < 0.3 and len(gaps) > 5:
+                        force_regenerate = True
     
     if song.lyrics.lrc_data and not force_regenerate:
         return JsonResponse({'lrc': song.lyrics.lrc_data})

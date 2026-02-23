@@ -217,31 +217,38 @@ def generate_lrc_timestamps(lyrics_text, duration_seconds):
     # アウトロ長（5〜15秒）
     outro_seconds = min(15, max(5, total_seconds // 12))
     
-    prompt = f"""You are a professional music timing expert. Estimate when each lyric line is sung and output in LRC format.
+    prompt = f"""You are a professional music timing expert specializing in Japanese educational songs. Analyze the lyrics structure and estimate precise timestamps.
 
 【Song Duration】{total_seconds} seconds
+【Number of lyric lines】{len(lyric_lines)} lines
+【Singing time available】{intro_seconds}s to {total_seconds - outro_seconds}s = {total_seconds - intro_seconds - outro_seconds} seconds
 
 【Lyrics】
 {lyrics_text}
 
-【CRITICAL RULES — Follow Exactly】
-1. Format: [MM:SS.xx]lyric text (xx = hundredths of a second)
-2. INTRO: The song has an instrumental intro of approximately {intro_seconds} seconds.
-   ★ The FIRST lyric line MUST start at [{intro_seconds // 60:02d}:{intro_seconds % 60:02d}.00] or later. NEVER before [{intro_seconds // 60:02d}:{intro_seconds % 60:02d}.00].
-3. INTERLUDE: Between sections (Verse→Chorus, Chorus→Verse, etc.) add 5-10 seconds of instrumental gap.
-4. OUTRO: Reserve the last {outro_seconds} seconds for instrumental outro. No lyrics after [{(total_seconds - outro_seconds) // 60:02d}:{(total_seconds - outro_seconds) % 60:02d}.00].
-5. EXCLUDE section labels like [Verse], [Chorus], [Bridge] — only timestamp actual lyric lines.
-6. EXCLUDE empty lines — only lines with actual lyrics.
-7. ALL lines must fit within the song duration ({total_seconds} seconds).
-8. Space lyrics EVENLY across the available singing time ({intro_seconds}s to {total_seconds - outro_seconds}s).
-9. Each line typically takes 3-5 seconds to sing. Minimum gap between lines: 2 seconds.
-10. Output ONLY LRC lines. No explanations, no comments, no other text.
+【ANALYSIS STEPS — Think through each before generating timestamps】
+Step 1: Identify the song structure (Verse 1, Chorus, Verse 2, Chorus, Bridge, Final Chorus, etc.)
+Step 2: Count sections and estimate interlude length between sections (typically 4-8 seconds)
+Step 3: Calculate singing time per section = (available time - total interlude time) / number of sections
+Step 4: Within each section, space lines evenly based on syllable count (more syllables = more time)
 
-【Output Example】
-[00:{intro_seconds:02d}.00]First lyric line here
-[00:{intro_seconds + 4:02d}.50]Second lyric line here
-[00:{intro_seconds + 9:02d}.00]Third lyric line here
-"""
+【CRITICAL RULES】
+1. Format: [MM:SS.xx]lyric text (xx = hundredths of a second)
+2. INTRO: First lyric starts at [{intro_seconds // 60:02d}:{intro_seconds % 60:02d}.00] or later. NEVER earlier.
+3. OUTRO: No lyrics after [{(total_seconds - outro_seconds) // 60:02d}:{(total_seconds - outro_seconds) % 60:02d}.00].
+4. INTERLUDE between sections: 4-8 seconds gap (instrumental break).
+5. Within a section: lines are spaced 2.5-5 seconds apart.
+6. Lines with more text/syllables need slightly more time (3-6 seconds).
+7. Short lines or exclamations need less time (2-3 seconds).
+8. Repeated chorus sections should have SIMILAR timing patterns.
+9. EXCLUDE section labels like [Verse], [Chorus] — only actual lyrics.
+10. EXCLUDE empty lines.
+11. Output ONLY LRC lines. No explanations.
+
+【Timing Calculation Guide】
+- Average seconds per line ≈ {(total_seconds - intro_seconds - outro_seconds) / max(len(lyric_lines), 1):.1f}s
+- If this is < 2.5s, some lines may need to overlap or be compressed
+- If this is > 6s, add longer pauses between sections"""
     
     try:
         response = model.generate_content(prompt, safety_settings=GEMINI_SAFETY_SETTINGS)
