@@ -552,7 +552,16 @@ class MurekaAIGenerator:
         prompt_parts = []
         if genre_en:  # ジャンルが指定されている場合のみ追加
             prompt_parts.append(genre_en)
-        prompt_parts.append(vocal_style)
+        
+        # ボーカルスタイルの処理（ボカロ風の場合は合成音声風プロンプトを追加）
+        VOCAL_STYLE_PROMPTS = {
+            'female': 'female',
+            'male': 'male',
+            'vocaloid_female': 'high-pitched cute synthesized female vocal, Vocaloid-style electronic voice, bright and airy digital vocal tone',
+            'vocaloid_male': 'synthesized male vocal, Vocaloid-style electronic voice, clear digital vocal tone with auto-tune effect',
+        }
+        vocal_prompt = VOCAL_STYLE_PROMPTS.get(vocal_style, vocal_style)
+        prompt_parts.append(vocal_prompt)
         if music_prompt_en:
             prompt_parts.append(music_prompt_en)
         full_prompt = ", ".join(prompt_parts)

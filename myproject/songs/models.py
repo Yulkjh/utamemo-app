@@ -47,6 +47,8 @@ class Song(models.Model):
         choices=[
             ('female', '女性ボーカル'),
             ('male', '男性ボーカル'),
+            ('vocaloid_female', 'ボカロ風（女性）'),
+            ('vocaloid_male', 'ボカロ風（男性）'),
         ],
         default='female',
         verbose_name='ボーカルスタイル'

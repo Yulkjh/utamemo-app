@@ -27,7 +27,6 @@
                     <li class="available"><i class="bi bi-check"></i>{% if is_english %}Up to 15 songs/month{% elif is_spanish %}Hasta 15 canciones/mes{% elif is_german %}Bis zu 15 Lieder/Monat{% elif is_portuguese %}Até 15 músicas/mês{% elif is_chinese %}每月最多15首{% else %}月15曲まで生成{% endif %}</li>
                     <li class="available"><i class="bi bi-check"></i>{% if is_english %}Premium quality{% elif is_spanish %}Calidad Premium{% elif is_german %}Premium-Qualität{% elif is_portuguese %}Qualidade Premium{% elif is_chinese %}高级音质{% else %}プレミアム音質{% endif %}</li>
                     <li class="unavailable"><i class="bi bi-x"></i>{% if is_english %}Karaoke mode{% elif is_spanish %}Modo karaoke{% elif is_german %}Karaoke-Modus{% elif is_portuguese %}Modo karaokê{% elif is_chinese %}卡拉OK模式{% else %}カラオケモード{% endif %}</li>
-                    <li class="unavailable"><i class="bi bi-x"></i>{% if is_english %}Reference song{% elif is_spanish %}Canción de referencia{% elif is_german %}Referenzlied{% elif is_portuguese %}Música de referência{% elif is_chinese %}参考曲{% else %}リファレンス曲{% endif %}</li>
                 </ul>
                 {% if current_plan == 'free' %}
                 <button class="plan-btn current" disabled>{% if is_english %}Current Plan{% elif is_spanish %}Plan Actual{% elif is_german %}Aktueller Plan{% elif is_portuguese %}Plano Atual{% elif is_chinese %}当前方案{% else %}現在のプラン{% endif %}</button>
@@ -51,7 +50,6 @@
                     <li class="available"><i class="bi bi-check"></i>{% if is_english %}Up to 70 songs/month{% elif is_spanish %}Hasta 70 canciones/mes{% elif is_german %}Bis zu 70 Lieder/Monat{% elif is_portuguese %}Até 70 músicas/mês{% elif is_chinese %}每月最多70首{% else %}月70曲まで生成{% endif %}</li>
                     <li class="available"><i class="bi bi-check"></i>{% if is_english %}All models available{% elif is_spanish %}Todos los modelos disponibles{% elif is_german %}Alle Modelle verfügbar{% elif is_portuguese %}Todos os modelos disponíveis{% elif is_chinese %}所有模型可用{% else %}全モデル利用可能{% endif %}</li>
                     <li class="available"><i class="bi bi-check"></i>{% if is_english %}Karaoke mode{% elif is_spanish %}Modo karaoke{% elif is_german %}Karaoke-Modus{% elif is_portuguese %}Modo karaokê{% elif is_chinese %}卡拉OK模式{% else %}カラオケモード{% endif %}</li>
-                    <li class="available"><i class="bi bi-check"></i>{% if is_english %}Reference song{% elif is_spanish %}Canción de referencia{% elif is_german %}Referenzlied{% elif is_portuguese %}Música de referência{% elif is_chinese %}参考曲{% else %}リファレンス曲{% endif %}</li>
                     <li class="available"><i class="bi bi-check"></i>{% if is_english %}No ads{% elif is_spanish %}Sin anuncios{% elif is_german %}Keine Werbung{% elif is_portuguese %}Sem anúncios{% elif is_chinese %}无广告{% else %}広告非表示{% endif %}</li>
                 </ul>
                 {% if current_plan == 'starter' %}
@@ -75,7 +73,6 @@
                     <li class="available"><i class="bi bi-check"></i>{% if is_english %}Unlimited songs{% elif is_spanish %}Canciones ilimitadas{% elif is_german %}Unbegrenzte Lieder{% elif is_portuguese %}Músicas ilimitadas{% elif is_chinese %}无限歌曲{% else %}曲数無制限{% endif %}</li>
                     <li class="available"><i class="bi bi-check"></i>{% if is_english %}Unlimited all models{% elif is_spanish %}Todos los modelos ilimitados{% elif is_german %}Alle Modelle unbegrenzt{% elif is_portuguese %}Todos os modelos ilimitados{% elif is_chinese %}所有模型无限制{% else %}全モデル無制限{% endif %}</li>
                     <li class="available"><i class="bi bi-check"></i>{% if is_english %}Karaoke mode{% elif is_spanish %}Modo karaoke{% elif is_german %}Karaoke-Modus{% elif is_portuguese %}Modo karaokê{% elif is_chinese %}卡拉OK模式{% else %}カラオケモード{% endif %}</li>
-                    <li class="available"><i class="bi bi-check"></i>{% if is_english %}Reference song{% elif is_spanish %}Canción de referencia{% elif is_german %}Referenzlied{% elif is_portuguese %}Música de referência{% elif is_chinese %}参考曲{% else %}リファレンス曲{% endif %}</li>
                     <li class="available"><i class="bi bi-check"></i>{% if is_english %}Priority queue{% elif is_spanish %}Cola prioritaria{% elif is_german %}Prioritätswarteschlange{% elif is_portuguese %}Fila prioritária{% elif is_chinese %}优先队列{% else %}優先キュー{% endif %}</li>
                 </ul>
                 {% if current_plan == 'pro' %}
