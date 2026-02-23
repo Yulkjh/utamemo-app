@@ -2160,6 +2160,15 @@ def generate_lrc_view(request, pk):
                     # 分散が非常に小さい = 機械的に等間隔 → 再生成
                     if variance < 0.3 and len(gaps) > 5:
                         force_regenerate = True
+            
+            # 間奏マーカー(♪)がない古いLRC → 再生成して間奏対応に更新
+            if not force_regenerate and '♪' not in song.lyrics.lrc_data:
+                # 歌詞に空行やセクション区切りがある場合のみ（間奏がありそうな場合）
+                lyrics_content = song.lyrics.content or ''
+                lines = lyrics_content.strip().split('\n')
+                has_section_breaks = any(not line.strip() for line in lines[1:-1]) if len(lines) > 3 else False
+                if has_section_breaks:
+                    force_regenerate = True
     
     if song.lyrics.lrc_data and not force_regenerate:
         return JsonResponse({'lrc': song.lyrics.lrc_data})

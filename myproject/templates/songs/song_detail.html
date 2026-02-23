@@ -1265,6 +1265,27 @@
     transform: scale(0.97);
 }
 
+/* 間奏マーカー */
+.karaoke-line.interlude {
+    text-align: center;
+    font-size: 1.1rem;
+    color: rgba(255, 121, 64, 0.4);
+    letter-spacing: 0.5em;
+    padding: 1rem;
+}
+
+.karaoke-line.interlude.active {
+    color: rgba(255, 121, 64, 0.9);
+    font-size: 1.3rem;
+    background: rgba(255, 121, 64, 0.06);
+    animation: interlude-pulse 1.5s ease-in-out infinite;
+}
+
+@keyframes interlude-pulse {
+    0%, 100% { opacity: 0.7; transform: scale(1); }
+    50% { opacity: 1; transform: scale(1.05); }
+}
+
 /* タイミング調整コントロール */
 .karaoke-timing-controls {
     display: flex;
@@ -1313,6 +1334,15 @@
     
     .karaoke-line.active {
         font-size: 1.15rem;
+    }
+    
+    .karaoke-line.interlude {
+        font-size: 0.95rem;
+        padding: 0.7rem;
+    }
+    
+    .karaoke-line.interlude.active {
+        font-size: 1.1rem;
     }
     
     .lyrics-header-actions {
@@ -3280,6 +3310,7 @@ document.getElementById('tagModal').addEventListener('click', function(e) {
     function parseLRC(lrcText) {
         const lines = lrcText.split('\n');
         const result = [];
+        const interludeChars = ['♪', '🎵', '♪♪', '🎶'];
         for (const line of lines) {
             const match = line.match(/\[(\d{2}):(\d{2})\.(\d{2})\](.*)/);
             if (match) {
@@ -3287,9 +3318,11 @@ document.getElementById('tagModal').addEventListener('click', function(e) {
                 const seconds = parseInt(match[2]);
                 const hundredths = parseInt(match[3]);
                 const time = minutes * 60 + seconds + hundredths / 100;
-                const text = removeCircledNumbers(match[4].trim());
+                const rawText = match[4].trim();
+                const isInterlude = interludeChars.includes(rawText);
+                const text = isInterlude ? '♪ 間奏 ♪' : removeCircledNumbers(rawText);
                 if (text) {
-                    result.push({ time, text });
+                    result.push({ time, text, isInterlude });
                 }
             }
         }
@@ -3302,7 +3335,8 @@ document.getElementById('tagModal').addEventListener('click', function(e) {
         
         let html = '<div class="karaoke-spacer" style="height: 120px;"></div>';
         lrcData.forEach((item, index) => {
-            html += `<div class="karaoke-line" data-index="${index}" data-time="${item.time}">${item.text}</div>`;
+            const interludeClass = item.isInterlude ? ' interlude' : '';
+            html += `<div class="karaoke-line${interludeClass}" data-index="${index}" data-time="${item.time}">${item.text}</div>`;
         });
         html += '<div class="karaoke-spacer" style="height: 200px;"></div>';
         container.innerHTML = html;

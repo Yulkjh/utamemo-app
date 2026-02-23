@@ -217,38 +217,61 @@ def generate_lrc_timestamps(lyrics_text, duration_seconds):
     # アウトロ長（5〜15秒）
     outro_seconds = min(15, max(5, total_seconds // 12))
     
+    # 歌詞構造を分析して間奏位置のヒントを生成
+    # 空行やセクションラベルの位置 = 間奏の可能性
+    section_breaks = []
+    current_section_lines = 0
+    for i, line in enumerate(lines):
+        stripped = line.strip()
+        if not stripped or re.match(r'^\[.*\]$', stripped):
+            if current_section_lines > 0:
+                section_breaks.append(i)
+                current_section_lines = 0
+        elif stripped:
+            current_section_lines += 1
+    
+    num_sections = len(section_breaks) + 1
+    
     prompt = f"""You are a professional music timing expert specializing in Japanese educational songs. Analyze the lyrics structure and estimate precise timestamps.
 
 【Song Duration】{total_seconds} seconds
 【Number of lyric lines】{len(lyric_lines)} lines
+【Estimated sections】{num_sections} sections with {len(section_breaks)} interludes
 【Singing time available】{intro_seconds}s to {total_seconds - outro_seconds}s = {total_seconds - intro_seconds - outro_seconds} seconds
 
 【Lyrics】
 {lyrics_text}
 
 【ANALYSIS STEPS — Think through each before generating timestamps】
-Step 1: Identify the song structure (Verse 1, Chorus, Verse 2, Chorus, Bridge, Final Chorus, etc.)
-Step 2: Count sections and estimate interlude length between sections (typically 4-8 seconds)
-Step 3: Calculate singing time per section = (available time - total interlude time) / number of sections
-Step 4: Within each section, space lines evenly based on syllable count (more syllables = more time)
+Step 1: Identify the song structure from empty lines and section labels.
+        Empty lines or section labels (like [Verse], [Chorus]) indicate INTERLUDES (instrumental breaks).
+Step 2: This song has approximately {num_sections} sections separated by {len(section_breaks)} interludes.
+Step 3: Estimate interlude length: typically 6-12 seconds for each instrumental break.
+        Total interlude time ≈ {len(section_breaks)} × 8 = {len(section_breaks) * 8} seconds.
+        Remaining singing time ≈ {total_seconds - intro_seconds - outro_seconds - len(section_breaks) * 8} seconds.
+Step 4: Distribute singing time across sections proportionally to number of lines per section.
+Step 5: Within each section, space lines 2.5-5 seconds apart based on text length.
 
 【CRITICAL RULES】
 1. Format: [MM:SS.xx]lyric text (xx = hundredths of a second)
-2. INTRO: First lyric starts at [{intro_seconds // 60:02d}:{intro_seconds % 60:02d}.00] or later. NEVER earlier.
+2. INTRO: First lyric starts at [{intro_seconds // 60:02d}:{intro_seconds % 60:02d}.00] or later.
 3. OUTRO: No lyrics after [{(total_seconds - outro_seconds) // 60:02d}:{(total_seconds - outro_seconds) % 60:02d}.00].
-4. INTERLUDE between sections: 4-8 seconds gap (instrumental break).
+4. ★★ INTERLUDES: At each section break (where empty lines or section labels appear in lyrics), 
+   insert a line: [MM:SS.xx]♪  (just the ♪ symbol, with timestamp of when the interlude STARTS).
+   The NEXT lyric line after ♪ should be 6-12 seconds later.
 5. Within a section: lines are spaced 2.5-5 seconds apart.
-6. Lines with more text/syllables need slightly more time (3-6 seconds).
-7. Short lines or exclamations need less time (2-3 seconds).
-8. Repeated chorus sections should have SIMILAR timing patterns.
-9. EXCLUDE section labels like [Verse], [Chorus] — only actual lyrics.
-10. EXCLUDE empty lines.
-11. Output ONLY LRC lines. No explanations.
+6. Lines with more text need more time (3-6 seconds). Short lines: 2-3 seconds.
+7. Repeated chorus sections should have SIMILAR timing patterns.
+8. EXCLUDE section labels like [Verse], [Chorus] — replace them with ♪ interlude markers.
+9. Output ONLY LRC lines. No explanations.
 
-【Timing Calculation Guide】
-- Average seconds per line ≈ {(total_seconds - intro_seconds - outro_seconds) / max(len(lyric_lines), 1):.1f}s
-- If this is < 2.5s, some lines may need to overlap or be compressed
-- If this is > 6s, add longer pauses between sections"""
+【Output Format Example】
+[00:{intro_seconds:02d}.00]First lyric line
+[00:{intro_seconds + 4:02d}.00]Second lyric line
+[00:{intro_seconds + 8:02d}.00]Third lyric line
+[00:{intro_seconds + 12:02d}.00]♪
+[00:{intro_seconds + 20:02d}.00]Fourth lyric line (after interlude)
+[00:{intro_seconds + 24:02d}.00]Fifth lyric line"""
     
     try:
         response = model.generate_content(prompt, safety_settings=GEMINI_SAFETY_SETTINGS)
@@ -281,6 +304,7 @@ Step 4: Within each section, space lines evenly based on syllable count (more sy
 
 def _ensure_intro_offset(lrc_lines, min_start_seconds, max_end_seconds):
     """LRCタイムスタンプのポストプロセス: イントロオフセットを保証し、全体を曲の範囲内に収める
+    間奏マーカー(♪)のギャップを保護しつつスケーリング・補正を行う
     
     Args:
         lrc_lines: LRC行のリスト
@@ -321,6 +345,15 @@ def _ensure_intro_offset(lrc_lines, min_start_seconds, max_end_seconds):
     if not parsed:
         return lrc_lines
     
+    # 間奏マーカー(♪)のインデックスを特定
+    interlude_indices = set()
+    for i, (ts, text) in enumerate(parsed):
+        if text.strip() in ('♪', '🎵', '♪♪', '🎶'):
+            interlude_indices.add(i)
+    
+    if interlude_indices:
+        logger.info(f"LRC補正: 間奏マーカー{len(interlude_indices)}箇所検出 (indices: {sorted(interlude_indices)})")
+    
     first_ts = parsed[0][0]
     last_ts = parsed[-1][0]
     
@@ -331,21 +364,77 @@ def _ensure_intro_offset(lrc_lines, min_start_seconds, max_end_seconds):
         logger.info(f"LRC補正: 全体を{shift:.1f}秒シフト（イントロオフセット保証: {first_ts:.1f}s → {min_start_seconds}s）")
         parsed = [(ts + shift, text) for ts, text in parsed]
     
-    # ケース2: 最後のタイムスタンプがアウトロに食い込む → 全体をスケーリング
+    # ケース2: 最後のタイムスタンプがアウトロに食い込む → セクション単位でスケーリング
+    # 間奏ギャップを保護しつつ歌詞セクションのみスケーリング
     last_ts = parsed[-1][0]
     first_ts = parsed[0][0]
     if last_ts > max_end_seconds and len(parsed) > 1:
-        # 利用可能な時間内にスケーリング
-        original_span = last_ts - first_ts
-        available_span = max_end_seconds - first_ts
-        if original_span > 0 and available_span > 0:
-            scale = available_span / original_span
-            logger.info(f"LRC補正: スケーリング {scale:.2f}x（アウトロ保護: {last_ts:.1f}s → {max_end_seconds}s）")
-            parsed = [(first_ts + (ts - first_ts) * scale, text) for ts, text in parsed]
+        if interlude_indices:
+            # 間奏保護スケーリング: 間奏ギャップの合計時間を算出
+            total_interlude_time = 0
+            for idx in sorted(interlude_indices):
+                # 間奏マーカーの前の行と後の行のギャップが間奏時間
+                if idx > 0 and idx < len(parsed) - 1:
+                    gap = parsed[idx + 1][0] - parsed[idx - 1][0]
+                    total_interlude_time += gap
+                elif idx == 0 and len(parsed) > 1:
+                    # 冒頭の間奏
+                    total_interlude_time += parsed[1][0] - parsed[0][0]
+            
+            # 歌詞部分のみのスパン = 全体スパン - 間奏時間
+            original_span = last_ts - first_ts
+            lyrics_span = original_span - total_interlude_time
+            available_span = max_end_seconds - first_ts
+            available_lyrics_span = available_span - total_interlude_time
+            
+            if lyrics_span > 0 and available_lyrics_span > 0:
+                scale = available_lyrics_span / lyrics_span
+                logger.info(f"LRC補正: 間奏保護スケーリング {scale:.2f}x（間奏{total_interlude_time:.1f}s保護、歌詞部分のみ圧縮）")
+                
+                # セクションごとにスケーリング（間奏ギャップは維持）
+                new_parsed = []
+                cumulative_offset = first_ts
+                prev_ts = first_ts
+                
+                for i, (ts, text) in enumerate(parsed):
+                    if i == 0:
+                        new_parsed.append((ts, text))
+                        continue
+                    
+                    gap = ts - parsed[i-1][0]
+                    
+                    # 前の行が間奏マーカー or 現在の行が間奏マーカー → ギャップ保護
+                    if (i - 1) in interlude_indices or i in interlude_indices:
+                        cumulative_offset += gap  # 間奏ギャップはそのまま
+                    else:
+                        cumulative_offset += gap * scale  # 歌詞ギャップはスケーリング
+                    
+                    new_parsed.append((cumulative_offset, text))
+                
+                parsed = new_parsed
+            else:
+                # フォールバック: 均一スケーリング
+                available_span = max_end_seconds - first_ts
+                if original_span > 0 and available_span > 0:
+                    scale = available_span / original_span
+                    logger.info(f"LRC補正: フォールバックスケーリング {scale:.2f}x")
+                    parsed = [(first_ts + (ts - first_ts) * scale, text) for ts, text in parsed]
+        else:
+            # 間奏なし: 従来の均一スケーリング
+            original_span = last_ts - first_ts
+            available_span = max_end_seconds - first_ts
+            if original_span > 0 and available_span > 0:
+                scale = available_span / original_span
+                logger.info(f"LRC補正: スケーリング {scale:.2f}x（アウトロ保護: {last_ts:.1f}s → {max_end_seconds}s）")
+                parsed = [(first_ts + (ts - first_ts) * scale, text) for ts, text in parsed]
     
-    # ケース3: 行間が不自然に詰まっている箇所を修正（最低1.5秒間隔を保証）
+    # ケース3: 行間が不自然に詰まっている箇所を修正
+    # 間奏マーカーは大きなギャップが正常なのでスキップ
     MIN_GAP = 1.5
     for i in range(1, len(parsed)):
+        # 間奏マーカーの前後はギャップチェックをスキップ（間奏は意図的に長いギャップ）
+        if i in interlude_indices or (i - 1) in interlude_indices:
+            continue
         if parsed[i][0] - parsed[i-1][0] < MIN_GAP:
             parsed[i] = (parsed[i-1][0] + MIN_GAP, parsed[i][1])
     
