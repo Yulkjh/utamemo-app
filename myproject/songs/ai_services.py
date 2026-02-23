@@ -804,6 +804,28 @@ Text: {text}"""
                             audio_url = choice.get('url')
                             print(f"Song URL: {audio_url}")
                             
+                            # Mureka APIレスポンスの全フィールドをログ出力（LRC/タイミング情報の発見用）
+                            import json
+                            choice_keys = list(choice.keys())
+                            logger.info(f"[MUREKA] Choice fields: {choice_keys}")
+                            print(f"[MUREKA] Choice fields: {choice_keys}")
+                            # 各フィールドの値の型とサンプルをログ
+                            for key in choice_keys:
+                                val = choice[key]
+                                val_type = type(val).__name__
+                                val_preview = str(val)[:200] if val else 'None'
+                                logger.info(f"[MUREKA] choice['{key}'] ({val_type}): {val_preview}")
+                                print(f"[MUREKA] choice['{key}'] ({val_type}): {val_preview}")
+                            # result全体の追加フィールドも確認
+                            result_keys = [k for k in result.keys() if k not in ('choices', 'status')]
+                            if result_keys:
+                                logger.info(f"[MUREKA] Additional result fields: {result_keys}")
+                                for key in result_keys:
+                                    val = result[key]
+                                    val_preview = str(val)[:200] if val else 'None'
+                                    logger.info(f"[MUREKA] result['{key}']: {val_preview}")
+                                    print(f"[MUREKA] result['{key}']: {val_preview}")
+                            
                             if not audio_url:
                                 raise Exception("Mureka API returned no audio URL")
                             
@@ -820,7 +842,10 @@ Text: {text}"""
                                 'status': 'completed',
                                 'api_provider': 'mureka',
                                 'trace_id': result.get('trace_id'),
-                                'lyrics_sections': choice.get('lyrics_sections', [])
+                                'lyrics_sections': choice.get('lyrics_sections', []),
+                                # Mureka APIからLRC/タイミング関連情報を取得（あれば）
+                                'lrc_data': choice.get('lrc') or choice.get('lrc_data') or choice.get('lyrics_lrc') or choice.get('aligned_lyrics') or '',
+                                'timestamps': choice.get('timestamps') or choice.get('timing') or choice.get('word_timestamps') or [],
                             }
                         else:
                             print("No choices returned from Mureka API")
@@ -886,6 +911,111 @@ Text: {text}"""
         
         print(f"Timeout waiting for task {task_id}")
         raise Exception(f"Timeout waiting for Mureka task after {max_attempts * 4} seconds")
+    
+    def describe_song(self, audio_url):
+        """Mureka APIの楽曲分析エンドポイントを呼び出し、歌詞タイミング等の情報を取得
+        
+        Args:
+            audio_url: 分析対象の音声URL
+            
+        Returns:
+            dict: APIレスポンス全体（利用可能なフィールドの調査用）
+        """
+        import requests
+        import time
+        
+        if not self.use_real_api or not self.api_key:
+            logger.warning("Mureka API not configured for describe_song")
+            return None
+        
+        headers = {
+            'Authorization': f'Bearer {self.api_key}',
+            'Content-Type': 'application/json'
+        }
+        
+        # Describe Song APIを試行
+        describe_endpoints = [
+            '/v1/song/describe',
+            '/v1/describe',
+            '/v1/song/analyze',
+            '/v1/song/lyrics-align',
+        ]
+        
+        for endpoint in describe_endpoints:
+            try:
+                url = f"{self.base_url}{endpoint}"
+                logger.info(f"[MUREKA] Trying describe endpoint: {url}")
+                
+                payload = {"url": audio_url}
+                response = requests.post(url, headers=headers, json=payload, timeout=30)
+                
+                logger.info(f"[MUREKA] {endpoint} → {response.status_code}")
+                if response.status_code == 200:
+                    result = response.json()
+                    import json
+                    logger.info(f"[MUREKA] Describe response keys: {list(result.keys())}")
+                    logger.info(f"[MUREKA] Describe response: {json.dumps(result, ensure_ascii=False)[:500]}")
+                    print(f"[MUREKA] Describe success at {endpoint}: {json.dumps(result, ensure_ascii=False)[:500]}")
+                    return result
+                elif response.status_code == 404:
+                    logger.info(f"[MUREKA] {endpoint} → 404 (not found)")
+                    continue
+                else:
+                    logger.info(f"[MUREKA] {endpoint} → {response.status_code}: {response.text[:200]}")
+                    
+            except Exception as e:
+                logger.warning(f"[MUREKA] {endpoint} error: {e}")
+                continue
+        
+        # 全エンドポイント失敗
+        logger.info("[MUREKA] No describe endpoint available")
+        return None
+    
+    def list_api_endpoints(self):
+        """利用可能なMureka APIエンドポイントを調査"""
+        import requests
+        
+        if not self.use_real_api or not self.api_key:
+            return None
+        
+        headers = {
+            'Authorization': f'Bearer {self.api_key}',
+            'Content-Type': 'application/json'
+        }
+        
+        # 既知のエンドポイント + 推測されるエンドポイントを試行
+        endpoints_to_test = [
+            ('GET', '/v1/song/list'),
+            ('GET', '/v1/endpoints'),
+            ('GET', '/v1/'),
+            ('GET', '/v1/song/features'),
+            ('POST', '/v1/song/describe'),
+            ('POST', '/v1/song/lyrics'),
+            ('POST', '/v1/song/transcribe'),
+            ('POST', '/v1/lyrics/align'),
+            ('POST', '/v1/lyrics/generate'),
+        ]
+        
+        results = {}
+        for method, endpoint in endpoints_to_test:
+            try:
+                url = f"{self.base_url}{endpoint}"
+                if method == 'GET':
+                    response = requests.get(url, headers=headers, timeout=10)
+                else:
+                    response = requests.post(url, headers=headers, json={}, timeout=10)
+                
+                results[endpoint] = {
+                    'status': response.status_code,
+                    'response': response.text[:200]
+                }
+                logger.info(f"[MUREKA] {method} {endpoint} → {response.status_code}: {response.text[:100]}")
+                print(f"[MUREKA] {method} {endpoint} → {response.status_code}: {response.text[:100]}")
+                
+            except Exception as e:
+                results[endpoint] = {'status': 'error', 'response': str(e)[:100]}
+        
+        return results
 
 
 class PDFTextExtractor:

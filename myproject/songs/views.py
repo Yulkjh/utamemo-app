@@ -2178,3 +2178,76 @@ def generate_lrc_view(request, pk):
         return JsonResponse({'lrc': lrc_data})
     else:
         return JsonResponse({'error': 'LRC generation failed'}, status=500)
+
+
+@login_required
+def mureka_api_debug(request):
+    """Mureka APIのレスポンスフィールド調査用（管理者のみ）"""
+    if not request.user.is_superuser:
+        return JsonResponse({'error': 'Forbidden'}, status=403)
+    
+    from .ai_services import MurekaAIGenerator
+    
+    mureka = MurekaAIGenerator()
+    
+    action = request.GET.get('action', 'endpoints')
+    
+    if action == 'endpoints':
+        # 利用可能エンドポイントの調査
+        results = mureka.list_api_endpoints()
+        return JsonResponse({'action': 'endpoints', 'results': results})
+    
+    elif action == 'describe':
+        # 特定の曲を分析
+        song_id = request.GET.get('song_id')
+        if not song_id:
+            return JsonResponse({'error': 'song_id required'}, status=400)
+        
+        song = get_object_or_404(Song, pk=song_id)
+        audio_url = song.audio_url
+        if not audio_url:
+            return JsonResponse({'error': 'No audio URL'}, status=400)
+        
+        result = mureka.describe_song(audio_url)
+        return JsonResponse({'action': 'describe', 'song_id': song_id, 'result': result})
+    
+    elif action == 'query_task':
+        # タスクの全フィールドを確認（最近の生成タスクIDを指定）
+        task_id = request.GET.get('task_id')
+        if not task_id:
+            # 最新の曲のtrace_idを使用
+            return JsonResponse({'error': 'task_id required'}, status=400)
+        
+        import requests as req
+        headers = {
+            'Authorization': f'Bearer {mureka.api_key}',
+            'Content-Type': 'application/json'
+        }
+        try:
+            response = req.get(f"{mureka.base_url}/v1/song/query/{task_id}", headers=headers, timeout=30)
+            if response.status_code == 200:
+                data = response.json()
+                return JsonResponse({'action': 'query_task', 'task_id': task_id, 'result': data})
+            else:
+                return JsonResponse({'action': 'query_task', 'status': response.status_code, 'body': response.text[:1000]})
+        except Exception as e:
+            return JsonResponse({'error': str(e)}, status=500)
+    
+    elif action == 'list_songs':
+        # Mureka APIの曲リストを取得
+        import requests as req
+        headers = {
+            'Authorization': f'Bearer {mureka.api_key}',
+            'Content-Type': 'application/json'
+        }
+        try:
+            response = req.get(f"{mureka.base_url}/v1/song/list", headers=headers, timeout=30)
+            if response.status_code == 200:
+                data = response.json()
+                return JsonResponse({'action': 'list_songs', 'result': data})
+            else:
+                return JsonResponse({'action': 'list_songs', 'status': response.status_code, 'body': response.text[:1000]})
+        except Exception as e:
+            return JsonResponse({'error': str(e)}, status=500)
+    
+    return JsonResponse({'error': 'Unknown action. Use: endpoints, describe, query_task, list_songs'}, status=400)

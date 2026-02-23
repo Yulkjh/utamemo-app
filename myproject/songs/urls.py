@@ -45,6 +45,9 @@ urlpatterns = [
     # カラオケ（LRC生成）
     path('songs/<int:pk>/generate-lrc/', views.generate_lrc_view, name='generate_lrc'),
     
+    # Mureka APIデバッグ（管理者のみ）
+    path('admin/mureka-debug/', views.mureka_api_debug, name='mureka_debug'),
+    
     # コンテンツ違反ページ
     path('content-violation/', views.content_violation_view, name='content_violation'),
 ]

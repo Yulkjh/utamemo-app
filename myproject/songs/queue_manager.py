@@ -277,6 +277,18 @@ class SongGenerationQueue:
                         song.save()
                         logger.info(f"Song {song_id}: Saved with audio_url: {audio_url}")
                         
+                        # Mureka APIからLRCデータが返されていれば歌詞に保存
+                        mureka_lrc = song_result.get('lrc_data', '')
+                        if mureka_lrc and hasattr(song, 'lyrics') and song.lyrics:
+                            song.lyrics.lrc_data = mureka_lrc
+                            song.lyrics.save(update_fields=['lrc_data'])
+                            logger.info(f"Song {song_id}: Mureka LRC data saved ({len(mureka_lrc)} chars)")
+                        
+                        # lyrics_sectionsの情報もログに残す
+                        mureka_sections = song_result.get('lyrics_sections', [])
+                        if mureka_sections:
+                            logger.info(f"Song {song_id}: Mureka lyrics_sections: {mureka_sections}")
+                        
                         # アップロード画像を削除（生成完了後）
                         if song.source_image:
                             try:
