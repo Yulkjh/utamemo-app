@@ -27,7 +27,7 @@ urlpatterns = [
     path('songs/<int:pk>/generating/', views.song_generating, name='song_generating'),
     path('songs/<int:pk>/status/', views.check_song_status, name='check_song_status'),
     path('songs/<int:pk>/recreate/', views.recreate_with_lyrics, name='recreate_with_lyrics'),
-    path('admin/api-status/', views.api_status_view, name='api_status'),
+    path('staff/api-status/', views.api_status_view, name='api_status'),
     path('set-language/<str:lang>/', views.set_language, name='set_language'),
     
     # クラス機能
@@ -46,7 +46,7 @@ urlpatterns = [
     path('songs/<int:pk>/generate-lrc/', views.generate_lrc_view, name='generate_lrc'),
     
     # Mureka APIデバッグ（管理者のみ）
-    path('admin/mureka-debug/', views.mureka_api_debug, name='mureka_debug'),
+    path('staff/mureka-debug/', views.mureka_api_debug, name='mureka_debug'),
     
     # コンテンツ違反ページ
     path('content-violation/', views.content_violation_view, name='content_violation'),
