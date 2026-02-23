@@ -95,7 +95,7 @@ class ContentFilter:
         
         # Sexual content
         'porn', 'porno', 'pornography',
-        'nude', 'naked', 'xxx',
+        'nude', 'xxx',
         'hentai', 'blowjob', 'handjob',
     ]
     
