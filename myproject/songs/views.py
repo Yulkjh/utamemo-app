@@ -2198,18 +2198,27 @@ def mureka_api_debug(request):
         return JsonResponse({'action': 'endpoints', 'results': results})
     
     elif action == 'describe':
-        # 特定の曲を分析
+        # 特定の曲を分析（song_id省略時は最新の公開曲を使用）
         song_id = request.GET.get('song_id')
-        if not song_id:
-            return JsonResponse({'error': 'song_id required'}, status=400)
+        if song_id:
+            song = get_object_or_404(Song, pk=song_id)
+        else:
+            song = Song.objects.filter(audio_url__isnull=False).exclude(audio_url='').order_by('-created_at').first()
+            if not song:
+                return JsonResponse({'error': 'No song with audio found'}, status=400)
         
-        song = get_object_or_404(Song, pk=song_id)
         audio_url = song.audio_url
         if not audio_url:
             return JsonResponse({'error': 'No audio URL'}, status=400)
         
         result = mureka.describe_song(audio_url)
-        return JsonResponse({'action': 'describe', 'song_id': song_id, 'result': result})
+        return JsonResponse({
+            'action': 'describe',
+            'song_id': song.pk,
+            'song_title': str(song),
+            'audio_url': audio_url[:100],
+            'result': result
+        })
     
     elif action == 'query_task':
         # タスクの全フィールドを確認（最近の生成タスクIDを指定）

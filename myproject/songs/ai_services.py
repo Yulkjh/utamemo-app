@@ -915,61 +915,118 @@ Text: {text}"""
     def describe_song(self, audio_url):
         """Mureka APIの楽曲分析エンドポイントを呼び出し、歌詞タイミング等の情報を取得
         
+        /v1/song/describe は存在するが「File format not supported」エラーを返す。
+        音声ファイルを直接アップロードする必要がある可能性が高い。
+        
         Args:
             audio_url: 分析対象の音声URL
             
         Returns:
-            dict: APIレスポンス全体（利用可能なフィールドの調査用）
+            dict: 各試行方法の結果を含む辞書
         """
         import requests
-        import time
+        import json
+        import io
         
         if not self.use_real_api or not self.api_key:
             logger.warning("Mureka API not configured for describe_song")
             return None
         
-        headers = {
-            'Authorization': f'Bearer {self.api_key}',
-            'Content-Type': 'application/json'
-        }
+        results = {}
+        endpoint = '/v1/song/describe'
+        url = f"{self.base_url}{endpoint}"
         
-        # Describe Song APIを試行
-        describe_endpoints = [
-            '/v1/song/describe',
-            '/v1/describe',
-            '/v1/song/analyze',
-            '/v1/song/lyrics-align',
-        ]
+        # 方法1: JSON body with "url" field
+        try:
+            headers_json = {
+                'Authorization': f'Bearer {self.api_key}',
+                'Content-Type': 'application/json'
+            }
+            payload = {"url": audio_url}
+            resp = requests.post(url, headers=headers_json, json=payload, timeout=30)
+            results['method1_json_url'] = {
+                'status': resp.status_code,
+                'response': resp.text[:500]
+            }
+        except Exception as e:
+            results['method1_json_url'] = {'error': str(e)}
         
-        for endpoint in describe_endpoints:
-            try:
-                url = f"{self.base_url}{endpoint}"
-                logger.info(f"[MUREKA] Trying describe endpoint: {url}")
+        # 方法2: JSON body with "audio_url" field
+        try:
+            payload = {"audio_url": audio_url}
+            resp = requests.post(url, headers=headers_json, json=payload, timeout=30)
+            results['method2_json_audio_url'] = {
+                'status': resp.status_code,
+                'response': resp.text[:500]
+            }
+        except Exception as e:
+            results['method2_json_audio_url'] = {'error': str(e)}
+        
+        # 方法3: JSON body with "file_url" field
+        try:
+            payload = {"file_url": audio_url}
+            resp = requests.post(url, headers=headers_json, json=payload, timeout=30)
+            results['method3_json_file_url'] = {
+                'status': resp.status_code,
+                'response': resp.text[:500]
+            }
+        except Exception as e:
+            results['method3_json_file_url'] = {'error': str(e)}
+        
+        # 方法4: 音声ファイルをダウンロードしてmultipart/form-dataでアップロード
+        try:
+            logger.info(f"[MUREKA] Downloading audio from: {audio_url[:100]}")
+            audio_resp = requests.get(audio_url, timeout=30)
+            if audio_resp.status_code == 200:
+                audio_content = audio_resp.content
+                content_type = audio_resp.headers.get('Content-Type', 'audio/mpeg')
                 
-                payload = {"url": audio_url}
-                response = requests.post(url, headers=headers, json=payload, timeout=30)
-                
-                logger.info(f"[MUREKA] {endpoint} → {response.status_code}")
-                if response.status_code == 200:
-                    result = response.json()
-                    import json
-                    logger.info(f"[MUREKA] Describe response keys: {list(result.keys())}")
-                    logger.info(f"[MUREKA] Describe response: {json.dumps(result, ensure_ascii=False)[:500]}")
-                    print(f"[MUREKA] Describe success at {endpoint}: {json.dumps(result, ensure_ascii=False)[:500]}")
-                    return result
-                elif response.status_code == 404:
-                    logger.info(f"[MUREKA] {endpoint} → 404 (not found)")
-                    continue
+                # ファイル拡張子を推定
+                if 'flac' in audio_url.lower() or 'flac' in content_type:
+                    ext, mime = 'flac', 'audio/flac'
+                elif 'wav' in content_type:
+                    ext, mime = 'wav', 'audio/wav'
                 else:
-                    logger.info(f"[MUREKA] {endpoint} → {response.status_code}: {response.text[:200]}")
-                    
-            except Exception as e:
-                logger.warning(f"[MUREKA] {endpoint} error: {e}")
-                continue
+                    ext, mime = 'mp3', 'audio/mpeg'
+                
+                headers_upload = {
+                    'Authorization': f'Bearer {self.api_key}',
+                }
+                
+                # field name "file" で試行
+                files = {'file': (f'song.{ext}', io.BytesIO(audio_content), mime)}
+                resp = requests.post(url, headers=headers_upload, files=files, timeout=60)
+                results['method4_upload_file'] = {
+                    'status': resp.status_code,
+                    'response': resp.text[:1000],
+                    'audio_size': len(audio_content),
+                    'mime': mime
+                }
+                
+                # field name "audio" で試行
+                files = {'audio': (f'song.{ext}', io.BytesIO(audio_content), mime)}
+                resp = requests.post(url, headers=headers_upload, files=files, timeout=60)
+                results['method5_upload_audio'] = {
+                    'status': resp.status_code,
+                    'response': resp.text[:1000]
+                }
+                
+                # field name "song" で試行
+                files = {'song': (f'song.{ext}', io.BytesIO(audio_content), mime)}
+                resp = requests.post(url, headers=headers_upload, files=files, timeout=60)
+                results['method6_upload_song'] = {
+                    'status': resp.status_code,
+                    'response': resp.text[:1000]
+                }
+            else:
+                results['method4_upload_file'] = {
+                    'error': f'Failed to download audio: {audio_resp.status_code}'
+                }
+        except Exception as e:
+            results['method4_upload_file'] = {'error': str(e)}
         
-        # 全エンドポイント失敗
-        logger.info("[MUREKA] No describe endpoint available")
-        return None
+        logger.info(f"[MUREKA] Describe results: {json.dumps(results, ensure_ascii=False)[:2000]}")
+        return results
     
     def list_api_endpoints(self):
         """利用可能なMureka APIエンドポイントを調査"""
