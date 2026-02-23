@@ -140,6 +140,107 @@ class ContentFilter:
         r'f+u+c+k+',       # 「fuuuck」など伸ばし表現
     ]
     
+    # ユーザー名用の禁止ワードリスト
+    # スラー、差別用語、卑語のバリエーション（リートスピーク・回避パターン含む）
+    # 長い単語は部分一致でチェック
+    PROHIBITED_USERNAME_WORDS = [
+        # 人種差別スラー + バリエーション
+        'nigger', 'nigga', 'nigg', 'n1gga', 'n1gger', 'niga', 'nigar',
+        'n!gga', 'n!gger', 'niqqer', 'niqqa', 'niqqah',
+        'negro', 'negr0',
+        'chink', 'ch1nk',
+        'wetback', 'beaner',
+        'cracker',
+        'honky', 'honkey',
+        'gringo',
+        'darkie', 'darky',
+        
+        # 性差別・LGBTQ差別
+        'faggot', 'f4ggot', 'fagg0t',
+        'tranny', 'tr4nny',
+        
+        # 障害者差別
+        'retard', 'r3tard', 'ret4rd',
+        'ガイジ', 'がいじ', '池沼',
+        
+        # 卑語・猥褻語（長い語は部分一致OK）
+        'fucker', 'motherfucker', 'phuck', 'phuk',
+        'bitch', 'b1tch', 'b!tch', 'biatch',
+        'cunt', 'c_nt', 'c*nt',
+        'pussy', 'pu$$y', 'pus5y',
+        'asshole', 'a$$hole', 'assh0le',
+        'bastard', 'b4stard',
+        'whore', 'wh0re',
+        'slut', 'sl*t',
+        'porn', 'p0rn',
+        'hentai',
+        
+        # 日本語差別用語
+        'チョン', 'ちょん',
+        'ニガー', 'にがー',
+        '土人', 'どじん',
+        'きちがい', 'キチガイ', '基地外',
+        'くたばれ', 'クタバレ',
+        'しね', 'シネ',
+        
+        # 中国語差別用語
+        '傻逼', '他妈的', '操你妈',
+        
+        # ナチス・ヘイトシンボル
+        'nazi', 'n4zi', 'naz1',
+        'hitler', 'h1tler',
+        'heil',
+        'whitepower', 'whitepow3r',
+        '卍卍',
+        'ss88', '1488', '14words',
+    ]
+    
+    # 短い禁止ワード（4文字以下）は誤検出しやすいため、除外リスト付きで個別チェック
+    # { 'word': ['除外ワード（これを含むユーザー名はOK）'] }
+    PROHIBITED_USERNAME_SHORT_WORDS = {
+        'fuck': ['fuchsia'],
+        'fck': [],
+        'fuk': [],
+        'fuc': ['fuchsia', 'fuchsin'],
+        'f_ck': [],
+        'f.ck': [],
+        'f*ck': [],
+        'shit': [],
+        'sh1t': [],
+        'sh!t': [],
+        'dick': ['dickens'],
+        'd1ck': [],
+        'd!ck': [],
+        'cock': ['cocktail', 'hancock', 'peacock', 'woodcock', 'cockpit', 'cockroach'],
+        'c0ck': [],
+        'jap': ['japan', 'japanese'],
+        'fag': ['fagan'],
+        'f4g': [],
+        'spic': ['spice', 'spicy'],
+        'sp1c': [],
+        'kike': [],
+        'k1ke': [],
+        'gook': [],
+        'g00k': [],
+        'coon': ['raccoon', 'cocoon', 'tycoon'],
+        'c00n': [],
+        'paki': ['pakistan'],
+        'dyke': [],
+        'dyk3': [],
+        'gaijin': [],
+        'hoe': ['shoes', 'shoe', 'phoenix', 'hoek'],
+        'h0e': [],
+        'kkk': [],
+    }
+    
+    # ユーザー名用の禁止パターン（正規表現）
+    PROHIBITED_USERNAME_PATTERNS = [
+        r'n+[i1!]+g+[a4@]+[rhz]*',  # nigga/niga系のバリエーション
+        r'f+[u\*]+c+k+',             # fuck系のバリエーション
+        r'sh+[i1!]+t+',              # shit系のバリエーション
+        r'b+[i1!]+t+ch+',            # bitch系のバリエーション
+    ]
+    
     # 有名人・著名人の名前（権利侵害防止）
     # 現代の芸能人・アーティスト・政治家・スポーツ選手等
     # ※歴史上の人物は ACADEMIC_CONTEXT_INDICATORS に含まれ、学術文脈で許可される
@@ -254,6 +355,26 @@ class ContentFilter:
         self.compiled_patterns = [
             re.compile(pattern, re.IGNORECASE)
             for pattern in self.PROHIBITED_PATTERNS
+        ]
+        
+        # ユーザー名用禁止ワードを小文字でセット化
+        self.prohibited_username_words = set()
+        for word in self.PROHIBITED_USERNAME_WORDS:
+            self.prohibited_username_words.add(word.lower())
+            # 日本語の場合はひらがな/カタカナ変換も追加
+            if not word.isascii():
+                self.prohibited_username_words.add(self._hiragana_to_katakana(word).lower())
+                self.prohibited_username_words.add(self._katakana_to_hiragana(word).lower())
+        
+        # ユーザー名用短い禁止ワード（除外リスト付き）を初期化
+        self.prohibited_username_short_words = {}
+        for word, exceptions in self.PROHIBITED_USERNAME_SHORT_WORDS.items():
+            self.prohibited_username_short_words[word.lower()] = [e.lower() for e in exceptions]
+        
+        # ユーザー名用正規表現パターンをコンパイル
+        self.compiled_username_patterns = [
+            re.compile(pattern, re.IGNORECASE)
+            for pattern in self.PROHIBITED_USERNAME_PATTERNS
         ]
     
     def _hiragana_to_katakana(self, text):
@@ -492,6 +613,75 @@ class ContentFilter:
     def get_violation_message_by_language(self, language='ja'):
         """言語に応じた違反メッセージを取得"""
         return self._get_violation_message([], language)
+    
+    def check_username(self, username):
+        """
+        ユーザー名に不適切な語句が含まれていないかチェック
+        
+        ユーザー名は学術文脈がないため、禁止ワードは無条件でブロック。
+        リートスピーク（数字・記号での代替）パターンも検出。
+        
+        Args:
+            username: チェックするユーザー名
+            
+        Returns:
+            dict: {
+                'is_inappropriate': bool,
+                'detected_words': list,
+                'message': str
+            }
+        """
+        if not username:
+            return {
+                'is_inappropriate': False,
+                'detected_words': [],
+                'message': ''
+            }
+        
+        detected_words = []
+        username_lower = username.lower().strip()
+        
+        # スペース・アンダースコア・ハイフン・ドットを除去して連結版も作成
+        username_stripped = re.sub(r'[\s_\-\.]+', '', username_lower)
+        
+        # 禁止ワードチェック（長い語 - 部分一致でOK）
+        for word in self.prohibited_username_words:
+            if word in username_lower or word in username_stripped:
+                detected_words.append(word)
+        
+        # 短い禁止ワードチェック（除外リスト付き）
+        for word, exceptions in self.prohibited_username_short_words.items():
+            if word in username_lower or word in username_stripped:
+                # 除外リストに該当する場合はスキップ
+                is_exception = False
+                for exc in exceptions:
+                    if exc in username_lower:
+                        is_exception = True
+                        break
+                if not is_exception:
+                    detected_words.append(word)
+        
+        # 正規表現パターンチェック
+        for compiled in self.compiled_username_patterns:
+            if compiled.search(username_lower) or compiled.search(username_stripped):
+                detected_words.append(f'pattern:{compiled.pattern}')
+        
+        # 重複除去
+        detected_words = list(set(detected_words))
+        
+        if detected_words:
+            logger.warning(f"Inappropriate username detected: '{username}' -> {detected_words}")
+            return {
+                'is_inappropriate': True,
+                'detected_words': detected_words,
+                'message': 'このユーザー名は使用できません。'
+            }
+        
+        return {
+            'is_inappropriate': False,
+            'detected_words': [],
+            'message': ''
+        }
 
 
 # シングルトンインスタンス
@@ -509,3 +699,16 @@ def check_text_for_inappropriate_content(text):
         dict: チェック結果
     """
     return content_filter.check_content(text)
+
+
+def check_username_for_inappropriate_content(username):
+    """
+    ユーザー名の不適切コンテンツをチェックする便利関数
+    
+    Args:
+        username: チェックするユーザー名
+        
+    Returns:
+        dict: チェック結果
+    """
+    return content_filter.check_username(username)
