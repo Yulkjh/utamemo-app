@@ -99,6 +99,39 @@
                 </form>
             </div>
 
+            <!-- フルスクリーンローディングオーバーレイ -->
+            <div id="loading-overlay" style="display:none;">
+                <div class="loading-overlay-bg"></div>
+                <div class="loading-overlay-content">
+                    <div class="loading-spinner-ring">
+                        <div></div><div></div><div></div><div></div>
+                    </div>
+                    <h2 class="loading-title" id="loading-title">
+                        {% if is_english %}Scanning your file...{% elif is_spanish %}Escaneando tu archivo...{% elif is_german %}Datei wird gescannt...{% elif is_portuguese %}Escaneando seu arquivo...{% elif is_chinese %}正在扫描文件...{% else %}ファイルを読み取り中...{% endif %}
+                    </h2>
+                    <p class="loading-subtitle" id="loading-subtitle">
+                        {% if is_english %}Extracting text with AI. This may take a moment.{% elif is_spanish %}Extrayendo texto con IA. Esto puede tardar un momento.{% elif is_german %}Text wird mit KI extrahiert. Dies kann einen Moment dauern.{% elif is_portuguese %}Extraindo texto com IA. Isso pode levar um momento.{% elif is_chinese %}AI正在提取文字，请稍候...{% else %}AIがテキストを抽出しています。少々お待ちください...{% endif %}
+                    </p>
+                    <div class="loading-progress-bar">
+                        <div class="loading-progress-fill" id="loading-progress-fill"></div>
+                    </div>
+                    <div class="loading-steps">
+                        <div class="loading-step active" id="step-upload">
+                            <i class="bi bi-cloud-arrow-up"></i>
+                            <span>{% if is_english %}Uploading{% elif is_chinese %}上传中{% else %}アップロード{% endif %}</span>
+                        </div>
+                        <div class="loading-step" id="step-ocr">
+                            <i class="bi bi-eye"></i>
+                            <span>{% if is_english %}Reading text{% elif is_chinese %}读取文字{% else %}テキスト読取{% endif %}</span>
+                        </div>
+                        <div class="loading-step" id="step-check">
+                            <i class="bi bi-check-circle"></i>
+                            <span>{% if is_english %}Checking{% elif is_chinese %}检查中{% else %}チェック中{% endif %}</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
             <!-- 手動入力ボタン（常に表示） -->
             <div class="text-center mt-4 fade-in">
                 <div class="divider-with-text mb-4">
@@ -478,6 +511,100 @@
         width: 100%;
     }
 }
+
+/* ローディングオーバーレイ */
+.loading-overlay-bg {
+    position: fixed;
+    top: 0; left: 0; right: 0; bottom: 0;
+    background: rgba(255, 252, 249, 0.97);
+    z-index: 9998;
+}
+.loading-overlay-content {
+    position: fixed;
+    top: 50%; left: 50%;
+    transform: translate(-50%, -50%);
+    z-index: 9999;
+    text-align: center;
+    width: 90%;
+    max-width: 420px;
+}
+.loading-title {
+    font-size: 1.5rem;
+    font-weight: 700;
+    color: #2d1b13;
+    margin-bottom: 0.5rem;
+}
+.loading-subtitle {
+    font-size: 0.95rem;
+    color: #8a6b5a;
+    margin-bottom: 2rem;
+}
+.loading-progress-bar {
+    width: 100%;
+    height: 6px;
+    background: #e8e0db;
+    border-radius: 3px;
+    overflow: hidden;
+    margin-bottom: 2rem;
+}
+.loading-progress-fill {
+    height: 100%;
+    width: 0%;
+    background: linear-gradient(90deg, #ff7940, #ff9a6c);
+    border-radius: 3px;
+    transition: width 0.5s ease;
+}
+.loading-steps {
+    display: flex;
+    justify-content: center;
+    gap: 2rem;
+}
+.loading-step {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 0.4rem;
+    color: #c0b0a5;
+    font-size: 0.8rem;
+    font-weight: 500;
+    transition: all 0.4s ease;
+}
+.loading-step i {
+    font-size: 1.4rem;
+}
+.loading-step.active {
+    color: #ff7940;
+}
+.loading-step.done {
+    color: #28a745;
+}
+/* スピナーリング */
+.loading-spinner-ring {
+    display: inline-block;
+    position: relative;
+    width: 64px;
+    height: 64px;
+    margin-bottom: 1.5rem;
+}
+.loading-spinner-ring div {
+    box-sizing: border-box;
+    display: block;
+    position: absolute;
+    width: 52px;
+    height: 52px;
+    margin: 6px;
+    border: 5px solid #ff7940;
+    border-radius: 50%;
+    animation: spinner-ring 1.2s cubic-bezier(0.5, 0, 0.5, 1) infinite;
+    border-color: #ff7940 transparent transparent transparent;
+}
+.loading-spinner-ring div:nth-child(1) { animation-delay: -0.45s; }
+.loading-spinner-ring div:nth-child(2) { animation-delay: -0.3s; }
+.loading-spinner-ring div:nth-child(3) { animation-delay: -0.15s; }
+@keyframes spinner-ring {
+    0% { transform: rotate(0deg); }
+    100% { transform: rotate(360deg); }
+}
 </style>
 
 <script>
@@ -835,18 +962,66 @@ document.addEventListener('DOMContentLoaded', function() {
             return false;
         }
         
+        // 即座にローディングオーバーレイを表示
+        const overlay = document.getElementById('loading-overlay');
+        overlay.style.display = 'block';
+        document.body.style.overflow = 'hidden';
+        
+        // ボタンを無効化
         const submitBtn = this.querySelector('button[type="submit"]');
         if (submitBtn) {
-            {% if is_english %}
-            submitBtn.innerHTML = '<i class="bi bi-hourglass-split"></i> Processing ' + selectedFiles.length + ' file(s)...';
-            {% elif is_chinese %}
-            submitBtn.innerHTML = '<i class="bi bi-hourglass-split"></i> 正在处理 ' + selectedFiles.length + ' 个文件...';
-            {% else %}
-            submitBtn.innerHTML = '<i class="bi bi-hourglass-split"></i> ' + selectedFiles.length + '件のファイルを処理中...';
-            {% endif %}
             submitBtn.disabled = true;
         }
         
+        // プログレスバーアニメーション
+        const progressFill = document.getElementById('loading-progress-fill');
+        const stepUpload = document.getElementById('step-upload');
+        const stepOcr = document.getElementById('step-ocr');
+        const stepCheck = document.getElementById('step-check');
+        const loadingTitle = document.getElementById('loading-title');
+        
+        // ステップ1: アップロード中（即座に開始）
+        progressFill.style.width = '15%';
+        stepUpload.classList.add('active');
+        
+        // ステップ2: 1.5秒後にOCR読取中へ
+        setTimeout(function() {
+            progressFill.style.width = '40%';
+            stepUpload.classList.remove('active');
+            stepUpload.classList.add('done');
+            stepUpload.querySelector('i').className = 'bi bi-check-circle-fill';
+            stepOcr.classList.add('active');
+            {% if is_english %}
+            loadingTitle.textContent = 'Reading text from file...';
+            {% elif is_chinese %}
+            loadingTitle.textContent = 'AI正在读取文字...';
+            {% else %}
+            loadingTitle.textContent = 'AIがテキストを読み取り中...';
+            {% endif %}
+        }, 1500);
+        
+        // ステップ3: 5秒後にチェック中へ
+        setTimeout(function() {
+            progressFill.style.width = '70%';
+            stepOcr.classList.remove('active');
+            stepOcr.classList.add('done');
+            stepOcr.querySelector('i').className = 'bi bi-check-circle-fill';
+            stepCheck.classList.add('active');
+            {% if is_english %}
+            loadingTitle.textContent = 'Almost done...';
+            {% elif is_chinese %}
+            loadingTitle.textContent = '即将完成...';
+            {% else %}
+            loadingTitle.textContent = 'もうすぐ完了...';
+            {% endif %}
+        }, 5000);
+        
+        // ゆっくり進むプログレス（サーバー応答待ち用）
+        setTimeout(function() { progressFill.style.width = '80%'; }, 8000);
+        setTimeout(function() { progressFill.style.width = '85%'; }, 12000);
+        setTimeout(function() { progressFill.style.width = '90%'; }, 18000);
+        
+        // フォーム送信を続行
         return true;
     });
     
