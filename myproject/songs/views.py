@@ -2243,20 +2243,45 @@ def mureka_api_debug(request):
             return JsonResponse({'error': str(e)}, status=500)
     
     elif action == 'list_songs':
-        # Mureka APIの曲リストを取得
+        # Mureka APIの曲リストを取得（GET & POST両方試す）
         import requests as req
         headers = {
             'Authorization': f'Bearer {mureka.api_key}',
             'Content-Type': 'application/json'
         }
+        results = {}
         try:
+            # GET
             response = req.get(f"{mureka.base_url}/v1/song/list", headers=headers, timeout=30)
-            if response.status_code == 200:
-                data = response.json()
-                return JsonResponse({'action': 'list_songs', 'result': data})
-            else:
-                return JsonResponse({'action': 'list_songs', 'status': response.status_code, 'body': response.text[:1000]})
+            results['GET /v1/song/list'] = {'status': response.status_code, 'body': response.text[:500]}
         except Exception as e:
-            return JsonResponse({'error': str(e)}, status=500)
+            results['GET /v1/song/list'] = {'error': str(e)}
+        try:
+            # POST
+            response = req.post(f"{mureka.base_url}/v1/song/list", headers=headers, json={}, timeout=30)
+            results['POST /v1/song/list'] = {'status': response.status_code, 'body': response.text[:500]}
+        except Exception as e:
+            results['POST /v1/song/list'] = {'error': str(e)}
+        try:
+            # POST with page
+            response = req.post(f"{mureka.base_url}/v1/song/list", headers=headers, json={"page": 1, "page_size": 5}, timeout=30)
+            results['POST /v1/song/list (paged)'] = {'status': response.status_code, 'body': response.text[:500]}
+        except Exception as e:
+            results['POST /v1/song/list (paged)'] = {'error': str(e)}
+        return JsonResponse({'action': 'list_songs', 'results': results})
     
-    return JsonResponse({'error': 'Unknown action. Use: endpoints, describe, query_task, list_songs'}, status=400)
+    elif action == 'recent_songs':
+        # DB内の最近の曲とそのメタデータを一覧表示
+        recent = Song.objects.filter(audio_url__isnull=False).exclude(audio_url='').order_by('-created_at')[:10]
+        songs_data = []
+        for s in recent:
+            songs_data.append({
+                'id': s.pk,
+                'title': str(s),
+                'created': s.created_at.isoformat() if s.created_at else None,
+                'audio_url': s.audio_url[:80] if s.audio_url else None,
+                'generation_status': s.generation_status if hasattr(s, 'generation_status') else None,
+            })
+        return JsonResponse({'action': 'recent_songs', 'songs': songs_data})
+    
+    return JsonResponse({'error': 'Unknown action. Use: endpoints, describe, query_task, list_songs, recent_songs'}, status=400)
