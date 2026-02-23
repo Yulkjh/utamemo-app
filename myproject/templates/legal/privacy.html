@@ -31,10 +31,11 @@
                     </ul>
                     
                     <h2 class="h5 mt-4">3. Information Sharing</h2>
-                    <p>We do not sell your personal information. We may share information with:</p>
+                    <p>We do not sell your personal information. We may share information with the following third-party service providers:</p>
                     <ul>
-                        <li><strong>AI Service Providers:</strong> To generate songs</li>
-                        <li><strong>Payment Processors:</strong> For paid plan subscriptions</li>
+                        <li><strong>Mureka (SKYWORK AI PTE. LTD.):</strong> Lyrics text and generation parameters are sent to generate music. Mureka's Privacy Policy applies.</li>
+                        <li><strong>Google Gemini AI (Google LLC):</strong> Uploaded text/image content is sent for lyrics generation. Google's Privacy Policy applies.</li>
+                        <li><strong>Stripe, Inc.:</strong> Payment information is processed for paid plan subscriptions. Stripe's Privacy Policy applies. We do not store credit card numbers on our servers.</li>
                         <li><strong>Legal Requirements:</strong> When required by law</li>
                     </ul>
                     
@@ -43,6 +44,7 @@
                     <ul>
                         <li>HTTPS encryption for all communications</li>
                         <li>Secure data storage</li>
+                        <li>API keys managed via environment variables (not stored in source code)</li>
                     </ul>
                     
                     <h2 class="h5 mt-4">5. Your Rights</h2>
@@ -51,19 +53,33 @@
                         <li>Access your personal data</li>
                         <li>Delete your account and data</li>
                         <li>Export your data</li>
+                        <li>Withdraw consent for data processing at any time</li>
+                    </ul>
+                    <p>For users in the European Economic Area (EEA), data is processed based on your consent and legitimate interest in providing the Service. You may exercise your GDPR rights by contacting us through the <a href="{% url 'contact' %}">Contact Page</a>.</p>
+                    
+                    <h2 class="h5 mt-4">6. Children's Privacy</h2>
+                    <p>The Service is intended for users of all ages, including elementary school students, for educational purposes.</p>
+                    <ul>
+                        <li>Users under 16 years of age (or the applicable age in their jurisdiction) must obtain consent from a parent or legal guardian before using the Service.</li>
+                        <li>We do not knowingly collect personal information from children under 13 without parental consent, in compliance with COPPA (Children's Online Privacy Protection Act).</li>
+                        <li>If we become aware that we have collected personal data from a child without parental consent, we will take steps to delete such information promptly.</li>
                     </ul>
                     
-                    <h2 class="h5 mt-4">6. Cookies</h2>
+                    <h2 class="h5 mt-4">7. Cookies</h2>
                     <p>We use cookies for:</p>
                     <ul>
                         <li>Session management (keeping you logged in)</li>
                         <li>Language preferences</li>
                     </ul>
+                    <p>These are essential cookies required for the Service to function. We do not use tracking or advertising cookies.</p>
                     
-                    <h2 class="h5 mt-4">7. Changes to This Policy</h2>
+                    <h2 class="h5 mt-4">8. Data Retention</h2>
+                    <p>We retain your data for the duration of your account existence. Upon account deletion, your personal data will be removed within 30 days. Generated songs may be retained in anonymized form.</p>
+                    
+                    <h2 class="h5 mt-4">9. Changes to This Policy</h2>
                     <p>We may update this Privacy Policy. We will notify you of significant changes by posting a notice on the Service.</p>
                     
-                    <h2 class="h5 mt-4">8. Contact Us</h2>
+                    <h2 class="h5 mt-4">10. Contact Us</h2>
                     <p>For privacy-related questions, please contact us through our <a href="{% url 'contact' %}">Contact Page</a>.</p>
                     
                     {% elif app_language == 'es' %}
@@ -296,7 +312,7 @@
                     
                     {% else %}
                     <h1 class="mb-4">プライバシーポリシー</h1>
-                    <p class="text-muted mb-4">最終更新日：2026年1月19日</p>
+                    <p class="text-muted mb-4">最終更新日：2026年2月23日</p>
                     
                     <h2 class="h5 mt-4">1. 収集する情報</h2>
                     <p>当方は以下の情報を収集します：</p>
@@ -315,11 +331,12 @@
                         <li>セキュリティの確保および不正防止</li>
                     </ul>
                     
-                    <h2 class="h5 mt-4">3. 情報の共有</h2>
-                    <p>当方はお客様の個人情報を販売しません。以下の場合に情報を共有することがあります：</p>
+                    <h2 class="h5 mt-4">3. 情報の共有（第三者提供）</h2>
+                    <p>当方はお客様の個人情報を販売しません。以下の第三者サービスプロバイダーに情報を共有することがあります：</p>
                     <ul>
-                        <li><strong>AIサービスプロバイダー：</strong>楽曲生成のため</li>
-                        <li><strong>決済処理業者：</strong>有料プランのサブスクリプション用</li>
+                        <li><strong>Mureka（SKYWORK AI PTE. LTD.）：</strong>楽曲生成のため、歌詞テキストおよび生成パラメータを送信します。Murekaのプライバシーポリシーが適用されます。</li>
+                        <li><strong>Google Gemini AI（Google LLC）：</strong>歌詞生成のため、アップロードされたテキスト・画像コンテンツを送信します。Googleのプライバシーポリシーが適用されます。</li>
+                        <li><strong>Stripe, Inc.：</strong>有料プランの決済情報を処理します。Stripeのプライバシーポリシーが適用されます。クレジットカード番号は当方のサーバーに保存されません。</li>
                         <li><strong>法的要件：</strong>法律で求められる場合</li>
                     </ul>
                     
@@ -328,6 +345,7 @@
                     <ul>
                         <li>すべての通信にHTTPS暗号化を使用</li>
                         <li>安全なデータ保存</li>
+                        <li>APIキーの環境変数管理（ソースコードに保存しない）</li>
                     </ul>
                     
                     <h2 class="h5 mt-4">5. お客様の権利</h2>
@@ -336,19 +354,33 @@
                         <li>個人データへのアクセス</li>
                         <li>アカウントとデータの削除</li>
                         <li>データのエクスポート</li>
+                        <li>データ処理に関する同意の撤回</li>
+                    </ul>
+                    <p>欧州経済領域（EEA）のユーザーの場合、データは同意およびサービス提供の正当な利益に基づいて処理されます。GDPRに基づく権利の行使は、<a href="{% url 'contact' %}">お問い合わせページ</a>よりご連絡ください。</p>
+                    
+                    <h2 class="h5 mt-4">6. 未成年者の保護</h2>
+                    <p>本サービスは、教育目的で小学生を含むすべての年齢のユーザーを対象としています。</p>
+                    <ul>
+                        <li>16歳未満（またはお住まいの国の該当年齢未満）のユーザーは、本サービスの利用前に保護者の同意を得る必要があります。</li>
+                        <li>当方は、COPPA（児童オンラインプライバシー保護法）に準拠し、保護者の同意なく13歳未満のお子様の個人情報を故意に収集しません。</li>
+                        <li>保護者の同意なくお子様の個人データを収集したことが判明した場合、速やかに当該情報を削除する措置を講じます。</li>
                     </ul>
                     
-                    <h2 class="h5 mt-4">6. Cookie（クッキー）</h2>
+                    <h2 class="h5 mt-4">7. Cookie（クッキー）</h2>
                     <p>以下の目的でCookieを使用しています：</p>
                     <ul>
                         <li>セッション管理（ログイン状態の維持）</li>
                         <li>言語設定の保存</li>
                     </ul>
+                    <p>これらはサービスの機能に必要な必須Cookieです。トラッキングや広告目的のCookieは使用しておりません。</p>
                     
-                    <h2 class="h5 mt-4">7. ポリシーの変更</h2>
+                    <h2 class="h5 mt-4">8. データの保持期間</h2>
+                    <p>アカウントが存在する期間中、お客様のデータを保持します。アカウント削除後、個人データは30日以内に削除されます。生成された楽曲は匿名化された形式で保持される場合があります。</p>
+                    
+                    <h2 class="h5 mt-4">9. ポリシーの変更</h2>
                     <p>本プライバシーポリシーを更新する場合があります。重要な変更がある場合は、本サービス上で通知します。</p>
                     
-                    <h2 class="h5 mt-4">8. お問い合わせ</h2>
+                    <h2 class="h5 mt-4">10. お問い合わせ</h2>
                     <p>プライバシーに関するご質問は、<a href="{% url 'contact' %}">お問い合わせページ</a>よりご連絡ください。</p>
                     {% endif %}
                     

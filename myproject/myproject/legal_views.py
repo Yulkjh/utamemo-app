@@ -14,6 +14,11 @@ def privacy(request):
     return render(request, 'legal/privacy.html')
 
 
+def tokushoho(request):
+    """特定商取引法に基づく表記ページ"""
+    return render(request, 'legal/tokushoho.html')
+
+
 def contact(request):
     """お問い合わせページ"""
     if request.method == 'POST':

@@ -20,7 +20,7 @@ from django.conf import settings
 from django.conf.urls.static import static
 from django.contrib.sitemaps.views import sitemap
 from .media_views import serve_protected_media
-from .legal_views import terms, privacy, contact
+from .legal_views import terms, privacy, contact, tokushoho
 from .sitemaps import StaticViewSitemap, SongSitemap
 
 sitemaps = {
@@ -36,6 +36,7 @@ urlpatterns = [
     path('terms/', terms, name='terms'),
     path('privacy/', privacy, name='privacy'),
     path('contact/', contact, name='contact'),
+    path('tokushoho/', tokushoho, name='tokushoho'),
     re_path(r'^media/(?P<path>.*)$', serve_protected_media, name='protected_media'),
 ]
 

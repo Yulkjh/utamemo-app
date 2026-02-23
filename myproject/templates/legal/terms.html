@@ -11,6 +11,7 @@
                 <div class="card-body p-4 p-md-5">
                     {% if app_language == 'en' %}
                     <h1 class="mb-4">UTAMEMO Terms of Service</h1>
+                    <p class="text-muted mb-2"><small>Last updated: February 23, 2026</small></p>
                     <p class="text-muted mb-4">These Terms of Service (hereinafter "Terms") establish the conditions for using "UTAMEMO" (hereinafter "the Service"), a learning support service provided by HOPE (hereinafter "the Operator"). By using the Service, users are deemed to have agreed to these Terms.</p>
                     
                     <h2 class="h5 mt-4">Article 1 (Scope of Application)</h2>
@@ -81,8 +82,10 @@
                     
                     <h2 class="h5 mt-4">Article 8 (Fees and Plans)</h2>
                     <p>The Service offers free and paid plans.</p>
-                    <p>Details of paid plans, including content, fees, and payment methods, are specified separately on the Service.</p>
+                    <p>Details of paid plans, including content, fees, and payment methods, are specified separately on the Service. For details, please see the <a href="{% url 'tokushoho' %}">Specified Commercial Transactions Act page</a>.</p>
+                    <p>Users may cancel their subscription at any time from the account settings page. Upon cancellation, paid plan features remain available until the end of the current billing period.</p>
                     <p>Fees for paid plans are, in principle, non-refundable regardless of the reason.</p>
+                    <p>However, if the Service is unavailable for an extended period due to the Operator's fault, a pro-rated refund or extension of the service period may be provided at the Operator's discretion.</p>
                     <p>For school plans, the contracting party is the school or teacher, and refunds are not provided to individual students.</p>
                     
                     <h2 class="h5 mt-4">Article 9 (Service Suspension/Interruption)</h2>
@@ -109,6 +112,7 @@
                     
                     {% elif app_language == 'es' %}
                     <h1 class="mb-4">Términos de Servicio de UTAMEMO</h1>
+                    <p class="text-muted mb-2"><small>Última actualización: 23 de febrero de 2026</small></p>
                     <p class="text-muted mb-4">Estos Términos de Servicio (en adelante "Términos") establecen las condiciones para el uso de "UTAMEMO" (en adelante "el Servicio"), un servicio de apoyo al aprendizaje proporcionado por HOPE (en adelante "el Operador"). Al usar el Servicio, se considera que los usuarios han aceptado estos Términos.</p>
                     
                     <h2 class="h5 mt-4">Artículo 1 (Ámbito de Aplicación)</h2>
@@ -205,6 +209,7 @@
                     
                     {% elif app_language == 'de' %}
                     <h1 class="mb-4">UTAMEMO Nutzungsbedingungen</h1>
+                    <p class="text-muted mb-2"><small>Letzte Aktualisierung: 23. Februar 2026</small></p>
                     <p class="text-muted mb-4">Diese Nutzungsbedingungen (nachfolgend "Bedingungen") legen die Bedingungen für die Nutzung von "UTAMEMO" (nachfolgend "der Service") fest, einem von HOPE (nachfolgend "der Betreiber") bereitgestellten Lernunterstützungsdienst. Durch die Nutzung des Services gelten Nutzer als mit diesen Bedingungen einverstanden.</p>
                     
                     <h2 class="h5 mt-4">Artikel 1 (Geltungsbereich)</h2>
@@ -301,6 +306,7 @@
                     
                     {% elif app_language == 'pt' %}
                     <h1 class="mb-4">Termos de Serviço do UTAMEMO</h1>
+                    <p class="text-muted mb-2"><small>Última atualização: 23 de fevereiro de 2026</small></p>
                     <p class="text-muted mb-4">Estes Termos de Serviço (doravante "Termos") estabelecem as condições para o uso do "UTAMEMO" (doravante "o Serviço"), um serviço de apoio à aprendizagem fornecido pela HOPE (doravante "o Operador"). Ao usar o Serviço, considera-se que os usuários concordaram com estes Termos.</p>
                     
                     <h2 class="h5 mt-4">Artigo 1 (Âmbito de Aplicação)</h2>
@@ -397,6 +403,7 @@
                     
                     {% elif app_language == 'zh' %}
                     <h1 class="mb-4">UTAMEMO 服务条款</h1>
+                    <p class="text-muted mb-2"><small>最后更新：2026年2月23日</small></p>
                     <p class="text-muted mb-4">本服务条款（以下简称"条款"）规定了使用HOPE（以下简称"运营方"）提供的学习支援服务"UTAMEMO"（以下简称"本服务"）的条件。使用本服务即视为用户已同意本条款。</p>
                     
                     <h2 class="h5 mt-4">第1条（适用范围）</h2>
@@ -493,6 +500,7 @@
                     
                     {% else %}
                     <h1 class="mb-4">UTAMEMO 利用規約</h1>
+                    <p class="text-muted mb-2"><small>最終更新日：2026年2月23日</small></p>
                     <p class="text-muted mb-4">本利用規約（以下「本規約」といいます。）は、HOPE（以下「運営者」といいます。）が提供する学習支援サービス「UTAMEMO」（以下「本サービス」といいます。）の利用条件を定めるものです。ユーザーは、本サービスを利用することにより、本規約に同意したものとみなされます。</p>
                     
                     <h2 class="h5 mt-4">第1条（適用）</h2>
@@ -563,8 +571,10 @@
                     
                     <h2 class="h5 mt-4">第8条（料金・プラン）</h2>
                     <p>本サービスには、無料プランおよび有料プランがあります。</p>
-                    <p>有料プランの内容、料金、支払方法等は、本サービス上で別途定めるものとします。</p>
+                    <p>有料プランの内容、料金、支払方法等は、本サービス上で別途定めるものとします。詳細は<a href="{% url 'tokushoho' %}">特定商取引法に基づく表記</a>をご確認ください。</p>
+                    <p>ユーザーは、アカウント設定ページからいつでもサブスクリプションを解約することができます。解約した場合、現在の課金期間の終了時まで有料プランの機能をご利用いただけます。</p>
                     <p>有料プランの利用料金は、理由の如何を問わず、原則として返金されません。</p>
+                    <p>ただし、運営者の責に帰すべき事由により長期間サービスが利用できなかった場合は、運営者の判断により日割りでの返金またはサービス期間の延長を行うことがあります。</p>
                     <p>学校向けプランにおいては、契約主体は学校または教員とし、生徒個人への返金は行いません。</p>
                     
                     <h2 class="h5 mt-4">第9条（サービスの停止・中断）</h2>

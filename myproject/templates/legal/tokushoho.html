@@ -1,0 +1,474 @@
+{% extends 'base.html' %}
+{% load i18n %}
+
+{% block title %}{% if app_language == 'en' %}Specified Commercial Transactions Act{% elif app_language == 'es' %}Ley de Transacciones Comerciales{% elif app_language == 'de' %}Gesetz über spezifizierte kommerzielle Transaktionen{% elif app_language == 'pt' %}Lei de Transações Comerciais Especificadas{% elif app_language == 'zh' %}特定商业交易法{% else %}特定商取引法に基づく表記{% endif %} - UTAMEMO{% endblock %}
+
+{% block content %}
+<div class="container py-5">
+    <div class="row justify-content-center">
+        <div class="col-lg-8">
+            <div class="card shadow-sm">
+                <div class="card-body p-4 p-md-5">
+                    {% if app_language == 'en' %}
+                    <h1 class="mb-4">Notation Based on Specified Commercial Transactions Act</h1>
+                    <p class="text-muted mb-4">Last updated: February 23, 2026</p>
+                    
+                    <table class="table table-bordered">
+                        <tbody>
+                            <tr>
+                                <th class="bg-light" style="width: 30%;">Business Operator</th>
+                                <td>HOPE</td>
+                            </tr>
+                            <tr>
+                                <th class="bg-light">Representative</th>
+                                <td>Disclosed upon request</td>
+                            </tr>
+                            <tr>
+                                <th class="bg-light">Address</th>
+                                <td>Disclosed upon request<br><small class="text-muted">* As this is a home-based business, the address will be disclosed without delay upon request.</small></td>
+                            </tr>
+                            <tr>
+                                <th class="bg-light">Phone Number</th>
+                                <td>Disclosed upon request<br><small class="text-muted">* As this is a home-based business, the phone number will be disclosed without delay upon request.</small></td>
+                            </tr>
+                            <tr>
+                                <th class="bg-light">Email</th>
+                                <td>Available via <a href="{% url 'contact' %}">Contact Page</a></td>
+                            </tr>
+                            <tr>
+                                <th class="bg-light">Service URL</th>
+                                <td><a href="https://utamemo.com">https://utamemo.com</a></td>
+                            </tr>
+                            <tr>
+                                <th class="bg-light">Prices</th>
+                                <td>
+                                    <ul class="mb-0">
+                                        <li>Free Plan: ¥0</li>
+                                        <li>Starter Plan: ¥780/month (tax included)</li>
+                                        <li>Pro Plan: ¥1,900/month (tax included)</li>
+                                        <li>School Plan: ¥450/month per student (tax included)</li>
+                                    </ul>
+                                </td>
+                            </tr>
+                            <tr>
+                                <th class="bg-light">Additional Fees</th>
+                                <td>Internet connection fees and communication charges required for using the Service are borne by the user.</td>
+                            </tr>
+                            <tr>
+                                <th class="bg-light">Payment Method</th>
+                                <td>Credit card payment (via Stripe)</td>
+                            </tr>
+                            <tr>
+                                <th class="bg-light">Payment Timing</th>
+                                <td>Charged at the time of subscription. Automatically renewed monthly thereafter.</td>
+                            </tr>
+                            <tr>
+                                <th class="bg-light">Service Delivery</th>
+                                <td>Available immediately after payment is completed.</td>
+                            </tr>
+                            <tr>
+                                <th class="bg-light">Cancellation &amp; Refund Policy</th>
+                                <td>
+                                    <ul class="mb-0">
+                                        <li>Users may cancel their subscription at any time from the account settings page.</li>
+                                        <li>Upon cancellation, the paid plan features remain available until the end of the current billing period.</li>
+                                        <li>In principle, fees already paid are non-refundable.</li>
+                                        <li>However, if the Service is unavailable for an extended period due to the Operator's fault, a pro-rated refund or extension of the service period may be provided at the Operator's discretion.</li>
+                                    </ul>
+                                </td>
+                            </tr>
+                            <tr>
+                                <th class="bg-light">Operating Environment</th>
+                                <td>A web browser (Chrome, Safari, Firefox, Edge latest version recommended) with internet connectivity is required.</td>
+                            </tr>
+                        </tbody>
+                    </table>
+
+                    {% elif app_language == 'es' %}
+                    <h1 class="mb-4">Notación Basada en la Ley de Transacciones Comerciales Especificadas</h1>
+                    <p class="text-muted mb-4">Última actualización: 23 de febrero de 2026</p>
+                    
+                    <table class="table table-bordered">
+                        <tbody>
+                            <tr>
+                                <th class="bg-light" style="width: 30%;">Operador Comercial</th>
+                                <td>HOPE</td>
+                            </tr>
+                            <tr>
+                                <th class="bg-light">Representante</th>
+                                <td>Se revelará a solicitud</td>
+                            </tr>
+                            <tr>
+                                <th class="bg-light">Dirección</th>
+                                <td>Se revelará a solicitud<br><small class="text-muted">* Como se trata de un negocio desde el hogar, la dirección se revelará sin demora a solicitud.</small></td>
+                            </tr>
+                            <tr>
+                                <th class="bg-light">Teléfono</th>
+                                <td>Se revelará a solicitud<br><small class="text-muted">* Como se trata de un negocio desde el hogar, el número se revelará sin demora a solicitud.</small></td>
+                            </tr>
+                            <tr>
+                                <th class="bg-light">Correo Electrónico</th>
+                                <td>Disponible a través de la <a href="{% url 'contact' %}">Página de Contacto</a></td>
+                            </tr>
+                            <tr>
+                                <th class="bg-light">URL del Servicio</th>
+                                <td><a href="https://utamemo.com">https://utamemo.com</a></td>
+                            </tr>
+                            <tr>
+                                <th class="bg-light">Precios</th>
+                                <td>
+                                    <ul class="mb-0">
+                                        <li>Plan Gratuito: ¥0</li>
+                                        <li>Plan Starter: ¥780/mes (impuestos incluidos)</li>
+                                        <li>Plan Pro: ¥1.900/mes (impuestos incluidos)</li>
+                                        <li>Plan Escolar: ¥450/mes por estudiante (impuestos incluidos)</li>
+                                    </ul>
+                                </td>
+                            </tr>
+                            <tr>
+                                <th class="bg-light">Cargos Adicionales</th>
+                                <td>Los costos de conexión a internet y las tarifas de comunicación necesarias para usar el Servicio corren por cuenta del usuario.</td>
+                            </tr>
+                            <tr>
+                                <th class="bg-light">Método de Pago</th>
+                                <td>Pago con tarjeta de crédito (a través de Stripe)</td>
+                            </tr>
+                            <tr>
+                                <th class="bg-light">Momento del Pago</th>
+                                <td>Se cobra al momento de la suscripción. Renovación automática mensual.</td>
+                            </tr>
+                            <tr>
+                                <th class="bg-light">Entrega del Servicio</th>
+                                <td>Disponible inmediatamente después de completar el pago.</td>
+                            </tr>
+                            <tr>
+                                <th class="bg-light">Cancelación y Reembolso</th>
+                                <td>
+                                    <ul class="mb-0">
+                                        <li>Los usuarios pueden cancelar su suscripción en cualquier momento desde la página de configuración de cuenta.</li>
+                                        <li>Al cancelar, las funciones del plan pago permanecen disponibles hasta el final del período de facturación actual.</li>
+                                        <li>En principio, las tarifas ya pagadas no son reembolsables.</li>
+                                        <li>Sin embargo, si el Servicio no está disponible por un período prolongado por culpa del Operador, se podrá proporcionar un reembolso prorrateado o extensión del período de servicio a discreción del Operador.</li>
+                                    </ul>
+                                </td>
+                            </tr>
+                            <tr>
+                                <th class="bg-light">Entorno Operativo</th>
+                                <td>Se requiere un navegador web (se recomienda la última versión de Chrome, Safari, Firefox, Edge) con conexión a internet.</td>
+                            </tr>
+                        </tbody>
+                    </table>
+
+                    {% elif app_language == 'de' %}
+                    <h1 class="mb-4">Angaben gemäß dem Gesetz über spezifizierte kommerzielle Transaktionen</h1>
+                    <p class="text-muted mb-4">Letzte Aktualisierung: 23. Februar 2026</p>
+                    
+                    <table class="table table-bordered">
+                        <tbody>
+                            <tr>
+                                <th class="bg-light" style="width: 30%;">Geschäftsbetreiber</th>
+                                <td>HOPE</td>
+                            </tr>
+                            <tr>
+                                <th class="bg-light">Vertreter</th>
+                                <td>Wird auf Anfrage offengelegt</td>
+                            </tr>
+                            <tr>
+                                <th class="bg-light">Adresse</th>
+                                <td>Wird auf Anfrage offengelegt<br><small class="text-muted">* Da es sich um ein Heimgeschäft handelt, wird die Adresse auf Anfrage unverzüglich offengelegt.</small></td>
+                            </tr>
+                            <tr>
+                                <th class="bg-light">Telefonnummer</th>
+                                <td>Wird auf Anfrage offengelegt<br><small class="text-muted">* Da es sich um ein Heimgeschäft handelt, wird die Nummer auf Anfrage unverzüglich offengelegt.</small></td>
+                            </tr>
+                            <tr>
+                                <th class="bg-light">E-Mail</th>
+                                <td>Verfügbar über die <a href="{% url 'contact' %}">Kontaktseite</a></td>
+                            </tr>
+                            <tr>
+                                <th class="bg-light">Service-URL</th>
+                                <td><a href="https://utamemo.com">https://utamemo.com</a></td>
+                            </tr>
+                            <tr>
+                                <th class="bg-light">Preise</th>
+                                <td>
+                                    <ul class="mb-0">
+                                        <li>Kostenloser Plan: ¥0</li>
+                                        <li>Starter-Plan: ¥780/Monat (inkl. MwSt.)</li>
+                                        <li>Pro-Plan: ¥1.900/Monat (inkl. MwSt.)</li>
+                                        <li>Schulplan: ¥450/Monat pro Schüler (inkl. MwSt.)</li>
+                                    </ul>
+                                </td>
+                            </tr>
+                            <tr>
+                                <th class="bg-light">Zusätzliche Gebühren</th>
+                                <td>Die für die Nutzung des Dienstes erforderlichen Internetverbindungskosten und Kommunikationsgebühren trägt der Nutzer.</td>
+                            </tr>
+                            <tr>
+                                <th class="bg-light">Zahlungsmethode</th>
+                                <td>Kreditkartenzahlung (über Stripe)</td>
+                            </tr>
+                            <tr>
+                                <th class="bg-light">Zahlungszeitpunkt</th>
+                                <td>Belastung zum Zeitpunkt des Abonnements. Automatische monatliche Verlängerung.</td>
+                            </tr>
+                            <tr>
+                                <th class="bg-light">Servicebereitstellung</th>
+                                <td>Sofort nach Abschluss der Zahlung verfügbar.</td>
+                            </tr>
+                            <tr>
+                                <th class="bg-light">Kündigung &amp; Erstattung</th>
+                                <td>
+                                    <ul class="mb-0">
+                                        <li>Nutzer können ihr Abonnement jederzeit über die Kontoeinstellungen kündigen.</li>
+                                        <li>Bei Kündigung bleiben die Funktionen des kostenpflichtigen Plans bis zum Ende des aktuellen Abrechnungszeitraums verfügbar.</li>
+                                        <li>Bereits gezahlte Gebühren werden grundsätzlich nicht erstattet.</li>
+                                        <li>Wenn der Dienst jedoch aufgrund eines Verschuldens des Betreibers über einen längeren Zeitraum nicht verfügbar ist, kann nach Ermessen des Betreibers eine anteilige Erstattung oder Verlängerung des Servicezeitraums gewährt werden.</li>
+                                    </ul>
+                                </td>
+                            </tr>
+                            <tr>
+                                <th class="bg-light">Betriebsumgebung</th>
+                                <td>Ein Webbrowser (Chrome, Safari, Firefox, Edge neueste Version empfohlen) mit Internetverbindung ist erforderlich.</td>
+                            </tr>
+                        </tbody>
+                    </table>
+
+                    {% elif app_language == 'pt' %}
+                    <h1 class="mb-4">Notação Baseada na Lei de Transações Comerciais Especificadas</h1>
+                    <p class="text-muted mb-4">Última atualização: 23 de fevereiro de 2026</p>
+                    
+                    <table class="table table-bordered">
+                        <tbody>
+                            <tr>
+                                <th class="bg-light" style="width: 30%;">Operador Comercial</th>
+                                <td>HOPE</td>
+                            </tr>
+                            <tr>
+                                <th class="bg-light">Representante</th>
+                                <td>Divulgado mediante solicitação</td>
+                            </tr>
+                            <tr>
+                                <th class="bg-light">Endereço</th>
+                                <td>Divulgado mediante solicitação<br><small class="text-muted">* Como se trata de um negócio domiciliar, o endereço será divulgado sem demora mediante solicitação.</small></td>
+                            </tr>
+                            <tr>
+                                <th class="bg-light">Telefone</th>
+                                <td>Divulgado mediante solicitação<br><small class="text-muted">* Como se trata de um negócio domiciliar, o número será divulgado sem demora mediante solicitação.</small></td>
+                            </tr>
+                            <tr>
+                                <th class="bg-light">E-mail</th>
+                                <td>Disponível através da <a href="{% url 'contact' %}">Página de Contato</a></td>
+                            </tr>
+                            <tr>
+                                <th class="bg-light">URL do Serviço</th>
+                                <td><a href="https://utamemo.com">https://utamemo.com</a></td>
+                            </tr>
+                            <tr>
+                                <th class="bg-light">Preços</th>
+                                <td>
+                                    <ul class="mb-0">
+                                        <li>Plano Gratuito: ¥0</li>
+                                        <li>Plano Starter: ¥780/mês (impostos inclusos)</li>
+                                        <li>Plano Pro: ¥1.900/mês (impostos inclusos)</li>
+                                        <li>Plano Escolar: ¥450/mês por aluno (impostos inclusos)</li>
+                                    </ul>
+                                </td>
+                            </tr>
+                            <tr>
+                                <th class="bg-light">Taxas Adicionais</th>
+                                <td>Os custos de conexão à internet e as taxas de comunicação necessárias para usar o Serviço são de responsabilidade do usuário.</td>
+                            </tr>
+                            <tr>
+                                <th class="bg-light">Método de Pagamento</th>
+                                <td>Pagamento com cartão de crédito (via Stripe)</td>
+                            </tr>
+                            <tr>
+                                <th class="bg-light">Momento do Pagamento</th>
+                                <td>Cobrado no momento da assinatura. Renovação automática mensal.</td>
+                            </tr>
+                            <tr>
+                                <th class="bg-light">Entrega do Serviço</th>
+                                <td>Disponível imediatamente após a conclusão do pagamento.</td>
+                            </tr>
+                            <tr>
+                                <th class="bg-light">Cancelamento e Reembolso</th>
+                                <td>
+                                    <ul class="mb-0">
+                                        <li>Os usuários podem cancelar sua assinatura a qualquer momento na página de configurações da conta.</li>
+                                        <li>Ao cancelar, os recursos do plano pago permanecem disponíveis até o final do período de faturamento atual.</li>
+                                        <li>Em princípio, as taxas já pagas não são reembolsáveis.</li>
+                                        <li>No entanto, se o Serviço estiver indisponível por um período prolongado por culpa do Operador, um reembolso proporcional ou extensão do período de serviço poderá ser fornecido a critério do Operador.</li>
+                                    </ul>
+                                </td>
+                            </tr>
+                            <tr>
+                                <th class="bg-light">Ambiente Operacional</th>
+                                <td>É necessário um navegador web (Chrome, Safari, Firefox, Edge versão mais recente recomendada) com conexão à internet.</td>
+                            </tr>
+                        </tbody>
+                    </table>
+
+                    {% elif app_language == 'zh' %}
+                    <h1 class="mb-4">基于特定商业交易法的标注</h1>
+                    <p class="text-muted mb-4">最后更新：2026年2月23日</p>
+                    
+                    <table class="table table-bordered">
+                        <tbody>
+                            <tr>
+                                <th class="bg-light" style="width: 30%;">经营者</th>
+                                <td>HOPE</td>
+                            </tr>
+                            <tr>
+                                <th class="bg-light">代表者</th>
+                                <td>应要求公开</td>
+                            </tr>
+                            <tr>
+                                <th class="bg-light">地址</th>
+                                <td>应要求公开<br><small class="text-muted">* 由于是居家经营，地址将在收到请求后立即公开。</small></td>
+                            </tr>
+                            <tr>
+                                <th class="bg-light">电话号码</th>
+                                <td>应要求公开<br><small class="text-muted">* 由于是居家经营，电话号码将在收到请求后立即公开。</small></td>
+                            </tr>
+                            <tr>
+                                <th class="bg-light">电子邮件</th>
+                                <td>可通过<a href="{% url 'contact' %}">联系页面</a>获取</td>
+                            </tr>
+                            <tr>
+                                <th class="bg-light">服务URL</th>
+                                <td><a href="https://utamemo.com">https://utamemo.com</a></td>
+                            </tr>
+                            <tr>
+                                <th class="bg-light">价格</th>
+                                <td>
+                                    <ul class="mb-0">
+                                        <li>免费计划：¥0</li>
+                                        <li>入门计划：¥780/月（含税）</li>
+                                        <li>专业计划：¥1,900/月（含税）</li>
+                                        <li>学校计划：¥450/月/学生（含税）</li>
+                                    </ul>
+                                </td>
+                            </tr>
+                            <tr>
+                                <th class="bg-light">额外费用</th>
+                                <td>使用本服务所需的互联网连接费和通信费由用户承担。</td>
+                            </tr>
+                            <tr>
+                                <th class="bg-light">支付方式</th>
+                                <td>信用卡支付（通过Stripe）</td>
+                            </tr>
+                            <tr>
+                                <th class="bg-light">支付时间</th>
+                                <td>订阅时收费。此后每月自动续订。</td>
+                            </tr>
+                            <tr>
+                                <th class="bg-light">服务提供</th>
+                                <td>付款完成后立即可用。</td>
+                            </tr>
+                            <tr>
+                                <th class="bg-light">取消和退款政策</th>
+                                <td>
+                                    <ul class="mb-0">
+                                        <li>用户可随时从账户设置页面取消订阅。</li>
+                                        <li>取消后，付费计划功能在当前计费周期结束前仍然可用。</li>
+                                        <li>原则上，已支付的费用不予退还。</li>
+                                        <li>但是，如果因运营方的原因导致服务长期无法使用，运营方可酌情提供按比例退款或延长服务期限。</li>
+                                    </ul>
+                                </td>
+                            </tr>
+                            <tr>
+                                <th class="bg-light">运行环境</th>
+                                <td>需要具有互联网连接的网络浏览器（推荐Chrome、Safari、Firefox、Edge最新版本）。</td>
+                            </tr>
+                        </tbody>
+                    </table>
+
+                    {% else %}
+                    <h1 class="mb-4">特定商取引法に基づく表記</h1>
+                    <p class="text-muted mb-4">最終更新日：2026年2月23日</p>
+                    
+                    <table class="table table-bordered">
+                        <tbody>
+                            <tr>
+                                <th class="bg-light" style="width: 30%;">事業者名</th>
+                                <td>HOPE</td>
+                            </tr>
+                            <tr>
+                                <th class="bg-light">代表者</th>
+                                <td>請求があった場合に遅滞なく開示いたします</td>
+                            </tr>
+                            <tr>
+                                <th class="bg-light">所在地</th>
+                                <td>請求があった場合に遅滞なく開示いたします<br><small class="text-muted">※個人事業のため、住所は請求があった際に遅滞なく開示いたします。</small></td>
+                            </tr>
+                            <tr>
+                                <th class="bg-light">電話番号</th>
+                                <td>請求があった場合に遅滞なく開示いたします<br><small class="text-muted">※個人事業のため、電話番号は請求があった際に遅滞なく開示いたします。</small></td>
+                            </tr>
+                            <tr>
+                                <th class="bg-light">メールアドレス</th>
+                                <td><a href="{% url 'contact' %}">お問い合わせページ</a>よりご連絡ください</td>
+                            </tr>
+                            <tr>
+                                <th class="bg-light">サービスURL</th>
+                                <td><a href="https://utamemo.com">https://utamemo.com</a></td>
+                            </tr>
+                            <tr>
+                                <th class="bg-light">販売価格</th>
+                                <td>
+                                    <ul class="mb-0">
+                                        <li>フリープラン：0円</li>
+                                        <li>スタータープラン：月額780円（税込）</li>
+                                        <li>プロプラン：月額1,900円（税込）</li>
+                                        <li>スクールプラン：生徒1名あたり月額450円（税込）</li>
+                                    </ul>
+                                </td>
+                            </tr>
+                            <tr>
+                                <th class="bg-light">販売価格以外の必要料金</th>
+                                <td>本サービスの利用に必要なインターネット接続料金および通信料金はユーザーの負担となります。</td>
+                            </tr>
+                            <tr>
+                                <th class="bg-light">支払方法</th>
+                                <td>クレジットカード決済（Stripe経由）</td>
+                            </tr>
+                            <tr>
+                                <th class="bg-light">支払時期</th>
+                                <td>サブスクリプション契約時に課金されます。以降、毎月自動更新されます。</td>
+                            </tr>
+                            <tr>
+                                <th class="bg-light">サービスの提供時期</th>
+                                <td>お支払い完了後、直ちにご利用いただけます。</td>
+                            </tr>
+                            <tr>
+                                <th class="bg-light">解約・返金ポリシー</th>
+                                <td>
+                                    <ul class="mb-0">
+                                        <li>ユーザーは、アカウント設定ページからいつでもサブスクリプションを解約できます。</li>
+                                        <li>解約した場合、現在の課金期間の終了時まで有料プランの機能をご利用いただけます。</li>
+                                        <li>お支払い済みの料金は、原則として返金いたしません。</li>
+                                        <li>ただし、運営者の責に帰すべき事由により長期間サービスが利用できなかった場合は、運営者の判断により日割りでの返金またはサービス期間の延長を行うことがあります。</li>
+                                    </ul>
+                                </td>
+                            </tr>
+                            <tr>
+                                <th class="bg-light">動作環境</th>
+                                <td>インターネット接続環境と、Webブラウザ（Chrome、Safari、Firefox、Edge 最新版推奨）が必要です。</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                    {% endif %}
+                    
+                    <div class="mt-5 pt-4 border-top">
+                        <a href="{% url 'songs:home' %}" class="btn btn-outline-primary">
+                            <i class="bi bi-arrow-left me-2"></i>
+                            {% if app_language == 'en' %}Back to Home{% elif app_language == 'es' %}Volver al Inicio{% elif app_language == 'de' %}Zurück zur Startseite{% elif app_language == 'pt' %}Voltar ao Início{% elif app_language == 'zh' %}返回首页{% else %}ホームに戻る{% endif %}
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
