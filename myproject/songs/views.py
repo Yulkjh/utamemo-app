@@ -2168,8 +2168,8 @@ def generate_lrc_view(request, pk):
     # durationを秒に変換
     duration_seconds = song.duration.total_seconds()
     
-    # Gemini AIでLRC生成
-    lrc_data = generate_lrc_timestamps(song.lyrics.content, duration_seconds)
+    # Gemini AIでLRC生成（Mureka分析情報も活用）
+    lrc_data = generate_lrc_timestamps(song.lyrics.content, duration_seconds, audio_url=song.audio_url)
     
     if lrc_data:
         # DBに保存

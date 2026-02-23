@@ -180,13 +180,15 @@ def detect_lyrics_language(lyrics):
     return 'other'
 
 
-def generate_lrc_timestamps(lyrics_text, duration_seconds):
+def generate_lrc_timestamps(lyrics_text, duration_seconds, audio_url=None):
     """
     Gemini AIを使って歌詞にタイムスタンプを推定し、LRC形式で返す
+    audio_urlがある場合、Mureka describe APIで楽曲分析情報を取得し、精度を向上させる
     
     Args:
         lyrics_text: 歌詞テキスト
         duration_seconds: 曲の長さ（秒）
+        audio_url: 音声ファイルのURL（Mureka分析用、省略可）
     
     Returns:
         str: LRC形式のタイムスタンプ付き歌詞、失敗時はNone
@@ -232,6 +234,38 @@ def generate_lrc_timestamps(lyrics_text, duration_seconds):
     
     num_sections = len(section_breaks) + 1
     
+    # Mureka describe APIで楽曲分析情報を取得（精度向上）
+    music_analysis = ""
+    if audio_url:
+        try:
+            mureka = MurekaAIGenerator()
+            describe_result = mureka.describe_song(audio_url)
+            if describe_result and describe_result.get('status') == 200:
+                data = describe_result['data']
+                instruments = ', '.join(data.get('instrument', []))
+                genres = ', '.join(data.get('genres', []))
+                tags = ', '.join(data.get('tags', []))
+                description = data.get('description', '')
+                
+                music_analysis = f"""
+【Music Analysis (from audio analysis)】
+- Instruments: {instruments}
+- Genres: {genres}
+- Style tags: {tags}
+- Description: {description}
+
+Use this analysis to improve timing accuracy:
+- The description mentions when instruments/vocals enter and the song structure
+- If the description mentions "intro" or "beginning", use that to estimate vocal start time
+- If it describes "chorus" with layered vocals, those sections may be denser/faster
+- Match the energy flow described to the pacing of lyrics
+"""
+                logger.info(f"[LRC] Mureka analysis added to prompt ({len(description)} chars)")
+            else:
+                logger.info("[LRC] Mureka describe returned no usable data")
+        except Exception as e:
+            logger.warning(f"[LRC] Mureka describe failed (non-critical): {e}")
+    
     prompt = f"""You are a professional music timing analyst. Your task is to estimate when each lyric line is sung in a song.
 
 【Song Info】
@@ -239,7 +273,7 @@ def generate_lrc_timestamps(lyrics_text, duration_seconds):
 - Number of lyric lines: {len(lyric_lines)}
 - Estimated sections: {num_sections} (with {len(section_breaks)} breaks between sections)
 - Average time per line: {total_seconds / len(lyric_lines):.1f} seconds (including interludes)
-
+{music_analysis}
 【Lyrics to timestamp】
 {lyrics_text}
 
