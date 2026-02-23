@@ -84,7 +84,7 @@
                     
                     {% elif app_language == 'es' %}
                     <h1 class="mb-4">Política de Privacidad</h1>
-                    <p class="text-muted mb-4">Última actualización: 19 de enero de 2026</p>
+                    <p class="text-muted mb-4">Última actualización: 23 de febrero de 2026</p>
                     
                     <h2 class="h5 mt-4">1. Información que Recopilamos</h2>
                     <p>Recopilamos la siguiente información:</p>
@@ -94,111 +94,157 @@
                         <li><strong>Datos de Uso:</strong> Registros de acceso, información del dispositivo</li>
                     </ul>
                     
-                    <h2 class="h5 mt-4">2. Cómo Usamos Su Información</h2>
-                    <p>Usamos su información para:</p>
+                    <h2 class="h5 mt-4">2. Base Legal del Tratamiento (RGPD/LOPDGDD)</h2>
+                    <p>El tratamiento de sus datos personales se basa en:</p>
                     <ul>
-                        <li>Proporcionar y mejorar el Servicio</li>
-                        <li>Procesar sus solicitudes de generación de canciones</li>
-                        <li>Comunicarnos con usted sobre el Servicio</li>
-                        <li>Garantizar la seguridad y prevenir el fraude</li>
+                        <li><strong>Consentimiento (Art. 6.1.a RGPD):</strong> Al registrarse y usar el Servicio</li>
+                        <li><strong>Ejecución de un contrato (Art. 6.1.b RGPD):</strong> Para la prestación del Servicio</li>
+                        <li><strong>Interés legítimo (Art. 6.1.f RGPD):</strong> Para la seguridad y mejora del Servicio</li>
                     </ul>
+                    <p>Conforme al Reglamento General de Protección de Datos (RGPD) y la Ley Orgánica 3/2018 de Protección de Datos Personales y garantía de los derechos digitales (LOPDGDD) de España.</p>
                     
-                    <h2 class="h5 mt-4">3. Compartir Información</h2>
-                    <p>No vendemos su información personal. Podemos compartir información con:</p>
+                    <h2 class="h5 mt-4">3. Compartir Información (Proveedores Terceros)</h2>
+                    <p>No vendemos su información personal. Compartimos datos con los siguientes proveedores terceros:</p>
                     <ul>
-                        <li><strong>Proveedores de Servicios de IA:</strong> Para generar canciones</li>
-                        <li><strong>Procesadores de Pago:</strong> Para suscripciones de planes de pago</li>
+                        <li><strong>Mureka (SKYWORK AI PTE. LTD., Singapur):</strong> Se envían textos de letras y parámetros de generación para crear música. Los datos se transfieren fuera del EEE. Se aplica la Política de Privacidad de Mureka.</li>
+                        <li><strong>Google Gemini AI (Google LLC, EE.UU.):</strong> Se envían contenidos de texto/imagen subidos para la generación de letras. Los datos se transfieren fuera del EEE bajo las Cláusulas Contractuales Tipo de la UE. Se aplica la Política de Privacidad de Google.</li>
+                        <li><strong>Stripe, Inc. (EE.UU.):</strong> Se procesan los datos de pago para suscripciones. No almacenamos números de tarjetas de crédito en nuestros servidores. Se aplica la Política de Privacidad de Stripe.</li>
                         <li><strong>Requisitos Legales:</strong> Cuando lo exija la ley</li>
                     </ul>
                     
-                    <h2 class="h5 mt-4">4. Seguridad de Datos</h2>
+                    <h2 class="h5 mt-4">4. Transferencias Internacionales de Datos</h2>
+                    <p>Sus datos pueden ser transferidos a países fuera del Espacio Económico Europeo (EEE), incluyendo EE.UU. y Singapur. Estas transferencias se realizan con garantías adecuadas conforme al RGPD, incluyendo Cláusulas Contractuales Tipo aprobadas por la Comisión Europea.</p>
+                    
+                    <h2 class="h5 mt-4">5. Seguridad de Datos</h2>
                     <p>Implementamos medidas de seguridad que incluyen:</p>
                     <ul>
                         <li>Encriptación HTTPS para todas las comunicaciones</li>
                         <li>Almacenamiento seguro de datos</li>
+                        <li>Claves API gestionadas mediante variables de entorno</li>
                     </ul>
                     
-                    <h2 class="h5 mt-4">5. Sus Derechos</h2>
-                    <p>Usted tiene derecho a:</p>
+                    <h2 class="h5 mt-4">6. Sus Derechos (RGPD)</h2>
+                    <p>Conforme al RGPD y la LOPDGDD, usted tiene derecho a:</p>
                     <ul>
                         <li>Acceder a sus datos personales</li>
-                        <li>Eliminar su cuenta y datos</li>
-                        <li>Exportar sus datos</li>
+                        <li>Rectificar datos inexactos</li>
+                        <li>Suprimir sus datos ("derecho al olvido")</li>
+                        <li>Limitar el tratamiento de sus datos</li>
+                        <li>Portabilidad de datos</li>
+                        <li>Oponerse al tratamiento</li>
+                        <li>Retirar el consentimiento en cualquier momento</li>
+                    </ul>
+                    <p>Para ejercer estos derechos, contacte con nosotros a través de la <a href="{% url 'contact' %}">Página de Contacto</a>.</p>
+                    <p>También tiene derecho a presentar una reclamación ante la Agencia Española de Protección de Datos (AEPD) en <a href="https://www.aepd.es" target="_blank" rel="noopener noreferrer">www.aepd.es</a>.</p>
+                    
+                    <h2 class="h5 mt-4">7. Protección de Menores</h2>
+                    <p>El Servicio está destinado a fines educativos para usuarios de todas las edades.</p>
+                    <ul>
+                        <li>Conforme a la LOPDGDD, los menores de 14 años necesitan el consentimiento de sus padres o tutores legales para utilizar el Servicio.</li>
+                        <li>No recopilamos intencionadamente datos personales de menores de 14 años sin el consentimiento parental.</li>
+                        <li>Si detectamos que hemos recopilado datos de un menor sin consentimiento parental, tomaremos medidas para eliminar dicha información.</li>
                     </ul>
                     
-                    <h2 class="h5 mt-4">6. Cookies</h2>
+                    <h2 class="h5 mt-4">8. Cookies</h2>
                     <p>Usamos cookies para:</p>
                     <ul>
                         <li>Gestión de sesiones (mantenerlo conectado)</li>
                         <li>Preferencias de idioma</li>
                     </ul>
+                    <p>Estas son cookies esenciales necesarias para el funcionamiento del Servicio. No utilizamos cookies de seguimiento ni publicitarias.</p>
                     
-                    <h2 class="h5 mt-4">7. Cambios a Esta Política</h2>
+                    <h2 class="h5 mt-4">9. Retención de Datos</h2>
+                    <p>Conservamos sus datos durante la existencia de su cuenta. Tras la eliminación de la cuenta, sus datos personales se eliminarán en un plazo de 30 días. Las canciones generadas pueden conservarse de forma anonimizada.</p>
+                    
+                    <h2 class="h5 mt-4">10. Cambios a Esta Política</h2>
                     <p>Podemos actualizar esta Política de Privacidad. Le notificaremos de cambios significativos publicando un aviso en el Servicio.</p>
                     
-                    <h2 class="h5 mt-4">8. Contáctenos</h2>
+                    <h2 class="h5 mt-4">11. Contáctenos</h2>
                     <p>Para preguntas relacionadas con la privacidad, contáctenos a través de nuestra <a href="{% url 'contact' %}">Página de Contacto</a>.</p>
                     
                     {% elif app_language == 'de' %}
-                    <h1 class="mb-4">Datenschutzrichtlinie</h1>
-                    <p class="text-muted mb-4">Zuletzt aktualisiert: 19. Januar 2026</p>
+                    <h1 class="mb-4">Datenschutzerklärung</h1>
+                    <p class="text-muted mb-4">Zuletzt aktualisiert: 23. Februar 2026</p>
                     
-                    <h2 class="h5 mt-4">1. Informationen, die wir sammeln</h2>
-                    <p>Wir sammeln folgende Informationen:</p>
+                    <h2 class="h5 mt-4">1. Informationen, die wir erheben</h2>
+                    <p>Wir erheben folgende Informationen:</p>
                     <ul>
                         <li><strong>Kontoinformationen:</strong> Benutzername, E-Mail-Adresse (optional)</li>
                         <li><strong>Inhalte:</strong> Liedtexte, die Sie eingeben, Lieder, die Sie erstellen</li>
                         <li><strong>Nutzungsdaten:</strong> Zugriffsprotokolle, Geräteinformationen</li>
                     </ul>
                     
-                    <h2 class="h5 mt-4">2. Wie wir Ihre Informationen verwenden</h2>
-                    <p>Wir verwenden Ihre Informationen um:</p>
+                    <h2 class="h5 mt-4">2. Rechtsgrundlage der Verarbeitung (DSGVO/BDSG)</h2>
+                    <p>Die Verarbeitung Ihrer personenbezogenen Daten erfolgt auf folgenden Rechtsgrundlagen:</p>
                     <ul>
-                        <li>Den Service bereitzustellen und zu verbessern</li>
-                        <li>Ihre Anfragen zur Liederstellung zu bearbeiten</li>
-                        <li>Mit Ihnen über den Service zu kommunizieren</li>
-                        <li>Sicherheit zu gewährleisten und Betrug zu verhindern</li>
+                        <li><strong>Einwilligung (Art. 6 Abs. 1 lit. a DSGVO):</strong> Bei Registrierung und Nutzung des Dienstes</li>
+                        <li><strong>Vertragserfüllung (Art. 6 Abs. 1 lit. b DSGVO):</strong> Zur Erbringung des Dienstes</li>
+                        <li><strong>Berechtigtes Interesse (Art. 6 Abs. 1 lit. f DSGVO):</strong> Für Sicherheit und Verbesserung des Dienstes</li>
+                    </ul>
+                    <p>Gemäß der Datenschutz-Grundverordnung (DSGVO), dem Bundesdatenschutzgesetz (BDSG) und dem Telekommunikation-Telemedien-Datenschutz-Gesetz (TTDSG).</p>
+                    
+                    <h2 class="h5 mt-4">3. Weitergabe von Daten (Drittanbieter)</h2>
+                    <p>Wir verkaufen Ihre persönlichen Daten nicht. Wir geben Daten an folgende Drittanbieter weiter:</p>
+                    <ul>
+                        <li><strong>Mureka (SKYWORK AI PTE. LTD., Singapur):</strong> Liedtexte und Generierungsparameter werden zur Musikerzeugung übermittelt. Daten werden außerhalb des EWR verarbeitet. Es gilt die Datenschutzrichtlinie von Mureka.</li>
+                        <li><strong>Google Gemini AI (Google LLC, USA):</strong> Hochgeladene Text-/Bildinhalte werden zur Liedtextgenerierung übermittelt. Die Datenübermittlung erfolgt auf Grundlage der EU-Standardvertragsklauseln. Es gilt die Datenschutzrichtlinie von Google.</li>
+                        <li><strong>Stripe, Inc. (USA):</strong> Zahlungsdaten werden für Abonnements verarbeitet. Kreditkartennummern werden nicht auf unseren Servern gespeichert. Es gilt die Datenschutzrichtlinie von Stripe.</li>
+                        <li><strong>Gesetzliche Anforderungen:</strong> Wenn gesetzlich vorgeschrieben</li>
                     </ul>
                     
-                    <h2 class="h5 mt-4">3. Weitergabe von Informationen</h2>
-                    <p>Wir verkaufen Ihre persönlichen Daten nicht. Wir können Informationen teilen mit:</p>
-                    <ul>
-                        <li><strong>KI-Dienstleistern:</strong> Zur Generierung von Liedern</li>
-                        <li><strong>Zahlungsabwicklern:</strong> Für kostenpflichtige Abonnements</li>
-                        <li><strong>Rechtliche Anforderungen:</strong> Wenn gesetzlich vorgeschrieben</li>
-                    </ul>
+                    <h2 class="h5 mt-4">4. Internationale Datenübermittlung</h2>
+                    <p>Ihre Daten können in Länder außerhalb des Europäischen Wirtschaftsraums (EWR) übermittelt werden, darunter die USA und Singapur. Diese Übermittlungen erfolgen mit angemessenen Garantien gemäß der DSGVO, einschließlich der von der Europäischen Kommission genehmigten Standardvertragsklauseln.</p>
                     
-                    <h2 class="h5 mt-4">4. Datensicherheit</h2>
-                    <p>Wir implementieren Sicherheitsmaßnahmen einschließlich:</p>
+                    <h2 class="h5 mt-4">5. Datensicherheit</h2>
+                    <p>Wir implementieren folgende Sicherheitsmaßnahmen:</p>
                     <ul>
                         <li>HTTPS-Verschlüsselung für alle Kommunikationen</li>
                         <li>Sichere Datenspeicherung</li>
+                        <li>API-Schlüssel werden über Umgebungsvariablen verwaltet</li>
                     </ul>
                     
-                    <h2 class="h5 mt-4">5. Ihre Rechte</h2>
-                    <p>Sie haben das Recht auf:</p>
+                    <h2 class="h5 mt-4">6. Ihre Rechte (DSGVO)</h2>
+                    <p>Gemäß DSGVO und BDSG haben Sie folgende Rechte:</p>
                     <ul>
-                        <li>Zugang zu Ihren persönlichen Daten</li>
-                        <li>Löschung Ihres Kontos und Ihrer Daten</li>
-                        <li>Export Ihrer Daten</li>
+                        <li>Recht auf Auskunft (Art. 15 DSGVO)</li>
+                        <li>Recht auf Berichtigung (Art. 16 DSGVO)</li>
+                        <li>Recht auf Löschung / "Recht auf Vergessenwerden" (Art. 17 DSGVO)</li>
+                        <li>Recht auf Einschränkung der Verarbeitung (Art. 18 DSGVO)</li>
+                        <li>Recht auf Datenübertragbarkeit (Art. 20 DSGVO)</li>
+                        <li>Widerspruchsrecht (Art. 21 DSGVO)</li>
+                        <li>Recht auf Widerruf der Einwilligung jederzeit</li>
+                    </ul>
+                    <p>Zur Ausübung Ihrer Rechte kontaktieren Sie uns bitte über die <a href="{% url 'contact' %}">Kontaktseite</a>.</p>
+                    <p>Sie haben außerdem das Recht, eine Beschwerde bei der zuständigen Datenschutzaufsichtsbehörde einzureichen. In Deutschland ist dies der Bundesbeauftragte für den Datenschutz und die Informationsfreiheit (BfDI) oder die Datenschutzbehörde Ihres Bundeslandes.</p>
+                    
+                    <h2 class="h5 mt-4">7. Schutz von Minderjährigen</h2>
+                    <p>Der Dienst ist für Bildungszwecke für Nutzer aller Altersgruppen bestimmt.</p>
+                    <ul>
+                        <li>Gemäß DSGVO Art. 8 und BDSG benötigen Personen unter 16 Jahren die Einwilligung ihrer Eltern oder Erziehungsberechtigten zur Nutzung des Dienstes.</li>
+                        <li>Wir erheben wissentlich keine personenbezogenen Daten von Kindern unter 16 Jahren ohne elterliche Einwilligung.</li>
+                        <li>Sollten wir feststellen, dass wir Daten eines Minderjährigen ohne elterliche Einwilligung erhoben haben, werden wir diese umgehend löschen.</li>
                     </ul>
                     
-                    <h2 class="h5 mt-4">6. Cookies</h2>
+                    <h2 class="h5 mt-4">8. Cookies</h2>
                     <p>Wir verwenden Cookies für:</p>
                     <ul>
                         <li>Sitzungsverwaltung (Sie angemeldet zu halten)</li>
                         <li>Spracheinstellungen</li>
                     </ul>
+                    <p>Dies sind technisch notwendige Cookies gemäß TTDSG § 25. Wir verwenden keine Tracking- oder Werbe-Cookies.</p>
                     
-                    <h2 class="h5 mt-4">7. Änderungen dieser Richtlinie</h2>
-                    <p>Wir können diese Datenschutzrichtlinie aktualisieren. Wir werden Sie über wesentliche Änderungen durch einen Hinweis auf dem Service informieren.</p>
+                    <h2 class="h5 mt-4">9. Datenspeicherungsdauer</h2>
+                    <p>Ihre Daten werden für die Dauer Ihres Kontos gespeichert. Nach Kontolöschung werden Ihre personenbezogenen Daten innerhalb von 30 Tagen gelöscht. Generierte Lieder können in anonymisierter Form aufbewahrt werden.</p>
                     
-                    <h2 class="h5 mt-4">8. Kontaktieren Sie uns</h2>
+                    <h2 class="h5 mt-4">10. Änderungen dieser Erklärung</h2>
+                    <p>Wir können diese Datenschutzerklärung aktualisieren. Über wesentliche Änderungen informieren wir Sie durch einen Hinweis auf dem Service.</p>
+                    
+                    <h2 class="h5 mt-4">11. Kontakt</h2>
                     <p>Bei datenschutzbezogenen Fragen kontaktieren Sie uns bitte über unsere <a href="{% url 'contact' %}">Kontaktseite</a>.</p>
                     
                     {% elif app_language == 'pt' %}
                     <h1 class="mb-4">Política de Privacidade</h1>
-                    <p class="text-muted mb-4">Última atualização: 19 de janeiro de 2026</p>
+                    <p class="text-muted mb-4">Última atualização: 23 de fevereiro de 2026</p>
                     
                     <h2 class="h5 mt-4">1. Informações que Coletamos</h2>
                     <p>Coletamos as seguintes informações:</p>
@@ -208,54 +254,77 @@
                         <li><strong>Dados de Uso:</strong> Logs de acesso, informações do dispositivo</li>
                     </ul>
                     
-                    <h2 class="h5 mt-4">2. Como Usamos Suas Informações</h2>
-                    <p>Usamos suas informações para:</p>
+                    <h2 class="h5 mt-4">2. Base Legal do Tratamento (LGPD)</h2>
+                    <p>O tratamento dos seus dados pessoais é realizado com base nas seguintes hipóteses da Lei Geral de Proteção de Dados (LGPD - Lei nº 13.709/2018):</p>
                     <ul>
-                        <li>Fornecer e melhorar o Serviço</li>
-                        <li>Processar suas solicitações de geração de músicas</li>
-                        <li>Comunicar-nos com você sobre o Serviço</li>
-                        <li>Garantir a segurança e prevenir fraudes</li>
+                        <li><strong>Consentimento (Art. 7º, I):</strong> Ao se registrar e utilizar o Serviço</li>
+                        <li><strong>Execução de contrato (Art. 7º, V):</strong> Para a prestação do Serviço</li>
+                        <li><strong>Legítimo interesse (Art. 7º, IX):</strong> Para segurança e melhoria do Serviço</li>
                     </ul>
                     
-                    <h2 class="h5 mt-4">3. Compartilhamento de Informações</h2>
-                    <p>Não vendemos suas informações pessoais. Podemos compartilhar informações com:</p>
+                    <h2 class="h5 mt-4">3. Compartilhamento de Informações (Provedores Terceiros)</h2>
+                    <p>Não vendemos suas informações pessoais. Compartilhamos dados com os seguintes provedores terceiros:</p>
                     <ul>
-                        <li><strong>Provedores de Serviços de IA:</strong> Para gerar músicas</li>
-                        <li><strong>Processadores de Pagamento:</strong> Para assinaturas de planos pagos</li>
+                        <li><strong>Mureka (SKYWORK AI PTE. LTD., Singapura):</strong> Textos de letras e parâmetros de geração são enviados para criar música. Os dados são transferidos internacionalmente. Aplica-se a Política de Privacidade da Mureka.</li>
+                        <li><strong>Google Gemini AI (Google LLC, EUA):</strong> Conteúdos de texto/imagem carregados são enviados para geração de letras. A transferência internacional de dados segue as salvaguardas da LGPD. Aplica-se a Política de Privacidade do Google.</li>
+                        <li><strong>Stripe, Inc. (EUA):</strong> Dados de pagamento são processados para assinaturas. Não armazenamos números de cartão de crédito em nossos servidores. Aplica-se a Política de Privacidade da Stripe.</li>
                         <li><strong>Requisitos Legais:</strong> Quando exigido por lei</li>
                     </ul>
                     
-                    <h2 class="h5 mt-4">4. Segurança de Dados</h2>
+                    <h2 class="h5 mt-4">4. Transferência Internacional de Dados</h2>
+                    <p>Seus dados podem ser transferidos para países fora do Brasil, incluindo EUA e Singapura. Conforme o Art. 33 da LGPD, estas transferências são realizadas com garantias adequadas de proteção de dados, incluindo cláusulas contratuais que assegurem o cumprimento dos princípios da LGPD.</p>
+                    
+                    <h2 class="h5 mt-4">5. Segurança de Dados</h2>
                     <p>Implementamos medidas de segurança incluindo:</p>
                     <ul>
                         <li>Criptografia HTTPS para todas as comunicações</li>
                         <li>Armazenamento seguro de dados</li>
+                        <li>Chaves de API gerenciadas por variáveis de ambiente</li>
                     </ul>
                     
-                    <h2 class="h5 mt-4">5. Seus Direitos</h2>
-                    <p>Você tem o direito de:</p>
+                    <h2 class="h5 mt-4">6. Seus Direitos (LGPD)</h2>
+                    <p>Conforme a LGPD, você tem direito a:</p>
                     <ul>
-                        <li>Acessar seus dados pessoais</li>
-                        <li>Excluir sua conta e dados</li>
-                        <li>Exportar seus dados</li>
+                        <li>Confirmação da existência de tratamento de dados</li>
+                        <li>Acesso aos seus dados pessoais</li>
+                        <li>Correção de dados incompletos, inexatos ou desatualizados</li>
+                        <li>Anonimização, bloqueio ou eliminação de dados desnecessários</li>
+                        <li>Portabilidade dos dados</li>
+                        <li>Eliminação dos dados pessoais tratados com consentimento</li>
+                        <li>Informação sobre entidades com as quais compartilhamos dados</li>
+                        <li>Revogação do consentimento</li>
+                    </ul>
+                    <p>Para exercer seus direitos, entre em contato conosco através da <a href="{% url 'contact' %}">Página de Contato</a>.</p>
+                    <p>Você também pode apresentar reclamação à Autoridade Nacional de Proteção de Dados (ANPD).</p>
+                    
+                    <h2 class="h5 mt-4">7. Proteção de Menores</h2>
+                    <p>O Serviço é destinado a fins educacionais para usuários de todas as idades.</p>
+                    <ul>
+                        <li>Conforme o Art. 14 da LGPD, o tratamento de dados pessoais de crianças e adolescentes é realizado em seu melhor interesse.</li>
+                        <li>Para menores de 12 anos, é necessário o consentimento específico de pelo menos um dos pais ou responsável legal.</li>
+                        <li>Se detectarmos que coletamos dados de menores sem o consentimento adequado, tomaremos medidas para eliminar essas informações.</li>
                     </ul>
                     
-                    <h2 class="h5 mt-4">6. Cookies</h2>
+                    <h2 class="h5 mt-4">8. Cookies</h2>
                     <p>Usamos cookies para:</p>
                     <ul>
                         <li>Gerenciamento de sessão (manter você conectado)</li>
                         <li>Preferências de idioma</li>
                     </ul>
+                    <p>Estes são cookies essenciais necessários para o funcionamento do Serviço. Não utilizamos cookies de rastreamento ou publicitários.</p>
                     
-                    <h2 class="h5 mt-4">7. Alterações nesta Política</h2>
+                    <h2 class="h5 mt-4">9. Retenção de Dados</h2>
+                    <p>Mantemos seus dados durante a existência da sua conta. Após a exclusão da conta, seus dados pessoais serão removidos em até 30 dias. Músicas geradas podem ser mantidas de forma anonimizada.</p>
+                    
+                    <h2 class="h5 mt-4">10. Alterações nesta Política</h2>
                     <p>Podemos atualizar esta Política de Privacidade. Notificaremos você sobre alterações significativas publicando um aviso no Serviço.</p>
                     
-                    <h2 class="h5 mt-4">8. Contate-nos</h2>
+                    <h2 class="h5 mt-4">11. Contate-nos</h2>
                     <p>Para perguntas relacionadas à privacidade, entre em contato conosco através da nossa <a href="{% url 'contact' %}">Página de Contato</a>.</p>
                     
                     {% elif app_language == 'zh' %}
                     <h1 class="mb-4">隐私政策</h1>
-                    <p class="text-muted mb-4">最后更新：2026年1月19日</p>
+                    <p class="text-muted mb-4">最后更新：2026年2月23日</p>
                     
                     <h2 class="h5 mt-4">1. 我们收集的信息</h2>
                     <p>我们收集以下信息：</p>
@@ -265,49 +334,70 @@
                         <li><strong>使用数据：</strong>访问日志、设备信息</li>
                     </ul>
                     
-                    <h2 class="h5 mt-4">2. 我们如何使用您的信息</h2>
-                    <p>我们使用您的信息来：</p>
+                    <h2 class="h5 mt-4">2. 个人信息处理的法律依据（PIPL）</h2>
+                    <p>根据《中华人民共和国个人信息保护法》（PIPL），我们基于以下法律依据处理您的个人信息：</p>
                     <ul>
-                        <li>提供和改进服务</li>
-                        <li>处理您的歌曲生成请求</li>
-                        <li>就服务与您沟通</li>
-                        <li>确保安全并防止欺诈</li>
+                        <li><strong>同意：</strong>在您注册并使用本服务时获得您的同意</li>
+                        <li><strong>履行合同：</strong>为向您提供本服务所必需</li>
+                        <li><strong>合法利益：</strong>为确保服务的安全性和改进服务</li>
                     </ul>
                     
-                    <h2 class="h5 mt-4">3. 信息共享</h2>
-                    <p>我们不会出售您的个人信息。我们可能与以下方共享信息：</p>
+                    <h2 class="h5 mt-4">3. 信息共享（第三方服务提供商）</h2>
+                    <p>我们不会出售您的个人信息。我们与以下第三方服务提供商共享数据：</p>
                     <ul>
-                        <li><strong>AI服务提供商：</strong>用于生成歌曲</li>
-                        <li><strong>支付处理商：</strong>用于付费订阅</li>
+                        <li><strong>Mureka（SKYWORK AI PTE. LTD.，新加坡）：</strong>歌词文本和生成参数将被发送以创建音乐。数据涉及跨境传输。适用Mureka隐私政策。</li>
+                        <li><strong>Google Gemini AI（Google LLC，美国）：</strong>上传的文本/图片内容将被发送以生成歌词。跨境数据传输按照PIPL相关规定执行。适用Google隐私政策。</li>
+                        <li><strong>Stripe, Inc.（美国）：</strong>支付数据通过Stripe处理订阅。我们不在自己的服务器上存储信用卡号。适用Stripe隐私政策。</li>
                         <li><strong>法律要求：</strong>当法律要求时</li>
                     </ul>
                     
-                    <h2 class="h5 mt-4">4. 数据安全</h2>
+                    <h2 class="h5 mt-4">4. 跨境数据传输</h2>
+                    <p>您的个人信息可能会被传输至中国境外的国家，包括日本、美国和新加坡。根据PIPL第三十八条，我们通过以下方式确保跨境数据传输的合规性：与数据接收方签订标准合同、进行个人信息保护影响评估，并确保境外接收方的数据保护水平不低于PIPL的要求。</p>
+                    
+                    <h2 class="h5 mt-4">5. 数据安全</h2>
                     <p>我们实施的安全措施包括：</p>
                     <ul>
                         <li>所有通信的HTTPS加密</li>
                         <li>安全的数据存储</li>
+                        <li>通过环境变量管理API密钥</li>
                     </ul>
                     
-                    <h2 class="h5 mt-4">5. 您的权利</h2>
-                    <p>您有权：</p>
+                    <h2 class="h5 mt-4">6. 您的权利（PIPL）</h2>
+                    <p>根据PIPL，您有权：</p>
                     <ul>
-                        <li>访问您的个人数据</li>
-                        <li>删除您的账户和数据</li>
-                        <li>导出您的数据</li>
+                        <li>知悉和决定个人信息的处理</li>
+                        <li>查阅和复制您的个人信息</li>
+                        <li>要求更正和补充不准确或不完整的信息</li>
+                        <li>要求删除个人信息</li>
+                        <li>要求个人信息处理者解释处理规则</li>
+                        <li>撤回同意</li>
+                        <li>要求个人信息的可携带性</li>
+                    </ul>
+                    <p>如需行使上述权利，请通过<a href="{% url 'contact' %}">联系页面</a>与我们联系。</p>
+                    
+                    <h2 class="h5 mt-4">7. 未成年人保护</h2>
+                    <p>本服务面向教育目的，适用于所有年龄段的用户。</p>
+                    <ul>
+                        <li>根据PIPL第三十一条，处理不满十四周岁未成年人个人信息需取得其父母或其他监护人的同意。</li>
+                        <li>我们为未成年人的个人信息制定专门的处理规则。</li>
+                        <li>如发现未经适当同意而收集了未成年人信息，我们将采取措施删除相关信息。</li>
                     </ul>
                     
-                    <h2 class="h5 mt-4">6. Cookie</h2>
+                    <h2 class="h5 mt-4">8. Cookie</h2>
                     <p>我们使用Cookie用于：</p>
                     <ul>
                         <li>会话管理（保持您的登录状态）</li>
                         <li>语言偏好设置</li>
                     </ul>
+                    <p>以上为服务运行所必需的Cookie。我们不使用跟踪或广告Cookie。</p>
                     
-                    <h2 class="h5 mt-4">7. 政策变更</h2>
+                    <h2 class="h5 mt-4">9. 数据保留</h2>
+                    <p>我们在您的账户存续期间保留您的数据。账户删除后，您的个人数据将在30天内移除。生成的歌曲可能以匿名化形式保留。</p>
+                    
+                    <h2 class="h5 mt-4">10. 政策变更</h2>
                     <p>我们可能会更新此隐私政策。如有重大变更，我们将在服务上发布通知。</p>
                     
-                    <h2 class="h5 mt-4">8. 联系我们</h2>
+                    <h2 class="h5 mt-4">11. 联系我们</h2>
                     <p>如有隐私相关问题，请通过我们的<a href="{% url 'contact' %}">联系页面</a>与我们联系。</p>
                     
                     {% else %}
