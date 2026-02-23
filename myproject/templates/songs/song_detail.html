@@ -330,12 +330,13 @@
                 {% if user.is_authenticated and user.is_starter %}
                 <div class="karaoke-container" id="karaoke-container" style="display: none;">
                     <div class="karaoke-timing-controls" id="karaoke-timing-controls">
-                        <button onclick="adjustKaraokeOffset(-0.5)" title="-0.5s">◀ 0.5s</button>
+                        <button onclick="adjustKaraokeOffset(-0.5)" title="-0.5s">◀ 0.5</button>
                         <button onclick="adjustKaraokeOffset(-0.2)" title="-0.2s">◀</button>
                         <span class="timing-label" id="karaoke-offset-label">±0.0s</span>
                         <button onclick="adjustKaraokeOffset(0.2)" title="+0.2s">▶</button>
-                        <button onclick="adjustKaraokeOffset(0.5)" title="+0.5s">0.5s ▶</button>
-                        <button onclick="resetKaraokeOffset()" title="{% if is_english %}Reset{% elif is_chinese %}重置{% else %}リセット{% endif %}" style="margin-left: 0.3rem;">↺</button>
+                        <button onclick="adjustKaraokeOffset(0.5)" title="+0.5s">0.5 ▶</button>
+                        <button onclick="resetKaraokeOffset()" title="{% if is_english %}Reset{% elif is_chinese %}重置{% else %}リセット{% endif %}">↺</button>
+                        <button onclick="syncToFirstLine()" class="sync-btn" id="sync-first-line-btn" title="{% if is_english %}Tap when singing starts{% elif is_chinese %}演唱开始时点击{% else %}歌い出しでタップ{% endif %}">🎤 {% if is_english %}Sync{% elif is_chinese %}同步{% else %}同期{% endif %}</button>
                     </div>
                     <div class="karaoke-loading" id="karaoke-loading">
                         <div class="karaoke-spinner"></div>
@@ -1327,19 +1328,20 @@
     display: flex;
     align-items: center;
     justify-content: center;
-    gap: 0.5rem;
-    padding: 0.5rem 1rem;
+    gap: 0.35rem;
+    padding: 0.5rem 0.75rem;
     background: rgba(0, 0, 0, 0.05);
     border-radius: 8px;
     margin-bottom: 0.5rem;
+    flex-wrap: wrap;
 }
 
 .karaoke-timing-controls button {
     background: rgba(255, 121, 64, 0.15);
     border: 1px solid rgba(255, 121, 64, 0.3);
     border-radius: 6px;
-    padding: 0.25rem 0.6rem;
-    font-size: 0.8rem;
+    padding: 0.25rem 0.5rem;
+    font-size: 0.75rem;
     font-weight: 600;
     color: #e0600a;
     cursor: pointer;
@@ -1350,10 +1352,33 @@
     background: rgba(255, 121, 64, 0.25);
 }
 
+.karaoke-timing-controls .sync-btn {
+    background: rgba(59, 130, 246, 0.15);
+    border-color: rgba(59, 130, 246, 0.3);
+    color: #2563eb;
+    margin-left: 0.3rem;
+}
+
+.karaoke-timing-controls .sync-btn:hover {
+    background: rgba(59, 130, 246, 0.25);
+}
+
+.karaoke-timing-controls .sync-btn.listening {
+    background: rgba(239, 68, 68, 0.2);
+    border-color: rgba(239, 68, 68, 0.4);
+    color: #dc2626;
+    animation: sync-pulse 0.8s ease-in-out infinite;
+}
+
+@keyframes sync-pulse {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.6; }
+}
+
 .karaoke-timing-controls .timing-label {
     font-size: 0.75rem;
     color: rgba(0, 0, 0, 0.5);
-    min-width: 60px;
+    min-width: 55px;
     text-align: center;
 }
 
@@ -3289,7 +3314,7 @@ document.getElementById('tagModal').addEventListener('click', function(e) {
     
     // === タイミング調整 ===
     window.adjustKaraokeOffset = function(delta) {
-        karaokeOffset = Math.max(-5, Math.min(5, karaokeOffset + delta));
+        karaokeOffset = Math.max(-10, Math.min(10, karaokeOffset + delta));
         lastActiveIndex = -1; // 強制再描画
         const label = document.getElementById('karaoke-offset-label');
         if (label) {
@@ -3303,6 +3328,48 @@ document.getElementById('tagModal').addEventListener('click', function(e) {
         lastActiveIndex = -1;
         const label = document.getElementById('karaoke-offset-label');
         if (label) label.textContent = '±0.0s';
+    };
+    
+    // 歌い出し同期ボタン: タップした瞬間の再生位置とLRC最初の歌詞行のズレを自動補正
+    let syncListening = false;
+    window.syncToFirstLine = function() {
+        const btn = document.getElementById('sync-first-line-btn');
+        const audio = document.getElementById('main-audio-player');
+        if (!audio || !lrcData || lrcData.length === 0) return;
+        
+        if (syncListening) {
+            // 2回目タップ = 今この瞬間が歌い出し
+            syncListening = false;
+            btn.classList.remove('listening');
+            btn.innerHTML = '🎤 {% if is_english %}Sync{% elif is_chinese %}同步{% else %}同期{% endif %}';
+            
+            // LRCの最初の歌詞行（間奏でない最初の行）のタイムスタンプ
+            const firstLyricLine = lrcData.find(item => !item.isInterlude);
+            if (!firstLyricLine) return;
+            
+            const currentTime = audio.currentTime;
+            const lrcFirstTime = firstLyricLine.time;
+            // ズレ = 実際の再生位置 - LRCの歌い出しタイム
+            const newOffset = currentTime - lrcFirstTime;
+            karaokeOffset = Math.max(-10, Math.min(10, newOffset));
+            lastActiveIndex = -1;
+            
+            const label = document.getElementById('karaoke-offset-label');
+            if (label) {
+                const sign = karaokeOffset >= 0 ? '+' : '';
+                label.textContent = `${sign}${karaokeOffset.toFixed(1)}s`;
+            }
+            console.log(`Sync: currentTime=${currentTime.toFixed(1)}, lrcFirst=${lrcFirstTime.toFixed(1)}, offset=${karaokeOffset.toFixed(1)}`);
+        } else {
+            // 1回目タップ = リスニングモード開始
+            syncListening = true;
+            btn.classList.add('listening');
+            btn.innerHTML = '🎤 {% if is_english %}Tap at vocal start!{% elif is_chinese %}演唱开始时再次点击!{% else %}歌い出しでタップ!{% endif %}';
+            
+            // 曲を最初から再生
+            audio.currentTime = 0;
+            audio.play();
+        }
     };
     
     // === LRC歌詞表示 ===

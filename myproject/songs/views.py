@@ -2146,29 +2146,21 @@ def generate_lrc_view(request, pk):
         lrc_timestamps = re.findall(r'\[(\d{2}):(\d{2})\.(\d{2})\]', song.lyrics.lrc_data)
         if lrc_timestamps:
             first_ts = int(lrc_timestamps[0][0]) * 60 + int(lrc_timestamps[0][1]) + int(lrc_timestamps[0][2]) / 100.0
-            # 最初のタイムスタンプが5秒未満 → イントロが考慮されていない古いデータ
-            if first_ts < 5.0:
+            
+            # v3品質チェック: 旧プロンプトで生成されたデータを検出して再生成
+            # 1) 最初のタイムスタンプが10秒以上 → 旧プロンプトの過剰イントロ
+            if first_ts >= 10.0:
                 force_regenerate = True
             
-            # 行間のタイミングが均一すぎる（旧プロンプトの問題）→ 再生成
+            # 2) 行間のタイミングが均一すぎる
             if not force_regenerate and len(lrc_timestamps) >= 3:
                 times = [int(t[0]) * 60 + int(t[1]) + int(t[2]) / 100.0 for t in lrc_timestamps]
                 gaps = [times[i+1] - times[i] for i in range(len(times)-1)]
                 if gaps:
                     avg_gap = sum(gaps) / len(gaps)
                     variance = sum((g - avg_gap) ** 2 for g in gaps) / len(gaps)
-                    # 分散が非常に小さい = 機械的に等間隔 → 再生成
                     if variance < 0.3 and len(gaps) > 5:
                         force_regenerate = True
-            
-            # 間奏マーカー(♪)がない古いLRC → 再生成して間奏対応に更新
-            if not force_regenerate and '♪' not in song.lyrics.lrc_data:
-                # 歌詞に空行やセクション区切りがある場合のみ（間奏がありそうな場合）
-                lyrics_content = song.lyrics.content or ''
-                lines = lyrics_content.strip().split('\n')
-                has_section_breaks = any(not line.strip() for line in lines[1:-1]) if len(lines) > 3 else False
-                if has_section_breaks:
-                    force_regenerate = True
     
     if song.lyrics.lrc_data and not force_regenerate:
         return JsonResponse({'lrc': song.lyrics.lrc_data})
