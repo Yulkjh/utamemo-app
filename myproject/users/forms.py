@@ -17,8 +17,8 @@ def _validate_username_content(username):
 
 
 def _validate_username_not_email(username):
-    """ユーザー名にメールアドレスが使われていないかチェック"""
-    if re.match(r'^[^@\s]+@[^@\s]+\.[^@\s]+$', username):
+    """ユーザー名にメールアドレスが使われていないかチェック（@xxx.xxx形式）"""
+    if re.search(r'@.+\..+', username):
         raise ValidationError(
             'メールアドレスはユーザー名に使用できません。下のメールアドレス欄に入力してください。'
             ' / Email addresses cannot be used as a username. Please enter it in the email field below.'

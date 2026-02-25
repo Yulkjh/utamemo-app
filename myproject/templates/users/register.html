@@ -35,14 +35,6 @@
                         <div class="field-hint">
                             {% if is_english %}Use alphanumeric characters, underscores, and hyphens{% elif is_spanish %}Use caracteres alfanuméricos, guiones bajos y guiones{% elif is_german %}Verwenden Sie alphanumerische Zeichen, Unterstriche und Bindestriche{% elif is_portuguese %}Use caracteres alfanuméricos, sublinhados e hífens{% elif is_chinese %}可使用字母、数字、下划线和连字符{% else %}半角英数字、アンダースコア、ハイフンが使用できます{% endif %}
                         </div>
-                        <div class="email-warning" id="username-email-warning" style="display: none;">
-                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                                <path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/>
-                                <line x1="12" y1="9" x2="12" y2="13"/>
-                                <line x1="12" y1="17" x2="12.01" y2="17"/>
-                            </svg>
-                            {% if is_english %}This looks like an email address. Please enter your email in the field below.{% elif is_spanish %}Esto parece una dirección de correo electrónico. Ingrese su correo en el campo de abajo.{% elif is_german %}Das sieht nach einer E-Mail-Adresse aus. Bitte geben Sie Ihre E-Mail im Feld unten ein.{% elif is_portuguese %}Isso parece um endereço de e-mail. Por favor, insira seu e-mail no campo abaixo.{% elif is_chinese %}这看起来像是电子邮箱地址。请在下方的邮箱栏中输入。{% else %}これはメールアドレスのようです。メールアドレスは下の欄に入力してください。{% endif %}
-                        </div>
                     </div>
                     
                     <!-- Email Field (Required) -->
@@ -238,30 +230,6 @@
     border: 1px solid rgba(220, 53, 69, 0.2);
 }
 
-.email-warning {
-    display: flex;
-    align-items: center;
-    gap: 0.5rem;
-    color: #e67e00;
-    font-size: 0.85rem;
-    margin-top: 0.5rem;
-    padding: 0.75rem;
-    background: rgba(255, 165, 0, 0.1);
-    border-radius: var(--radius-md);
-    border: 1px solid rgba(255, 165, 0, 0.25);
-    animation: fadeIn 0.3s ease;
-}
-
-.email-warning svg {
-    flex-shrink: 0;
-    color: #e67e00;
-}
-
-@keyframes fadeIn {
-    from { opacity: 0; transform: translateY(-4px); }
-    to { opacity: 1; transform: translateY(0); }
-}
-
 .btn-register {
     width: 100%;
     background: var(--primary-gradient);
@@ -413,27 +381,6 @@ document.addEventListener('DOMContentLoaded', function() {
         {% else %}
         usernameInput.placeholder = 'ユーザー名';
         {% endif %}
-
-        // メールアドレス入力検出
-        const emailWarning = document.getElementById('username-email-warning');
-        function checkUsernameForEmail() {
-            const val = usernameInput.value.trim();
-            const looksLikeEmail = /^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(val);
-            if (emailWarning) {
-                emailWarning.style.display = looksLikeEmail ? 'flex' : 'none';
-            }
-            if (looksLikeEmail) {
-                usernameInput.style.borderColor = '#e67e00';
-                usernameInput.style.boxShadow = '0 0 0 3px rgba(230, 126, 0, 0.15)';
-            } else {
-                usernameInput.style.borderColor = '';
-                usernameInput.style.boxShadow = '';
-            }
-        }
-        usernameInput.addEventListener('input', checkUsernameForEmail);
-        usernameInput.addEventListener('blur', checkUsernameForEmail);
-        // ページロード時にも（サーバーバリデーション失敗で値が残っている場合）
-        checkUsernameForEmail();
     }
     if (password1Input) {
         {% if is_english %}
