@@ -3,6 +3,7 @@ from django.contrib.auth.forms import UserCreationForm
 from django.core.exceptions import ValidationError
 from .models import User
 from songs.content_filter import check_username_for_inappropriate_content
+import re
 
 
 def _validate_username_content(username):
@@ -12,6 +13,15 @@ def _validate_username_content(username):
         raise ValidationError(
             'このユーザー名は使用できません。別のユーザー名を選んでください。'
             ' / This username is not allowed. Please choose a different one.'
+        )
+
+
+def _validate_username_not_email(username):
+    """ユーザー名にメールアドレスが使われていないかチェック"""
+    if re.match(r'^[^@\s]+@[^@\s]+\.[^@\s]+$', username):
+        raise ValidationError(
+            'メールアドレスはユーザー名に使用できません。下のメールアドレス欄に入力してください。'
+            ' / Email addresses cannot be used as a username. Please enter it in the email field below.'
         )
 
 
@@ -40,6 +50,7 @@ class UserRegistrationForm(UserCreationForm):
     def clean_username(self):
         username = self.cleaned_data.get('username')
         if username:
+            _validate_username_not_email(username)
             _validate_username_content(username)
         return username
 
