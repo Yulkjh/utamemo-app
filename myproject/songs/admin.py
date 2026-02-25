@@ -58,15 +58,10 @@ class SongAdmin(admin.ModelAdmin):
 
 @admin.register(Lyrics)
 class LyricsAdmin(admin.ModelAdmin):
-    list_display = ('id', 'song', 'has_lrc', 'created_at')
+    list_display = ('id', 'song', 'created_at')
     search_fields = ('song__title', 'content', 'original_text')
     ordering = ('-created_at',)
     readonly_fields = ('created_at',)
-    
-    def has_lrc(self, obj):
-        return bool(obj.lrc_data)
-    has_lrc.boolean = True
-    has_lrc.short_description = 'LRCデータ'
 
 
 @admin.register(Tag)

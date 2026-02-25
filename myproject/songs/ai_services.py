@@ -136,50 +136,6 @@ def _get_gemini_model():
     return _GEMINI_MODEL
 
 
-def detect_lyrics_language(lyrics):
-    """歌詞の主要言語を判定する
-    
-    ひらがな変換が必要なのは日本語のみ。
-    それ以外の言語（中国語、英語、韓国語、スペイン語、ポルトガル語、
-    ドイツ語、アラビア語、タイ語等）はすべてそのまま送信する。
-    
-    Returns:
-        'ja' - 日本語（ひらがな・カタカナを含む → ひらがな変換する）
-        'other' - 日本語以外（そのまま送信）
-    """
-    if not lyrics:
-        return 'ja'
-    
-    # セクションラベルや空行を除去して歌詞本文のみ解析
-    clean = re.sub(r'\[.*?\]', '', lyrics)
-    clean = re.sub(r'\s+', '', clean)
-    
-    if not clean:
-        return 'ja'
-    
-    hiragana_count = 0
-    katakana_count = 0
-    
-    for char in clean:
-        cp = ord(char)
-        if 0x3040 <= cp <= 0x309F:
-            hiragana_count += 1
-        elif 0x30A0 <= cp <= 0x30FF:
-            katakana_count += 1
-    
-    japanese_kana = hiragana_count + katakana_count
-    
-    # ひらがな・カタカナが含まれていれば日本語
-    # （日本語の歌詞には必ず助詞やひらがな表記が含まれる）
-    if japanese_kana > 0:
-        return 'ja'
-    
-    # ひらがな・カタカナが一切ない場合は日本語以外
-    # （中国語、英語、韓国語、スペイン語、ポルトガル語、ドイツ語、
-    #   アラビア語、タイ語、ヒンディー語、フランス語など全て該当）
-    return 'other'
-
-
 class MurekaAIGenerator:
     """Mureka AI を使用した楽曲生成クラス"""
     
@@ -634,9 +590,6 @@ Text: {text}"""
                                 'api_provider': 'mureka',
                                 'trace_id': result.get('trace_id'),
                                 'lyrics_sections': choice.get('lyrics_sections', []),
-                                # Mureka APIからLRC/タイミング関連情報を取得（あれば）
-                                'lrc_data': choice.get('lrc') or choice.get('lrc_data') or choice.get('lyrics_lrc') or choice.get('aligned_lyrics') or '',
-                                'timestamps': choice.get('timestamps') or choice.get('timing') or choice.get('word_timestamps') or [],
                             }
                         else:
                             print("No choices returned from Mureka API")
