@@ -329,10 +329,6 @@
                 <!-- カラオケモード表示（スターター以上のみ） -->
                 {% if user.is_authenticated and user.is_starter %}
                 <div class="karaoke-container" id="karaoke-container" style="display: none;">
-                    <div class="karaoke-loading" id="karaoke-loading">
-                        <div class="karaoke-spinner"></div>
-                        <p>{% if is_english %}Generating timing data...{% elif is_chinese %}正在生成时间数据...{% else %}タイミングデータを生成中...{% endif %}</p>
-                    </div>
                     <div class="karaoke-lyrics" id="karaoke-lyrics"></div>
                 </div>
                 {% endif %}
@@ -1309,35 +1305,12 @@
     overflow: hidden;
 }
 
-.karaoke-loading {
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    justify-content: center;
-    padding: 3rem;
-    color: rgba(0, 0, 0, 0.5);
-    gap: 1rem;
-}
-
-.karaoke-spinner {
-    width: 40px;
-    height: 40px;
-    border: 3px solid rgba(0, 0, 0, 0.1);
-    border-top-color: #ff7940;
-    border-radius: 50%;
-    animation: karaoke-spin 0.8s linear infinite;
-}
-
-@keyframes karaoke-spin {
-    to { transform: rotate(360deg); }
-}
-
 .karaoke-lyrics {
     padding: 2rem 2rem;
     max-height: 400px;
     overflow-y: auto;
-    scroll-behavior: smooth;
     -webkit-overflow-scrolling: touch;
+    overscroll-behavior: contain;
 }
 
 .karaoke-lyrics::-webkit-scrollbar {
@@ -1357,88 +1330,27 @@
     padding: 0.6rem 1rem;
     margin: 0.3rem 0;
     border-radius: 8px;
-    font-size: 1rem;
-    line-height: 1.7;
-    color: rgba(0, 0, 0, 0.2);
-    transition: all 0.4s cubic-bezier(0.25, 0.46, 0.45, 0.94);
-    transform: scale(0.95);
-    transform-origin: left center;
+    font-size: 1.15rem;
+    line-height: 1.8;
+    color: #1f2937;
+    font-weight: 600;
+    cursor: pointer;
+    transition: background 0.2s ease;
+    user-select: none;
+    -webkit-user-select: none;
 }
 
-.karaoke-line.active {
-    color: #000000;
-    font-weight: 800;
-    font-size: 1.35rem;
-    transform: scale(1);
-    text-shadow: none;
-    background: rgba(255, 121, 64, 0.08);
+.karaoke-line:active {
+    background: rgba(255, 121, 64, 0.1);
 }
 
-.karaoke-line.passed {
-    color: rgba(0, 0, 0, 0.35);
-    transform: scale(0.95);
-}
-
-.karaoke-line.next-line {
-    color: rgba(0, 0, 0, 0.45);
-    transform: scale(0.97);
-}
-
-/* 間奏マーカー（Apple Music風ドット） */
-.karaoke-line.interlude {
+.karaoke-line.section-break {
     text-align: center;
-    padding: 1.2rem 1rem;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    gap: 0.5rem;
-    font-size: 0;
-    letter-spacing: 0;
-}
-
-.karaoke-line.interlude .interlude-dots {
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    gap: 0.6rem;
-}
-
-.karaoke-line.interlude .interlude-dot {
-    width: 8px;
-    height: 8px;
-    border-radius: 50%;
-    background: rgba(0, 0, 0, 0.15);
-    transition: background 0.4s ease;
-}
-
-.karaoke-line.interlude.active .interlude-dot {
-    background: rgba(255, 121, 64, 0.85);
-    animation: dot-bounce 1.4s ease-in-out infinite;
-}
-
-.karaoke-line.interlude.active .interlude-dot:nth-child(1) {
-    animation-delay: 0s;
-}
-.karaoke-line.interlude.active .interlude-dot:nth-child(2) {
-    animation-delay: 0.2s;
-}
-.karaoke-line.interlude.active .interlude-dot:nth-child(3) {
-    animation-delay: 0.4s;
-}
-
-.karaoke-line.interlude.passed .interlude-dot {
-    background: rgba(0, 0, 0, 0.1);
-}
-
-@keyframes dot-bounce {
-    0%, 80%, 100% {
-        transform: scale(1);
-        opacity: 0.4;
-    }
-    40% {
-        transform: scale(1.5);
-        opacity: 1;
-    }
+    padding: 1rem;
+    color: rgba(0, 0, 0, 0.2);
+    font-size: 0.85rem;
+    font-weight: 400;
+    cursor: default;
 }
 
 
@@ -1449,25 +1361,12 @@
     }
     
     .karaoke-line {
-        font-size: 0.9rem;
+        font-size: 1rem;
         padding: 0.5rem 0.75rem;
     }
     
-    .karaoke-line.active {
-        font-size: 1.15rem;
-    }
-    
-    .karaoke-line.interlude {
-        padding: 0.8rem;
-    }
-    
-    .karaoke-line.interlude .interlude-dot {
-        width: 6px;
-        height: 6px;
-    }
-    
-    .karaoke-line.interlude.active {
-        font-size: 0;
+    .karaoke-line.section-break {
+        padding: 0.6rem;
     }
     
     .lyrics-header-actions {
@@ -3026,16 +2925,10 @@ document.getElementById('tagModal').addEventListener('click', function(e) {
 (function() {
     // === 状態管理 ===
     let karaokeActive = false;
-    let lrcData = null;
-    let lrcLoaded = false;
-    let lrcLoading = false;
     let karaokeAudioUrl = null;
     let originalAudioUrl = null;
     let isVocalRemoved = false;
     let karaokeProcessing = false;
-    let lastActiveIndex = -1;
-    let karaokeSyncRAF = null;
-    let karaokeOffset = 0; // ユーザー調整用タイミングオフセット（秒）
     
     const songId = {{ song.pk }};
     const audioSourceUrl = '{% if song.audio_file %}{{ song.audio_file.url }}{% elif song.audio_url %}{{ song.audio_url }}{% endif %}';
@@ -3059,18 +2952,13 @@ document.getElementById('tagModal').addEventListener('click', function(e) {
             normalLyrics.style.display = 'none';
             karaokeContainer.style.display = 'block';
             
-            // 1) LRC歌詞を読み込み
-            if (!lrcLoaded && !lrcLoading) {
-                loadLRC();
-            } else if (lrcLoaded) {
-                startKaraokeSync();
-            }
+            // 歌詞をカラオケ表示用にレンダリング
+            renderKaraokeLyrics();
             
-            // 2) ボーカル除去を開始（まだ処理していない場合）
+            // ボーカル除去を開始（まだ処理していない場合）
             if (!isVocalRemoved && audioSourceUrl) {
                 startVocalRemoval(audioSourceUrl);
             } else if (isVocalRemoved && karaokeAudioUrl) {
-                // 既にボーカル除去済み → 切り替え
                 switchToKaraokeAudio();
             }
             
@@ -3083,7 +2971,6 @@ document.getElementById('tagModal').addEventListener('click', function(e) {
             btnText.textContent = '{% if is_english %}Start Karaoke{% elif is_chinese %}开始卡拉OK{% else %}カラオケを始める{% endif %}';
             normalLyrics.style.display = 'block';
             karaokeContainer.style.display = 'none';
-            stopKaraokeSync();
             
             // 通常音声に戻す
             if (isVocalRemoved) {
@@ -3094,6 +2981,30 @@ document.getElementById('tagModal').addEventListener('click', function(e) {
             removeKaraokeLabel();
         }
     };
+    
+    // === 歌詞をカラオケ用にレンダリング（手動スクロール方式） ===
+    function renderKaraokeLyrics() {
+        const container = document.getElementById('karaoke-lyrics');
+        const normalLyrics = document.getElementById('lyrics-normal');
+        if (!container || !normalLyrics) return;
+        
+        // 通常歌詞のテキストを取得
+        const lyricsText = normalLyrics.innerText || normalLyrics.textContent || '';
+        const lines = lyricsText.split('\n');
+        
+        let html = '';
+        for (const line of lines) {
+            const trimmed = line.trim();
+            if (!trimmed) {
+                // 空行 = セクション区切り
+                html += '<div class="karaoke-line section-break">・・・</div>';
+            } else {
+                html += `<div class="karaoke-line">${trimmed}</div>`;
+            }
+        }
+        container.innerHTML = html;
+        container.scrollTop = 0;
+    }
     
     // === ボーカル除去 ===
     async function startVocalRemoval(audioUrl) {
@@ -3369,171 +3280,6 @@ document.getElementById('tagModal').addEventListener('click', function(e) {
     document.getElementById('karaokeModal').addEventListener('click', function(e) {
         if (e.target === this && !karaokeProcessing) {
             window.cancelKaraoke();
-        }
-    });
-    
-    // === LRC歌詞表示 ===
-    function loadLRC() {
-        lrcLoading = true;
-        const loading = document.getElementById('karaoke-loading');
-        const lyricsDiv = document.getElementById('karaoke-lyrics');
-        loading.style.display = 'flex';
-        lyricsDiv.style.display = 'none';
-        
-        const csrfToken = document.querySelector('[name=csrfmiddlewaretoken]');
-        
-        fetch(`/songs/${songId}/generate-lrc/`, {
-            method: 'POST',
-            headers: {
-                'X-CSRFToken': csrfToken ? csrfToken.value : '',
-                'Content-Type': 'application/json',
-            },
-        })
-        .then(res => res.json())
-        .then(data => {
-            lrcLoading = false;
-            if (data.lrc) {
-                lrcData = parseLRC(data.lrc);
-                lrcLoaded = true;
-                renderKaraokeLyrics();
-                loading.style.display = 'none';
-                lyricsDiv.style.display = 'block';
-                startKaraokeSync();
-            } else {
-                loading.innerHTML = '<p style="color: rgba(0,0,0,0.5);">{% if is_english %}Could not generate timing data. Please try again.{% elif is_chinese %}无法生成时间数据，请重试。{% else %}タイミングデータを生成できませんでした。もう一度お試しください。{% endif %}</p>';
-            }
-        })
-        .catch(err => {
-            lrcLoading = false;
-            console.error('LRC load error:', err);
-            loading.innerHTML = '<p style="color: rgba(0,0,0,0.5);">{% if is_english %}Error loading timing data.{% elif is_chinese %}加载时间数据出错。{% else %}タイミングデータの読み込みエラー{% endif %}</p>';
-        });
-    }
-    
-    function removeCircledNumbers(text) {
-        return text.replace(/[\u2460-\u2473\u2474-\u2487\u2488-\u249B\u24EA-\u24FF\u2776-\u277F\u2780-\u2789\u278A-\u2793\u3251-\u325F\u32B1-\u32BF\u24B6-\u24E9]/g, '').replace(/\s{2,}/g, ' ').trim();
-    }
-    
-    function parseLRC(lrcText) {
-        const lines = lrcText.split('\n');
-        const result = [];
-        const interludeChars = ['♪', '🎵', '♪♪', '🎶'];
-        for (const line of lines) {
-            const match = line.match(/\[(\d{2}):(\d{2})\.(\d{2})\](.*)/);
-            if (match) {
-                const minutes = parseInt(match[1]);
-                const seconds = parseInt(match[2]);
-                const hundredths = parseInt(match[3]);
-                const time = minutes * 60 + seconds + hundredths / 100;
-                const rawText = match[4].trim();
-                const isInterlude = interludeChars.includes(rawText);
-                const text = isInterlude ? '' : removeCircledNumbers(rawText);
-                if (text || isInterlude) {
-                    result.push({ time, text, isInterlude });
-                }
-            }
-        }
-        return result;
-    }
-    
-    function renderKaraokeLyrics() {
-        const container = document.getElementById('karaoke-lyrics');
-        if (!lrcData || lrcData.length === 0) return;
-        
-        let html = '<div class="karaoke-spacer" style="height: 120px;"></div>';
-        lrcData.forEach((item, index) => {
-            if (item.isInterlude) {
-                html += `<div class="karaoke-line interlude" data-index="${index}" data-time="${item.time}"><div class="interlude-dots"><span class="interlude-dot"></span><span class="interlude-dot"></span><span class="interlude-dot"></span></div></div>`;
-            } else {
-                html += `<div class="karaoke-line" data-index="${index}" data-time="${item.time}">${item.text}</div>`;
-            }
-        });
-        html += '<div class="karaoke-spacer" style="height: 200px;"></div>';
-        container.innerHTML = html;
-    }
-    
-    function startKaraokeSync() {
-        const audio = document.getElementById('main-audio-player');
-        if (!audio || !lrcData) return;
-        
-        // requestAnimationFrameで高精度同期（60fps）
-        function syncLoop() {
-            if (!karaokeActive) return;
-            onTimeUpdate();
-            karaokeSyncRAF = requestAnimationFrame(syncLoop);
-        }
-        karaokeSyncRAF = requestAnimationFrame(syncLoop);
-    }
-    
-    function stopKaraokeSync() {
-        if (karaokeSyncRAF) {
-            cancelAnimationFrame(karaokeSyncRAF);
-            karaokeSyncRAF = null;
-        }
-        lastActiveIndex = -1;
-    }
-    
-    function onTimeUpdate() {
-        const audio = document.getElementById('main-audio-player');
-        if (!audio || !lrcData || !karaokeActive) return;
-        
-        // 先読みオフセット: 歌詞を少し早めに表示することで体感のズレを軽減
-        const LOOKAHEAD = 0.3; // 0.3秒先読み
-        const currentTime = audio.currentTime + LOOKAHEAD + karaokeOffset;
-        let activeIndex = -1;
-        
-        for (let i = lrcData.length - 1; i >= 0; i--) {
-            if (currentTime >= lrcData[i].time) {
-                activeIndex = i;
-                break;
-            }
-        }
-        
-        if (activeIndex === lastActiveIndex) return;
-        lastActiveIndex = activeIndex;
-        
-        const lines = document.querySelectorAll('.karaoke-line');
-        lines.forEach((el, idx) => {
-            el.classList.remove('active', 'passed');
-            if (idx === activeIndex) {
-                el.classList.add('active');
-            } else if (idx < activeIndex) {
-                el.classList.add('passed');
-            }
-        });
-        
-        // 次の歌詞行もプレハイライト（薄く強調して準備感を出す）
-        if (activeIndex >= 0 && activeIndex + 1 < lines.length) {
-            lines[activeIndex + 1].classList.add('next-line');
-        }
-        // 前回のnext-lineを消す
-        lines.forEach((el, idx) => {
-            if (idx !== activeIndex + 1) el.classList.remove('next-line');
-        });
-        
-        if (activeIndex >= 0) {
-            const activeLine = lines[activeIndex];
-            if (activeLine) {
-                const container = document.getElementById('karaoke-lyrics');
-                const containerRect = container.getBoundingClientRect();
-                const lineRect = activeLine.getBoundingClientRect();
-                const targetOffset = lineRect.top - containerRect.top - (containerRect.height / 3);
-                // スムーズスクロール
-                container.scrollTop += targetOffset * 0.15;
-            }
-        }
-    }
-    
-    // カラオケ行クリックでシーク
-    document.addEventListener('click', function(e) {
-        const line = e.target.closest('.karaoke-line');
-        if (line && karaokeActive) {
-            const time = parseFloat(line.dataset.time);
-            const audio = document.getElementById('main-audio-player');
-            if (audio && !isNaN(time)) {
-                audio.currentTime = time;
-                if (audio.paused) audio.play();
-            }
         }
     });
     

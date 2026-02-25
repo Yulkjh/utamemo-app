@@ -15,7 +15,7 @@ import logging
 
 from .models import Song, Like, Favorite, Comment, UploadedImage, Lyrics, PlayHistory, Tag
 from .forms import SongCreateForm, ImageUploadForm, CommentForm, SongPrivacyForm
-from .ai_services import GeminiLyricsGenerator, GeminiOCR, MurekaAIGenerator, generate_lrc_timestamps
+from .ai_services import GeminiLyricsGenerator, GeminiOCR, MurekaAIGenerator
 from .content_filter import check_text_for_inappropriate_content
 
 # ロガー設定
@@ -2122,62 +2122,6 @@ def recreate_with_lyrics(request, pk):
     
     # 楽曲作成画面にリダイレクト（歌詞確認画面をスキップ）
     return redirect('songs:lyrics_confirmation')
-
-
-@login_required
-@require_POST
-def generate_lrc_view(request, pk):
-    """LRC（タイムスタンプ付き歌詞）を生成するAPIエンドポイント"""
-    song = get_object_or_404(Song, pk=pk)
-    
-    # 音声と歌詞が必要
-    if not hasattr(song, 'lyrics') or not song.lyrics:
-        return JsonResponse({'error': 'No lyrics found'}, status=400)
-    
-    if not song.duration:
-        return JsonResponse({'error': 'No duration info'}, status=400)
-    
-    # 既にLRCデータがある場合はそのまま返す（force=trueで再生成可能）
-    force_regenerate = request.POST.get('force', '').lower() == 'true'
-    
-    # 既存LRCの品質チェック
-    if song.lyrics.lrc_data and not force_regenerate:
-        import re
-        lrc_timestamps = re.findall(r'\[(\d{2}):(\d{2})\.(\d{2})\]', song.lyrics.lrc_data)
-        if lrc_timestamps:
-            first_ts = int(lrc_timestamps[0][0]) * 60 + int(lrc_timestamps[0][1]) + int(lrc_timestamps[0][2]) / 100.0
-            
-            # v3品質チェック: 旧プロンプトで生成されたデータを検出して再生成
-            # 1) 最初のタイムスタンプが10秒以上 → 旧プロンプトの過剰イントロ
-            if first_ts >= 10.0:
-                force_regenerate = True
-            
-            # 2) 行間のタイミングが均一すぎる
-            if not force_regenerate and len(lrc_timestamps) >= 3:
-                times = [int(t[0]) * 60 + int(t[1]) + int(t[2]) / 100.0 for t in lrc_timestamps]
-                gaps = [times[i+1] - times[i] for i in range(len(times)-1)]
-                if gaps:
-                    avg_gap = sum(gaps) / len(gaps)
-                    variance = sum((g - avg_gap) ** 2 for g in gaps) / len(gaps)
-                    if variance < 0.3 and len(gaps) > 5:
-                        force_regenerate = True
-    
-    if song.lyrics.lrc_data and not force_regenerate:
-        return JsonResponse({'lrc': song.lyrics.lrc_data})
-    
-    # durationを秒に変換
-    duration_seconds = song.duration.total_seconds()
-    
-    # Gemini AIでLRC生成（Mureka分析情報も活用）
-    lrc_data = generate_lrc_timestamps(song.lyrics.content, duration_seconds, audio_url=song.audio_url)
-    
-    if lrc_data:
-        # DBに保存
-        song.lyrics.lrc_data = lrc_data
-        song.lyrics.save(update_fields=['lrc_data'])
-        return JsonResponse({'lrc': lrc_data})
-    else:
-        return JsonResponse({'error': 'LRC generation failed'}, status=500)
 
 
 @login_required
