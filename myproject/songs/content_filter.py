@@ -29,13 +29,18 @@ class ContentFilter:
     ]
     
     # 文脈に応じて判定する暴力系ワード（日本語）
-    # 歴史・学術・文学的文脈では許可する
+    # 歴史・学術・文学的文脈、および歌詞・詩的文脈では許可する
     ACADEMIC_CONTEXT_WORDS_JA = {
         '殺す': [],
         'ころす': [],
         '殺した': [],
         '殺される': [],
         '殺された': [],
+        '殺せ': [],
+        '死にたい': [],
+        '死ぬ': [],
+        '死んだ': [],
+        '死んで': [],
     }
     
     # 学術的・歴史的文脈を示すキーワード（これらが同じテキストにあれば暴力系ワードを許可）
@@ -60,6 +65,35 @@ class ContentFilter:
         # 教科書・学習
         '教科書', '問題', '試験', 'テスト', '学習', '勉強',
         '授業', '講義', '解説', 'ページ', '章',
+        # 歌詞・詩的文脈（歌詞中の比喩的・詩的表現を許可する）
+        '歌', 'うた', 'メロディ', 'サビ', 'コーラス',
+        '夢', 'ゆめ', '涙', 'なみだ', '心', 'こころ',
+        '愛', 'あい', '恋', 'こい', '想い', 'おもい',
+        '空', 'そら', '海', 'うみ', '風', 'かぜ',
+        '光', 'ひかり', '闇', 'やみ', '影', 'かげ',
+        '花', 'はな', '星', 'ほし', '月', 'つき', '太陽', 'たいよう',
+        '翼', 'つばさ', '羽', 'はね',
+        '明日', 'あした', '未来', 'みらい', '過去', 'かこ',
+        '記憶', 'きおく', '約束', 'やくそく',
+        '届け', 'とどけ', '叫び', 'さけび', '祈り', 'いのり',
+        '痛み', 'いたみ', '傷', 'きず', '孤独', 'こどく',
+        '世界', 'せかい', '永遠', 'えいえん',
+        '瞳', 'ひとみ', '声', 'こえ', '手', 'て',
+        '強く', 'つよく', '優しく', 'やさしく',
+        '走る', 'はしる', '飛ぶ', 'とぶ', '泣く', 'なく',
+        '笑う', 'わらう', '信じる', 'しんじる',
+        '最後', 'さいご', '始まり', 'はじまり',
+        '旅', 'たび', '道', 'みち', '扉', 'とびら',
+        # 歌詞でよく使われる人称・感情表現
+        '君', 'きみ', '僕', 'ぼく', 'あなた', 'わたし', '私',
+        '好き', 'すき', '嫌い', 'きらい', '寂しい', 'さみしい',
+        '切ない', 'せつない', '悲しい', 'かなしい', '嬉しい', 'うれしい',
+        '会いたい', 'あいたい', '忘れない', 'わすれない',
+        '抱きしめ', 'だきしめ', '離さない', 'はなさない',
+        '生きる', 'いきる', '生きて', 'いきて',
+        # セクションラベル（歌詞構造）
+        '[verse', '[chorus', '[bridge', '[intro', '[outro',
+        'verse', 'chorus', 'bridge', 'intro', 'outro',
     ]
     
     # 部分一致で誤検出しやすいワード（特別な処理が必要）
@@ -125,6 +159,26 @@ class ContentFilter:
         # Literature
         'novel', 'literature', 'story', 'author', 'shakespeare',
         'chapter', 'textbook', 'lesson', 'study', 'exam',
+        # Song/Lyrics/Poetry context
+        'song', 'melody', 'chorus', 'verse', 'bridge', 'intro', 'outro',
+        'dream', 'tears', 'heart', 'soul', 'love', 'hope',
+        'sky', 'ocean', 'wind', 'light', 'shadow', 'darkness',
+        'flower', 'star', 'moon', 'sun',
+        'wings', 'fly', 'rain', 'fire',
+        'tomorrow', 'forever', 'memory', 'promise',
+        'pain', 'wound', 'lonely', 'loneliness',
+        'world', 'eternity', 'destiny', 'fate',
+        'eyes', 'voice', 'hands', 'arms',
+        'strong', 'gentle', 'brave',
+        'run', 'cry', 'smile', 'believe',
+        'last', 'begin', 'end', 'journey', 'road', 'door',
+        # Common lyrical pronouns and emotions
+        'you', 'your', 'mine', 'baby', 'darling', 'tonight',
+        'miss', 'hold', 'never', 'always', 'away',
+        'alive', 'live', 'breathe', 'free', 'freedom',
+        'broken', 'falling', 'rising', 'fading',
+        'thousand', 'million', 'hundred',
+        '[verse', '[chorus', '[bridge', '[intro', '[outro',
     ]
     
     # 禁止ワードリスト（中国語）
@@ -136,7 +190,7 @@ class ContentFilter:
     
     # 禁止パターン（正規表現）- 脅迫的な強調表現のみ
     PROHIBITED_PATTERNS = [
-        r'死ね+',           # 「死ねええ」など
+        r'死ねえ+',         # 「死ねええ」など脅迫的な伸ばし表現のみ
         r'f+u+c+k+',       # 「fuuuck」など伸ばし表現
     ]
     
@@ -331,20 +385,27 @@ class ContentFilter:
     
     def __init__(self):
         """フィルターの初期化"""
-        # すべての禁止ワードを小文字で統合
-        self.prohibited_words = set()
+        # 日本語・中国語の禁止ワード（部分一致でチェック）
+        self.prohibited_words_substring = set()
         
         for word in self.PROHIBITED_WORDS_JA:
-            self.prohibited_words.add(word.lower())
+            self.prohibited_words_substring.add(word.lower())
             # ひらがな/カタカナ変換も追加
-            self.prohibited_words.add(self._hiragana_to_katakana(word).lower())
-            self.prohibited_words.add(self._katakana_to_hiragana(word).lower())
-        
-        for word in self.PROHIBITED_WORDS_EN:
-            self.prohibited_words.add(word.lower())
+            self.prohibited_words_substring.add(self._hiragana_to_katakana(word).lower())
+            self.prohibited_words_substring.add(self._katakana_to_hiragana(word).lower())
         
         for word in self.PROHIBITED_WORDS_ZH:
-            self.prohibited_words.add(word.lower())
+            self.prohibited_words_substring.add(word.lower())
+        
+        # 英語の禁止ワード（単語境界でチェック → 部分一致を防ぐ）
+        self.prohibited_words_en_patterns = []
+        for word in self.PROHIBITED_WORDS_EN:
+            # スペースを含むフレーズはそのまま、単語は\bで囲む
+            if ' ' in word:
+                pattern = re.compile(re.escape(word.lower()), re.IGNORECASE)
+            else:
+                pattern = re.compile(r'\b' + re.escape(word.lower()) + r'\b', re.IGNORECASE)
+            self.prohibited_words_en_patterns.append((word.lower(), pattern))
         
         # 有名人名を小文字でセット化
         self.celebrity_names = set()
@@ -415,9 +476,14 @@ class ContentFilter:
         detected_words = []
         text_lower = text.lower()
         
-        # 禁止ワードのチェック（無条件でブロック）
-        for word in self.prohibited_words:
+        # 日本語・中国語の禁止ワードチェック（部分一致・無条件でブロック）
+        for word in self.prohibited_words_substring:
             if word in text_lower:
+                detected_words.append(word)
+        
+        # 英語の禁止ワードチェック（単語境界で判定・部分一致を防ぐ）
+        for word, pattern in self.prohibited_words_en_patterns:
+            if pattern.search(text_lower):
                 detected_words.append(word)
         
         # 文脈依存ワードのチェック（除外リストを考慮）
