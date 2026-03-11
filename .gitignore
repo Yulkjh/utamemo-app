@@ -12,3 +12,4 @@ node_modules/
 .git/
 *.secret
 .vscode/
+myproject/media/uploaded_images/
