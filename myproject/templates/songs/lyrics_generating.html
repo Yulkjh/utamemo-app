@@ -71,24 +71,6 @@
                 {% if is_english %}Usually takes 10-30 seconds{% elif is_chinese %}通常需要10-30秒{% else %}通常10〜30秒で完成します{% endif %}
             </p>
         </div>
-
-        <!-- ヒント -->
-        <div class="generating-tip" id="generating-tip">
-            <i class="bi bi-lightbulb"></i>
-            <span id="tip-text">
-                {% if is_english %}Tip: You can freely edit the lyrics after they're generated!{% elif is_chinese %}提示：生成后可以自由编辑歌词！{% else %}ヒント：生成された歌詞は自由に編集できます！{% endif %}
-            </span>
-        </div>
-
-        <!-- テキスト量の表示 -->
-        {% if text_length %}
-        <div class="generating-info">
-            <span class="info-badge">
-                <i class="bi bi-file-earmark-text"></i>
-                {% if is_english %}{{ text_length }} chars detected{% elif is_chinese %}检测到{{ text_length }}个字符{% else %}{{ text_length }}文字のテキストを検出{% endif %}
-            </span>
-        </div>
-        {% endif %}
     </div>
 </div>
 
