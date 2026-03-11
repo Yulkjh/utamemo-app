@@ -102,6 +102,27 @@
             </div>
         </div>
         {% endif %}
+
+        <!-- フラッシュカード作成済み通知 -->
+        {% if flashcard_deck %}
+        <div class="flashcard-created-notice" style="margin-top: 1.5rem; padding: 1rem 1.5rem; background: white; border-radius: 14px; border: 1px solid var(--border-color, #f0e6e0); box-shadow: 0 2px 8px rgba(0,0,0,0.06);">
+            <div class="d-flex align-items-center gap-2 mb-2">
+                <i class="bi bi-check-circle-fill" style="color: #28a745; font-size: 1.2rem;"></i>
+                <span class="fw-bold" style="color: #2d1b13;">
+                    {% if is_english %}Flashcard deck created!{% elif is_chinese %}闪卡组已创建！{% elif is_spanish %}¡Mazo de tarjetas creado!{% elif is_german %}Lernkarten-Deck erstellt!{% elif is_portuguese %}Baralho de flashcards criado!{% else %}暗記カードを準備しました！{% endif %}
+                </span>
+            </div>
+            <p class="text-muted small mb-2" style="margin-left: 1.8rem;">
+                {% if is_english %}Select the terms you want to study{% elif is_chinese %}选择要学习的术语{% elif is_spanish %}Selecciona los términos a estudiar{% elif is_german %}Wähle die Begriffe zum Lernen{% elif is_portuguese %}Selecione os termos para estudar{% else %}覚えたい用語を選んでデッキを完成させましょう{% endif %}
+            </p>
+            <div style="margin-left: 1.8rem;">
+                <a href="{% url 'songs:flashcard_select' flashcard_deck.pk %}" class="btn btn-sm" style="background: linear-gradient(135deg, #ff7940, #ff6b35); color: white; border: none; border-radius: 8px; padding: 6px 16px; text-decoration: none; font-weight: 600;">
+                    <i class="bi bi-check2-square me-1"></i>
+                    {% if is_english %}Select Terms{% elif is_chinese %}选择术语{% elif is_spanish %}Seleccionar Términos{% elif is_german %}Begriffe wählen{% elif is_portuguese %}Selecionar Termos{% else %}用語を選ぶ{% endif %}
+                </a>
+            </div>
+        </div>
+        {% endif %}
     </div>
 </div>
 

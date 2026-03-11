@@ -2,6 +2,7 @@ from django.contrib import admin
 from .models import (
     Song, Lyrics, Like, Favorite, Comment, UploadedImage,
     Tag, PlayHistory, Classroom, ClassroomMembership, ClassroomSong,
+    FlashcardDeck, Flashcard,
 )
 
 
@@ -155,3 +156,34 @@ class ClassroomSongAdmin(admin.ModelAdmin):
     search_fields = ('classroom__name', 'song__title', 'shared_by__username')
     ordering = ('-shared_at',)
     readonly_fields = ('shared_at',)
+
+
+class FlashcardInline(admin.TabularInline):
+    """フラッシュカードをデッキ詳細画面にインライン表示"""
+    model = Flashcard
+    extra = 0
+    readonly_fields = ('created_at',)
+    fields = ('term', 'definition', 'is_selected', 'mastery_level', 'order', 'created_at')
+
+
+@admin.register(FlashcardDeck)
+class FlashcardDeckAdmin(admin.ModelAdmin):
+    list_display = ('id', 'title', 'user', 'card_count', 'created_at', 'updated_at')
+    list_filter = ('created_at',)
+    search_fields = ('title', 'user__username')
+    ordering = ('-updated_at',)
+    readonly_fields = ('created_at', 'updated_at')
+    inlines = [FlashcardInline]
+
+
+@admin.register(Flashcard)
+class FlashcardAdmin(admin.ModelAdmin):
+    list_display = ('id', 'term', 'definition_short', 'deck', 'is_selected', 'mastery_level', 'created_at')
+    list_filter = ('is_selected', 'mastery_level', 'created_at')
+    search_fields = ('term', 'definition', 'deck__title')
+    ordering = ('-created_at',)
+    readonly_fields = ('created_at',)
+    
+    def definition_short(self, obj):
+        return obj.definition[:80] + '...' if len(obj.definition) > 80 else obj.definition
+    definition_short.short_description = '定義'

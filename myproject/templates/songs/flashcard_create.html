@@ -1,0 +1,184 @@
+{% extends 'base.html' %}
+
+{% block title %}{% if is_english %}Create Flashcards{% elif is_chinese %}创建闪卡{% elif is_spanish %}Crear Tarjetas{% elif is_german %}Lernkarten erstellen{% elif is_portuguese %}Criar Flashcards{% else %}フラッシュカード作成{% endif %} - UTAMEMO{% endblock %}
+
+{% block content %}
+<div class="container py-5">
+    <div class="row justify-content-center">
+        <div class="col-lg-8">
+            <!-- ヘッダー -->
+            <div class="text-center mb-5 fade-in">
+                <h1 class="display-6 fw-bold mb-3">
+                    <i class="bi bi-camera me-2" style="color: var(--primary-color);"></i>
+                    {% if is_english %}Create Flashcards{% elif is_chinese %}创建闪卡{% elif is_spanish %}Crear Tarjetas{% elif is_german %}Lernkarten erstellen{% elif is_portuguese %}Criar Flashcards{% else %}暗記カードを作成{% endif %}
+                </h1>
+                <p class="text-muted">
+                    {% if is_english %}Upload a photo of your study materials — AI will extract key terms{% elif is_chinese %}上传学习材料照片，AI会自动提取关键术语{% elif is_spanish %}Sube una foto de tus materiales — la IA extraerá los términos clave{% elif is_german %}Lade ein Foto deiner Lernmaterialien hoch — KI extrahiert die Schlüsselbegriffe{% elif is_portuguese %}Envie uma foto do seu material — a IA extrairá os termos-chave{% else %}教材の写真をアップロードすると、AIが重要語句を自動抽出します{% endif %}
+                </p>
+            </div>
+
+            <div class="upload-area-container fade-in">
+                <form method="post" enctype="multipart/form-data" id="flashcard-upload-form" novalidate>
+                    {% csrf_token %}
+                    
+                    <!-- デッキ名 -->
+                    <div class="mb-4">
+                        <label class="form-label fw-bold">
+                            <i class="bi bi-tag me-1"></i>
+                            {% if is_english %}Deck Name{% elif is_chinese %}卡组名称{% elif is_spanish %}Nombre del Mazo{% elif is_german %}Deckname{% elif is_portuguese %}Nome do Baralho{% else %}デッキ名{% endif %}
+                        </label>
+                        {{ form.deck_title }}
+                        <small class="text-muted">
+                            {% if is_english %}Optional — auto-generated if empty{% elif is_chinese %}可选 — 留空则自动生成{% elif is_spanish %}Opcional — se generará automáticamente{% elif is_german %}Optional — wird automatisch generiert{% elif is_portuguese %}Opcional — gerado automaticamente{% else %}任意 — 空欄の場合は自動生成されます{% endif %}
+                        </small>
+                    </div>
+                    
+                    <!-- アップロードエリア -->
+                    <div class="upload-area" id="upload-area" style="border: 2px dashed var(--border-color); border-radius: 16px; padding: 3rem; text-align: center; cursor: pointer; transition: all 0.3s; background: var(--surface-elevated);">
+                        <div class="upload-content" id="upload-content">
+                            <div class="mb-3">
+                                <i class="bi bi-cloud-upload" style="font-size: 3rem; color: var(--primary-color);"></i>
+                            </div>
+                            <h5 class="fw-bold mb-2">
+                                {% if is_english %}Drag and drop files here{% elif is_chinese %}拖放文件到这里{% elif is_spanish %}Arrastra y suelta archivos aquí{% elif is_german %}Dateien hier ablegen{% elif is_portuguese %}Arraste e solte arquivos aqui{% else %}ファイルをドラッグ＆ドロップ{% endif %}
+                            </h5>
+                            
+                            {{ form.images }}
+                            
+                            <div class="d-flex gap-2 justify-content-center flex-wrap mt-3">
+                                <button type="button" class="btn-gradient-primary" id="file-select-btn">
+                                    <i class="bi bi-image me-1"></i>
+                                    {% if is_english %}Select Photo{% elif is_chinese %}选择照片{% elif is_spanish %}Seleccionar Foto{% elif is_german %}Foto auswählen{% elif is_portuguese %}Selecionar Foto{% else %}写真を選択{% endif %}
+                                </button>
+                            </div>
+                            
+                            <div class="mt-3">
+                                <small class="text-muted">
+                                    {% if is_english %}JPG, PNG, JPEG formats • Max 10MB{% elif is_chinese %}JPG、PNG、JPEG格式 • 最大10MB{% elif is_spanish %}Formatos JPG, PNG, JPEG • Máx 10MB{% elif is_german %}JPG, PNG, JPEG Formate • Max 10MB{% elif is_portuguese %}Formatos JPG, PNG, JPEG • Máx 10MB{% else %}JPG、PNG、JPEG形式 • 最大10MB{% endif %}
+                                </small>
+                            </div>
+                        </div>
+                        
+                        <!-- プレビュー -->
+                        <div id="preview-area" style="display: none;">
+                            <img id="preview-image" alt="Preview" style="max-height: 300px; max-width: 100%; border-radius: 12px; margin-bottom: 1rem;">
+                            <div>
+                                <button type="button" class="btn-outline-modern btn-sm" id="change-file-btn">
+                                    <i class="bi bi-arrow-repeat me-1"></i>
+                                    {% if is_english %}Change{% elif is_chinese %}更换{% elif is_spanish %}Cambiar{% elif is_german %}Ändern{% elif is_portuguese %}Alterar{% else %}変更{% endif %}
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- アクションボタン -->
+                    <div class="text-center mt-4" id="action-buttons" style="display: none;">
+                        <button type="submit" class="btn-gradient-secondary btn-lg" id="submit-btn">
+                            <i class="bi bi-magic me-2"></i>
+                            {% if is_english %}Extract Key Terms{% elif is_chinese %}提取关键术语{% elif is_spanish %}Extraer Términos{% elif is_german %}Schlüsselbegriffe extrahieren{% elif is_portuguese %}Extrair Termos-chave{% else %}重要語句を抽出{% endif %}
+                        </button>
+                    </div>
+                    
+                    <!-- ローディング -->
+                    <div class="text-center mt-4" id="loading-area" style="display: none;">
+                        <div class="spinner-border" style="color: var(--primary-color); width: 3rem; height: 3rem;" role="status">
+                            <span class="visually-hidden">Loading...</span>
+                        </div>
+                        <p class="mt-3 fw-bold" style="color: var(--text-primary);">
+                            {% if is_english %}Analyzing your materials...{% elif is_chinese %}正在分析您的学习材料...{% elif is_spanish %}Analizando tus materiales...{% elif is_german %}Materialien werden analysiert...{% elif is_portuguese %}Analisando seus materiais...{% else %}教材を解析中...{% endif %}
+                        </p>
+                        <p class="text-muted small">
+                            {% if is_english %}AI is reading your photo and extracting key terms{% elif is_chinese %}AI正在读取照片并提取关键术语{% elif is_spanish %}La IA está leyendo tu foto y extrayendo términos{% elif is_german %}KI liest dein Foto und extrahiert Schlüsselbegriffe{% elif is_portuguese %}A IA está lendo sua foto e extraindo termos-chave{% else %}AIが写真を読み取り、重要語句を抽出しています{% endif %}
+                        </p>
+                    </div>
+                </form>
+            </div>
+            
+            <!-- 戻るリンク -->
+            <div class="text-center mt-4">
+                <a href="{% url 'songs:flashcard_list' %}" class="text-muted" style="text-decoration: none;">
+                    <i class="bi bi-arrow-left me-1"></i>
+                    {% if is_english %}Back to Decks{% elif is_chinese %}返回卡组{% elif is_spanish %}Volver a Mazos{% elif is_german %}Zurück zu Decks{% elif is_portuguese %}Voltar aos Baralhos{% else %}デッキ一覧に戻る{% endif %}
+                </a>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const fileInput = document.querySelector('input[type="file"]');
+    const fileSelectBtn = document.getElementById('file-select-btn');
+    const changeFileBtn = document.getElementById('change-file-btn');
+    const uploadArea = document.getElementById('upload-area');
+    const uploadContent = document.getElementById('upload-content');
+    const previewArea = document.getElementById('preview-area');
+    const previewImage = document.getElementById('preview-image');
+    const actionButtons = document.getElementById('action-buttons');
+    const loadingArea = document.getElementById('loading-area');
+    const form = document.getElementById('flashcard-upload-form');
+    
+    // ファイル選択ボタン
+    fileSelectBtn.addEventListener('click', function(e) {
+        e.preventDefault();
+        e.stopPropagation();
+        fileInput.click();
+    });
+    
+    if (changeFileBtn) {
+        changeFileBtn.addEventListener('click', function(e) {
+            e.preventDefault();
+            e.stopPropagation();
+            fileInput.click();
+        });
+    }
+    
+    // ドラッグ＆ドロップ
+    uploadArea.addEventListener('dragover', function(e) {
+        e.preventDefault();
+        uploadArea.style.borderColor = 'var(--primary-color)';
+        uploadArea.style.background = 'rgba(255,121,64,0.05)';
+    });
+    
+    uploadArea.addEventListener('dragleave', function() {
+        uploadArea.style.borderColor = 'var(--border-color)';
+        uploadArea.style.background = 'var(--surface-elevated)';
+    });
+    
+    uploadArea.addEventListener('drop', function(e) {
+        e.preventDefault();
+        uploadArea.style.borderColor = 'var(--border-color)';
+        uploadArea.style.background = 'var(--surface-elevated)';
+        
+        if (e.dataTransfer.files.length > 0) {
+            fileInput.files = e.dataTransfer.files;
+            showPreview(e.dataTransfer.files[0]);
+        }
+    });
+    
+    // ファイル選択時のプレビュー
+    fileInput.addEventListener('change', function() {
+        if (this.files.length > 0) {
+            showPreview(this.files[0]);
+        }
+    });
+    
+    function showPreview(file) {
+        const reader = new FileReader();
+        reader.onload = function(e) {
+            previewImage.src = e.target.result;
+            uploadContent.style.display = 'none';
+            previewArea.style.display = 'block';
+            actionButtons.style.display = 'block';
+        };
+        reader.readAsDataURL(file);
+    }
+    
+    // フォーム送信時にローディング表示
+    form.addEventListener('submit', function() {
+        actionButtons.style.display = 'none';
+        loadingArea.style.display = 'block';
+    });
+});
+</script>
+{% endblock %}

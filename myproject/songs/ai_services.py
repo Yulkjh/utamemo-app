@@ -301,17 +301,78 @@ class MurekaAIGenerator:
         if genre_en:  # ジャンルが指定されている場合のみ追加
             prompt_parts.append(genre_en)
         
-        # ボーカルスタイルの処理（ボカロ風の場合は合成音声風プロンプトを追加）
-        VOCAL_STYLE_PROMPTS = {
-            'female': 'female',
-            'male': 'male',
+        # ボーカルスタイルの処理
+        # 毎回異なる声質になるよう、ランダムな特徴を組み合わせる
+        import random
+        
+        VOCAL_TONE_TRAITS = [
+            'warm', 'bright', 'husky', 'clear', 'soft', 'powerful',
+            'smooth', 'raspy', 'airy', 'rich', 'delicate', 'soulful',
+            'silky', 'crisp', 'mellow', 'vibrant', 'breathy', 'deep',
+        ]
+        VOCAL_SINGING_STYLES = [
+            'with natural vibrato', 'with gentle expression', 'with emotional delivery',
+            'with dynamic range', 'with relaxed phrasing', 'with energetic performance',
+            'with intimate tone', 'with lyrical flow', 'with passionate intensity',
+            'with subtle nuance', 'with playful articulation', 'with steady control',
+        ]
+        VOCAL_AGE_RANGE = [
+            'young adult', 'mature', 'youthful', 'seasoned',
+        ]
+        
+        # スタイルごとの基本プロンプトとランダム特徴の組み合わせ
+        FIXED_VOCAL_PROMPTS = {
             'vocaloid_female': 'high-pitched cute synthesized female vocal, Vocaloid-style electronic voice, bright and airy digital vocal tone',
             'vocaloid_male': 'synthesized male vocal, Vocaloid-style electronic voice, clear digital vocal tone with auto-tune effect',
+            'duet': 'male and female duet vocal, harmonizing together, call and response singing',
+            'choir': 'choral ensemble vocal, rich harmonies, layered group singing',
+            'whisper': 'soft whispery vocal, intimate and breathy, ASMR-like gentle singing',
+            'child': 'young child vocal, innocent and bright, youthful pure singing voice',
         }
-        vocal_prompt = VOCAL_STYLE_PROMPTS.get(vocal_style, vocal_style)
-        prompt_parts.append(vocal_prompt)
+        # ランダム特徴を付与するスタイル → (ベース性別, 追加特徴)
+        RANDOM_VOCAL_BASE = {
+            'female': ('female', ''),
+            'female_cute': ('female', 'cute high-pitched sweet'),
+            'female_cool': ('female', 'cool sophisticated alto'),
+            'female_powerful': ('female', 'powerful belting strong'),
+            'male': ('male', ''),
+            'male_high': ('male', 'high-pitched tenor bright'),
+            'male_low': ('male', 'deep low bass baritone'),
+            'male_rough': ('male', 'rough gritty rock raspy'),
+        }
+        
+        # music_promptに声・ボーカルに関する記述が含まれているか判定
+        VOICE_KEYWORDS = [
+            'vocal', 'voice', 'singer', 'singing', 'female', 'male',
+            'soprano', 'alto', 'tenor', 'bass', 'baritone', 'husky',
+            'breathy', 'raspy', 'falsetto', 'whisper', 'choir', 'duet',
+        ]
+        has_voice_in_prompt = False
         if music_prompt_en:
-            prompt_parts.append(music_prompt_en)
+            prompt_lower = music_prompt_en.lower()
+            has_voice_in_prompt = any(kw in prompt_lower for kw in VOICE_KEYWORDS)
+        
+        if has_voice_in_prompt:
+            # ユーザーが声について指定済み → ランダム声質を付与しない
+            logger.info(f"Voice description detected in music_prompt, skipping random vocal traits")
+            if music_prompt_en:
+                prompt_parts.append(music_prompt_en)
+        else:
+            if vocal_style in FIXED_VOCAL_PROMPTS:
+                vocal_prompt = FIXED_VOCAL_PROMPTS[vocal_style]
+            elif vocal_style in RANDOM_VOCAL_BASE:
+                gender, extra = RANDOM_VOCAL_BASE[vocal_style]
+                tone = random.choice(VOCAL_TONE_TRAITS)
+                style = random.choice(VOCAL_SINGING_STYLES)
+                age = random.choice(VOCAL_AGE_RANGE)
+                base = f"{tone} {age} {gender} vocal {style}"
+                vocal_prompt = f"{extra} {base}".strip() if extra else base
+            else:
+                vocal_prompt = vocal_style
+            prompt_parts.append(vocal_prompt)
+            if music_prompt_en:
+                prompt_parts.append(music_prompt_en)
+        
         full_prompt = ", ".join(prompt_parts)
         
         # リファレンス曲をプロンプトに追加（英語で）
@@ -434,41 +495,93 @@ class MurekaAIGenerator:
                     raise
     
     def _translate_prompt_to_english(self, text):
-        """音楽スタイルプロンプトを英語に翻訳する（Gemini使用）
+        """音楽スタイルプロンプトを英語に翻訳する（辞書ベース、LLM不使用）
         
-        既に英語の場合はそのまま返す。日本語や他言語の場合は英語に翻訳する。
-        翻訳に失敗した場合は元のテキストをそのまま返す。
+        既に英語の場合はそのまま返す。日本語や他言語の場合は辞書で翻訳する。
+        辞書にない語句はそのまま残す（Mureka APIは多少の非英語でも解釈可能）。
         """
+        import re
+        
         # ASCII文字が大部分なら既に英語と判定
         ascii_count = sum(1 for c in text if ord(c) < 128)
         if len(text) > 0 and ascii_count / len(text) > 0.8:
             return text
         
-        try:
-            model = _get_gemini_model()
-            if not model:
-                logger.warning("Gemini model not available for prompt translation, using original text")
-                return text
-            
-            prompt = f"""Translate the following music style description to English. 
-Keep it concise and natural for a music generation AI prompt. 
-Only output the English translation, nothing else.
-
-Text: {text}"""
-            
-            response = model.generate_content(prompt, safety_settings=GEMINI_SAFETY_SETTINGS)
-            translated = _safe_get_response_text(response) or ''
-            
-            # 翻訳結果が空や異常に長い場合は元テキストを使用
-            if not translated or len(translated) > len(text) * 5:
-                return text
-            
-            logger.info(f"Prompt translated: '{text}' → '{translated}'")
-            return translated
-            
-        except Exception as e:
-            logger.warning(f"Prompt translation failed: {e}, using original text")
+        # 音楽スタイル用の日本語→英語辞書（長い語句を先にマッチさせる）
+        MUSIC_PROMPT_DICT = {
+            # ジャンル・スタイル
+            'ヒップホップ': 'hip-hop', 'シティポップ': 'city pop', 'ボサノバ': 'bossa nova',
+            'アンビエント': 'ambient', 'オルタナティブ': 'alternative', 'プログレッシブ': 'progressive',
+            'シンセウェーブ': 'synthwave', 'エレクトロニカ': 'electronica', 'トランス': 'trance',
+            'テクノ': 'techno', 'ハウス': 'house', 'ドラムンベース': 'drum and bass',
+            'レゲエ': 'reggae', 'スカ': 'ska', 'ファンク': 'funk', 'ソウル': 'soul',
+            'ゴスペル': 'gospel', 'ブルース': 'blues', 'カントリー': 'country',
+            'フォーク': 'folk', 'アコースティック': 'acoustic', 'オーケストラ': 'orchestral',
+            'シンフォニック': 'symphonic', 'ケルト': 'celtic', 'ワールド': 'world',
+            'ラテン': 'latin', 'サンバ': 'samba', 'タンゴ': 'tango',
+            'ポップ': 'pop', 'ロック': 'rock', 'バラード': 'ballad',
+            'ラップ': 'rap', 'ジャズ': 'jazz', 'クラシック': 'classical',
+            '電子音楽': 'electronic', 'メタル': 'metal', 'パンク': 'punk',
+            'アニソン': 'anime song', 'アニメ': 'anime style', 'ゲーム音楽': 'game music',
+            'ボカロ': 'vocaloid style', 'アイドル': 'idol pop',
+            'ローファイ': 'lo-fi', 'ロウファイ': 'lo-fi', 'ローファイビート': 'lo-fi beat',
+            'R&B': 'R&B', 'EDM': 'EDM',
+            # 中国語ジャンル
+            '流行': 'pop', '摇滚': 'rock', '抒情': 'ballad', '说唱': 'rap',
+            '电子': 'electronic', '古典': 'classical', '爵士': 'jazz',
+            # テンポ・雰囲気
+            'アップテンポ': 'upbeat tempo', 'スローテンポ': 'slow tempo',
+            'ミドルテンポ': 'mid-tempo', 'テンポが速い': 'fast tempo',
+            'テンポが遅い': 'slow tempo', 'テンポ': 'tempo',
+            '速い': 'fast', '遅い': 'slow',
+            '激しい': 'intense', '穏やか': 'calm', '静か': 'quiet',
+            '明るい': 'bright', '暗い': 'dark', '切ない': 'melancholic',
+            '悲しい': 'sad', '楽しい': 'fun', '爽やか': 'refreshing',
+            'エモい': 'emotional', 'ノスタルジック': 'nostalgic',
+            'ドラマチック': 'dramatic', '壮大': 'epic', '幻想的': 'dreamy',
+            'ダーク': 'dark', 'ヘビー': 'heavy', 'ライト': 'light',
+            'チル': 'chill', 'エモーショナル': 'emotional',
+            'おしゃれ': 'stylish', 'かわいい': 'cute', 'かっこいい': 'cool',
+            '元気': 'energetic', '力強い': 'powerful', '優しい': 'gentle',
+            '繊細': 'delicate', '透明感': 'transparent ethereal',
+            '重厚': 'heavy majestic', '軽快': 'light upbeat',
+            # ボーカル・声
+            '女性ボーカル': 'female vocal', '男性ボーカル': 'male vocal',
+            '高い声': 'high-pitched voice', '低い声': 'low-pitched voice',
+            'ハスキー': 'husky', 'ウィスパー': 'whisper',
+            'ファルセット': 'falsetto', 'シャウト': 'shout',
+            'ハモり': 'harmony', 'コーラス': 'chorus',
+            'ラップ調': 'rap style', '語り': 'spoken word',
+            # 楽器
+            'ピアノ': 'piano', 'ギター': 'guitar', 'ドラム': 'drums',
+            'ベース': 'bass', 'バイオリン': 'violin', 'チェロ': 'cello',
+            'フルート': 'flute', 'サックス': 'saxophone', 'トランペット': 'trumpet',
+            'シンセサイザー': 'synthesizer', 'シンセ': 'synth',
+            'ストリングス': 'strings', 'ブラス': 'brass',
+            'アコギ': 'acoustic guitar', 'エレキ': 'electric guitar',
+            'ウクレレ': 'ukulele', 'ハープ': 'harp', 'オルガン': 'organ',
+            'マリンバ': 'marimba', '三味線': 'shamisen', '琴': 'koto',
+            '和楽器': 'Japanese traditional instruments', '和風': 'Japanese style',
+            # 修飾
+            '風': ' style', '調': ' style', '系': ' style', '的': '',
+            '感じ': ' feel', 'っぽい': '-like',
+        }
+        
+        result = text
+        # 長い語句から順にマッチさせる（前後にスペースを付けて結合問題を防ぐ）
+        for ja, en in sorted(MUSIC_PROMPT_DICT.items(), key=lambda x: len(x[0]), reverse=True):
+            result = result.replace(ja, f' {en} ')
+        
+        # 残った日本語の助詞・接続詞を除去
+        result = re.sub(r'[のでをがはにとも、。]+', ' ', result)
+        # 連続スペースを整理
+        result = re.sub(r'\s+', ' ', result).strip()
+        # 空になった場合は元テキストを返す
+        if not result:
             return text
+        
+        logger.info(f"Prompt translated (dict): '{text}' → '{result}'")
+        return result
     
     def _truncate_lyrics_by_section(self, lyrics, max_length):
         """歌詞をセクション単位で切り詰める（完全なセクションで終わるように）"""
@@ -803,6 +916,7 @@ class PDFTextExtractor:
     def extract_text_from_pdf(self, pdf_file):
         """PDFファイルからテキストを抽出
         
+
         まずPyMuPDFでテキスト抽出を試み、
         テキストが取得できない場合（スキャンPDFなど）はGemini OCRで画像として処理
         """
@@ -898,10 +1012,13 @@ class PDFTextExtractor:
                 img = Image.frombytes("RGB", [pix.width, pix.height], pix.samples)
                 
                 # Geminiで OCR
-                prompt = """Extract ALL text from this image accurately and completely.
-Preserve line breaks, paragraph structure, and logical reading order.
-If text is underlined, bold, or highlighted, wrap it with **double asterisks**.
-Output only the extracted text without any additional explanation."""
+                prompt = """この画像に含まれるテキストをすべて正確に書き起こしてください。
+
+ルール:
+・改行や段落構造をそのまま保つ
+・一部の語句だけが下線・太字・マーカー・色付き（赤字・青字等）で強調されている場合、その語句を【】で囲む（例: 【重要語句】）
+・ただし文章全体が同じ色やスタイルの場合は強調ではないので【】で囲まない
+・テキストのみを出力し、説明や補足は一切書かない"""
                 
                 try:
                     response = model.generate_content([prompt, img], safety_settings=GEMINI_SAFETY_SETTINGS)
@@ -983,17 +1100,18 @@ class GeminiOCR:
             img_buffer.seek(0)
             img = Image.open(img_buffer)
             
-            prompt = """Extract ALL text from this image accurately and completely.
+            prompt = """この画像に含まれるテキストをすべて正確に書き起こしてください。
 
-CRITICAL RULES:
-1. Preserve the original line breaks, paragraph structure, and logical flow.
-2. If text is underlined, bold, highlighted, or marked in any way, wrap it with **double asterisks** like **this**.
-3. Maintain the reading order (top to bottom, left to right for horizontal text; top to bottom, right to left for vertical Japanese text).
-4. Include ALL text: headings, body text, captions, labels, footnotes, annotations.
-5. For tables or structured content, preserve the structure as clearly as possible.
-6. Ignore watermarks, page numbers, and decorative elements.
-7. If handwritten text is present, transcribe it as accurately as possible.
-8. Output ONLY the extracted text — no explanations or commentary."""
+ルール:
+・改行や段落構造をそのまま保つ
+・縦書きは上→下、右→左の順序で読む
+・横書きは上→下、左→右の順序で読む
+・見出し、本文、注釈、キャプションをすべて含める
+・手書き文字も可能な限り正確に読み取る
+・一部の語句だけが下線・太字・マーカー・色付き（赤字・青字等）で強調されている場合、その語句を【】で囲む（例: 【重要語句】）
+・ただし文章全体が同じ色やスタイルの場合は強調ではないので【】で囲まない
+・透かし、ページ番号、装飾は無視する
+・テキストのみを出力し、説明や補足は一切書かない"""
             
             # リトライロジック（最大3回）
             max_retries = 3
@@ -1089,6 +1207,92 @@ class GeminiLyricsGenerator:
                 
         except Exception as e:
             print(f"Gemini lyrics generation error: {e}")
+            raise
+
+    def generate_lyrics_from_images(self, images, title="", genre="pop", language_mode="japanese", custom_request="", extracted_text=""):
+        """画像を直接Geminiに渡して歌詞を生成（OCR+歌詞生成を一発で行う）
+        
+        OCRを挟まず画像から直接歌詞を生成することで:
+        - OCR段階での情報ロスを防ぐ
+        - 強調表現・図表・レイアウトをGeminiが直接理解できる
+        - APIコール数が半減する（OCR+生成 → 生成のみ）
+        
+        Args:
+            images: PIL.Image のリスト
+            extracted_text: 既にOCRで抽出済みのテキスト（補助情報として使用、空でもOK）
+            title, genre, language_mode, custom_request: 従来と同じ
+        
+        Returns:
+            str: 生成された歌詞
+        """
+        if not self.model:
+            raise Exception("Gemini APIが設定されていません。管理者に連絡してください。")
+        
+        if not images:
+            raise Exception("画像が指定されていません。")
+        
+        try:
+            # 言語モード別のプロンプトを取得
+            # extracted_textに画像参照指示を追加
+            image_instruction = "（※ 添付画像の内容を直接読み取って歌詞を作成してください。画像内で一部の語句だけが下線・太字・マーカー・色付き（赤字・青字等）で他と異なる見た目になっている場合、それは強調された重要語句です。必ず歌詞に含めてください。全体が同じ色やスタイルの場合は強調ではありません。）"
+            
+            if extracted_text:
+                combined_text = f"{image_instruction}\n\n■ 画像から事前に抽出されたテキスト（参考）\n{extracted_text}"
+            else:
+                combined_text = image_instruction
+            
+            if language_mode == "english_vocab":
+                prompt = self._get_english_vocab_prompt(combined_text, genre, custom_request)
+            elif language_mode == "english":
+                prompt = self._get_english_prompt(combined_text, genre, custom_request)
+            elif language_mode == "chinese":
+                prompt = self._get_chinese_prompt(combined_text, genre, custom_request)
+            elif language_mode == "chinese_vocab":
+                prompt = self._get_chinese_vocab_prompt(combined_text, genre, custom_request)
+            else:
+                prompt = self._get_japanese_prompt(combined_text, genre, custom_request)
+            
+            # プロンプト + 画像リストをGeminiに一括送信
+            content_parts = [prompt] + list(images)
+            
+            logger.info(f"generate_lyrics_from_images: Sending {len(images)} image(s) + prompt to Gemini")
+            
+            # リトライロジック（最大3回）
+            max_retries = 3
+            last_error = None
+            for attempt in range(max_retries):
+                try:
+                    response = self.model.generate_content(
+                        content_parts,
+                        safety_settings=GEMINI_SAFETY_SETTINGS,
+                    )
+                    
+                    raw_lyrics = _safe_get_response_text(response)
+                    
+                    if raw_lyrics:
+                        lyrics = self._extract_clean_lyrics(raw_lyrics)
+                        logger.info(f"generate_lyrics_from_images: Success! Generated {len(lyrics)} chars (attempt {attempt + 1})")
+                        return lyrics
+                    
+                    last_error = "Empty response"
+                    logger.warning(f"generate_lyrics_from_images: Empty response on attempt {attempt + 1}")
+                    
+                except Exception as api_error:
+                    last_error = str(api_error)
+                    logger.warning(f"generate_lyrics_from_images: API error on attempt {attempt + 1}: {api_error}")
+                
+                if attempt < max_retries - 1:
+                    time.sleep(2 * (attempt + 1))
+            
+            # 全リトライ失敗 → テキストベースにフォールバック
+            if extracted_text:
+                logger.warning("generate_lyrics_from_images: All image attempts failed, falling back to text-based generation")
+                return self.generate_lyrics(extracted_text, title=title, genre=genre, language_mode=language_mode, custom_request=custom_request)
+            
+            raise Exception(f"画像からの歌詞生成に失敗しました: {last_error}")
+            
+        except Exception as e:
+            logger.error(f"generate_lyrics_from_images error: {e}")
             raise
 
     def _get_english_vocab_prompt(self, extracted_text, genre, custom_request=""):
@@ -1190,7 +1394,7 @@ class GeminiLyricsGenerator:
 【Key Information Focus】
 ・Turn facts into singable lines
 ・Make numbers and dates rhythmic
-・Include terms that are underlined, bold, or highlighted in the text
+・Include terms wrapped in 【】brackets (these are emphasized/highlighted/colored terms) as highest priority
 ・Right after important terms, explain their meaning/definition/characteristics
 ・Include as many technical terms, names, dates, places, concepts as possible from the text
 
@@ -1288,7 +1492,7 @@ class GeminiLyricsGenerator:
 【关键信息聚焦】
 ・将事实转化为可唱的歌词
 ・让数字和日期有节奏感
-・文本中有下划线、粗体、荧光笔标记的内容必须包含在歌词中
+・文本中用【】括起来的词语（即下划线、粗体、荧光笔标记、彩色文字的重点内容）必须优先包含在歌词中
 ・重要术语出现后，紧接着解释其含义、定义、特征
 ・尽可能多地包含文本中的专业术语、人名、年份、地名、概念
 
@@ -1387,7 +1591,7 @@ class GeminiLyricsGenerator:
 ・重要词汇在副歌中重复3次以上
 ・使用容易记忆的短语
 ・关键概念要反复出现
-・文本中有下划线、粗体、荧光笔标记的内容必须包含在歌词中
+・文本中用【】括起来的词语（即下划线、粗体、荧光笔标记、彩色文字的重点内容）必须优先包含在歌词中
 ・重要术语出现后，紧接着解释其含义、定义、特征
 
 【禁止使用的过渡词】
@@ -1494,7 +1698,7 @@ class GeminiLyricsGenerator:
 ・小学生〜中学生でも口ずさみやすい音感を重視
 
 【テキスト情報の取り込み】
-・テキスト内で「下線」「太字」「マーカー」「**強調**」されている語句は必ず歌詞に含める
+・テキスト内で【】で囲まれた語句（下線・太字・マーカー・色付き文字で強調された内容）は最重要として必ず歌詞に含める
 ・最重要単語はChorusで最低2〜3回以上繰り返す
 ・重要な専門用語が出たら、その直後または次の行でその意味・定義・特徴を説明する
 ・「AはBである」形式ではなく「A B」のようにシンプルに並べる
@@ -1736,17 +1940,413 @@ def number_to_japanese_reading(num_str):
 
 
 def kanji_and_numbers_to_hiragana(text):
-    """漢字と数字をひらがなに変換（fugashiが利用可能な場合）
-    改行や句読点を保持して、歌詞の構造を維持する
-    """
-    def num_to_hiragana(match):
-        return number_to_japanese_reading(match.group())
+    """漢字と数字をひらがなに変換（fugashi + 歌詞用読み替え辞書）
     
-    text = re.sub(r'[0-9]+', num_to_hiragana, text)
+    Gemini APIを使わず、fugashi形態素解析 + 歌詞特化の読み替え辞書で
+    高品質なひらがな変換を行う。助詞の発音変換（は→わ、へ→え、を→お）も対応。
+    改行や句読点を保持して、歌詞の構造を維持する。
+    """
+    
+    # === 歌詞用読み替え辞書 ===
+    # fugashiのデフォルト読みが歌詞に不自然な場合に上書きする
+    # キー: (surface, fugashiのカナ読み) → 値: 正しいひらがな読み
+    LYRICS_READING_OVERRIDES = {
+        # ── 人称代名詞 ──
+        ('私', 'ワタクシ'): 'わたし',
+
+        # ── 時間・日付（歌詞で口語的読みが自然なもの） ──
+        ('明日', 'アス'): 'あした',
+        ('昨日', 'サクジツ'): 'きのう',
+        ('今日', 'コンニチ'): 'きょう',
+        ('昨夜', 'サクヤ'): 'ゆうべ',
+        ('明後日', 'ミョウゴニチ'): 'あさって',
+        # 一昨日: fugashiが「一昨」+「日」に分割するため複合語辞書で対応
+
+        # ── 言う活用形（「ゆう」→「いう」が歌唱では標準） ──
+        ('言う', 'ユウ'): 'いう',
+        ('言っ', 'ユッ'): 'いっ',
+        ('言い', 'ユイ'): 'いい',
+        ('言え', 'ユエ'): 'いえ',
+        ('言わ', 'ユワ'): 'いわ',
+        ('言お', 'ユオ'): 'いお',
+
+        # ── 時（じ→とき） ──
+        ('時', 'ジ'): 'とき',
+
+        # ── 人数・助数詞系 ──
+        ('一人', 'イチニン'): 'ひとり',
+        ('二人', 'ニニン'): 'ふたり',
+        ('大人', 'ダイニン'): 'おとな',
+        ('一日', 'ツイタチ'): 'いちにち',
+
+        # ── 歌詞的読み（訓読み優先） ──
+        ('故郷', 'コキョウ'): 'ふるさと',
+        ('身体', 'シンタイ'): 'からだ',
+        ('宝物', 'ホウモツ'): 'たからもの',
+        ('花弁', 'カベン'): 'はなびら',
+        ('春風', 'シュンプウ'): 'はるかぜ',
+        ('南風', 'ハエ'): 'みなみかぜ',
+        ('南風', 'ナンプウ'): 'みなみかぜ',
+
+        # ── 日々・所・側 ──
+        ('日々', 'ニチニチ'): 'ひび',
+        ('想い', 'ソウイ'): 'おもい',
+        ('側', 'ガワ'): 'そば',
+
+        # ── 形（ケイ→かたち）──
+        # ※ 接尾辞「形(ケイ)」は「けい」のまま（未然形、連用形 etc）
+        #    単独の「形」は「かたち」が自然 → convert_token 内で文脈判定
+
+        # ── 所（ショ→ところ）──
+        # ※ 接尾辞「所(ショ)」は「しょ」のまま（裁判所、研究所 etc）
+        #    単独の「所」は「ところ」が自然 → convert_token 内で文脈判定
+
+        # ── 上手/下手（歌詞では「じょうず/へた」） ──
+        ('下手', 'シタテ'): 'へた',
+        ('上手', 'ウワテ'): 'じょうず',
+
+        # ── 深い系（ぶかい→ふかい） ──
+        ('深い', 'ブカイ'): 'ふかい',
+        ('深く', 'ブカク'): 'ふかく',
+        ('深さ', 'ブカサ'): 'ふかさ',
+        ('深み', 'ブカミ'): 'ふかみ',
+        ('深ま', 'ブカマ'): 'ふかま',
+        ('深め', 'ブカメ'): 'ふかめ',
+
+        # ── 走り出る→走り出す 読み修正 ──
+        # fugashiが「走り出す」(五段)を「走り出る」(下一段)と解析し
+        # 「ハシリデ」を返す場合がある → 歌詞では「はしりだ」が自然
+        ('走り出', 'ハシリデ'): 'はしりだ',
+
+        # ── 瞬く（しばたたく→またたく） ──
+        # fugashiが「しばたたく」を返すが歌詞では「またたく」が自然
+        ('瞬く', 'シバタタク'): 'またたく',
+        ('瞬い', 'シバタタイ'): 'またたい',
+        ('瞬き', 'マバタキ'): 'またたき',
+
+        # ── 歌詞で訓読み/歌詞的読みが自然な単漢字 ──
+        ('刃', 'ハ'): 'やいば',
+        ('塵', 'ゴミ'): 'ちり',
+        ('露', 'ロ'): 'つゆ',
+
+        # ── 下（もと→した）──
+        # fugashiが文脈により「モト」を返すが歌詞では「した」が自然
+        ('下', 'モト'): 'した',
+
+        # ── 紅葉（こうよう→もみじ）──
+        # 歌詞では「もみじ」が自然（紅葉狩り、紅葉が散る等）
+        ('紅葉', 'コウヨウ'): 'もみじ',
+
+        # ── 連濁が欠落するケース（fugashiが複合語を2トークンに分ける場合用） ──
+        # ※ 連濁は COMPOUND_OVERRIDES で処理する
+        ('景色', 'ケシキ'): 'けしき',   # 単独時は「けしき」で正しい
+        ('心地', 'ココチ'): 'ここち',   # 単独時は「ここち」で正しい
+
+        # ── fugashiが1トークンで返す複合語（COMPOUND_OVERRIDESでは拾えない） ──
+        ('三日月', 'ミカツキ'): 'みかづき',    # 文中で1トークンになる場合
+        ('日曜日', 'ニチヨウビ'): 'にちようび', # fugashiが1トークンで返す場合用
+        ('何に', 'ナンニ'): 'なんに',           # fugashiが「何」+「に」を結合する
+
+        # ── 接尾辞「中」の読み分け ──
+        # サ変可能の後 → ちゅう（勉強中、授業中、食事中）
+        # それ以外の後 → じゅう（世界中、一日中、体中）
+        # ※ convert_token 内で文脈判定するため、ここでは定義しない
+
+        # ── 額（がく→ひたい）──
+        ('額', 'ガク'): 'ひたい',   # 歌詞・日常語では「ひたい」が自然
+
+        # ── 風（フウ→かぜ）──
+        # ※ 接尾辞「風(フウ)」は「ふう」のまま（偏西風、季節風 etc）
+        #    単独の「風」は「かぜ」が自然 → convert_token 内で文脈判定
+
+        # ── 朝露（ちょうろ→あさつゆ）──
+        ('朝露', 'チョウロ'): 'あさつゆ',   # 歌詞では「あさつゆ」が自然
+
+        # ── 何も/何か（なんも→なにも、なんか→なにか）──
+        ('何も', 'ナンモ'): 'なにも',
+        ('何か', 'ナンカ'): 'なにか',
+
+        # ── 楓（ふう→かえで）──
+        # fugashiが単独で「フウ」を返すが歌詞では「かえで」が自然
+        ('楓', 'フウ'): 'かえで',
+
+        # ── 箱（ばこ→はこ）──
+        # fugashiが連濁形「バコ」を返すことがあるが、単独では「はこ」が正しい
+        ('箱', 'バコ'): 'はこ',
+
+        # ── 体（たい→からだ）──
+        # ※ 一律オーバーライドすると「染色体→せんしょくからだ」等の副作用が出るため
+        #    convert_token 内で文脈判定する（前の語が漢語＝音読み「たい」、単独＝「からだ」）
+
+        # ── 葉（は→は）──
+        # fugashiが「ヨウ」を返す場合があるが歌詞では「は」が自然
+        ('葉', 'ヨウ'): 'は',
+
+        # ── 科学用語: fugashiが人名と誤認するもの ──
+        ('中和', 'ナカワ'): 'ちゅうわ',     # 人名「中和(ナカワ)」→科学用語「ちゅうわ」
+        ('陽子', 'ヨウコ'): 'ようし',       # 人名「陽子(ヨウコ)」→科学用語「ようし」
+        ('平野', 'ヒラノ'): 'へいや',       # 人名「平野(ヒラノ)」→地理用語「へいや」
+        ('地頭', 'ジガシラ'): 'じとう',     # 「じがしら」→歴史用語「じとう」
+        ('角柱', 'カクバシラ'): 'かくちゅう', # 建築→数学用語「かくちゅう」
+        ('球', 'タマ'): 'きゅう',           # 歌詞的「たま」→学術「きゅう」
+        ('序詞', 'ジョシ'): 'じょことば',   # 「じょし」→古文用語「じょことば」
+
+        # ── 接尾辞「形」の読み分け ──
+        # fugashiが接尾辞として「ガタ」を返すが、学術用語では「けい」が正しい
+        # 例: 三角形→さんかっけい、四角形→しかっけい、長方形→ちょうほうけい
+        # ※ convert_token 内で接尾辞「形(ガタ)」→「けい」に変換
+    }
+
+    # === 複合語読み替え辞書 ===
+    # fugashiが2つ以上のトークンに分割する複合語で、結合後の読みが特殊なもの
+    # キー: 元テキスト(surface連結) → 値: 正しいひらがな読み
+    COMPOUND_OVERRIDES = {
+        # 一昨日: 「一昨」+「日」→「おととい」
+        '一昨日': 'おととい',
+        '一昨年': 'おととし',
+        # 三日月: 「三」+「日」+「月」→ 「みかづき」
+        '三日月': 'みかづき',
+        # 連濁が必要な複合語
+        '雪景色': 'ゆきげしき',
+        '夢見心地': 'ゆめみごこち',
+        # 曜日の連濁（fugashiが「日曜」+「日(ヒ)」に分割する場合）
+        '日曜日': 'にちようび',
+        '月曜日': 'げつようび',
+        '火曜日': 'かようび',
+        '水曜日': 'すいようび',
+        '木曜日': 'もくようび',
+        '金曜日': 'きんようび',
+        '土曜日': 'どようび',
+        # 番+連濁
+        '一番星': 'いちばんぼし',
+        # 一日中: 「一」+「日」+「中」→ いちにちじゅう
+        '一日中': 'いちにちじゅう',
+        # 四字熟語
+        '一期一会': 'いちごいちえ',
+        '七転八倒': 'しちてんばっとう',
+        # 連濁が必要な植物名
+        '彼岸花': 'ひがんばな',
+        # 慣用句・熟語の特殊読み
+        '瞬く間': 'またたくま',
+        '朝露': 'あさつゆ',
+        '何時': 'なんじ',
+        # 「体」+接尾辞（からだじゅう）
+        '体中': 'からだじゅう',
+        # 「楓」関連の複合語
+        '楓色': 'かえでいろ',
+
+        # === 科学用語（fugashiが分割を誤るもの） ===
+        '光合成': 'こうごうせい',       # 光(ヒカリ)+合成 → こうごうせい
+        '北極星': 'ほっきょくせい',     # 北極+星(ホシ) → ほっきょくせい
+        '三角形': 'さんかっけい',       # 三角+形(ガタ) → さんかっけい（促音便）
+        '四角形': 'しかっけい',         # 四角+形(ガタ) → しかっけい（促音便）
+        '長方形': 'ちょうほうけい',     # 長方+形(ガタ) → ちょうほうけい
+        '台形': 'だいけい',             # 台+形(ガタ) → だいけい
+        '円錐形': 'えんすいけい',       # 円錐+形(ガタ) → えんすいけい
+        '正方形': 'せいほうけい',       # 正方+形(ガタ) → せいほうけい
+        '染色体': 'せんしょくたい',     # 染色+体(タイ) → せんしょくたい
+        '抗体': 'こうたい',             # 抗+体(タイ) → こうたい（分割される場合用）
+        '天体': 'てんたい',             # 天+体(タイ) → てんたい（分割される場合用）
+        '中性子': 'ちゅうせいし',       # 中性+子(シ) → ちゅうせいし
+
+        # === 四字熟語（fugashiの読みが特殊読みと異なるもの） ===
+        '言語道断': 'ごんごどうだん',   # 言語(ゲンゴ) → ごんご
+        '三位一体': 'さんみいったい',   # 三(サン)+位(イ) → さんみ
+        '傍若無人': 'ぼうじゃくぶじん', # 無人(ムジン) → ぶじん
+        '竜頭蛇尾': 'りゅうとうだび',   # 竜頭(リュウズ) → りゅうとう
+        '一石二鳥': 'いっせきにちょう', # 石(コク) → せき
+
+        # === 理科用語（複合語） ===
+        '熱力学': 'ねつりきがく',       # 熱力(ネツリョク) → ねつりき
+        '陽電子': 'ようでんし',         # 陽(ヒ) → よう
+        '有糸分裂': 'ゆうしぶんれつ',   # 糸(イト) → し
+        '白血球': 'はっけっきゅう',     # 白(シロ) → はく → はっ
+        '赤血球': 'せっけっきゅう',     # 赤(アカ) → せき → せっ
+        '血小板': 'けっしょうばん',     # 血(ケツ) → けっ
+        '大気圧': 'たいきあつ',         # 大(ダイ) → たい
+        '偏西風': 'へんせいふう',       # 風(フウ接尾辞) → ふう
+        '季節風': 'きせつふう',         # 風(フウ接尾辞) → ふう
+
+        # === 社会用語 ===
+        '三角州': 'さんかくす',         # 州(シュウ) → す
+
+        # === 数学用語 ===
+        '平方根': 'へいほうこん',       # 根(ネ) → こん
+        '平行四辺形': 'へいこうしへんけい', # 形(ケイ接尾辞) → けい
+
+        # === 文学作品名 ===
+        '枕草子': 'まくらのそうし',     # 枕+草子 → まくらのそうし（「の」挿入）
+        '古今和歌集': 'こきんわかしゅう', # 古今(ココン) → こきん
+    }
+
+    # === 「何」の文脈判定 ===
+    NANI_KEEP_NAN_NEXT = {
+        '度', '人', '回', '本', '個', '杯', '匹', '年', '日', '月',
+        '歳', '冊', '件', '階', '番', '倍', '割', '分', '秒', '時',
+        '曲', '枚', '台', '千', '万', '億', '百', '十',
+    }
+    
+    # === 数字変換（セクションマーカー行を除外） ===
+    # 「N+つ」特殊読み辞書（和語の数え方）
+    COUNTER_TSU = {
+        '1': 'ひとつ', '2': 'ふたつ', '3': 'みっつ', '4': 'よっつ',
+        '5': 'いつつ', '6': 'むっつ', '7': 'ななつ', '8': 'やっつ',
+        '9': 'ここのつ',
+    }
+    # 「N+人」特殊読み辞書（ひとり/ふたり）
+    COUNTER_NIN = {
+        '1': 'ひとり', '2': 'ふたり',
+    }
+    
+    def num_to_hiragana_in_context(match):
+        """数字を文脈に応じてひらがなに変換（Nつ/N人対応）"""
+        num_part = match.group(1)
+        suffix = match.group(2)  # 'つ', '人', or ''
+        if suffix == 'つ' and num_part in COUNTER_TSU:
+            return COUNTER_TSU[num_part]
+        if suffix == '人' and num_part in COUNTER_NIN:
+            return COUNTER_NIN[num_part]
+        return number_to_japanese_reading(num_part) + suffix
+    
+    def convert_line_numbers(line):
+        """セクションマーカー行以外のアラビア数字を変換"""
+        if line.strip().startswith('[') and line.strip().endswith(']'):
+            return line
+        # 「数字+つ/人」パターンを優先処理、それ以外は通常変換
+        return re.sub(r'([0-9]+)([つ人]?)', num_to_hiragana_in_context, line)
+    
+    text = '\n'.join(convert_line_numbers(l) for l in text.split('\n'))
+    
+    # === 数字変換後の促音便ルール定義（最終出力に適用） ===
+    # 「ひゃく」+カ行 → 促音便（例: ひゃくかい→ひゃっかい）
+    # 「いち」+カ行/サ行/タ行 → 促音便（例: いちかい→いっかい）
+    # 「はち」+カ行/サ行/タ行 → 促音便（例: はちかい→はっかい）
+    # 「じゅう」+カ行 → 促音便（例: じゅうかい→じゅっかい）
+    # 「ろく」+カ行 → 促音便（例: ろくかい→ろっかい）
+    SOKUON_RULES = {
+        'ひゃく': (['か', 'き', 'く', 'け', 'こ'], 'ひゃっ'),
+        'いち': (['か', 'き', 'く', 'け', 'こ', 'さ', 'し', 'す', 'せ', 'そ', 'た', 'ち', 'つ', 'て', 'と'], 'いっ'),
+        'はち': (['か', 'き', 'く', 'け', 'こ', 'さ', 'し', 'す', 'せ', 'そ', 'た', 'ち', 'つ', 'て', 'と'], 'はっ'),
+        'じゅう': (['か', 'き', 'く', 'け', 'こ'], 'じゅっ'),
+        'ろく': (['か', 'き', 'く', 'け', 'こ'], 'ろっ'),
+    }
     
     if not FUGASHI_AVAILABLE:
-        # fugashiがない場合は数字のみ変換して返す
         return text
+    
+    # === カタカナ→ひらがな変換ヘルパー ===
+    def katakana_to_hiragana(kana):
+        """カタカナ文字列をひらがなに変換"""
+        return ''.join(
+            chr(ord(c) - 96) if 'ァ' <= c <= 'ヶ' else c
+            for c in kana
+        )
+
+    def convert_token(word, words, i):
+        """1トークンをひらがなに変換する"""
+        surface = word.surface
+        kana = word.feature.kana
+        pos = str(word.feature).split(',')[0] if word.feature else ''
+        pos_full = str(word.feature) if word.feature else ''
+        
+        has_kanji = any('\u4e00' <= c <= '\u9fff' for c in surface)
+        
+        if has_kanji and kana:
+            # --- 「何」の文脈判定 ---
+            if surface == '何' and kana == 'ナン':
+                next_surface = words[i + 1].surface if i + 1 < len(words) else ''
+                # 助数詞（何度、何人、何回…）→ なん
+                if next_surface and next_surface[0] in NANI_KEEP_NAN_NEXT:
+                    return 'なん'
+                # 「なに」になる助詞: を、が、に、は、も、か（格助詞・係助詞・副助詞）
+                elif next_surface in ('を', 'が', 'に', 'は', 'も', 'か'):
+                    return 'なに'
+                # 文末の「何」→ なに
+                elif not next_surface:
+                    return 'なに'
+                # それ以外の助詞・助動詞（で、も、か、と、だ…）→ なん
+                else:
+                    next_pos = str(words[i + 1].feature).split(',')[0] if i + 1 < len(words) else ''
+                    if '助詞' in next_pos or '助動詞' in next_pos:
+                        return 'なん'
+                    return 'なに'
+            
+            # --- 接尾辞「中」の文脈判定 ---
+            # サ変可能（勉強、授業、食事、営業…）の後 → ちゅう（進行中）
+            # それ以外（世界、体、日本、一日…）の後 → じゅう（全体）
+            if surface == '中' and kana == 'チュウ' and '接尾辞' in pos_full:
+                if i > 0:
+                    prev_pos_full = str(words[i - 1].feature) if words[i - 1].feature else ''
+                    if 'サ変可能' in prev_pos_full:
+                        return 'ちゅう'
+                return 'じゅう'
+            
+            # --- 「体」(タイ) の文脈判定 ---
+            # 前の語が漢語（音読み複合語の末尾）→ たい（染色体、液体、天体…）
+            # 単独または前が助詞・ひらがな → からだ（歌詞・日常語）
+            if surface == '体' and kana == 'タイ':
+                if i > 0:
+                    prev_surface = words[i - 1].surface
+                    prev_has_kanji = any('\u4e00' <= c <= '\u9fff' for c in prev_surface)
+                    if prev_has_kanji:
+                        return 'たい'  # 漢語の後 → 音読み（染色体、液体 etc）
+                return 'からだ'  # 単独 or 前が助詞等 → 訓読み
+            
+            # --- 接尾辞「形」(ガタ) の文脈判定 ---
+            # 「〜角形」「〜方形」等の学術用語 → けい
+            # 「大形」「小形」等 → がた のまま
+            if surface == '形' and kana == 'ガタ' and '接尾辞' in pos_full:
+                if i > 0:
+                    prev_surface = words[i - 1].surface
+                    # 「角」「方」「錐」等で終わる場合は「けい」
+                    if prev_surface.endswith(('角', '方', '錐', '円', '型')):
+                        return 'けい'
+                return 'がた'
+            
+            # --- 接尾辞「形」(ケイ) の文脈判定 ---
+            # 接尾辞として使われている場合（未然形、連用形 etc）→ けい
+            # 単独の「形」→ かたち（歌詞・日常語）
+            if surface == '形' and kana == 'ケイ':
+                if '接尾辞' in pos_full:
+                    return 'けい'  # 未然形、命令形 etc
+                return 'かたち'  # 単独 → 訓読み
+            
+            # --- 「風」(フウ) の文脈判定 ---
+            # 接尾辞として使われている場合（偏西風、季節風 etc）→ ふう
+            # 単独の「風」→ かぜ（歌詞・日常語）
+            if surface == '風' and kana == 'フウ':
+                if '接尾辞' in pos_full:
+                    return 'ふう'  # 偏西風、季節風 etc
+                return 'かぜ'  # 単独 → 訓読み
+            
+            # --- 「所」(ショ) の文脈判定 ---
+            # 接尾辞として使われている場合（裁判所、研究所 etc）→ しょ
+            # 単独の「所」→ ところ（歌詞・日常語）
+            if surface == '所' and kana == 'ショ':
+                if '接尾辞' in pos_full:
+                    return 'しょ'  # 裁判所、研究所 etc
+                return 'ところ'  # 単独 → 訓読み
+            
+            # --- 読み替え辞書チェック ---
+            override_key = (surface, kana)
+            if override_key in LYRICS_READING_OVERRIDES:
+                return LYRICS_READING_OVERRIDES[override_key]
+            return katakana_to_hiragana(kana)
+        elif has_kanji:
+            return surface
+        elif re.match(r'^[A-Za-zａ-ｚＡ-Ｚ]+$', surface):
+            return surface
+        elif re.match(r'^[ァ-ヴー]+$', surface):
+            return surface
+        else:
+            # 助詞の発音変換
+            if surface == 'は' and '助詞' in pos:
+                return 'わ'
+            elif surface == 'へ' and '助詞' in pos:
+                return 'え'
+            elif surface == 'を' and '助詞' in pos:
+                return 'お'
+            return surface
     
     # 行ごとに処理して改行を保持
     lines = text.split('\n')
@@ -1756,108 +2356,270 @@ def kanji_and_numbers_to_hiragana(text):
     
     for line in lines:
         if not line.strip():
-            # 空行はそのまま保持
             converted_lines.append('')
             continue
             
-        # セクションマーカー（[Verse], [Chorus]など）はそのまま保持
+        # セクションマーカー保持
         if line.strip().startswith('[') and line.strip().endswith(']'):
             converted_lines.append(line)
             continue
         
-        result = []
-        for word in tagger(line):
-            if re.match(r'[A-Za-zａ-ｚＡ-Ｚァ-ンー]', word.surface):
-                result.append(word.surface)
-            elif re.match(r'[一-龥]', word.surface):
-                result.append(word.feature.kana or word.surface)
-            else:
-                result.append(word.surface)
+        # === スペース分割方式 ===
+        segments = re.split(r'( +|\u3000+)', line)
+        converted_segments = []
         
-        converted_lines.append(''.join(result))
+        for segment in segments:
+            if not segment or re.match(r'^[ \u3000]+$', segment):
+                converted_segments.append(segment)
+                continue
+            
+            # === fugashiで形態素解析 ===
+            words = list(tagger(segment))
+            result = []
+            skip_until = -1  # 複合語で先読みした分をスキップ
+            
+            for i, word in enumerate(words):
+                if i <= skip_until:
+                    continue
+                
+                # --- 複合語チェック（前方一致で最長マッチ） ---
+                compound_matched = False
+                for length in range(min(4, len(words) - i), 1, -1):
+                    compound_surface = ''.join(w.surface for w in words[i:i+length])
+                    if compound_surface in COMPOUND_OVERRIDES:
+                        result.append(COMPOUND_OVERRIDES[compound_surface])
+                        skip_until = i + length - 1
+                        compound_matched = True
+                        break
+                
+                if not compound_matched:
+                    result.append(convert_token(word, words, i))
+            
+            converted_segments.append(''.join(result))
+        
+        converted_lines.append(''.join(converted_segments))
     
-    # 改行で結合して返す
-    return '\n'.join(converted_lines)
+    # === 数字由来の促音便を最終出力に適用 ===
+    final_text = '\n'.join(converted_lines)
+    for prefix, (triggers, replacement) in SOKUON_RULES.items():
+        for trigger in triggers:
+            final_text = final_text.replace(prefix + trigger, replacement + trigger)
+    
+    return final_text
 
 
 def convert_lyrics_to_hiragana_with_context(lyrics):
-    """Gemini AIを使って文脈を考慮しながら歌詞をひらがなに変換
+    """歌詞をひらがなに変換（fugashi + 歌詞用読み替え辞書）
     
-    漢字の読みを正確にするために、文脈を考慮して変換する。
-    例: 「今日」→「きょう」vs「こんにち」、「明日」→「あした」vs「あす」
+    fugashi形態素解析 + 歌詞特化の読み替え辞書で変換する。
+    助詞の発音変換（は→わ、へ→え、を→お）にも対応。
     """
-    model = _get_gemini_model()
+    return kanji_and_numbers_to_hiragana(lyrics)
+
+
+class GeminiFlashcardExtractor:
+    """Gemini を使用してテキスト/画像から重要語句と定義を抽出するクラス"""
     
-    if not model:
-        # Geminiが使えない場合はfallback
-        logger.warning("Gemini not available, falling back to fugashi conversion")
-        return kanji_and_numbers_to_hiragana(lyrics)
+    def __init__(self):
+        self.model = _get_gemini_model()
     
-    try:
-        prompt = f"""以下の日本語の歌詞を、漢字を全てひらがなに変換してください。
-
-1. 文脈を考慮して、正しい読み方を選んでください
-   - 「今日」→ 歌詞では通常「きょう」
-   - 「明日」→ 歌詞では通常「あした」または「あす」（文脈による）
-   - 「昨日」→ 歌詞では通常「きのう」
-   - 「一人」→「ひとり」
-   - 「二人」→「ふたり」
-   - 「今」→「いま」
-   - 「何」→ 「なに」または「なん」（文脈による）
-   - 「風」→「かぜ」
-   - 「空」→「そら」
-   - 「海」→「うみ」
-   - 「心」→「こころ」
-   - 「夢」→「ゆめ」
-   - 「愛」→「あい」
-   - 「光」→「ひかり」
-   - 「影」→「かげ」
-   - 「声」→「こえ」
-   - 「道」→「みち」
-   - 「日」→ 日付は「にち」、日の光は「ひ」
-   - 「私」→「わたし」
-   - 「君」→「きみ」
-   - 「僕」→「ぼく」
-
-2. 数字は日本語の読みに変換
-   - 「1」→「いち」、「2」→「に」、「10」→「じゅう」、「100」→「ひゃく」
-
-3. 助詞の発音変換（重要！歌の発音に合わせる）
-   - 助詞の「は」→「わ」に変換（例：「私は」→「わたしわ」、「これは」→「これわ」）
-   - 助詞の「へ」→「え」に変換（例：「海へ」→「うみえ」、「空へ」→「そらえ」）
-   - 助詞の「を」→「お」に変換（例：「夢を」→「ゆめお」）
-   ※ 助詞以外の「は」「へ」「を」はそのまま（例：「はな」→「はな」、「へや」→「へや」）
-
-4. セクションラベル（[Verse], [Chorus], [Bridge]など）はそのまま保持
-
-5. 英語はそのまま保持
-
-6. 改行や空行は必ず保持
-
-7. カタカナはそのまま保持
-
-8. 出力は変換後の歌詞のみ（説明や前置きは不要）
-
-【変換する歌詞】
-{lyrics}
-
-【出力】（変換後の歌詞のみを出力）"""
-
-        response = model.generate_content(prompt, safety_settings=GEMINI_SAFETY_SETTINGS)
+    def extract_terms_from_text(self, text):
+        """テキストから重要語句と定義を抽出
         
-        converted = _safe_get_response_text(response)
-        if converted:
-            # 余計な説明を削除
-            if converted.startswith('```'):
-                lines = converted.split('\n')
-                converted = '\n'.join(lines[1:-1] if lines[-1] == '```' else lines[1:])
+        OCRで抽出されたテキスト（【】マーク付き）を解析し、
+        学習用のterm-definitionペアを生成する。
+        
+        Args:
+            text: OCR抽出テキスト（【重要語句】マーク付きの場合あり）
             
-            logger.info(f"Gemini hiragana conversion successful: {len(lyrics)} -> {len(converted)} chars")
-            return converted
-        else:
-            logger.warning("Gemini returned empty response, falling back to fugashi")
-            return kanji_and_numbers_to_hiragana(lyrics)
+        Returns:
+            list[dict]: [{"term": "語句", "definition": "説明"}, ...]
+        """
+        if not self.model:
+            logger.error("GeminiFlashcardExtractor: Gemini API not configured")
+            return []
+        
+        if not text or not text.strip():
+            return []
+        
+        try:
+            prompt = f"""以下のテキストから、学習に重要な語句（キーワード）とその意味・定義のペアを抽出してください。
+
+ルール:
+・【】で囲まれた語句は必ずキーワードとして含め、importance を "high" にする
+・【】で囲まれていなくても、テスト・試験に出そうな重要語句を選ぶ
+・各キーワードに対して、簡潔でわかりやすい定義・説明を付ける
+・定義はテキストの文脈に基づいて書く
+・最低5個、最大20個のペアを抽出する
+・同じ語句の重複は避ける
+・importance は "high"（特に重要・強調されている）または "normal"（通常の重要語句）を設定する
+
+出力形式（JSON配列のみ出力。他の文章は一切書かないこと）:
+[
+  {{"term": "キーワード1", "definition": "定義・説明1", "importance": "high"}},
+  {{"term": "キーワード2", "definition": "定義・説明2", "importance": "normal"}}
+]
+
+テキスト:
+{text}"""
             
-    except Exception as e:
-        logger.error(f"Gemini hiragana conversion error: {e}, falling back to fugashi")
-        return kanji_and_numbers_to_hiragana(lyrics)
+            max_retries = 3
+            last_error = None
+            for attempt in range(max_retries):
+                try:
+                    response = self.model.generate_content(
+                        prompt,
+                        safety_settings=GEMINI_SAFETY_SETTINGS,
+                    )
+                    raw_text = _safe_get_response_text(response)
+                    if raw_text:
+                        terms = self._parse_terms_json(raw_text)
+                        if terms:
+                            logger.info(f"GeminiFlashcardExtractor: Extracted {len(terms)} terms")
+                            return terms
+                    last_error = "Empty or unparseable response"
+                except Exception as api_error:
+                    last_error = str(api_error)
+                    logger.warning(f"GeminiFlashcardExtractor: API error attempt {attempt + 1}: {api_error}")
+                
+                if attempt < max_retries - 1:
+                    import time as _time
+                    _time.sleep(2 * (attempt + 1))
+            
+            logger.error(f"GeminiFlashcardExtractor: All attempts failed. Last error: {last_error}")
+            return []
+            
+        except Exception as e:
+            logger.error(f"GeminiFlashcardExtractor: Error: {e}", exc_info=True)
+            return []
+    
+    def extract_terms_from_image(self, image_file):
+        """画像から直接重要語句と定義を抽出
+        
+        画像をGeminiに渡し、OCR+キーワード抽出を一括で行う。
+        
+        Args:
+            image_file: 画像ファイル（パス、FieldFile、またはfile-likeオブジェクト）
+            
+        Returns:
+            list[dict]: [{"term": "語句", "definition": "説明"}, ...]
+        """
+        if not self.model:
+            logger.error("GeminiFlashcardExtractor: Gemini API not configured")
+            return []
+        
+        try:
+            import io
+            
+            # 画像を読み込む
+            img = None
+            if isinstance(image_file, str):
+                img = Image.open(image_file)
+            elif hasattr(image_file, 'path'):
+                try:
+                    img = Image.open(image_file.path)
+                except (FileNotFoundError, OSError):
+                    if hasattr(image_file, 'open'):
+                        image_file.open('rb')
+                        img = Image.open(image_file)
+                    elif hasattr(image_file, 'read'):
+                        image_file.seek(0)
+                        img = Image.open(image_file)
+            elif hasattr(image_file, 'read'):
+                img = Image.open(image_file)
+            
+            if img is None:
+                logger.error("GeminiFlashcardExtractor: Failed to open image")
+                return []
+            
+            # MPO形式対応
+            if img.mode != 'RGB':
+                img = img.convert('RGB')
+            img_buffer = io.BytesIO()
+            img.save(img_buffer, format='JPEG', quality=95)
+            img_buffer.seek(0)
+            img = Image.open(img_buffer)
+            
+            prompt = """この画像に含まれるテキストを読み取り、学習に重要な語句（キーワード）とその意味・定義のペアを抽出してください。
+
+ルール:
+・下線・太字・マーカー・色付き（赤字・青字等）で強調されている語句は必ずキーワードとして含め、importance を "high" にする（ただし全体が同じ色なら強調ではない）
+・強調されていなくても、テスト・試験に出そうな重要語句を選ぶ（importance は "normal"）
+・各キーワードに対して、画像の文脈に基づいた簡潔でわかりやすい定義・説明を付ける
+・最低5個、最大20個のペアを抽出する
+・同じ語句の重複は避ける
+
+出力形式（JSON配列のみ出力。他の文章は一切書かないこと）:
+[
+  {"term": "キーワード1", "definition": "定義・説明1", "importance": "high"},
+  {"term": "キーワード2", "definition": "定義・説明2", "importance": "normal"}
+]"""
+            
+            max_retries = 3
+            last_error = None
+            for attempt in range(max_retries):
+                try:
+                    response = self.model.generate_content(
+                        [prompt, img],
+                        safety_settings=GEMINI_SAFETY_SETTINGS,
+                    )
+                    raw_text = _safe_get_response_text(response)
+                    if raw_text:
+                        terms = self._parse_terms_json(raw_text)
+                        if terms:
+                            logger.info(f"GeminiFlashcardExtractor: Extracted {len(terms)} terms from image")
+                            return terms
+                    last_error = "Empty or unparseable response"
+                except Exception as api_error:
+                    last_error = str(api_error)
+                    logger.warning(f"GeminiFlashcardExtractor: API error attempt {attempt + 1}: {api_error}")
+                
+                if attempt < max_retries - 1:
+                    import time as _time
+                    _time.sleep(2 * (attempt + 1))
+            
+            logger.error(f"GeminiFlashcardExtractor: All image attempts failed. Last error: {last_error}")
+            return []
+            
+        except Exception as e:
+            logger.error(f"GeminiFlashcardExtractor: Image error: {e}", exc_info=True)
+            return []
+    
+    def _parse_terms_json(self, raw_text):
+        """Geminiの応答からJSON配列をパース
+        
+        ```json ... ``` のコードブロックにも対応。
+        """
+        import json
+        
+        text = raw_text.strip()
+        
+        # コードブロックを除去
+        if '```' in text:
+            match = re.search(r'```(?:json)?\s*\n?(.*?)\n?```', text, re.DOTALL)
+            if match:
+                text = match.group(1).strip()
+        
+        try:
+            data = json.loads(text)
+            if isinstance(data, list):
+                # 各要素にtermとdefinitionがあるか検証
+                valid_terms = []
+                for item in data:
+                    if isinstance(item, dict) and 'term' in item and 'definition' in item:
+                        term = str(item['term']).strip()
+                        definition = str(item['definition']).strip()
+                        importance = str(item.get('importance', 'normal')).strip().lower()
+                        if importance not in ('high', 'normal'):
+                            importance = 'normal'
+                        if term and definition:
+                            valid_terms.append({
+                                'term': term,
+                                'definition': definition,
+                                'importance': importance,
+                            })
+                return valid_terms
+        except json.JSONDecodeError:
+            logger.warning(f"GeminiFlashcardExtractor: JSON parse failed: {text[:200]}")
+        
+        return []

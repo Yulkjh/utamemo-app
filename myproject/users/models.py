@@ -75,6 +75,22 @@ class User(AbstractUser):
         help_text='Reserved for future use'
     )
     
+    # BAN（アカウント停止）
+    is_banned = models.BooleanField(
+        default=False,
+        verbose_name='BAN済み'
+    )
+    ban_reason = models.TextField(
+        blank=True,
+        default='',
+        verbose_name='BAN理由'
+    )
+    banned_at = models.DateTimeField(
+        blank=True,
+        null=True,
+        verbose_name='BAN日時'
+    )
+    
     # リマインドメール
     last_reminder_sent = models.DateTimeField(
         blank=True,

@@ -449,6 +449,46 @@
                 {% endif %}
             </div>
 
+            <!-- 暗記カードセクション -->
+            {% if user == song.created_by %}
+            <div class="flashcard-section fade-in" style="background: white; border-radius: 16px; padding: 1.5rem; border: 1px solid var(--border-color, #f0e6e0); box-shadow: 0 2px 8px rgba(0,0,0,0.04); margin-bottom: 1.5rem;">
+                <h4 style="margin-bottom: 1rem;">
+                    <i class="bi bi-card-text me-2" style="color: var(--primary-color);"></i>
+                    {% if is_english %}Flashcards{% elif is_chinese %}闪卡{% elif is_spanish %}Tarjetas{% elif is_german %}Lernkarten{% elif is_portuguese %}Flashcards{% else %}暗記カード{% endif %}
+                </h4>
+                {% if flashcard_deck %}
+                <div class="d-flex flex-column gap-2">
+                    <div class="d-flex align-items-center gap-2 mb-1">
+                        <span class="badge" style="background: var(--primary-gradient); padding: 5px 10px; border-radius: 16px; font-size: 0.8rem;">
+                            <i class="bi bi-layers me-1"></i>{{ flashcard_deck.card_count }}{% if is_english %} cards{% elif is_chinese %}张{% else %}枚{% endif %}
+                        </span>
+                    </div>
+                    <div class="d-flex gap-2">
+                        {% if flashcard_deck.card_count > 0 %}
+                        <a href="{% url 'songs:flashcard_study' flashcard_deck.pk %}" class="btn btn-sm" style="background: linear-gradient(135deg, #ff7940, #ff6b35); color: white; border: none; border-radius: 8px; padding: 6px 16px; text-decoration: none; font-weight: 600; flex: 1; text-align: center;">
+                            <i class="bi bi-play-fill me-1"></i>{% if is_english %}Study{% elif is_chinese %}学习{% elif is_spanish %}Estudiar{% elif is_german %}Lernen{% elif is_portuguese %}Estudar{% else %}学習する{% endif %}
+                        </a>
+                        {% endif %}
+                        <a href="{% url 'songs:flashcard_select' flashcard_deck.pk %}" class="btn btn-sm btn-outline-secondary" style="border-radius: 8px; padding: 6px 16px; text-decoration: none;">
+                            <i class="bi bi-pencil me-1"></i>{% if is_english %}Edit{% elif is_chinese %}编辑{% else %}編集{% endif %}
+                        </a>
+                    </div>
+                </div>
+                {% else %}
+                <p class="text-muted small mb-3">
+                    {% if is_english %}Create flashcards from this song's source material{% elif is_chinese %}从这首歌的源材料中创建闪卡{% elif is_spanish %}Crea tarjetas de estudio a partir del material fuente{% elif is_german %}Erstelle Lernkarten aus dem Quellmaterial{% elif is_portuguese %}Crie flashcards a partir do material fonte{% else %}この楽曲の元教材から暗記カードを作成します{% endif %}
+                </p>
+                <form method="post" action="{% url 'songs:flashcard_create_from_song' song.pk %}">
+                    {% csrf_token %}
+                    <button type="submit" class="btn btn-sm w-100" style="background: linear-gradient(135deg, #ff7940, #ff6b35); color: white; border: none; border-radius: 8px; padding: 8px 16px; font-weight: 600;">
+                        <i class="bi bi-plus-lg me-1"></i>
+                        {% if is_english %}Create Flashcards{% elif is_chinese %}创建闪卡{% elif is_spanish %}Crear Tarjetas{% elif is_german %}Lernkarten erstellen{% elif is_portuguese %}Criar Flashcards{% else %}暗記カードを作成{% endif %}
+                    </button>
+                </form>
+                {% endif %}
+            </div>
+            {% endif %}
+
             <!-- 関連楽曲 -->
             <div class="related-songs fade-in">
                 <h4>{% if is_english %}Related Songs{% elif is_spanish %}Canciones Relacionadas{% elif is_german %}Ähnliche Songs{% elif is_portuguese %}Músicas Relacionadas{% elif is_chinese %}相关歌曲{% else %}関連楽曲{% endif %}</h4>

@@ -100,6 +100,7 @@ MIDDLEWARE = [
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
     'myproject.security.SecurityMiddleware',
+    'users.middleware.BanCheckMiddleware',
 ]
 
 ROOT_URLCONF = 'myproject.urls'

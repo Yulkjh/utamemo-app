@@ -1,6 +1,7 @@
 from django.contrib import admin
 from django.contrib.auth.admin import UserAdmin as BaseUserAdmin
 from django.contrib.admin import AdminSite
+from django.utils import timezone
 from .models import User
 from myproject.security import (
     get_client_ip, is_locked_out, record_failed_login,
@@ -57,17 +58,43 @@ class UserAdmin(BaseUserAdmin):
         ('認証情報', {'fields': ('username',)}),
         ('個人情報', {'fields': ('first_name', 'last_name', 'email')}),
         ('権限', {'fields': ('is_active', 'is_staff', 'is_superuser', 'groups', 'user_permissions')}),
+        ('BAN管理', {'fields': ('is_banned', 'ban_reason', 'banned_at')}),
         ('日時', {'fields': ('last_login', 'date_joined')}),
         ('追加情報', {'fields': ('bio', 'profile_image', 'plan', 'stripe_customer_id')}),
     )
     
     # 一覧表示：ユーザー名・権限・プランを表示
-    list_display = ('id', 'username', 'email', 'plan', 'is_superuser', 'is_staff', 'is_active', 'date_joined')
+    list_display = ('id', 'username', 'email', 'plan', 'is_banned', 'is_superuser', 'is_staff', 'is_active', 'date_joined')
     list_display_links = ('id', 'username')
-    list_filter = ('is_superuser', 'is_staff', 'is_active', 'plan')
+    list_filter = ('is_banned', 'is_superuser', 'is_staff', 'is_active', 'plan')
     ordering = ('-date_joined',)
     
     search_fields = ('username', 'email', 'first_name', 'last_name')
     
     # 読み取り専用フィールド
-    readonly_fields = ('last_login', 'date_joined')
+    readonly_fields = ('last_login', 'date_joined', 'banned_at')
+    
+    # 一括アクション
+    actions = ['ban_users', 'unban_users']
+    
+    @admin.action(description='選択したユーザーをBANする')
+    def ban_users(self, request, queryset):
+        """選択したユーザーをBANする"""
+        # スーパーユーザー・スタッフはBANできない
+        queryset = queryset.exclude(is_superuser=True).exclude(is_staff=True)
+        count = queryset.filter(is_banned=False).update(
+            is_banned=True,
+            banned_at=timezone.now(),
+            ban_reason='管理者によりBANされました',
+        )
+        self.message_user(request, f'{count}人のユーザーをBANしました。')
+    
+    @admin.action(description='選択したユーザーのBANを解除する')
+    def unban_users(self, request, queryset):
+        """選択したユーザーのBANを解除する"""
+        count = queryset.filter(is_banned=True).update(
+            is_banned=False,
+            banned_at=None,
+            ban_reason='',
+        )
+        self.message_user(request, f'{count}人のユーザーのBANを解除しました。')

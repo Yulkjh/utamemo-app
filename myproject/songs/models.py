@@ -43,12 +43,30 @@ class Song(models.Model):
         verbose_name='ジャンル'
     )
     vocal_style = models.CharField(
-        max_length=20,
+        max_length=30,
         choices=[
-            ('female', '女性ボーカル'),
-            ('male', '男性ボーカル'),
-            ('vocaloid_female', 'ボカロ風（女性）'),
-            ('vocaloid_male', 'ボカロ風（男性）'),
+            ('女性ボーカル', (
+                ('female', '女性ボーカル'),
+                ('female_cute', 'かわいい系女性'),
+                ('female_cool', 'クール系女性'),
+                ('female_powerful', 'パワフル系女性'),
+            )),
+            ('男性ボーカル', (
+                ('male', '男性ボーカル'),
+                ('male_high', 'ハイトーン系男性'),
+                ('male_low', 'ローボイス系男性'),
+                ('male_rough', 'ワイルド系男性'),
+            )),
+            ('特殊スタイル', (
+                ('duet', 'デュエット（男女）'),
+                ('choir', 'コーラス / 合唱'),
+                ('whisper', 'ウィスパー / ささやき'),
+                ('child', '子供の声'),
+            )),
+            ('ボカロ風', (
+                ('vocaloid_female', 'ボカロ風（女性）'),
+                ('vocaloid_male', 'ボカロ風（男性）'),
+            )),
         ],
         default='female',
         verbose_name='ボーカルスタイル'
@@ -533,3 +551,131 @@ class ClassroomSong(models.Model):
 
     def __str__(self):
         return f"{self.song.title} in {self.classroom.name}"
+
+
+class FlashcardDeck(models.Model):
+    """フラッシュカードデッキモデル"""
+    user = models.ForeignKey(
+        User,
+        on_delete=models.CASCADE,
+        related_name='flashcard_decks',
+        verbose_name='ユーザー'
+    )
+    title = models.CharField(
+        max_length=200,
+        verbose_name='デッキ名'
+    )
+    description = models.TextField(
+        blank=True,
+        verbose_name='説明'
+    )
+    source_song = models.ForeignKey(
+        'Song',
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='flashcard_decks',
+        verbose_name='元楽曲'
+    )
+    source_image = models.ForeignKey(
+        'UploadedImage',
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='flashcard_decks',
+        verbose_name='元画像'
+    )
+    source_text = models.TextField(
+        blank=True,
+        verbose_name='元テキスト',
+        help_text='OCRで抽出されたテキストまたは手動入力テキスト'
+    )
+    card_count = models.PositiveIntegerField(
+        default=0,
+        verbose_name='カード数'
+    )
+    created_at = models.DateTimeField(
+        auto_now_add=True,
+        verbose_name='作成日時'
+    )
+    updated_at = models.DateTimeField(
+        auto_now=True,
+        verbose_name='更新日時'
+    )
+
+    class Meta:
+        verbose_name = 'フラッシュカードデッキ'
+        verbose_name_plural = 'フラッシュカードデッキ'
+        ordering = ['-updated_at']
+        indexes = [
+            models.Index(fields=['user', '-updated_at']),
+        ]
+
+    def __str__(self):
+        return f"{self.title} ({self.card_count}枚)"
+
+    def update_card_count(self):
+        """選択済みカード数を更新"""
+        self.card_count = self.flashcards.filter(is_selected=True).count()
+        self.save(update_fields=['card_count'])
+
+
+class Flashcard(models.Model):
+    """フラッシュカードモデル"""
+    MASTERY_CHOICES = [
+        (0, '未学習'),
+        (1, '学習中'),
+        (2, 'もう少し'),
+        (3, '覚えた'),
+    ]
+
+    IMPORTANCE_CHOICES = [
+        ('high', '重要'),
+        ('normal', '通常'),
+    ]
+
+    deck = models.ForeignKey(
+        FlashcardDeck,
+        on_delete=models.CASCADE,
+        related_name='flashcards',
+        verbose_name='デッキ'
+    )
+    term = models.CharField(
+        max_length=500,
+        verbose_name='用語（表面）'
+    )
+    definition = models.TextField(
+        verbose_name='定義・説明（裏面）'
+    )
+    importance = models.CharField(
+        max_length=10,
+        choices=IMPORTANCE_CHOICES,
+        default='normal',
+        verbose_name='重要度'
+    )
+    is_selected = models.BooleanField(
+        default=False,
+        verbose_name='選択済み',
+        help_text='ユーザーがデッキに含めることを選択したカード'
+    )
+    mastery_level = models.IntegerField(
+        choices=MASTERY_CHOICES,
+        default=0,
+        verbose_name='習熟度'
+    )
+    order = models.PositiveIntegerField(
+        default=0,
+        verbose_name='表示順'
+    )
+    created_at = models.DateTimeField(
+        auto_now_add=True,
+        verbose_name='作成日時'
+    )
+
+    class Meta:
+        verbose_name = 'フラッシュカード'
+        verbose_name_plural = 'フラッシュカード'
+        ordering = ['order', 'id']
+
+    def __str__(self):
+        return f"{self.term} → {self.definition[:50]}"

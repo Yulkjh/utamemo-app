@@ -1,0 +1,291 @@
+{% extends 'base.html' %}
+
+{% block title %}{% if is_english %}Study{% elif is_chinese %}学习{% elif is_spanish %}Estudiar{% elif is_german %}Lernen{% elif is_portuguese %}Estudar{% else %}学習{% endif %} - {{ deck.title }} - UTAMEMO{% endblock %}
+
+{% block content %}
+<div class="container py-5">
+    <div class="row justify-content-center">
+        <div class="col-lg-8">
+            <!-- ヘッダー -->
+            <div class="text-center mb-4 fade-in">
+                <h2 class="fw-bold mb-1" style="color: var(--text-primary);">{{ deck.title }}</h2>
+                <div class="d-flex justify-content-center align-items-center gap-3">
+                    <span class="text-muted" id="card-counter">1 / {{ total_cards }}</span>
+                    <span class="badge" id="mastered-badge" style="background: var(--primary-gradient); padding: 4px 10px; border-radius: 12px;">
+                        <i class="bi bi-check-circle me-1"></i><span id="mastered-count">{{ mastered_count }}</span> / {{ total_cards }}
+                    </span>
+                </div>
+                
+                <!-- 進捗バー -->
+                <div class="mt-3 mx-auto" style="max-width: 400px;">
+                    <div class="progress" style="height: 6px; border-radius: 3px; background: var(--border-color);">
+                        <div class="progress-bar" id="progress-bar" role="progressbar" 
+                             style="width: {% widthratio mastered_count total_cards 100 %}%; background: var(--primary-gradient); border-radius: 3px; transition: width 0.3s;"></div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- フラッシュカード -->
+            <div class="flashcard-container fade-in" style="perspective: 1200px; max-width: 600px; margin: 0 auto;">
+                <div class="flashcard" id="flashcard" onclick="flipCard()" 
+                     style="position: relative; width: 100%; min-height: 350px; cursor: pointer; transform-style: preserve-3d; transition: transform 0.6s;">
+                    
+                    <!-- 表面（用語） -->
+                    <div class="flashcard-front" id="card-front"
+                         style="position: absolute; width: 100%; height: 100%; backface-visibility: hidden; border-radius: 20px; padding: 2.5rem; display: flex; flex-direction: column; justify-content: center; align-items: center; text-align: center; background: white; box-shadow: 0 8px 32px rgba(0,0,0,0.08); border: 1px solid var(--border-color);">
+                        <div class="mb-2">
+                            <small class="text-muted text-uppercase" style="letter-spacing: 2px;">
+                                {% if is_english %}TERM{% elif is_chinese %}术语{% elif is_spanish %}TÉRMINO{% elif is_german %}BEGRIFF{% elif is_portuguese %}TERMO{% else %}用語{% endif %}
+                            </small>
+                        </div>
+                        <div class="fw-bold" id="term-text" style="font-size: 1.8rem; color: var(--text-primary); line-height: 1.4;">
+                        </div>
+                        <div class="mt-4">
+                            <small class="text-muted">
+                                <i class="bi bi-hand-index me-1"></i>
+                                {% if is_english %}Tap to reveal{% elif is_chinese %}点击翻转{% elif is_spanish %}Toca para revelar{% elif is_german %}Tippen zum Aufdecken{% elif is_portuguese %}Toque para revelar{% else %}タップで裏面を見る{% endif %}
+                            </small>
+                        </div>
+                    </div>
+                    
+                    <!-- 裏面（定義） -->
+                    <div class="flashcard-back" id="card-back"
+                         style="position: absolute; width: 100%; height: 100%; backface-visibility: hidden; border-radius: 20px; padding: 2.5rem; display: flex; flex-direction: column; justify-content: center; align-items: center; text-align: center; background: linear-gradient(135deg, #fff5f0 0%, #ffffff 100%); box-shadow: 0 8px 32px rgba(0,0,0,0.08); border: 2px solid var(--primary-color); transform: rotateY(180deg);">
+                        <div class="mb-2">
+                            <small style="color: var(--primary-color); text-transform: uppercase; letter-spacing: 2px; font-weight: 600;">
+                                {% if is_english %}DEFINITION{% elif is_chinese %}定义{% elif is_spanish %}DEFINICIÓN{% elif is_german %}DEFINITION{% elif is_portuguese %}DEFINIÇÃO{% else %}定義{% endif %}
+                            </small>
+                        </div>
+                        <div id="definition-text" style="font-size: 1.3rem; color: var(--text-primary); line-height: 1.6;">
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 習熟度ボタン（裏面表示時のみ） -->
+            <div class="text-center mt-4 fade-in" id="mastery-buttons" style="display: none;">
+                <p class="text-muted small mb-3">
+                    {% if is_english %}How well did you know this?{% elif is_chinese %}你对这个了解多少？{% elif is_spanish %}¿Qué tan bien lo sabías?{% elif is_german %}Wie gut wusstest du das?{% elif is_portuguese %}Quão bem você sabia isso?{% else %}どのくらい覚えていましたか？{% endif %}
+                </p>
+                <div class="d-flex justify-content-center gap-2 flex-wrap">
+                    <button class="mastery-btn" onclick="rateMastery(0)" style="background: #f8d7da; color: #842029; border: none; padding: 10px 20px; border-radius: 12px; font-weight: 600; cursor: pointer; transition: transform 0.1s;">
+                        <i class="bi bi-x-circle me-1"></i>
+                        {% if is_english %}Don't know{% elif is_chinese %}不知道{% elif is_spanish %}No sé{% elif is_german %}Weiß nicht{% elif is_portuguese %}Não sei{% else %}わからない{% endif %}
+                    </button>
+                    <button class="mastery-btn" onclick="rateMastery(1)" style="background: #fff3cd; color: #664d03; border: none; padding: 10px 20px; border-radius: 12px; font-weight: 600; cursor: pointer; transition: transform 0.1s;">
+                        <i class="bi bi-question-circle me-1"></i>
+                        {% if is_english %}Not sure{% elif is_chinese %}不确定{% elif is_spanish %}No seguro{% elif is_german %}Unsicher{% elif is_portuguese %}Não tenho certeza{% else %}あやしい{% endif %}
+                    </button>
+                    <button class="mastery-btn" onclick="rateMastery(2)" style="background: #d1e7dd; color: #0f5132; border: none; padding: 10px 20px; border-radius: 12px; font-weight: 600; cursor: pointer; transition: transform 0.1s;">
+                        <i class="bi bi-check-circle me-1"></i>
+                        {% if is_english %}Almost{% elif is_chinese %}差不多{% elif is_spanish %}Casi{% elif is_german %}Fast{% elif is_portuguese %}Quase{% else %}もう少し{% endif %}
+                    </button>
+                    <button class="mastery-btn" onclick="rateMastery(3)" style="background: var(--primary-gradient); color: white; border: none; padding: 10px 20px; border-radius: 12px; font-weight: 600; cursor: pointer; transition: transform 0.1s;">
+                        <i class="bi bi-star-fill me-1"></i>
+                        {% if is_english %}Got it!{% elif is_chinese %}掌握了！{% elif is_spanish %}¡Lo sé!{% elif is_german %}Kann ich!{% elif is_portuguese %}Sei!{% else %}覚えた！{% endif %}
+                    </button>
+                </div>
+            </div>
+
+            <!-- ナビゲーション -->
+            <div class="d-flex justify-content-between align-items-center mt-4 fade-in" style="max-width: 600px; margin-left: auto; margin-right: auto;">
+                <button class="btn-outline-modern" onclick="prevCard()" id="prev-btn" disabled>
+                    <i class="bi bi-chevron-left me-1"></i>
+                    {% if is_english %}Prev{% elif is_chinese %}上一张{% elif is_spanish %}Anterior{% elif is_german %}Zurück{% elif is_portuguese %}Anterior{% else %}前へ{% endif %}
+                </button>
+                <button class="btn-outline-modern" onclick="shuffleCards()">
+                    <i class="bi bi-shuffle"></i>
+                </button>
+                <button class="btn-outline-modern" onclick="nextCard()" id="next-btn">
+                    {% if is_english %}Next{% elif is_chinese %}下一张{% elif is_spanish %}Siguiente{% elif is_german %}Weiter{% elif is_portuguese %}Próximo{% else %}次へ{% endif %}
+                    <i class="bi bi-chevron-right ms-1"></i>
+                </button>
+            </div>
+
+            <!-- 戻るリンク -->
+            <div class="text-center mt-4">
+                <a href="{% url 'songs:flashcard_list' %}" class="text-muted" style="text-decoration: none;">
+                    <i class="bi bi-arrow-left me-1"></i>
+                    {% if is_english %}Back to Decks{% elif is_chinese %}返回卡组{% elif is_spanish %}Volver a Mazos{% elif is_german %}Zurück zu Decks{% elif is_portuguese %}Voltar aos Baralhos{% else %}デッキ一覧に戻る{% endif %}
+                </a>
+            </div>
+        </div>
+    </div>
+</div>
+
+<style>
+.mastery-btn:hover {
+    transform: scale(1.05);
+}
+.mastery-btn:active {
+    transform: scale(0.95);
+}
+@media (max-width: 576px) {
+    .flashcard-container {
+        margin-left: -0.5rem;
+        margin-right: -0.5rem;
+    }
+    #term-text {
+        font-size: 1.4rem !important;
+    }
+    #definition-text {
+        font-size: 1.1rem !important;
+    }
+}
+</style>
+
+<script>
+const cards = {{ cards_json|safe }};
+let currentIndex = 0;
+let isFlipped = false;
+const deckPk = {{ deck.pk }};
+const csrfToken = '{{ csrf_token }}';
+const totalCards = {{ total_cards }};
+let masteredCount = {{ mastered_count }};
+
+function showCard(index) {
+    if (cards.length === 0) return;
+    
+    const card = cards[index];
+    document.getElementById('term-text').textContent = card.term;
+    document.getElementById('definition-text').textContent = card.definition;
+    document.getElementById('card-counter').textContent = (index + 1) + ' / ' + cards.length;
+    
+    // カードを表面に戻す
+    if (isFlipped) {
+        document.getElementById('flashcard').style.transform = 'rotateY(0deg)';
+        isFlipped = false;
+    }
+    
+    // 習熟度ボタンを非表示
+    document.getElementById('mastery-buttons').style.display = 'none';
+    
+    // ナビゲーションボタンの有効/無効
+    document.getElementById('prev-btn').disabled = (index === 0);
+    document.getElementById('next-btn').disabled = (index === cards.length - 1);
+}
+
+function flipCard() {
+    const flashcard = document.getElementById('flashcard');
+    isFlipped = !isFlipped;
+    flashcard.style.transform = isFlipped ? 'rotateY(180deg)' : 'rotateY(0deg)';
+    
+    // 裏面表示時に習熟度ボタンを表示
+    document.getElementById('mastery-buttons').style.display = isFlipped ? 'block' : 'none';
+}
+
+function nextCard() {
+    if (currentIndex < cards.length - 1) {
+        currentIndex++;
+        showCard(currentIndex);
+    }
+}
+
+function prevCard() {
+    if (currentIndex > 0) {
+        currentIndex--;
+        showCard(currentIndex);
+    }
+}
+
+function shuffleCards() {
+    for (let i = cards.length - 1; i > 0; i--) {
+        const j = Math.floor(Math.random() * (i + 1));
+        [cards[i], cards[j]] = [cards[j], cards[i]];
+    }
+    currentIndex = 0;
+    showCard(0);
+}
+
+function rateMastery(level) {
+    const card = cards[currentIndex];
+    const oldLevel = card.mastery_level;
+    card.mastery_level = level;
+    
+    // サーバーに送信
+    fetch(`{% url 'songs:flashcard_update_mastery' deck.pk %}`, {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+            'X-CSRFToken': csrfToken,
+        },
+        body: JSON.stringify({
+            card_id: card.id,
+            mastery_level: level,
+        }),
+    })
+    .then(r => r.json())
+    .then(data => {
+        if (data.success) {
+            masteredCount = data.mastered_count;
+            document.getElementById('mastered-count').textContent = masteredCount;
+            document.getElementById('progress-bar').style.width = data.progress_percent + '%';
+        }
+    })
+    .catch(err => console.error('Mastery update error:', err));
+    
+    // 次のカードへ自動進行
+    setTimeout(() => {
+        if (currentIndex < cards.length - 1) {
+            nextCard();
+        } else {
+            // 最後のカードの場合は完了メッセージ
+            showCompletionMessage();
+        }
+    }, 300);
+}
+
+function showCompletionMessage() {
+    const container = document.querySelector('.flashcard-container');
+    container.innerHTML = `
+        <div class="text-center py-5" style="background: white; border-radius: 20px; box-shadow: 0 8px 32px rgba(0,0,0,0.08); padding: 3rem;">
+            <div style="font-size: 4rem; margin-bottom: 1rem;">🎉</div>
+            <h3 class="fw-bold mb-2" style="color: var(--text-primary);">
+                ${masteredCount === totalCards ? 
+                    '{% if is_english %}Perfect!{% elif is_chinese %}完美！{% else %}パーフェクト！{% endif %}' : 
+                    '{% if is_english %}Round Complete!{% elif is_chinese %}一轮完成！{% else %}一周完了！{% endif %}'}
+            </h3>
+            <p class="text-muted mb-4">
+                ${masteredCount} / ${totalCards} {% if is_english %}mastered{% elif is_chinese %}已掌握{% else %}覚えた{% endif %}
+            </p>
+            <div class="d-flex justify-content-center gap-3">
+                <button class="btn-gradient-primary" onclick="location.reload()">
+                    <i class="bi bi-arrow-repeat me-1"></i>{% if is_english %}Study Again{% elif is_chinese %}再学一次{% else %}もう一周{% endif %}
+                </button>
+                <a href="{% url 'songs:flashcard_list' %}" class="btn-outline-modern" style="text-decoration: none;">
+                    {% if is_english %}Done{% elif is_chinese %}完成{% else %}終了{% endif %}
+                </a>
+            </div>
+        </div>
+    `;
+    document.getElementById('mastery-buttons').style.display = 'none';
+}
+
+// キーボードショートカット
+document.addEventListener('keydown', function(e) {
+    if (e.key === 'ArrowRight' || e.key === 'd') nextCard();
+    else if (e.key === 'ArrowLeft' || e.key === 'a') prevCard();
+    else if (e.key === ' ' || e.key === 'Enter') { e.preventDefault(); flipCard(); }
+    else if (e.key === '1') rateMastery(0);
+    else if (e.key === '2') rateMastery(1);
+    else if (e.key === '3') rateMastery(2);
+    else if (e.key === '4') rateMastery(3);
+});
+
+// スワイプ操作
+let touchStartX = 0;
+document.querySelector('.flashcard-container').addEventListener('touchstart', function(e) {
+    touchStartX = e.changedTouches[0].screenX;
+});
+document.querySelector('.flashcard-container').addEventListener('touchend', function(e) {
+    const diff = e.changedTouches[0].screenX - touchStartX;
+    if (Math.abs(diff) > 50) {
+        if (diff > 0) prevCard();
+        else nextCard();
+    }
+});
+
+// 初期表示
+showCard(0);
+</script>
+{% endblock %}

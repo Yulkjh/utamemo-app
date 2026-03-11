@@ -185,6 +185,21 @@
                                 
                                 <!-- 元テキスト（非表示） -->
                                 <input type="hidden" name="original_text" value="{{ extracted_text|default:'' }}">
+                                
+                                <!-- フラッシュカード同時作成オプション -->
+                                <div class="flashcard-option mt-4 p-3" style="background: linear-gradient(135deg, #fff8f5 0%, #fff0eb 100%); border: 1px solid var(--border-color); border-radius: 12px;">
+                                    <div class="form-check d-flex align-items-center gap-2">
+                                        <input class="form-check-input" type="checkbox" name="create_flashcards" id="create-flashcards-check" value="true"
+                                               style="width: 20px; height: 20px; cursor: pointer; border-color: var(--primary-color);">
+                                        <label class="form-check-label fw-bold" for="create-flashcards-check" style="cursor: pointer; color: var(--text-primary);">
+                                            <i class="bi bi-card-text me-1" style="color: var(--primary-color);"></i>
+                                            {% if is_english %}Also create flashcards{% elif is_chinese %}同时创建闪卡{% elif is_spanish %}También crear tarjetas{% elif is_german %}Auch Lernkarten erstellen{% elif is_portuguese %}Também criar flashcards{% else %}暗記カードも同時に作成{% endif %}
+                                        </label>
+                                    </div>
+                                    <p class="text-muted small mb-0 mt-1 ms-4 ps-1">
+                                        {% if is_english %}AI will extract key terms from your notes and create a flashcard deck{% elif is_chinese %}AI将从笔记中提取关键术语并创建闪卡组{% elif is_spanish %}La IA extraerá los términos clave de tus notas y creará un mazo{% elif is_german %}KI extrahiert Schlüsselbegriffe aus deinen Notizen und erstellt ein Lernkarten-Deck{% elif is_portuguese %}A IA extrairá termos-chave das suas notas e criará um baralho{% else %}AIが教材から重要語句を抽出して暗記カードデッキを作成します{% endif %}
+                                    </p>
+                                </div>
                             </form>
                         </div>
                     </div>

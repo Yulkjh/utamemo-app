@@ -1,5 +1,5 @@
 from django import forms
-from .models import Song, UploadedImage, Comment
+from .models import Song, UploadedImage, Comment, FlashcardDeck
 
 
 class MultipleFileInput(forms.ClearableFileInput):
@@ -182,3 +182,76 @@ class SongPrivacyForm(forms.ModelForm):
     class Meta:
         model = Song
         fields = ['is_public']
+
+
+class FlashcardImageUploadForm(forms.Form):
+    """フラッシュカード用画像アップロードフォーム"""
+    images = MultipleFileField(
+        required=False,
+        widget=MultipleFileInput(attrs={
+            'accept': 'image/*,.pdf,application/pdf,.heic,.heif,image/heic,image/heif',
+            'class': 'form-control',
+            'style': 'display: none !important;',
+            'multiple': 'multiple'
+        }),
+    )
+    deck_title = forms.CharField(
+        max_length=200,
+        required=False,
+        widget=forms.TextInput(attrs={
+            'class': 'form-control',
+            'placeholder': 'デッキ名（例：世界史 第3章）'
+        }),
+        label='デッキ名'
+    )
+    
+    def clean_images(self):
+        """ファイルバリデーション"""
+        from django.conf import settings as _settings
+        from django.core.exceptions import ValidationError
+        
+        files = self.cleaned_data.get('images', [])
+        if not files:
+            return files
+        
+        max_image_size = getattr(_settings, 'MAX_IMAGE_SIZE', 10 * 1024 * 1024)
+        allowed_image_types = getattr(_settings, 'ALLOWED_IMAGE_TYPES', 
+            ['image/jpeg', 'image/png', 'image/gif', 'image/webp', 'image/heic', 'image/heif'])
+        image_extensions = {'.jpg', '.jpeg', '.png', '.gif', '.webp', '.heic', '.heif'}
+        
+        errors = []
+        for f in files:
+            content_type = getattr(f, 'content_type', '')
+            file_size = getattr(f, 'size', 0)
+            file_name = getattr(f, 'name', 'file')
+            file_ext = '.' + file_name.rsplit('.', 1)[-1].lower() if '.' in file_name else ''
+            
+            is_image = content_type in allowed_image_types or file_ext in image_extensions
+            if not is_image:
+                errors.append(f'{file_name}: サポートされていないファイル形式です')
+            elif file_size > max_image_size:
+                size_mb = max_image_size / (1024 * 1024)
+                errors.append(f'{file_name}: {size_mb:.0f}MB以下にしてください')
+        
+        if errors:
+            raise ValidationError(errors)
+        
+        return files
+
+
+class FlashcardDeckEditForm(forms.ModelForm):
+    """フラッシュカードデッキ編集フォーム"""
+    class Meta:
+        model = FlashcardDeck
+        fields = ['title', 'description']
+        widgets = {
+            'title': forms.TextInput(attrs={
+                'class': 'form-control',
+                'placeholder': 'デッキ名'
+            }),
+            'description': forms.Textarea(attrs={
+                'class': 'form-control',
+                'rows': 2,
+                'placeholder': '説明（任意）'
+            }),
+        }

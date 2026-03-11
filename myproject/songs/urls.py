@@ -47,4 +47,12 @@ urlpatterns = [
     
     # コンテンツ違反ページ
     path('content-violation/', views.content_violation_view, name='content_violation'),
+    
+    # フラッシュカード機能
+    path('flashcards/', views.flashcard_list, name='flashcard_list'),
+    path('songs/<int:pk>/flashcards/create/', views.flashcard_create_from_song, name='flashcard_create_from_song'),
+    path('flashcards/<int:pk>/select/', views.flashcard_select, name='flashcard_select'),
+    path('flashcards/<int:pk>/study/', views.flashcard_study, name='flashcard_study'),
+    path('flashcards/<int:pk>/mastery/', views.flashcard_update_mastery, name='flashcard_update_mastery'),
+    path('flashcards/<int:pk>/delete/', views.flashcard_deck_delete, name='flashcard_deck_delete'),
 ]

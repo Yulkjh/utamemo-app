@@ -45,6 +45,32 @@
     <!-- 楽曲リスト -->
     <div class="library-content">
         <div class="container">
+            <!-- ソートタブ -->
+            <div class="sort-tabs">
+                <a href="?sort=popular{% if request.GET.q %}&q={{ request.GET.q }}{% endif %}" 
+                   class="sort-tab{% if current_sort == 'popular' %} active{% endif %}">
+                    <i class="bi bi-fire"></i>
+                    <span>{% if is_english %}Popular{% elif is_spanish %}Popular{% elif is_german %}Beliebt{% elif is_portuguese %}Popular{% elif is_chinese %}热门{% else %}人気順{% endif %}</span>
+                </a>
+                <a href="?sort=newest{% if request.GET.q %}&q={{ request.GET.q }}{% endif %}" 
+                   class="sort-tab{% if current_sort == 'newest' %} active{% endif %}">
+                    <i class="bi bi-clock"></i>
+                    <span>{% if is_english %}Newest{% elif is_spanish %}Recientes{% elif is_german %}Neueste{% elif is_portuguese %}Recentes{% elif is_chinese %}最新{% else %}新着順{% endif %}</span>
+                </a>
+                <a href="?sort=most_played{% if request.GET.q %}&q={{ request.GET.q }}{% endif %}" 
+                   class="sort-tab{% if current_sort == 'most_played' %} active{% endif %}">
+                    <i class="bi bi-headphones"></i>
+                    <span>{% if is_english %}Most Played{% elif is_spanish %}Más Reproducidas{% elif is_german %}Meistgespielt{% elif is_portuguese %}Mais Tocadas{% elif is_chinese %}播放最多{% else %}再生数順{% endif %}</span>
+                </a>
+                {% if user.is_authenticated %}
+                <a href="?sort=favorites{% if request.GET.q %}&q={{ request.GET.q }}{% endif %}" 
+                   class="sort-tab{% if current_sort == 'favorites' %} active{% endif %}">
+                    <i class="bi bi-bookmark-heart"></i>
+                    <span>{% if is_english %}Favorites{% elif is_spanish %}Favoritos{% elif is_german %}Favoriten{% elif is_portuguese %}Favoritos{% elif is_chinese %}收藏{% else %}お気に入り{% endif %}</span>
+                </a>
+                {% endif %}
+            </div>
+            
             {% if songs %}
             <div class="songs-list" id="songsList">
                 {% for song in songs %}
@@ -115,6 +141,32 @@
                 </div>
                 {% endfor %}
             </div>
+            
+            <!-- ページネーション -->
+            {% if page_obj.has_other_pages %}
+            <nav aria-label="{% if is_english %}Pagination{% elif is_chinese %}分页{% else %}ページネーション{% endif %}" class="pagination-nav">
+                <ul class="pagination-list">
+                    {% if page_obj.has_previous %}
+                    <li><a class="page-link-custom" href="?page={{ page_obj.previous_page_number }}&sort={{ current_sort }}{% if request.GET.q %}&q={{ request.GET.q }}{% endif %}">
+                        <i class="bi bi-chevron-left"></i>
+                    </a></li>
+                    {% endif %}
+                    {% for num in page_obj.paginator.page_range %}
+                        {% if page_obj.number == num %}
+                        <li><span class="page-link-custom active">{{ num }}</span></li>
+                        {% elif num > page_obj.number|add:'-3' and num < page_obj.number|add:'3' %}
+                        <li><a class="page-link-custom" href="?page={{ num }}&sort={{ current_sort }}{% if request.GET.q %}&q={{ request.GET.q }}{% endif %}">{{ num }}</a></li>
+                        {% endif %}
+                    {% endfor %}
+                    {% if page_obj.has_next %}
+                    <li><a class="page-link-custom" href="?page={{ page_obj.next_page_number }}&sort={{ current_sort }}{% if request.GET.q %}&q={{ request.GET.q }}{% endif %}">
+                        <i class="bi bi-chevron-right"></i>
+                    </a></li>
+                    {% endif %}
+                </ul>
+            </nav>
+            {% endif %}
+            
             {% else %}
             <!-- 楽曲がない場合 -->
             <div class="empty-state">
@@ -776,6 +828,141 @@
     -webkit-background-clip: text;
     -webkit-text-fill-color: transparent;
     background-clip: text;
+}
+
+/* ソートタブ */
+.sort-tabs {
+    display: flex;
+    gap: 8px;
+    margin-bottom: 1.2rem;
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+    scrollbar-width: none;
+    -ms-overflow-style: none;
+    padding-bottom: 2px;
+}
+
+.sort-tabs::-webkit-scrollbar {
+    display: none;
+}
+
+.sort-tab {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    padding: 10px 18px;
+    border-radius: 25px;
+    background: white;
+    color: #666;
+    font-size: 0.9rem;
+    font-weight: 500;
+    text-decoration: none;
+    white-space: nowrap;
+    transition: all 0.2s ease;
+    border: 1.5px solid #e0e0e0;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.04);
+}
+
+.sort-tab:hover {
+    color: #ff7940;
+    border-color: #ff7940;
+    text-decoration: none;
+    background: #fff5f0;
+}
+
+.sort-tab.active {
+    background: linear-gradient(135deg, #ff7940 0%, #ff6b35 100%);
+    color: white;
+    border-color: transparent;
+    box-shadow: 0 3px 10px rgba(255, 121, 64, 0.3);
+}
+
+.sort-tab.active:hover {
+    color: white;
+    background: linear-gradient(135deg, #ff8a55 0%, #ff7940 100%);
+}
+
+.sort-tab i {
+    font-size: 1rem;
+}
+
+@media (max-width: 768px) {
+    .sort-tabs {
+        gap: 6px;
+        margin-bottom: 1rem;
+        padding: 0 2px;
+    }
+    
+    .sort-tab {
+        padding: 8px 14px;
+        font-size: 0.82rem;
+    }
+    
+    .sort-tab i {
+        font-size: 0.9rem;
+    }
+}
+
+@media (max-width: 480px) {
+    .sort-tab {
+        padding: 7px 12px;
+        font-size: 0.8rem;
+    }
+}
+
+/* ページネーション */
+.pagination-nav {
+    margin-top: 1.5rem;
+    display: flex;
+    justify-content: center;
+}
+
+.pagination-list {
+    display: flex;
+    gap: 6px;
+    list-style: none;
+    padding: 0;
+    margin: 0;
+}
+
+.page-link-custom {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    min-width: 40px;
+    height: 40px;
+    padding: 0 12px;
+    border-radius: 12px;
+    background: white;
+    color: #666;
+    font-size: 0.9rem;
+    font-weight: 500;
+    text-decoration: none;
+    border: 1.5px solid #e0e0e0;
+    transition: all 0.2s ease;
+}
+
+.page-link-custom:hover {
+    color: #ff7940;
+    border-color: #ff7940;
+    text-decoration: none;
+    background: #fff5f0;
+}
+
+.page-link-custom.active {
+    background: linear-gradient(135deg, #ff7940 0%, #ff6b35 100%);
+    color: white;
+    border-color: transparent;
+    box-shadow: 0 3px 10px rgba(255, 121, 64, 0.3);
+}
+
+@media (max-width: 480px) {
+    .page-link-custom {
+        min-width: 36px;
+        height: 36px;
+        font-size: 0.85rem;
+        border-radius: 10px;
+    }
 }
 </style>
 

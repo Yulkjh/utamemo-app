@@ -16,7 +16,7 @@ import logging
 from .models import Song, Like, Favorite, Comment, UploadedImage, Lyrics, PlayHistory, Tag
 from .forms import SongCreateForm, ImageUploadForm, CommentForm, SongPrivacyForm
 from .ai_services import GeminiLyricsGenerator, GeminiOCR, MurekaAIGenerator
-from .content_filter import check_text_for_inappropriate_content
+from .content_filter import check_text_for_inappropriate_content, check_name_for_inappropriate_content
 
 # ロガー設定
 logger = logging.getLogger(__name__)
@@ -66,6 +66,13 @@ class SongListView(ListView):
     context_object_name = 'songs'
     paginate_by = 12
     
+    # ソートオプション
+    SORT_OPTIONS = {
+        'popular': '-likes_count',      # 人気順（デフォルト）
+        'newest': '-created_at',        # 新着順
+        'most_played': '-total_plays',  # 再生回数順
+    }
+    
     def get_queryset(self):
         # 生成完了した公開楽曲のみ表示
         queryset = Song.objects.filter(
@@ -92,7 +99,30 @@ class SongListView(ListView):
                 Q(tags__name__icontains=katakana_query)
             ).distinct()
         
-        return queryset.order_by('-likes_count', '-created_at')
+        # ソート処理
+        sort = self.request.GET.get('sort', 'popular')
+        
+        if sort == 'favorites' and self.request.user.is_authenticated:
+            # お気に入り順：ユーザーがお気に入りした曲を先に
+            from django.db.models import Case, When, Value, IntegerField
+            fav_song_ids = list(
+                self.request.user.favorites.values_list('song_id', flat=True)
+            )
+            if fav_song_ids:
+                queryset = queryset.annotate(
+                    is_fav=Case(
+                        When(pk__in=fav_song_ids, then=Value(1)),
+                        default=Value(0),
+                        output_field=IntegerField()
+                    )
+                ).order_by('-is_fav', '-likes_count', '-created_at')
+            else:
+                queryset = queryset.order_by('-likes_count', '-created_at')
+        else:
+            order_field = self.SORT_OPTIONS.get(sort, '-likes_count')
+            queryset = queryset.order_by(order_field, '-created_at')
+        
+        return queryset
     
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
@@ -110,6 +140,9 @@ class SongListView(ListView):
         else:
             context['user_liked_songs'] = []
             context['user_favorite_songs'] = []
+        
+        # 現在のソート
+        context['current_sort'] = self.request.GET.get('sort', 'popular')
         
         return context
 
@@ -172,6 +205,13 @@ class SongDetailView(DetailView):
             context['related_songs'] = self._get_related_songs(song)
         except Exception:
             context['related_songs'] = []
+        
+        # この楽曲の暗記カードデッキ
+        if self.request.user.is_authenticated and self.request.user == song.created_by:
+            from .models import FlashcardDeck
+            context['flashcard_deck'] = FlashcardDeck.objects.filter(
+                source_song=song, user=self.request.user
+            ).first()
         
         return context
     
@@ -409,6 +449,11 @@ class CreateSongView(LoginRequiredMixin, CreateView):
             vocal_style=vocal_style
         )
         
+        # フラッシュカード同時作成
+        create_flashcards = self.request.POST.get('create_flashcards') == 'true'
+        if create_flashcards:
+            self._create_flashcards_from_session(original_text, title)
+        
         # セッションからリファレンス音声情報をクリア
         if 'reference_audio_path' in self.request.session:
             del self.request.session['reference_audio_path']
@@ -464,6 +509,96 @@ class CreateSongView(LoginRequiredMixin, CreateView):
     
     def get_success_url(self):
         return reverse_lazy('songs:song_generating', kwargs={'pk': self.object.pk})
+    
+    def _create_flashcards_from_session(self, original_text, song_title):
+        """セッションの画像/テキストからフラッシュカードデッキを作成"""
+        from .models import FlashcardDeck, Flashcard, UploadedImage as UImage
+        from .ai_services import GeminiFlashcardExtractor, GeminiOCR
+        
+        try:
+            extractor = GeminiFlashcardExtractor()
+            all_terms = []
+            source_image_obj = None
+            source_text = original_text or ''
+            
+            # 1. 画像がある場合 → 画像から直接抽出を試みる
+            uploaded_image_ids = self.request.session.get('uploaded_image_ids', [])
+            if uploaded_image_ids:
+                for img_id in uploaded_image_ids:
+                    try:
+                        uploaded = UImage.objects.get(id=img_id, user=self.request.user)
+                        if source_image_obj is None:
+                            source_image_obj = uploaded
+                        terms = extractor.extract_terms_from_image(uploaded.image)
+                        if terms:
+                            all_terms.extend(terms)
+                    except Exception as img_err:
+                        logger.warning(f"Flashcard image extraction error: {img_err}")
+            
+            # 画像ID が1つの場合のフォールバック
+            if not uploaded_image_ids:
+                single_id = self.request.session.get('uploaded_image_id')
+                if single_id:
+                    try:
+                        uploaded = UImage.objects.get(id=single_id, user=self.request.user)
+                        source_image_obj = uploaded
+                        terms = extractor.extract_terms_from_image(uploaded.image)
+                        if terms:
+                            all_terms.extend(terms)
+                    except Exception as img_err:
+                        logger.warning(f"Flashcard single image error: {img_err}")
+            
+            # 2. 画像から取れなかった場合 → テキストから抽出
+            if not all_terms and source_text:
+                terms = extractor.extract_terms_from_text(source_text)
+                if terms:
+                    all_terms.extend(terms)
+            
+            if not all_terms:
+                logger.info("Flashcard: No terms extracted, skipping deck creation")
+                return
+            
+            # 重複除去
+            seen = set()
+            unique_terms = []
+            for t in all_terms:
+                key = t['term'].strip().lower()
+                if key not in seen:
+                    seen.add(key)
+                    unique_terms.append(t)
+            
+            # デッキ作成
+            deck_title = f'{song_title} の暗記カード' if song_title else 'テスト対策カード'
+            deck = FlashcardDeck.objects.create(
+                user=self.request.user,
+                title=deck_title,
+                source_song=self.object,
+                source_image=source_image_obj,
+                source_text=source_text[:5000] if source_text else '',
+            )
+            
+            # カードを作成（highはデフォルト選択、選択画面へ誘導）
+            for i, t in enumerate(unique_terms):
+                importance = t.get('importance', 'normal')
+                Flashcard.objects.create(
+                    deck=deck,
+                    term=t['term'],
+                    definition=t['definition'],
+                    importance=importance,
+                    is_selected=(importance == 'high'),
+                    order=i,
+                )
+            
+            deck.update_card_count()
+            
+            # セッションにデッキIDを保存（song_generating画面で選択画面へのリンク表示用）
+            self.request.session['created_flashcard_deck_id'] = deck.pk
+            
+            logger.info(f"Flashcard deck created: '{deck_title}' with {deck.card_count} cards for user {self.request.user.id}")
+            
+        except Exception as e:
+            logger.error(f"Flashcard creation error: {e}", exc_info=True)
+            # フラッシュカード作成失敗しても楽曲生成は続行
 
 
 def validate_uploaded_file(file, app_language='ja'):
@@ -731,7 +866,13 @@ class LyricsGeneratingView(LoginRequiredMixin, TemplateView):
 
 @login_required
 def generate_lyrics_api(request):
-    """歌詞生成API（AJAXで呼ばれる）"""
+    """歌詞生成API（AJAXで呼ばれる）
+    
+    画像がアップロードされている場合:
+      → 画像+テキストを直接Geminiに渡して一発で歌詞生成（高品質）
+    テキストのみの場合:
+      → 従来のテキストベース歌詞生成
+    """
     if request.method != 'POST':
         return JsonResponse({'success': False, 'error': 'POST only'}, status=405)
     
@@ -749,11 +890,45 @@ def generate_lyrics_api(request):
     
     try:
         lyrics_generator = GeminiLyricsGenerator()
-        generated_lyrics = lyrics_generator.generate_lyrics(
-            extracted_text, 
-            language_mode=language_mode, 
-            custom_request=custom_request
-        )
+        
+        # 画像がある場合 → 画像直接生成パス（OCRの情報ロスを回避）
+        uploaded_image_ids = request.session.get('uploaded_image_ids', [])
+        generated_lyrics = None
+        
+        if uploaded_image_ids:
+            try:
+                from PIL import Image as PILImage
+                from .models import UploadedImage
+                images = []
+                for img_id in uploaded_image_ids:
+                    try:
+                        uploaded = UploadedImage.objects.get(id=img_id, user=request.user)
+                        img = PILImage.open(uploaded.image.path)
+                        if img.mode != 'RGB':
+                            img = img.convert('RGB')
+                        images.append(img)
+                    except Exception as img_err:
+                        logger.warning(f"Could not load image {img_id}: {img_err}")
+                
+                if images:
+                    logger.info(f"Using direct image-to-lyrics generation with {len(images)} image(s)")
+                    generated_lyrics = lyrics_generator.generate_lyrics_from_images(
+                        images,
+                        language_mode=language_mode,
+                        custom_request=custom_request,
+                        extracted_text=extracted_text,
+                    )
+            except Exception as img_gen_err:
+                logger.warning(f"Image-based generation failed, falling back to text: {img_gen_err}")
+                generated_lyrics = None
+        
+        # 画像パスが使えない場合 → 従来のテキストベース生成
+        if not generated_lyrics:
+            generated_lyrics = lyrics_generator.generate_lyrics(
+                extracted_text, 
+                language_mode=language_mode, 
+                custom_request=custom_request
+            )
         
         if generated_lyrics:
             # セッションに保存（LyricsConfirmationViewで使う）
@@ -848,7 +1023,40 @@ class LyricsConfirmationView(LoginRequiredMixin, TemplateView):
             if extracted_text:
                 try:
                     lyrics_generator = GeminiLyricsGenerator()
-                    new_lyrics = lyrics_generator.generate_lyrics(extracted_text, language_mode=language_mode, custom_request=custom_request)
+                    new_lyrics = None
+                    
+                    # 画像がある場合 → 画像直接生成パス
+                    uploaded_image_ids = request.session.get('uploaded_image_ids', [])
+                    if uploaded_image_ids:
+                        try:
+                            from PIL import Image as PILImage
+                            from .models import UploadedImage
+                            images = []
+                            for img_id in uploaded_image_ids:
+                                try:
+                                    uploaded = UploadedImage.objects.get(id=img_id, user=request.user)
+                                    img = PILImage.open(uploaded.image.path)
+                                    if img.mode != 'RGB':
+                                        img = img.convert('RGB')
+                                    images.append(img)
+                                except Exception:
+                                    pass
+                            
+                            if images:
+                                new_lyrics = lyrics_generator.generate_lyrics_from_images(
+                                    images,
+                                    language_mode=language_mode,
+                                    custom_request=custom_request,
+                                    extracted_text=extracted_text,
+                                )
+                        except Exception as img_err:
+                            logger.warning(f"Regenerate image-based failed: {img_err}")
+                            new_lyrics = None
+                    
+                    # フォールバック: テキストベース
+                    if not new_lyrics:
+                        new_lyrics = lyrics_generator.generate_lyrics(extracted_text, language_mode=language_mode, custom_request=custom_request)
+                    
                     request.session['generated_lyrics'] = new_lyrics
                     return JsonResponse({
                         'success': True,
@@ -1491,8 +1699,19 @@ def song_generating(request, pk):
     if song.generation_status == 'completed':
         return redirect('songs:song_detail', pk=pk)
     
+    # フラッシュカード同時作成された場合のデッキ情報
+    flashcard_deck_id = request.session.pop('created_flashcard_deck_id', None)
+    flashcard_deck = None
+    if flashcard_deck_id:
+        from .models import FlashcardDeck
+        try:
+            flashcard_deck = FlashcardDeck.objects.get(pk=flashcard_deck_id, user=request.user)
+        except FlashcardDeck.DoesNotExist:
+            pass
+    
     return render(request, 'songs/song_generating.html', {
         'song': song,
+        'flashcard_deck': flashcard_deck,
     })
 
 
@@ -1693,6 +1912,17 @@ def classroom_create(request):
                 messages.error(request, '请输入班级名称。')
             else:
                 messages.error(request, 'クラス名を入力してください。')
+            return redirect('songs:classroom_create')
+        
+        # 卑語・不適切ワードチェック
+        name_check = check_name_for_inappropriate_content(name)
+        if name_check['is_inappropriate']:
+            if is_english:
+                messages.error(request, 'This class name contains inappropriate language. Please choose a different name.')
+            elif is_chinese:
+                messages.error(request, '此班级名称包含不当用语，请选择其他名称。')
+            else:
+                messages.error(request, 'このクラス名には不適切な言葉が含まれています。別の名前を入力してください。')
             return redirect('songs:classroom_create')
         
         code = generate_classroom_code()
@@ -2229,3 +2459,214 @@ def mureka_api_debug(request):
         return JsonResponse({'action': 'recent_songs', 'songs': songs_data})
     
     return JsonResponse({'error': 'Unknown action. Use: endpoints, describe, query_task, list_songs, recent_songs'}, status=400)
+
+
+# ===================================================
+# フラッシュカード機能
+# ===================================================
+
+@login_required
+def flashcard_list(request):
+    """フラッシュカード デッキ一覧"""
+    from .models import FlashcardDeck
+    decks = FlashcardDeck.objects.filter(user=request.user).select_related('source_song').prefetch_related('flashcards')
+    
+    # 各デッキの学習進捗を計算
+    for deck in decks:
+        selected = deck.flashcards.filter(is_selected=True)
+        deck.total_selected = selected.count()
+        deck.mastered_count = selected.filter(mastery_level=3).count()
+        if deck.total_selected > 0:
+            deck.progress_percent = int(deck.mastered_count / deck.total_selected * 100)
+        else:
+            deck.progress_percent = 0
+    
+    return render(request, 'songs/flashcard_list.html', {
+        'decks': decks,
+    })
+
+
+@login_required
+def flashcard_create_from_song(request, pk):
+    """楽曲から暗記カードを作成"""
+    from .models import FlashcardDeck, Flashcard, Song
+    from .ai_services import GeminiFlashcardExtractor, GeminiOCR
+    
+    song = get_object_or_404(Song, pk=pk, created_by=request.user)
+    
+    # 既にこの楽曲の暗記カードがある場合はそちらにリダイレクト
+    existing_deck = FlashcardDeck.objects.filter(source_song=song, user=request.user).first()
+    if existing_deck:
+        return redirect('songs:flashcard_select', pk=existing_deck.pk)
+    
+    if request.method != 'POST':
+        return redirect('songs:song_detail', pk=pk)
+    
+    extractor = GeminiFlashcardExtractor()
+    all_terms = []
+    source_image_obj = None
+    source_text = ''
+    
+    # 歌詞のオリジナルテキストを取得
+    try:
+        if hasattr(song, 'lyrics') and song.lyrics:
+            source_text = song.lyrics.original_text or ''
+    except Exception:
+        pass
+    
+    # 1. 元画像がある場合 → 画像から直接抽出
+    if song.source_image:
+        try:
+            source_image_obj = song.source_image
+            terms = extractor.extract_terms_from_image(song.source_image.image)
+            if terms:
+                all_terms.extend(terms)
+        except Exception as e:
+            logger.warning(f"Flashcard image extraction error: {e}")
+    
+    # 2. 画像から取れなかった場合 → テキストから抽出
+    if not all_terms and source_text:
+        terms = extractor.extract_terms_from_text(source_text)
+        if terms:
+            all_terms.extend(terms)
+    
+    if not all_terms:
+        app_language = request.session.get('app_language', 'ja')
+        if app_language == 'en':
+            messages.warning(request, 'Could not extract terms from this song.')
+        elif app_language == 'zh':
+            messages.warning(request, '无法从这首歌曲中提取术语。')
+        else:
+            messages.warning(request, 'この楽曲からキーワードを抽出できませんでした。')
+        return redirect('songs:song_detail', pk=pk)
+    
+    # 重複除去
+    seen = set()
+    unique_terms = []
+    for t in all_terms:
+        key = t['term'].strip().lower()
+        if key not in seen:
+            seen.add(key)
+            unique_terms.append(t)
+    
+    # デッキ作成
+    deck = FlashcardDeck.objects.create(
+        user=request.user,
+        title=f'{song.title} の暗記カード',
+        source_song=song,
+        source_image=source_image_obj,
+        source_text=source_text[:5000] if source_text else '',
+    )
+    
+    for i, t in enumerate(unique_terms):
+        importance = t.get('importance', 'normal')
+        Flashcard.objects.create(
+            deck=deck,
+            term=t['term'],
+            definition=t['definition'],
+            importance=importance,
+            is_selected=(importance == 'high'),
+            order=i,
+        )
+    
+    return redirect('songs:flashcard_select', pk=deck.pk)
+
+
+@login_required
+def flashcard_select(request, pk):
+    """用語の選択・厳選画面"""
+    from .models import FlashcardDeck, Flashcard
+    
+    deck = get_object_or_404(FlashcardDeck.objects.select_related('source_song'), pk=pk, user=request.user)
+    flashcards = deck.flashcards.all()
+    
+    if request.method == 'POST':
+        # 選択された用語のIDリストを取得
+        selected_ids = request.POST.getlist('selected_cards')
+        selected_ids = [int(x) for x in selected_ids if x.isdigit()]
+        
+        # 全カードの選択状態を更新
+        deck.flashcards.update(is_selected=False)
+        if selected_ids:
+            deck.flashcards.filter(id__in=selected_ids).update(is_selected=True)
+        
+        deck.update_card_count()
+        
+        if deck.card_count > 0:
+            messages.success(request, f'{deck.card_count}枚のカードでデッキを作成しました！')
+            return redirect('songs:flashcard_study', pk=deck.pk)
+        else:
+            messages.warning(request, 'カードを1枚以上選択してください。')
+    
+    return render(request, 'songs/flashcard_select.html', {
+        'deck': deck,
+        'flashcards': flashcards,
+    })
+
+
+@login_required
+def flashcard_study(request, pk):
+    """フラッシュカード学習画面"""
+    from .models import FlashcardDeck
+    
+    deck = get_object_or_404(FlashcardDeck, pk=pk, user=request.user)
+    cards = deck.flashcards.filter(is_selected=True)
+    
+    if not cards.exists():
+        messages.warning(request, 'このデッキにはカードがありません。')
+        return redirect('songs:flashcard_select', pk=deck.pk)
+    
+    # カードデータをJSON化（JSで使用）
+    cards_data = list(cards.values('id', 'term', 'definition', 'mastery_level', 'order'))
+    
+    return render(request, 'songs/flashcard_study.html', {
+        'deck': deck,
+        'cards': cards,
+        'cards_json': json.dumps(cards_data, ensure_ascii=False),
+        'total_cards': cards.count(),
+        'mastered_count': cards.filter(mastery_level=3).count(),
+    })
+
+
+@login_required
+@require_POST
+def flashcard_update_mastery(request, pk):
+    """カードの習熟度を更新（AJAX）"""
+    from .models import Flashcard
+    
+    try:
+        data = json.loads(request.body)
+        card_id = data.get('card_id')
+        mastery = data.get('mastery_level', 0)
+        
+        card = get_object_or_404(Flashcard, pk=card_id, deck__pk=pk, deck__user=request.user)
+        card.mastery_level = max(0, min(3, int(mastery)))
+        card.save(update_fields=['mastery_level'])
+        
+        # デッキ全体の進捗を返す
+        deck = card.deck
+        selected = deck.flashcards.filter(is_selected=True)
+        mastered = selected.filter(mastery_level=3).count()
+        total = selected.count()
+        
+        return JsonResponse({
+            'success': True,
+            'mastery_level': card.mastery_level,
+            'mastered_count': mastered,
+            'total_cards': total,
+            'progress_percent': int(mastered / total * 100) if total > 0 else 0,
+        })
+    except Exception as e:
+        return JsonResponse({'success': False, 'error': str(e)}, status=400)
+
+
+@login_required
+@require_POST
+def flashcard_deck_delete(request, pk):
+    """デッキを削除"""
+    from .models import FlashcardDeck
+    
+    deck = get_object_or_404(FlashcardDeck, pk=pk, user=request.user)
+    deck.delete()
+    messages.success(request, 'デッキを削除しました。')
+    return redirect('songs:flashcard_list')

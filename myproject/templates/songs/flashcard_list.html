@@ -1,0 +1,109 @@
+{% extends 'base.html' %}
+
+{% block title %}{% if is_english %}Flashcards{% elif is_chinese %}闪卡{% elif is_spanish %}Tarjetas{% elif is_german %}Lernkarten{% elif is_portuguese %}Flashcards{% else %}フラッシュカード{% endif %} - UTAMEMO{% endblock %}
+
+{% block content %}
+<div class="container py-5">
+    <div class="row justify-content-center">
+        <div class="col-lg-10">
+            <!-- ヘッダー -->
+            <div class="d-flex justify-content-between align-items-center mb-4 fade-in">
+                <div>
+                    <h1 class="display-6 fw-bold mb-1">
+                        <i class="bi bi-card-text me-2" style="color: var(--primary-color);"></i>
+                        {% if is_english %}Flashcards{% elif is_chinese %}闪卡{% elif is_spanish %}Tarjetas{% elif is_german %}Lernkarten{% elif is_portuguese %}Flashcards{% else %}フラッシュカード{% endif %}
+                    </h1>
+                    <p class="text-muted mb-0">
+                        {% if is_english %}Study key terms from your notes{% elif is_chinese %}学习笔记中的关键术语{% elif is_spanish %}Estudia los términos clave de tus notas{% elif is_german %}Lerne Schlüsselbegriffe aus deinen Notizen{% elif is_portuguese %}Estude os termos-chave das suas notas{% else %}写真から重要語句を抽出して暗記{% endif %}
+                    </p>
+                </div>
+                <a href="{% url 'songs:upload_image' %}" class="btn-gradient-primary">
+                    <i class="bi bi-plus-lg me-1"></i>
+                    {% if is_english %}Create Song{% elif is_chinese %}创建歌曲{% elif is_spanish %}Crear Canción{% elif is_german %}Song erstellen{% elif is_portuguese %}Criar Música{% else %}楽曲を作成{% endif %}
+                </a>
+            </div>
+
+            {% if decks %}
+            <div class="row g-4">
+                {% for deck in decks %}
+                <div class="col-md-6 col-lg-4 fade-in">
+                    <div class="card h-100" style="border: 1px solid var(--border-color); border-radius: 16px; overflow: hidden; transition: transform 0.2s, box-shadow 0.2s;">
+                        <div class="card-body p-4">
+                            <h5 class="fw-bold mb-2" style="color: var(--text-primary);">{{ deck.title }}</h5>
+                            {% if deck.source_song %}
+                            <a href="{% url 'songs:song_detail' deck.source_song.pk %}" class="text-muted small mb-2 d-block text-decoration-none" style="color: var(--primary-color) !important;">
+                                <i class="bi bi-music-note me-1"></i>{{ deck.source_song.title|truncatechars:40 }}
+                            </a>
+                            {% endif %}
+                            {% if deck.description %}
+                            <p class="text-muted small mb-3">{{ deck.description|truncatechars:60 }}</p>
+                            {% endif %}
+                            
+                            <!-- カード数 -->
+                            <div class="d-flex align-items-center mb-3">
+                                <span class="badge" style="background: var(--primary-gradient); padding: 6px 12px; border-radius: 20px;">
+                                    <i class="bi bi-layers me-1"></i>{{ deck.total_selected }}{% if is_english %} cards{% elif is_chinese %}张卡{% else %}枚{% endif %}
+                                </span>
+                            </div>
+                            
+                            <!-- 進捗バー -->
+                            {% if deck.total_selected > 0 %}
+                            <div class="mb-3">
+                                <div class="d-flex justify-content-between small mb-1">
+                                    <span class="text-muted">{% if is_english %}Progress{% elif is_chinese %}进度{% elif is_spanish %}Progreso{% elif is_german %}Fortschritt{% elif is_portuguese %}Progresso{% else %}学習進捗{% endif %}</span>
+                                    <span class="fw-bold" style="color: var(--primary-color);">{{ deck.progress_percent }}%</span>
+                                </div>
+                                <div class="progress" style="height: 6px; border-radius: 3px; background: var(--border-color);">
+                                    <div class="progress-bar" role="progressbar" style="width: {{ deck.progress_percent }}%; background: var(--primary-gradient); border-radius: 3px;"></div>
+                                </div>
+                            </div>
+                            {% endif %}
+                            
+                            <div class="text-muted small mb-3">
+                                <i class="bi bi-clock me-1"></i>{{ deck.updated_at|timesince }}{% if is_english %} ago{% elif is_chinese %}前{% else %}前{% endif %}
+                            </div>
+                        </div>
+                        <div class="card-footer bg-transparent border-top-0 p-4 pt-0">
+                            <div class="d-flex gap-2">
+                                {% if deck.total_selected > 0 %}
+                                <a href="{% url 'songs:flashcard_study' deck.pk %}" class="btn-gradient-secondary btn-sm flex-grow-1 text-center" style="text-decoration: none;">
+                                    <i class="bi bi-play-fill me-1"></i>{% if is_english %}Study{% elif is_chinese %}学习{% elif is_spanish %}Estudiar{% elif is_german %}Lernen{% elif is_portuguese %}Estudar{% else %}学習する{% endif %}
+                                </a>
+                                {% endif %}
+                                <a href="{% url 'songs:flashcard_select' deck.pk %}" class="btn-outline-modern btn-sm" style="text-decoration: none;">
+                                    <i class="bi bi-pencil"></i>
+                                </a>
+                                <form method="post" action="{% url 'songs:flashcard_deck_delete' deck.pk %}" style="display: inline;" onsubmit="return confirm('{% if is_english %}Delete this deck?{% elif is_chinese %}删除此卡组？{% else %}このデッキを削除しますか？{% endif %}');">
+                                    {% csrf_token %}
+                                    <button type="submit" class="btn-outline-modern btn-sm" style="color: #dc3545; border-color: #dc3545;">
+                                        <i class="bi bi-trash"></i>
+                                    </button>
+                                </form>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                {% endfor %}
+            </div>
+            {% else %}
+            <!-- 空の状態 -->
+            <div class="text-center py-5 fade-in">
+                <div style="font-size: 4rem; color: var(--border-color); margin-bottom: 1.5rem;">
+                    <i class="bi bi-card-text"></i>
+                </div>
+                <h4 class="fw-bold mb-2" style="color: var(--text-primary);">
+                    {% if is_english %}No flashcard decks yet{% elif is_chinese %}还没有闪卡组{% elif is_spanish %}Aún no hay mazos{% elif is_german %}Noch keine Lernkarten{% elif is_portuguese %}Nenhum baralho ainda{% else %}まだデッキがありません{% endif %}
+                </h4>
+                <p class="text-muted mb-4">
+                    {% if is_english %}Create a song from your study materials, then generate flashcards{% elif is_chinese %}上传学习材料创建歌曲，然后生成闪卡{% elif is_spanish %}Crea una canción a partir de tus materiales y luego genera tarjetas{% elif is_german %}Erstelle einen Song aus deinem Lernmaterial und generiere dann Lernkarten{% elif is_portuguese %}Crie uma música do seu material de estudo e depois gere flashcards{% else %}教材から楽曲を作成すると暗記カードも作れます{% endif %}
+                </p>
+                <a href="{% url 'songs:upload_image' %}" class="btn-gradient-primary btn-lg">
+                    <i class="bi bi-plus-lg me-2"></i>
+                    {% if is_english %}Create a Song{% elif is_chinese %}创建歌曲{% elif is_spanish %}Crear Canción{% elif is_german %}Song erstellen{% elif is_portuguese %}Criar Música{% else %}楽曲を作成する{% endif %}
+                </a>
+            </div>
+            {% endif %}
+        </div>
+    </div>
+</div>
+{% endblock %}

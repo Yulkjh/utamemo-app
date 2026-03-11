@@ -237,6 +237,21 @@ class ContentFilter:
         'くたばれ', 'クタバレ',
         'しね', 'シネ',
         
+        # 日本語卑語・下品な言葉
+        'ちんこ', 'チンコ', 'ちんぽ', 'チンポ', 'ちんちん', 'チンチン',
+        'まんこ', 'マンコ',
+        'おっぱい', 'オッパイ',
+        'うんこ', 'ウンコ', 'うんち', 'ウンチ',
+        'きんたま', 'キンタマ', '金玉',
+        'ちんぽこ', 'チンポコ',
+        'おちんちん', 'オチンチン',
+        'ちんげ', 'チンゲ', 'まんげ', 'マンゲ',
+        'ぼっき', 'ボッキ', '勃起',
+        'ざーめん', 'ザーメン',
+        'しこしこ', 'シコシコ',
+        'おなにー', 'オナニー',
+        'せっくす', 'セックス',
+        
         # 中国語差別用語
         '傻逼', '他妈的', '操你妈',
         
@@ -748,6 +763,78 @@ class ContentFilter:
             'detected_words': [],
             'message': ''
         }
+    
+    def check_name(self, name):
+        """
+        クラス名・デッキ名等の汎用名前チェック
+        
+        ユーザー名と同じ禁止ワードリスト + 日本語コンテンツ用禁止ワードも使用。
+        
+        Args:
+            name: チェックする名前
+            
+        Returns:
+            dict: {
+                'is_inappropriate': bool,
+                'detected_words': list,
+                'message': str
+            }
+        """
+        if not name:
+            return {
+                'is_inappropriate': False,
+                'detected_words': [],
+                'message': ''
+            }
+        
+        detected_words = []
+        name_lower = name.lower().strip()
+        
+        # スペース・アンダースコア・ハイフン・ドットを除去した連結版
+        name_stripped = re.sub(r'[\s_\-\.]+', '', name_lower)
+        
+        # ユーザー名用禁止ワードチェック（長い語 - 部分一致）
+        for word in self.prohibited_username_words:
+            if word in name_lower or word in name_stripped:
+                detected_words.append(word)
+        
+        # 短い禁止ワードチェック（除外リスト付き）
+        for word, exceptions in self.prohibited_username_short_words.items():
+            if word in name_lower or word in name_stripped:
+                is_exception = False
+                for exc in exceptions:
+                    if exc in name_lower:
+                        is_exception = True
+                        break
+                if not is_exception:
+                    detected_words.append(word)
+        
+        # 日本語・中国語コンテンツ用禁止ワードも追加チェック
+        for word in self.prohibited_words_substring:
+            if word in name_lower or word in name_stripped:
+                detected_words.append(word)
+        
+        # 正規表現パターンチェック
+        for compiled in self.compiled_username_patterns:
+            if compiled.search(name_lower) or compiled.search(name_stripped):
+                detected_words.append(f'pattern:{compiled.pattern}')
+        
+        # 重複除去
+        detected_words = list(set(detected_words))
+        
+        if detected_words:
+            logger.warning(f"Inappropriate name detected: '{name}' -> {detected_words}")
+            return {
+                'is_inappropriate': True,
+                'detected_words': detected_words,
+                'message': 'この名前には不適切な言葉が含まれています。'
+            }
+        
+        return {
+            'is_inappropriate': False,
+            'detected_words': [],
+            'message': ''
+        }
 
 
 # シングルトンインスタンス
@@ -778,3 +865,16 @@ def check_username_for_inappropriate_content(username):
         dict: チェック結果
     """
     return content_filter.check_username(username)
+
+
+def check_name_for_inappropriate_content(name):
+    """
+    クラス名・デッキ名等の汎用名前チェック便利関数
+    
+    Args:
+        name: チェックする名前
+        
+    Returns:
+        dict: チェック結果
+    """
+    return content_filter.check_name(name)
