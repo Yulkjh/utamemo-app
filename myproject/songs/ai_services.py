@@ -1,14 +1,91 @@
 import os
 import requests
 from django.conf import settings
+from django.core.cache import cache
 import time
 import google.generativeai as genai
 from PIL import Image
 import re
 import logging
+import hashlib
 
 # ロガー設定
 logger = logging.getLogger(__name__)
+
+# ========================================
+# APIキャッシュ設定
+# ========================================
+# キャッシュ有効期限（秒）- 同じ入力に対するレスポンスをキャッシュ
+GEMINI_CACHE_TTL = 3600 * 24  # 24時間
+
+
+def _get_cache_key(text, operation):
+    """テキストと操作種別からキャッシュキーを生成
+    
+    Args:
+        text: 入力テキスト
+        operation: 操作種別（'lyrics', 'flashcard', 'ocr'等）
+    
+    Returns:
+        str: キャッシュキー
+    """
+    text_hash = hashlib.sha256(text.encode('utf-8')).hexdigest()[:16]
+    return f"gemini_{operation}_{text_hash}"
+
+
+def _get_cached_response(cache_key):
+    """キャッシュからレスポンスを取得"""
+    try:
+        cached = cache.get(cache_key)
+        if cached:
+            logger.info(f"Cache hit: {cache_key}")
+            return cached
+    except Exception as e:
+        logger.warning(f"Cache get error: {e}")
+    return None
+
+
+def _set_cached_response(cache_key, response, ttl=None):
+    """レスポンスをキャッシュに保存"""
+    try:
+        cache.set(cache_key, response, ttl or GEMINI_CACHE_TTL)
+        logger.info(f"Cache set: {cache_key}")
+    except Exception as e:
+        logger.warning(f"Cache set error: {e}")
+
+
+# ========================================
+# フラッシュカード前処理（【】マーク抽出）
+# ========================================
+def extract_bracketed_terms(text):
+    """テキストから【】で囲まれた語句を抽出（LLM不使用）
+    
+    OCRで抽出されたテキストの【重要語句】マークを正規表現で確実に抽出。
+    LLMに頑らず、ローカルで処理することで見落としを防ぐ。
+    
+    Args:
+        text: OCR抽出テキスト
+    
+    Returns:
+        list[str]: 【】で囲まれた語句のリスト（重複なし）
+    """
+    if not text:
+        return []
+    
+    # 【...】パターンを抽出
+    pattern = r'【([^】]+)】'
+    matches = re.findall(pattern, text)
+    
+    # 重複を除去しつつ順序を維持
+    seen = set()
+    unique_terms = []
+    for term in matches:
+        term = term.strip()
+        if term and term not in seen:
+            seen.add(term)
+            unique_terms.append(term)
+    
+    return unique_terms
 
 # fugashiはオプショナル（ひらがな変換に使用）
 try:
@@ -1165,6 +1242,8 @@ class GeminiLyricsGenerator:
     def generate_lyrics(self, extracted_text, title="", genre="pop", language_mode="japanese", custom_request=""):
         """抽出されたテキストから歌詞を生成（漢字のまま返す）
         
+        最適化: 同一入力に対するレスポンスをキャッシュ（1時間有効）
+        
         language_mode:
         - "japanese": 日本語モード（従来の動作）
         - "english_vocab": 日本語で英単語を覚えるモード
@@ -1178,6 +1257,16 @@ class GeminiLyricsGenerator:
         
         if not self.model:
             raise Exception("Gemini APIが設定されていません。管理者に連絡してください。")
+        
+        # キャッシュキーを生成（全パラメータを含む）
+        cache_input = f"{extracted_text}|{genre}|{language_mode}|{custom_request}"
+        cache_key = _get_cache_key(cache_input, 'lyrics')
+        
+        # キャッシュをチェック
+        cached = _get_cached_response(cache_key)
+        if cached:
+            logger.info("GeminiLyricsGenerator: Returning cached lyrics")
+            return cached
         
         try:
             if language_mode == "english_vocab":
@@ -1200,6 +1289,10 @@ class GeminiLyricsGenerator:
                 lyrics = self._extract_clean_lyrics(raw_lyrics)
                 
                 print(f"Gemini lyrics generation successful! Generated {len(lyrics)} characters")
+                
+                # キャッシュに保存（1時間有効 - 再生成を妨げないため短めに）
+                _set_cached_response(cache_key, lyrics, ttl=3600)
+                
                 return lyrics
             else:
                 print("Failed to generate lyrics")
@@ -2429,6 +2522,10 @@ class GeminiFlashcardExtractor:
         OCRで抽出されたテキスト（【】マーク付き）を解析し、
         学習用のterm-definitionペアを生成する。
         
+        最適化:
+        - 【】マークの語句は正規表現で事前抽出（LLMの見落とし防止）
+        - 同一テキストへのレスポンスをキャッシュ（API呼び出し削減）
+        
         Args:
             text: OCR抽出テキスト（【重要語句】マーク付きの場合あり）
             
@@ -2442,18 +2539,35 @@ class GeminiFlashcardExtractor:
         if not text or not text.strip():
             return []
         
+        # キャッシュをチェック
+        cache_key = _get_cache_key(text, 'flashcard')
+        cached = _get_cached_response(cache_key)
+        if cached:
+            return cached
+        
         try:
+            # 【】マークの語句を正規表現で事前抽出（LLMに頼らず確実に取得）
+            pre_extracted_terms = extract_bracketed_terms(text)
+            
+            # 事前抽出した語句をプロンプトに明示的に含める
+            pre_extracted_section = ""
+            if pre_extracted_terms:
+                terms_list = "、".join(pre_extracted_terms)
+                pre_extracted_section = f"""
+■ 必須キーワード（以下の語句は必ずimportance="high"で含めること）:
+{terms_list}
+"""
+            
             prompt = f"""以下のテキストから、学習に重要な語句（キーワード）とその意味・定義のペアを抽出してください。
-
+{pre_extracted_section}
 ルール:
-・【】で囲まれた語句は必ずキーワードとして含め、importance を "high" にする
-・【】で囲まれていなくても、テスト・試験に出そうな重要語句を選ぶ
+・上記の「必須キーワード」は必ず全て含め、importance を "high" にする
+・それ以外にも、テスト・試験に出そうな重要語句を選ぶ（importance は "normal"）
 ・各キーワードに対して、簡潔でわかりやすい定義・説明を付ける
 ・定義はテキストの文脈に基づいて書くが、「テキストでは」「画像では」「本文では」のような出典への言及は絶対にしない
 ・定義は一般的な知識として完結する文で書く
 ・最低5個、最大20個のペアを抽出する
 ・同じ語句の重複は避ける
-・importance は "high"（特に重要・強調されている）または "normal"（通常の重要語句）を設定する
 
 出力形式（JSON配列のみ出力。他の文章は一切書かないこと）:
 [
@@ -2476,7 +2590,21 @@ class GeminiFlashcardExtractor:
                     if raw_text:
                         terms = self._parse_terms_json(raw_text)
                         if terms:
+                            # 事前抽出した語句がすべて含まれているか確認
+                            extracted_term_names = {t['term'] for t in terms}
+                            for pre_term in pre_extracted_terms:
+                                if pre_term not in extracted_term_names:
+                                    # LLMが見落とした語句を追加（定義は後でユーザーが編集可能）
+                                    terms.append({
+                                        'term': pre_term,
+                                        'definition': '（定義を追加してください）',
+                                        'importance': 'high',
+                                    })
+                                    logger.info(f"GeminiFlashcardExtractor: Added missed term: {pre_term}")
+                            
                             logger.info(f"GeminiFlashcardExtractor: Extracted {len(terms)} terms")
+                            # キャッシュに保存
+                            _set_cached_response(cache_key, terms)
                             return terms
                     last_error = "Empty or unparseable response"
                 except Exception as api_error:
