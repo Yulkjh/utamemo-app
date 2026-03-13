@@ -266,9 +266,9 @@ class MurekaAIGenerator:
         self.use_real_api = getattr(settings, 'USE_MUREKA_API', False)
         
         if self.use_real_api and self.api_key:
-            print("MurekaAIGenerator: Using Mureka API for song generation.")
+            logger.info("MurekaAIGenerator: Using Mureka API for song generation.")
         else:
-            print("MurekaAIGenerator: API key not set or disabled.")
+            logger.info("MurekaAIGenerator: API key not set or disabled.")
     
     def generate_song(self, lyrics, title="", genre="pop", vocal_style="female", model="mureka-v8", music_prompt="", reference_song=""):
         """歌詞から楽曲を生成（Mureka API使用）
@@ -322,10 +322,10 @@ class MurekaAIGenerator:
         # 注意: ひらがな変換後は文字数が増えるため、余裕を持った制限を設定
         max_lyrics_length = 2500
         if len(lyrics) > max_lyrics_length:
-            print(f"Lyrics too long ({len(lyrics)} chars), truncating smartly...")
+            logger.info(f"Lyrics too long ({len(lyrics)} chars), truncating smartly...")
             # セクション単位で切り詰める（[Verse], [Chorus]などの区切りを維持）
             lyrics = self._truncate_lyrics_by_section(lyrics, max_lyrics_length)
-            print(f"Truncated lyrics to {len(lyrics)} chars")
+            logger.info(f"Truncated lyrics to {len(lyrics)} chars")
         
         # 歌詞が短すぎる場合のチェック
         if len(lyrics.strip()) < 50:
@@ -474,7 +474,6 @@ class MurekaAIGenerator:
         import json
         payload_log = {k: (v[:100] + '...' if k == 'lyrics' and len(v) > 100 else v) for k, v in payload.items()}
         logger.info(f"[MUREKA] Full payload: {json.dumps(payload_log, ensure_ascii=False)}")
-        print(f"[MUREKA] Full payload: {json.dumps(payload_log, ensure_ascii=False)}")
         
         max_retries = 5
         base_wait_time = 10  # 10秒（30秒→10秒に短縮）
@@ -491,46 +490,46 @@ class MurekaAIGenerator:
                     timeout=api_timeout
                 )
                 
-                print(f"Response status: {response.status_code}")
-                print(f"Response text: {response.text[:500]}")
+                logger.info(f"Response status: {response.status_code}")
+                logger.info(f"Response text: {response.text[:500]}")
                 
                 if response.status_code == 200:
                     result = response.json()
-                    print(f"Mureka API response: {result}")
-                    print(f"Mureka API task created! Task ID: {result.get('id')}")
+                    logger.info(f"Mureka API response: {result}")
+                    logger.info(f"Mureka API task created! Task ID: {result.get('id')}")
                     
                     task_id = result.get('id')
                     if task_id:
                         return self._wait_for_mureka_completion(task_id, title, lyrics, genre)
                     else:
-                        print("No task ID returned from Mureka API")
-                        print(f"Full response: {result}")
+                        logger.warning("No task ID returned from Mureka API")
+                        logger.info(f"Full response: {result}")
                         raise Exception("Mureka API did not return a task ID")
                 
                 elif response.status_code == 429:
                     wait_time = base_wait_time * (attempt + 1)
                     logger.warning(f"Mureka API rate limit (429). Waiting {wait_time}s...")
-                    print(f"Rate limit reached (429). Waiting {wait_time} seconds...")
+                    logger.info(f"Rate limit reached (429). Waiting {wait_time} seconds...")
                     
                     if attempt < max_retries - 1:
                         time.sleep(wait_time)
                         continue
                     else:
                         error_msg = f"Mureka API rate limit exceeded after {max_retries} attempts. しばらく待ってから再試行してください。"
-                        print(f"{error_msg}")
+                        logger.info(f"{error_msg}")
                         raise Exception(error_msg)
                 
                 elif response.status_code == 400:
                     # Bad request - 歌詞の問題の可能性
                     error_msg = f"Mureka API bad request (400): {response.text}"
-                    print(f"{error_msg}")
+                    logger.info(f"{error_msg}")
                     raise Exception(error_msg)
                 
                 elif response.status_code >= 500:
                     # サーバーエラー - リトライ
                     if attempt < max_retries - 1:
                         wait_time = base_wait_time * (attempt + 1)
-                        print(f"Server error ({response.status_code}), retrying in {wait_time}s...")
+                        logger.info(f"Server error ({response.status_code}), retrying in {wait_time}s...")
                         time.sleep(wait_time)
                         continue
                     else:
@@ -538,34 +537,34 @@ class MurekaAIGenerator:
                 
                 else:
                     error_msg = f"Mureka API error: {response.status_code} - {response.text}"
-                    print(f"{error_msg}")
+                    logger.info(f"{error_msg}")
                     raise Exception(error_msg)
                     
             except requests.exceptions.Timeout:
-                print(f"Mureka API timeout on attempt {attempt + 1}")
+                logger.info(f"Mureka API timeout on attempt {attempt + 1}")
                 if attempt < max_retries - 1:
                     wait_time = base_wait_time
-                    print(f"Retrying after {wait_time} seconds...")
+                    logger.info(f"Retrying after {wait_time} seconds...")
                     time.sleep(wait_time)
                     continue
                 else:
                     raise Exception("Mureka API timeout after all retries")
                     
             except requests.exceptions.ConnectionError as e:
-                print(f"Mureka API connection error: {e}")
+                logger.info(f"Mureka API connection error: {e}")
                 if attempt < max_retries - 1:
                     wait_time = base_wait_time * (2 ** attempt)
-                    print(f"Retrying after {wait_time} seconds...")
+                    logger.info(f"Retrying after {wait_time} seconds...")
                     time.sleep(wait_time)
                     continue
                 else:
                     raise Exception(f"Mureka API connection failed: {e}")
                     
             except requests.exceptions.RequestException as e:
-                print(f"Mureka API request error: {e}")
+                logger.info(f"Mureka API request error: {e}")
                 if attempt < max_retries - 1:
                     wait_time = base_wait_time * (2 ** attempt)
-                    print(f"Retrying after {wait_time} seconds...")
+                    logger.info(f"Retrying after {wait_time} seconds...")
                     time.sleep(wait_time)
                     continue
                 else:
@@ -729,23 +728,23 @@ class MurekaAIGenerator:
                     status = task.get('status')
                     
                     if status in ['pending', 'running', 'queued', 'processing']:
-                        print(f"Cancelling running task: {task_id} (status: {status})")
+                        logger.info(f"Cancelling running task: {task_id} (status: {status})")
                         cancel_url = f"{self.base_url}/v1/song/cancel/{task_id}"
                         cancel_response = requests.post(cancel_url, headers=headers, timeout=10)
                         
                         if cancel_response.status_code == 200:
-                            print(f"Task {task_id} cancelled successfully")
+                            logger.info(f"Task {task_id} cancelled successfully")
                         else:
-                            print(f"Failed to cancel task {task_id}: {cancel_response.text}")
+                            logger.info(f"Failed to cancel task {task_id}: {cancel_response.text}")
                         
                         time.sleep(1)
                 
                 if not tasks:
-                    print("No running tasks found")
+                    logger.info("No running tasks found")
             else:
-                print(f"Could not fetch task list: {response.status_code}")
+                logger.info(f"Could not fetch task list: {response.status_code}")
         except Exception as e:
-            print(f"Error checking/cancelling tasks: {e}")
+            logger.info(f"Error checking/cancelling tasks: {e}")
     
     def _wait_for_mureka_completion(self, task_id, title, lyrics, genre):
         """Mureka APIのタスク完了を待つ"""
@@ -765,7 +764,7 @@ class MurekaAIGenerator:
         while attempt < max_attempts:
             try:
                 query_url = f"{self.base_url}/v1/song/query/{task_id}"
-                print(f"Checking task status: {query_url} (Attempt {attempt + 1}/{max_attempts})")
+                logger.info(f"Checking task status: {query_url} (Attempt {attempt + 1}/{max_attempts})")
                 
                 response = requests.get(query_url, headers=headers, timeout=30)
                 
@@ -774,29 +773,29 @@ class MurekaAIGenerator:
                     result = response.json()
                     status = result.get('status')
                     
-                    print(f"Task {task_id} status: {status}")
+                    logger.info(f"Task {task_id} status: {status}")
                     
                     if status in ['completed', 'succeeded']:
                         choices = result.get('choices', [])
-                        print(f"Choices count: {len(choices) if choices else 0}")
+                        logger.info(f"Choices count: {len(choices) if choices else 0}")
                         
                         if choices and len(choices) > 0:
                             choice = choices[0]
                             audio_url = choice.get('url')
-                            print(f"Song URL: {audio_url}")
+                            logger.info(f"Song URL: {audio_url}")
                             
                             # Mureka APIレスポンスの全フィールドをログ出力（LRC/タイミング情報の発見用）
                             import json
                             choice_keys = list(choice.keys())
                             logger.info(f"[MUREKA] Choice fields: {choice_keys}")
-                            print(f"[MUREKA] Choice fields: {choice_keys}")
+                            logger.info(f"[MUREKA] Choice fields: {choice_keys}")
                             # 各フィールドの値の型とサンプルをログ
                             for key in choice_keys:
                                 val = choice[key]
                                 val_type = type(val).__name__
                                 val_preview = str(val)[:200] if val else 'None'
                                 logger.info(f"[MUREKA] choice['{key}'] ({val_type}): {val_preview}")
-                                print(f"[MUREKA] choice['{key}'] ({val_type}): {val_preview}")
+                                logger.info(f"[MUREKA] choice['{key}'] ({val_type}): {val_preview}")
                             # result全体の追加フィールドも確認
                             result_keys = [k for k in result.keys() if k not in ('choices', 'status')]
                             if result_keys:
@@ -805,7 +804,7 @@ class MurekaAIGenerator:
                                     val = result[key]
                                     val_preview = str(val)[:200] if val else 'None'
                                     logger.info(f"[MUREKA] result['{key}']: {val_preview}")
-                                    print(f"[MUREKA] result['{key}']: {val_preview}")
+                                    logger.info(f"[MUREKA] result['{key}']: {val_preview}")
                             
                             if not audio_url:
                                 raise Exception("Mureka API returned no audio URL")
@@ -826,12 +825,12 @@ class MurekaAIGenerator:
                                 'lyrics_sections': choice.get('lyrics_sections', []),
                             }
                         else:
-                            print("No choices returned from Mureka API")
+                            logger.warning("No choices returned from Mureka API")
                             raise Exception("Mureka API returned no song choices")
                             
                     elif status in ['failed', 'error', 'cancelled']:
                         error_msg = result.get('error', result.get('message', 'Unknown error'))
-                        print(f"Task failed with status: {status}, error: {error_msg}")
+                        logger.info(f"Task failed with status: {status}, error: {error_msg}")
                         raise Exception(f"Mureka generation failed: {error_msg}")
                         
                     else:
@@ -843,17 +842,17 @@ class MurekaAIGenerator:
                         else:
                             wait_time = 5  # 後半は長く
                         
-                        print(f"Task still {status}, waiting {wait_time}s...")
+                        logger.info(f"Task still {status}, waiting {wait_time}s...")
                         time.sleep(wait_time)
                         attempt += 1
                         
                 elif response.status_code == 404:
-                    print(f"Task {task_id} not found")
+                    logger.info(f"Task {task_id} not found")
                     raise Exception(f"Mureka task not found: {task_id}")
                     
                 else:
                     consecutive_errors += 1
-                    print(f"Query error: {response.status_code} (consecutive: {consecutive_errors})")
+                    logger.info(f"Query error: {response.status_code} (consecutive: {consecutive_errors})")
                     
                     if consecutive_errors >= max_consecutive_errors:
                         raise Exception(f"Too many consecutive errors checking task status")
@@ -863,7 +862,7 @@ class MurekaAIGenerator:
                     
             except requests.exceptions.Timeout:
                 consecutive_errors += 1
-                print(f"Query timeout (consecutive: {consecutive_errors})")
+                logger.info(f"Query timeout (consecutive: {consecutive_errors})")
                 
                 if consecutive_errors >= max_consecutive_errors:
                     raise Exception("Too many timeouts checking task status")
@@ -873,7 +872,7 @@ class MurekaAIGenerator:
                 
             except requests.exceptions.RequestException as e:
                 consecutive_errors += 1
-                print(f"Query request error: {e} (consecutive: {consecutive_errors})")
+                logger.info(f"Query request error: {e} (consecutive: {consecutive_errors})")
                 
                 if consecutive_errors >= max_consecutive_errors:
                     raise Exception(f"Network error checking task status: {e}")
@@ -884,10 +883,10 @@ class MurekaAIGenerator:
             except Exception as e:
                 if "failed" in str(e).lower() or "error" in str(e).lower():
                     raise  # 明確な失敗は再スロー
-                print(f"Error querying task: {e}")
+                logger.info(f"Error querying task: {e}")
                 raise
         
-        print(f"Timeout waiting for task {task_id}")
+        logger.error(f"Timeout waiting for task {task_id}")
         raise Exception(f"Timeout waiting for Mureka task after {max_attempts * 4} seconds")
     
     def describe_song(self, audio_url):
@@ -979,7 +978,7 @@ class MurekaAIGenerator:
                     'response': response.text[:200]
                 }
                 logger.info(f"[MUREKA] {method} {endpoint} → {response.status_code}: {response.text[:100]}")
-                print(f"[MUREKA] {method} {endpoint} → {response.status_code}: {response.text[:100]}")
+                logger.info(f"[MUREKA] {method} {endpoint} → {response.status_code}: {response.text[:100]}")
                 
             except Exception as e:
                 results[endpoint] = {'status': 'error', 'response': str(e)[:100]}
@@ -1018,14 +1017,14 @@ class PDFTextExtractor:
             extracted_text = []
             page_count = len(doc)
             
-            print(f"PDF opened: {page_count} pages")
+            logger.info(f"PDF opened: {page_count} pages")
             
             for page_num in range(page_count):
                 page = doc.load_page(page_num)
                 text = page.get_text()
                 if text.strip():
                     extracted_text.append(text.strip())
-                    print(f"Page {page_num + 1}: Extracted {len(text)} chars")
+                    logger.info(f"Page {page_num + 1}: Extracted {len(text)} chars")
             
             doc.close()
             
@@ -1033,18 +1032,18 @@ class PDFTextExtractor:
             
             # テキストが取得できた場合
             if result.strip():
-                print(f"PDF extraction successful! Extracted {len(result)} characters from {page_count} pages")
+                logger.info(f"PDF extraction successful! Extracted {len(result)} characters from {page_count} pages")
                 return result
             
             # テキストが取得できない場合（スキャンPDFなど）はOCRで処理
-            print("No text found in PDF, trying OCR...")
+            logger.info("No text found in PDF, trying OCR...")
             return self._extract_with_ocr(pdf_file, pdf_bytes if 'pdf_bytes' in dir() else None)
             
         except ImportError as e:
-            print(f"PyMuPDF not installed: {e}")
+            logger.info(f"PyMuPDF not installed: {e}")
             return ""
         except Exception as e:
-            print(f"PDF extraction error: {e}")
+            logger.info(f"PDF extraction error: {e}")
             import traceback
             traceback.print_exc()
             return ""  # エラー時は空文字を返す
@@ -1073,7 +1072,7 @@ class PDFTextExtractor:
             # Gemini OCRを使用
             model = _get_gemini_model()
             if not model:
-                print("Gemini model not available for OCR")
+                logger.warning("Gemini model not available for OCR")
                 doc.close()
                 return ""
             
@@ -1102,18 +1101,18 @@ class PDFTextExtractor:
                     text = _safe_get_response_text(response)
                     if text:
                         extracted_texts.append(text)
-                        print(f"OCR Page {page_num + 1}: Extracted {len(text)} chars")
+                        logger.info(f"OCR Page {page_num + 1}: Extracted {len(text)} chars")
                 except Exception as e:
-                    print(f"OCR error on page {page_num + 1}: {e}")
+                    logger.info(f"OCR error on page {page_num + 1}: {e}")
             
             doc.close()
             
             result = '\n\n'.join(extracted_texts)
-            print(f"PDF OCR completed! Extracted {len(result)} characters")
+            logger.info(f"PDF OCR completed! Extracted {len(result)} characters")
             return result
             
         except Exception as e:
-            print(f"PDF OCR extraction error: {e}")
+            logger.info(f"PDF OCR extraction error: {e}")
             import traceback
             traceback.print_exc()
             return ""
@@ -1288,18 +1287,18 @@ class GeminiLyricsGenerator:
                 
                 lyrics = self._extract_clean_lyrics(raw_lyrics)
                 
-                print(f"Gemini lyrics generation successful! Generated {len(lyrics)} characters")
+                logger.info(f"Gemini lyrics generation successful! Generated {len(lyrics)} characters")
                 
                 # キャッシュに保存（1時間有効 - 再生成を妨げないため短めに）
                 _set_cached_response(cache_key, lyrics, ttl=3600)
                 
                 return lyrics
             else:
-                print("Failed to generate lyrics")
+                logger.error("Failed to generate lyrics")
                 raise Exception("Failed to generate lyrics")
                 
         except Exception as e:
-            print(f"Gemini lyrics generation error: {e}")
+            logger.info(f"Gemini lyrics generation error: {e}")
             raise
 
     def generate_lyrics_from_images(self, images, title="", genre="pop", language_mode="japanese", custom_request="", extracted_text=""):
@@ -1897,13 +1896,13 @@ class GeminiLyricsGenerator:
             if tags_text:
                 tags = [tag.strip() for tag in tags_text.split(',') if tag.strip()]
                 tags = list(dict.fromkeys(tags))[:10]
-                print(f"Generated tags: {tags}")
+                logger.info(f"Generated tags: {tags}")
                 return tags
             else:
                 return []
                 
         except Exception as e:
-            print(f"Tag generation error: {e}")
+            logger.info(f"Tag generation error: {e}")
             return []
     
     def _extract_clean_lyrics(self, raw_text):

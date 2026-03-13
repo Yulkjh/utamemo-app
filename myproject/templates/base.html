@@ -64,12 +64,22 @@
             box-sizing: border-box;
         }
         
+        html {
+            scroll-behavior: smooth;
+        }
+        
         body {
             font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
             background: linear-gradient(135deg, #fff4f0 0%, #ffe6d9 50%, #ffd4c4 100%);
             color: var(--text-primary);
             line-height: 1.6;
             min-height: 100vh;
+        }
+        
+        /* アクセシビリティ: フォーカスリング */
+        :focus-visible {
+            outline: 2px solid var(--primary-color);
+            outline-offset: 2px;
         }
         
         .glass-effect {
@@ -1148,7 +1158,7 @@
 
     <!-- メッセージ表示 -->
     {% if messages %}
-    <div class="container mt-5 pt-4">
+    <div class="container" style="padding-top: 90px;">
         {% for message in messages %}
         <div class="alert alert-{{ message.tags }} alert-modern alert-dismissible fade show" role="alert">
             {{ message }}
@@ -1201,7 +1211,7 @@
             <hr class="my-4" style="border-color: var(--text-secondary);">
             <div class="row align-items-center">
                 <div class="col-md-12 text-center">
-                    <p class="footer-description small mb-0">&copy; 2026 UTAMEMO. All rights reserved.</p>
+                    <p class="footer-description small mb-0">&copy; 2025 UTAMEMO. All rights reserved.</p>
                 </div>
             </div>
         </div>
@@ -1268,6 +1278,22 @@
             document.addEventListener('click', function() {
                 languageSwitchers.forEach(s => s.classList.remove('open'));
                 userSwitchers.forEach(s => s.classList.remove('open'));
+            });
+            
+            // ESCキーでドロップダウンを閉じる
+            document.addEventListener('keydown', function(e) {
+                if (e.key === 'Escape') {
+                    languageSwitchers.forEach(s => s.classList.remove('open'));
+                    userSwitchers.forEach(s => s.classList.remove('open'));
+                }
+            });
+            
+            // アラートメッセージを5秒後に自動非表示
+            document.querySelectorAll('.alert-modern').forEach(function(alert) {
+                setTimeout(function() {
+                    var bsAlert = bootstrap.Alert.getOrCreateInstance(alert);
+                    if (bsAlert) bsAlert.close();
+                }, 5000);
             });
             
             // DEMOバナーの状態を復元

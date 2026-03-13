@@ -19,6 +19,9 @@ import json
 import base64
 from io import BytesIO
 from PIL import Image, ImageOps
+import logging
+
+logger = logging.getLogger(__name__)
 
 
 class RegisterView(CreateView):
@@ -416,7 +419,7 @@ def upgrade_success(request):
                 else:
                     messages.success(request, f'{plan_name}プランへようこそ！プランが有効になりました。')
         except Exception as e:
-            print(f"Error processing payment success: {e}")
+            logger.error(f"Error processing payment success: {e}")
     
     return redirect('users:upgrade')
 
@@ -446,7 +449,19 @@ def stripe_webhook(request):
                 user = User.objects.get(id=user_id)
                 user.plan = plan  # 正しいプランを設定
                 user.stripe_subscription_id = session.get('subscription')
-                user.plan_expires_at = timezone.now() + timedelta(days=30)
+                # Stripeサブスクリプションから正確な期限を取得
+                sub_id = session.get('subscription')
+                if sub_id:
+                    try:
+                        sub = stripe.Subscription.retrieve(sub_id)
+                        from datetime import datetime
+                        user.plan_expires_at = datetime.fromtimestamp(
+                            sub.current_period_end, tz=timezone.utc
+                        )
+                    except Exception:
+                        user.plan_expires_at = timezone.now() + timedelta(days=30)
+                else:
+                    user.plan_expires_at = timezone.now() + timedelta(days=30)
                 user.save()
             except User.DoesNotExist:
                 pass
@@ -468,7 +483,15 @@ def stripe_webhook(request):
         if subscription_id:
             try:
                 user = User.objects.get(stripe_subscription_id=subscription_id)
-                user.plan_expires_at = timezone.now() + timedelta(days=30)
+                # Stripeサブスクリプションから正確な期限を取得
+                try:
+                    sub = stripe.Subscription.retrieve(subscription_id)
+                    from datetime import datetime
+                    user.plan_expires_at = datetime.fromtimestamp(
+                        sub.current_period_end, tz=timezone.utc
+                    )
+                except Exception:
+                    user.plan_expires_at = timezone.now() + timedelta(days=30)
                 user.save()
             except User.DoesNotExist:
                 pass
@@ -521,7 +544,7 @@ class SchoolInquiryView(TemplateView):
         
         # 管理者にメール送信
         try:
-            admin_email = 'hope47284@gmail.com'
+            admin_email = getattr(settings, 'ADMIN_NOTIFICATION_EMAIL', 'admin@utamemo.com')
             send_mail(
                 subject=f'【UTAMEMOスクールプラン】{organization_name}様からのお問い合わせ',
                 message=email_body,
@@ -531,7 +554,7 @@ class SchoolInquiryView(TemplateView):
             )
         except Exception as e:
             # メール送信失敗してもエラーにはしない（ログに記録）
-            print(f"Email send error: {e}")
+            logger.error(f"Email send error: {e}")
         
         messages.success(request, 'お問い合わせを送信しました。担当者より折り返しご連絡いたします。')
         return redirect('users:school_inquiry_complete')

@@ -1077,6 +1077,7 @@ class LyricsConfirmationView(LoginRequiredMixin, TemplateView):
 
 
 @login_required
+@require_POST
 def like_song(request, pk):
     """楽曲いいね機能"""
     from django.db import transaction
@@ -1108,16 +1109,21 @@ def like_song(request, pk):
 
 
 @login_required
+@require_POST
 def favorite_song(request, pk):
     """楽曲お気に入り機能"""
+    from django.db import transaction
+
     song = get_object_or_404(Song, pk=pk)
-    favorite, created = Favorite.objects.get_or_create(user=request.user, song=song)
     
-    if not created:
-        favorite.delete()
-        favorited = False
-    else:
-        favorited = True
+    with transaction.atomic():
+        favorite, created = Favorite.objects.get_or_create(user=request.user, song=song)
+        
+        if not created:
+            favorite.delete()
+            favorited = False
+        else:
+            favorited = True
     
     if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
         return JsonResponse({'favorited': favorited})
@@ -1158,11 +1164,13 @@ def delete_song(request, pk):
 @require_POST
 def record_play(request, pk):
     """再生回数を記録するAPI"""
+    from django.db.models import F
+
     song = get_object_or_404(Song, pk=pk)
     
-    # 総再生回数を更新（誰でも）
-    song.total_plays += 1
-    song.save(update_fields=['total_plays'])
+    # F()式でレースコンディション防止
+    Song.objects.filter(pk=pk).update(total_plays=F('total_plays') + 1)
+    song.refresh_from_db()
     
     # ログインユーザーの場合は個人の再生履歴も更新
     my_play_count = 0
@@ -1174,8 +1182,8 @@ def record_play(request, pk):
         )
         
         if not created:
-            play_history.play_count += 1
-            play_history.save()
+            PlayHistory.objects.filter(pk=play_history.pk).update(play_count=F('play_count') + 1)
+            play_history.refresh_from_db()
         
         my_play_count = play_history.play_count
     
@@ -1651,7 +1659,8 @@ def retry_song_generation(request, pk):
 
 def set_language(request, lang):
     """アプリの言語を切り替える"""
-    if lang in ['ja', 'en', 'zh']:
+    supported_languages = {'ja', 'en', 'zh', 'es', 'de', 'pt'}
+    if lang in supported_languages:
         # セッションに言語を保存
         request.session['app_language'] = lang
         request.session.modified = True
@@ -2137,6 +2146,7 @@ def classroom_delete(request, pk):
 def audio_proxy(request, pk):
     """外部音声URLをプロキシして返す（CORS対策）"""
     from django.http import StreamingHttpResponse, HttpResponse
+    from urllib.parse import urlparse
     import requests as req
     import time
     
@@ -2146,6 +2156,18 @@ def audio_proxy(request, pk):
     audio_url = song.audio_url
     if not audio_url:
         return HttpResponse('No audio URL', status=404)
+    
+    # ドメインホワイトリスト（SSRF防止）
+    ALLOWED_AUDIO_DOMAINS = {
+        'cdn.mureka.ai',
+        'api.mureka.ai',
+        'mureka-public.s3.amazonaws.com',
+        'storage.googleapis.com',
+    }
+    parsed = urlparse(audio_url)
+    if parsed.hostname not in ALLOWED_AUDIO_DOMAINS:
+        logger.warning(f"Audio proxy blocked unauthorized domain: {parsed.hostname} for song {pk}")
+        return HttpResponse('Forbidden', status=403)
     
     # リトライロジック（最大3回）
     max_retries = 3

@@ -48,16 +48,16 @@
                             <a href="{% url 'songs:upload_image' %}" class="btn btn-primary btn-lg px-5">
                                 <i class="bi bi-camera-fill me-2"></i>{% if is_english %}Create a Song{% elif is_spanish %}Crear una Canción{% elif is_german %}Song erstellen{% elif is_portuguese %}Criar uma Música{% elif is_chinese %}创作歌曲{% else %}楽曲を作成する{% endif %}
                             </a>
-                            <a href="/songs/" class="btn btn-outline-primary btn-lg px-5">
+                            <a href="{% url 'songs:song_list' %}" class="btn btn-outline-primary btn-lg px-5">
                                 <i class="bi bi-music-note-list me-2"></i>{% if is_english %}Browse Songs{% elif is_spanish %}Ver Canciones{% elif is_german %}Songs durchsuchen{% elif is_portuguese %}Explorar Músicas{% elif is_chinese %}浏览歌曲{% else %}楽曲一覧を見る{% endif %}
                             </a>
                         </div>
                     {% else %}
                         <div class="d-flex flex-column flex-md-row gap-3 justify-content-center">
-                            <a href="/users/register/" class="btn btn-primary btn-lg px-5">
+                            <a href="{% url 'users:register' %}" class="btn btn-primary btn-lg px-5">
                                 <i class="bi bi-play-circle-fill me-2"></i>{% if is_english %}Get Started (Free){% elif is_spanish %}Comenzar (Gratis){% elif is_german %}Starten (Kostenlos){% elif is_portuguese %}Começar (Grátis){% elif is_chinese %}开始使用（免费）{% else %}始める（無料）{% endif %}
                             </a>
-                            <a href="/songs/" class="btn btn-outline-primary btn-lg px-5">
+                            <a href="{% url 'songs:song_list' %}" class="btn btn-outline-primary btn-lg px-5">
                                 <i class="bi bi-headphones me-2"></i>{% if is_english %}Listen to Songs{% elif is_spanish %}Escuchar Canciones{% elif is_german %}Songs anhören{% elif is_portuguese %}Ouvir Músicas{% elif is_chinese %}试听歌曲{% else %}楽曲を聞いてみる{% endif %}
                             </a>
                         </div>

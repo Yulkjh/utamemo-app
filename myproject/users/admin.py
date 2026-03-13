@@ -60,22 +60,37 @@ class UserAdmin(BaseUserAdmin):
         ('権限', {'fields': ('is_active', 'is_staff', 'is_superuser', 'groups', 'user_permissions')}),
         ('BAN管理', {'fields': ('is_banned', 'ban_reason', 'banned_at')}),
         ('日時', {'fields': ('last_login', 'date_joined')}),
-        ('追加情報', {'fields': ('bio', 'profile_image', 'plan', 'stripe_customer_id')}),
+        ('プラン・課金', {
+            'fields': ('plan', 'plan_expires_at', 'stripe_customer_id', 'stripe_subscription_id')
+        }),
+        ('プロフィール', {'fields': ('bio', 'profile_image')}),
+        ('メール通知', {'fields': ('receive_reminder_emails', 'last_reminder_sent')}),
     )
     
-    # 一覧表示：ユーザー名・権限・プランを表示
-    list_display = ('id', 'username', 'email', 'plan', 'is_banned', 'is_superuser', 'is_staff', 'is_active', 'date_joined')
+    # 一覧表示
+    list_display = (
+        'id', 'username', 'email', 'plan', 'plan_expires_at',
+        'song_count', 'is_banned', 'is_superuser', 'is_staff', 'is_active', 'date_joined',
+    )
     list_display_links = ('id', 'username')
     list_filter = ('is_banned', 'is_superuser', 'is_staff', 'is_active', 'plan')
     ordering = ('-date_joined',)
+    date_hierarchy = 'date_joined'
+    list_per_page = 30
     
-    search_fields = ('username', 'email', 'first_name', 'last_name')
+    search_fields = ('username', 'email', 'first_name', 'last_name', 'stripe_customer_id')
     
     # 読み取り専用フィールド
-    readonly_fields = ('last_login', 'date_joined', 'banned_at')
+    readonly_fields = ('last_login', 'date_joined', 'banned_at', 'last_reminder_sent')
     
     # 一括アクション
-    actions = ['ban_users', 'unban_users']
+    actions = ['ban_users', 'unban_users', 'reset_to_free_plan']
+    
+    def song_count(self, obj):
+        """ユーザーの楽曲数を表示"""
+        from songs.models import Song
+        return Song.objects.filter(created_by=obj).count()
+    song_count.short_description = '楽曲数'
     
     @admin.action(description='選択したユーザーをBANする')
     def ban_users(self, request, queryset):
@@ -98,3 +113,13 @@ class UserAdmin(BaseUserAdmin):
             ban_reason='',
         )
         self.message_user(request, f'{count}人のユーザーのBANを解除しました。')
+    
+    @admin.action(description='選択したユーザーをフリープランに戻す')
+    def reset_to_free_plan(self, request, queryset):
+        """有料プランをフリーにリセット"""
+        count = queryset.exclude(plan='free').update(
+            plan='free',
+            plan_expires_at=None,
+            stripe_subscription_id=None,
+        )
+        self.message_user(request, f'{count}人のユーザーをフリープランにリセットしました。')

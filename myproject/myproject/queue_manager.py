@@ -1,8 +1,11 @@
 """楽曲生成キュー管理システム"""
 import threading
 import time
+import logging
 from django.db import transaction
 from songs.models import Song
+
+logger = logging.getLogger(__name__)
 
 
 class SongGenerationQueue:
@@ -28,15 +31,15 @@ class SongGenerationQueue:
         """バックグラウンドワーカースレッドを開始"""
         worker_thread = threading.Thread(target=self._process_queue, daemon=True)
         worker_thread.start()
-        print("[INFO] Queue worker started")
+        logger.info(" Queue worker started")
     
     def add_to_queue(self, song_id, lyrics_content, title, genre, vocal_style='female'):
         """楽曲をキューに追加"""
-        print(f"[INFO] Added Song ID {song_id} to queue with vocal style: {vocal_style}")
+        logger.info(f" Added Song ID {song_id} to queue with vocal style: {vocal_style}")
     
     def _process_queue(self):
         """キューを処理するワーカー"""
-        print("[INFO] Queue worker processing started")
+        logger.info(" Queue worker processing started")
         
         while True:
             try:
@@ -59,13 +62,11 @@ class SongGenerationQueue:
                             song_id = None
                 
                 if song_id:
-                    print(f"[INFO] Starting generation for Song ID {song_id}")
+                    logger.info(f" Starting generation for Song ID {song_id}")
                     try:
                         self._generate_song(song_id)
                     except Exception as e:
-                        print(f"[ERROR] Error generating Song ID {song_id}: {e}")
-                        import traceback
-                        traceback.print_exc()
+                        logger.error(f" Error generating Song ID {song_id}: {e}", exc_info=True)
                         try:
                             with transaction.atomic():
                                 song = Song.objects.select_for_update().get(id=song_id)
@@ -77,16 +78,14 @@ class SongGenerationQueue:
                     finally:
                         with self._processing_lock:
                             self._processing = False
-                        print(f"[INFO] Completed processing Song ID {song_id}")
+                        logger.info(f" Completed processing Song ID {song_id}")
                         
                         self._update_queue_positions()
                 else:
                     time.sleep(5)
                     
             except Exception as e:
-                print(f"[ERROR] Queue worker error: {e}")
-                import traceback
-                traceback.print_exc()
+                logger.error(f" Queue worker error: {e}", exc_info=True)
                 with self._processing_lock:
                     self._processing = False
                 time.sleep(5)
@@ -100,7 +99,7 @@ class SongGenerationQueue:
             song = Song.objects.get(id=song_id)
             
             if not hasattr(song, 'lyrics') or not song.lyrics:
-                print(f"[ERROR] Song ID {song_id} has no lyrics")
+                logger.error(f" Song ID {song_id} has no lyrics")
                 song.generation_status = 'failed'
                 song.save()
                 return
@@ -110,12 +109,12 @@ class SongGenerationQueue:
             genre = song.genre or 'pop'
             vocal_style = song.vocal_style or 'female'
             
-            print(f"[INFO] Converting lyrics to hiragana...")
+            logger.info(f" Converting lyrics to hiragana...")
             lyrics_generator = GeminiLyricsGenerator()
             hiragana_lyrics = lyrics_generator.convert_to_hiragana(lyrics_content)
-            print(f"[INFO] Hiragana conversion complete")
+            logger.info(f" Hiragana conversion complete")
             
-            print(f"[INFO] Starting song generation with Mureka API...")
+            logger.info(f" Starting song generation with Mureka API...")
             mureka_generator = MurekaAIGenerator()
             song_result = mureka_generator.generate_song(
                 lyrics=hiragana_lyrics,
@@ -123,10 +122,10 @@ class SongGenerationQueue:
                 genre=genre.lower()
             )
             
-            print(f"[INFO] Song generation result: {song_result}")
+            logger.info(f" Song generation result: {song_result}")
             
             if song_result and (song_result.get('status') == 'completed' or song_result.get('audio_url')):
-                print(f"[INFO] Song generation successful")
+                logger.info(f" Song generation successful")
                 
                 song.refresh_from_db()
                 duration_seconds = song_result.get('duration', 180)
@@ -139,7 +138,7 @@ class SongGenerationQueue:
                 song.generation_status = 'completed'
                 song.queue_position = None
                 song.save()
-                print(f"[INFO] Song saved: {audio_url}")
+                logger.info(f" Song saved: {audio_url}")
                 
                 # アップロード画像を削除（生成完了後）
                 if song.source_image:
@@ -148,19 +147,17 @@ class SongGenerationQueue:
                         if source_image.image:
                             source_image.image.delete(save=False)
                         source_image.delete()
-                        print(f"[INFO] Source image deleted for song {song.id}")
+                        logger.info(f" Source image deleted for song {song.id}")
                     except Exception as img_error:
-                        print(f"[WARNING] Failed to delete source image: {img_error}")
+                        logger.warning(f" Failed to delete source image: {img_error}")
             else:
-                print(f"[ERROR] Song generation failed")
+                logger.error(f" Song generation failed")
                 song.generation_status = 'failed'
                 song.queue_position = None
                 song.save()
                 
         except Exception as e:
-            print(f"[ERROR] _generate_song error: {e}")
-            import traceback
-            traceback.print_exc()
+            logger.error(f" _generate_song error: {e}", exc_info=True)
             raise
     
     def _update_queue_positions(self):
@@ -173,7 +170,7 @@ class SongGenerationQueue:
             )
             if stale_songs.exists():
                 count = stale_songs.update(queue_position=None)
-                print(f"[INFO] Cleared stale queue positions for {count} completed/failed songs")
+                logger.info(f" Cleared stale queue positions for {count} completed/failed songs")
             
             # pending/generating の曲だけ位置を再計算
             pending_songs = Song.objects.filter(
@@ -185,9 +182,9 @@ class SongGenerationQueue:
                     song.queue_position = index
                     song.save(update_fields=['queue_position'])
                     
-            print(f"[INFO] Queue updated: {pending_songs.count()} songs pending")
+            logger.info(f" Queue updated: {pending_songs.count()} songs pending")
         except Exception as e:
-            print(f"[WARNING] Queue position update error: {e}")
+            logger.warning(f" Queue position update error: {e}")
 
 
 queue_manager = SongGenerationQueue()

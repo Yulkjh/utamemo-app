@@ -1,6 +1,9 @@
 from django.apps import AppConfig
 import sys
 import os
+import logging
+
+logger = logging.getLogger(__name__)
 
 
 class SongsConfig(AppConfig):
@@ -11,12 +14,12 @@ class SongsConfig(AppConfig):
         """App startup"""
         # マイグレーション中はqueue_managerを初期化しない
         if 'makemigrations' in sys.argv or 'migrate' in sys.argv:
-            print("[INFO] Skipping queue manager during migration")
+            logger.info("Skipping queue manager during migration")
             return
         
         # テスト実行中はスキップ
         if 'test' in sys.argv:
-            print("[INFO] Skipping queue manager during tests")
+            logger.info("Skipping queue manager during tests")
             return
         
         # RUN_MAINはDjangoのリローダーが設定する環境変数
@@ -29,23 +32,23 @@ class SongsConfig(AppConfig):
             # 開発環境ではRUN_MAINが設定されない場合があるので、
             # runserverコマンドの場合は許可
             if 'runserver' not in sys.argv and not worker_id:
-                print("[INFO] Skipping queue manager (not main process)")
+                logger.info("Skipping queue manager (not main process)")
                 return
         
         # 環境変数でキューワーカーを無効化できるようにする
         if os.environ.get('DISABLE_QUEUE_WORKER', 'false').lower() == 'true':
-            print("[INFO] Queue worker disabled by environment variable")
+            logger.info("Queue worker disabled by environment variable")
             return
             
         # キューマネージャーを初期化（ワーカースレッドを開始）
         try:
             from .queue_manager import queue_manager
-            print("[INFO] キューマネージャーを初期化しました")
+            logger.info("キューマネージャーを初期化しました")
             
             # 起動時にスタックしたキューをクリーンアップ
             self._cleanup_stale_queue()
         except Exception as e:
-            print(f"[WARNING] キューマネージャーの初期化エラー: {e}")
+            logger.warning(f"キューマネージャーの初期化エラー: {e}")
 
     def _cleanup_stale_queue(self):
         """起動時にスタックしたキューをクリーンアップ"""
@@ -60,7 +63,7 @@ class SongsConfig(AppConfig):
             stale_count = stale.count()
             if stale_count > 0:
                 stale.update(queue_position=None)
-                print(f"[INFO] 起動時クリーンアップ: {stale_count}曲のスタックしたqueue_positionをクリア")
+                logger.info(f"起動時クリーンアップ: {stale_count}曲のスタックしたqueue_positionをクリア")
             
             # 1時間以上generating状態の曲をfailedに
             from django.utils import timezone
@@ -78,7 +81,7 @@ class SongsConfig(AppConfig):
                     queue_position=None,
                     error_message='サーバー再起動によりリセットされました。再生成してください。'
                 )
-                print(f"[INFO] 起動時クリーンアップ: {stuck_count}曲のスタックしたgenerating曲をfailedに変更")
+                logger.info(f"起動時クリーンアップ: {stuck_count}曲のスタックしたgenerating曲をfailedに変更")
 
             # queue_positionを再計算
             active_songs = Song.objects.filter(
@@ -89,6 +92,6 @@ class SongsConfig(AppConfig):
                     song.queue_position = index
                     song.save(update_fields=['queue_position'])
             
-            print(f"[INFO] 起動時クリーンアップ完了（アクティブキュー: {active_songs.count()}曲）")
+            logger.info(f"起動時クリーンアップ完了（アクティブキュー: {active_songs.count()}曲）")
         except Exception as e:
-            print(f"[WARNING] 起動時キュークリーンアップエラー: {e}")
+            logger.warning(f"起動時キュークリーンアップエラー: {e}")
