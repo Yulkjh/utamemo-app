@@ -1235,7 +1235,9 @@
             });
             
             fadeElements.forEach(element => {
-                observer.observe(element);
+                if (!element.closest('.music-library')) {
+                    observer.observe(element);
+                }
             });
             
             // 言語セレクターのクリック処理

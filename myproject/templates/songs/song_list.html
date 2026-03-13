@@ -62,13 +62,6 @@
                     <i class="bi bi-headphones"></i>
                     <span>{% if is_english %}Most Played{% elif is_spanish %}Más Reproducidas{% elif is_german %}Meistgespielt{% elif is_portuguese %}Mais Tocadas{% elif is_chinese %}播放最多{% else %}再生数順{% endif %}</span>
                 </a>
-                {% if user.is_authenticated %}
-                <a href="?sort=favorites{% if request.GET.q %}&q={{ request.GET.q }}{% endif %}" 
-                   class="sort-tab{% if current_sort == 'favorites' %} active{% endif %}">
-                    <i class="bi bi-bookmark-heart"></i>
-                    <span>{% if is_english %}Favorites{% elif is_spanish %}Favoritos{% elif is_german %}Favoriten{% elif is_portuguese %}Favoritos{% elif is_chinese %}收藏{% else %}お気に入り{% endif %}</span>
-                </a>
-                {% endif %}
             </div>
             
             {% if songs %}
@@ -187,21 +180,13 @@
 </div>
 
 <style>
-/* アニメーション無効化 */
-.music-library,
-.music-library *,
-.song-item,
-.songs-list,
-.songs-list * {
+/* アニメーション無効化 - ページ読み込み時の展開アニメーション防止 */
+.music-library .fade-in,
+.music-library .song-item,
+.music-library .songs-list,
+.music-library .songs-list * {
     animation: none !important;
     animation-delay: 0s !important;
-    opacity: 1 !important;
-    transform: none !important;
-}
-
-.song-item.fade-in,
-.songs-list .fade-in {
-    animation: none !important;
     opacity: 1 !important;
     transform: none !important;
 }
