@@ -12,7 +12,7 @@ from django.conf import settings
 from django.utils import timezone
 from django.core.mail import send_mail
 from datetime import timedelta
-from .forms import UserRegistrationForm, ProfileEditForm
+from .forms import UserRegistrationForm, ProfileEditForm, AccountDeleteForm
 from .models import User
 from songs.models import Song, Favorite, Like, Classroom
 import json
@@ -602,4 +602,73 @@ class CustomPasswordResetConfirmView(PasswordResetConfirmView):
 class CustomPasswordResetCompleteView(PasswordResetCompleteView):
     """パスワードリセット完了ビュー"""
     template_name = 'users/password_reset_complete.html'
+
+
+@login_required
+def delete_account(request):
+    """アカウント削除ビュー（GDPR「忘れられる権利」対応）"""
+    user = request.user
+    app_language = request.session.get('app_language', 'ja')
+    
+    if request.method == 'POST':
+        form = AccountDeleteForm(request.POST, user=user)
+        if form.is_valid():
+            username = user.username
+            
+            # Stripeサブスクリプションのキャンセル
+            if user.stripe_subscription_id:
+                try:
+                    import stripe
+                    stripe.api_key = getattr(settings, 'STRIPE_SECRET_KEY', '')
+                    if stripe.api_key:
+                        stripe.Subscription.cancel(user.stripe_subscription_id)
+                except Exception as e:
+                    logger.error(f'アカウント削除時のStripeキャンセル失敗: user={username}, error={e}')
+            
+            # プロフィール画像の削除
+            if user.profile_image:
+                user.profile_image.delete(save=False)
+            
+            # ユーザーの曲の音声ファイルを削除
+            for song in Song.objects.filter(created_by=user):
+                if song.audio_file:
+                    song.audio_file.delete(save=False)
+                if song.cover_image:
+                    song.cover_image.delete(save=False)
+            
+            # ログアウトしてからユーザーを削除（CASCADEで関連データも削除）
+            from django.contrib.auth import logout
+            logout(request)
+            user.delete()
+            
+            logger.info(f'アカウント削除完了: username={username}')
+            
+            if app_language == 'en':
+                messages.success(request, 'Your account and all associated data have been deleted.')
+            elif app_language == 'zh':
+                messages.success(request, '您的账户及所有相关数据已被删除。')
+            elif app_language == 'es':
+                messages.success(request, 'Su cuenta y todos los datos asociados han sido eliminados.')
+            elif app_language == 'de':
+                messages.success(request, 'Ihr Konto und alle zugehörigen Daten wurden gelöscht.')
+            elif app_language == 'pt':
+                messages.success(request, 'Sua conta e todos os dados associados foram excluídos.')
+            else:
+                messages.success(request, 'アカウントとすべての関連データが削除されました。')
+            
+            return redirect('songs:home')
+    else:
+        form = AccountDeleteForm(user=user)
+    
+    # 削除されるデータのサマリーを計算
+    song_count = Song.objects.filter(created_by=user).count()
+    favorite_count = Favorite.objects.filter(user=user).count()
+    like_count = Like.objects.filter(user=user).count()
+    
+    return render(request, 'users/delete_account.html', {
+        'form': form,
+        'song_count': song_count,
+        'favorite_count': favorite_count,
+        'like_count': like_count,
+    })
 

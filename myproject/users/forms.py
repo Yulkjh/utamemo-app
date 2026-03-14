@@ -55,6 +55,29 @@ class UserRegistrationForm(UserCreationForm):
         return username
 
 
+class AccountDeleteForm(forms.Form):
+    """アカウント削除確認フォーム"""
+    
+    confirm_username = forms.CharField(
+        required=True,
+        error_messages={
+            'required': 'ユーザー名を入力してください。 / Please enter your username.',
+        },
+    )
+    
+    def __init__(self, *args, user=None, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.user = user
+    
+    def clean_confirm_username(self):
+        confirm_username = self.cleaned_data.get('confirm_username')
+        if self.user and confirm_username != self.user.username:
+            raise ValidationError(
+                'ユーザー名が一致しません。 / Username does not match.'
+            )
+        return confirm_username
+
+
 class ProfileEditForm(forms.ModelForm):
     """プロフィール編集フォーム"""
     

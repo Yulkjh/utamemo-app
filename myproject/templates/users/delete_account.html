@@ -1,0 +1,376 @@
+{% extends 'base.html' %}
+
+{% block title %}{% if is_english %}Delete Account{% elif is_spanish %}Eliminar Cuenta{% elif is_german %}Konto Löschen{% elif is_portuguese %}Excluir Conta{% elif is_chinese %}删除账户{% else %}アカウント削除{% endif %} - UTAMEMO{% endblock %}
+
+{% block content %}
+<div class="delete-account-container">
+    <div class="delete-account-wrapper fade-in">
+        <div class="delete-header">
+            <a href="{% url 'users:profile_edit' %}" class="back-link">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <path d="M19 12H5"/>
+                    <path d="M12 19l-7-7 7-7"/>
+                </svg>
+                {% if is_english %}Back{% elif is_spanish %}Atrás{% elif is_german %}Zurück{% elif is_chinese %}返回{% else %}戻る{% endif %}
+            </a>
+            <h1>
+                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <circle cx="12" cy="12" r="10"/>
+                    <line x1="12" y1="8" x2="12" y2="12"/>
+                    <line x1="12" y1="16" x2="12.01" y2="16"/>
+                </svg>
+                {% if is_english %}Delete Account{% elif is_spanish %}Eliminar Cuenta{% elif is_german %}Konto Löschen{% elif is_portuguese %}Excluir Conta{% elif is_chinese %}删除账户{% else %}アカウント削除{% endif %}
+            </h1>
+        </div>
+
+        <div class="delete-body">
+            <!-- 警告メッセージ -->
+            <div class="warning-box">
+                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/>
+                    <line x1="12" y1="9" x2="12" y2="13"/>
+                    <line x1="12" y1="17" x2="12.01" y2="17"/>
+                </svg>
+                <div>
+                    {% if is_english %}
+                    <strong>Warning: This action cannot be undone.</strong>
+                    <p>Once you delete your account, all your data will be permanently removed.</p>
+                    {% elif is_spanish %}
+                    <strong>Advertencia: Esta acción no se puede deshacer.</strong>
+                    <p>Una vez que elimine su cuenta, todos sus datos se eliminarán permanentemente.</p>
+                    {% elif is_german %}
+                    <strong>Warnung: Diese Aktion kann nicht rückgängig gemacht werden.</strong>
+                    <p>Sobald Sie Ihr Konto löschen, werden alle Ihre Daten dauerhaft entfernt.</p>
+                    {% elif is_chinese %}
+                    <strong>警告：此操作不可撤销。</strong>
+                    <p>一旦删除账户，您的所有数据将被永久删除。</p>
+                    {% else %}
+                    <strong>警告：この操作は取り消せません。</strong>
+                    <p>アカウントを削除すると、すべてのデータが完全に削除されます。</p>
+                    {% endif %}
+                </div>
+            </div>
+
+            <!-- 削除されるデータのサマリー -->
+            <div class="data-summary">
+                <h3>{% if is_english %}Data to be deleted:{% elif is_spanish %}Datos que se eliminarán:{% elif is_german %}Zu löschende Daten:{% elif is_chinese %}将被删除的数据:{% else %}削除されるデータ:{% endif %}</h3>
+                <ul>
+                    <li>
+                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <path d="M9 18V5l12-2v13"/>
+                            <circle cx="6" cy="18" r="3"/>
+                            <circle cx="18" cy="16" r="3"/>
+                        </svg>
+                        {% if is_english %}{{ song_count }} song(s){% elif is_spanish %}{{ song_count }} canción(es){% elif is_german %}{{ song_count }} Lied(er){% elif is_chinese %}{{ song_count }} 首歌曲{% else %}{{ song_count }} 曲の楽曲{% endif %}
+                    </li>
+                    <li>
+                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/>
+                        </svg>
+                        {% if is_english %}{{ like_count }} like(s), {{ favorite_count }} favorite(s){% elif is_spanish %}{{ like_count }} me gusta(s), {{ favorite_count }} favorito(s){% elif is_german %}{{ like_count }} Like(s), {{ favorite_count }} Favorit(en){% elif is_chinese %}{{ like_count }} 个赞，{{ favorite_count }} 个收藏{% else %}{{ like_count }} 件のいいね、{{ favorite_count }} 件のお気に入り{% endif %}
+                    </li>
+                    <li>
+                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/>
+                            <circle cx="12" cy="7" r="4"/>
+                        </svg>
+                        {% if is_english %}Profile data, settings, and subscription{% elif is_spanish %}Datos de perfil, configuración y suscripción{% elif is_german %}Profildaten, Einstellungen und Abonnement{% elif is_chinese %}个人资料、设置和订阅{% else %}プロフィール、設定、サブスクリプション{% endif %}
+                    </li>
+                </ul>
+            </div>
+
+            <!-- 削除確認フォーム -->
+            <form method="post" class="delete-form" id="delete-form">
+                {% csrf_token %}
+                
+                <div class="confirm-section">
+                    <label for="id_confirm_username" class="form-label">
+                        {% if is_english %}To confirm, type your username <strong>{{ user.username }}</strong> below:{% elif is_spanish %}Para confirmar, escriba su nombre de usuario <strong>{{ user.username }}</strong> abajo:{% elif is_german %}Zur Bestätigung geben Sie Ihren Benutzernamen <strong>{{ user.username }}</strong> ein:{% elif is_chinese %}请输入您的用户名 <strong>{{ user.username }}</strong> 以确认:{% else %}確認のため、ユーザー名 <strong>{{ user.username }}</strong> を入力してください:{% endif %}
+                    </label>
+                    <input type="text" 
+                           name="confirm_username" 
+                           id="id_confirm_username" 
+                           class="confirm-input" 
+                           autocomplete="off"
+                           placeholder="{{ user.username }}">
+                    {% if form.confirm_username.errors %}
+                    <div class="error-message">
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <circle cx="12" cy="12" r="10"/>
+                            <line x1="12" y1="8" x2="12" y2="12"/>
+                            <line x1="12" y1="16" x2="12.01" y2="16"/>
+                        </svg>
+                        {{ form.confirm_username.errors.0 }}
+                    </div>
+                    {% endif %}
+                </div>
+
+                <div class="form-actions">
+                    <a href="{% url 'users:profile_edit' %}" class="btn-cancel">
+                        {% if is_english %}Cancel{% elif is_spanish %}Cancelar{% elif is_german %}Abbrechen{% elif is_chinese %}取消{% else %}キャンセル{% endif %}
+                    </a>
+                    <button type="submit" class="btn-delete" id="btn-delete" disabled>
+                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <polyline points="3 6 5 6 21 6"/>
+                            <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/>
+                        </svg>
+                        {% if is_english %}Delete My Account{% elif is_spanish %}Eliminar Mi Cuenta{% elif is_german %}Mein Konto Löschen{% elif is_chinese %}删除我的账户{% else %}アカウントを削除する{% endif %}
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<style>
+.delete-account-container {
+    min-height: 100vh;
+    background: linear-gradient(135deg, #fff0f0 0%, #ffd4d4 100%);
+    padding: 2rem 1rem;
+}
+
+.delete-account-wrapper {
+    max-width: 600px;
+    margin: 0 auto;
+    background: var(--surface);
+    border-radius: var(--radius-xl);
+    box-shadow: var(--shadow-lg);
+    overflow: hidden;
+    border: 1px solid rgba(220, 53, 69, 0.2);
+}
+
+.delete-header {
+    background: linear-gradient(135deg, #dc3545 0%, #c82333 100%);
+    color: white;
+    padding: 1.5rem 2rem;
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+}
+
+.delete-header .back-link {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    color: white;
+    text-decoration: none;
+    font-size: 0.9rem;
+    opacity: 0.9;
+    transition: opacity 0.2s;
+}
+
+.delete-header .back-link:hover {
+    opacity: 1;
+    color: white;
+}
+
+.delete-header h1 {
+    font-size: 1.3rem;
+    font-weight: 700;
+    margin: 0;
+    flex: 1;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+}
+
+.delete-body {
+    padding: 2rem;
+}
+
+.warning-box {
+    background: #fff3cd;
+    border: 1px solid #ffc107;
+    border-radius: var(--radius-lg);
+    padding: 1.25rem;
+    display: flex;
+    gap: 1rem;
+    align-items: flex-start;
+    margin-bottom: 1.5rem;
+    color: #856404;
+}
+
+.warning-box svg {
+    flex-shrink: 0;
+    margin-top: 2px;
+}
+
+.warning-box strong {
+    display: block;
+    margin-bottom: 0.25rem;
+}
+
+.warning-box p {
+    margin: 0;
+    font-size: 0.9rem;
+}
+
+.data-summary {
+    background: var(--surface-elevated);
+    border-radius: var(--radius-lg);
+    padding: 1.25rem;
+    margin-bottom: 2rem;
+    border: 1px solid var(--border-color);
+}
+
+.data-summary h3 {
+    font-size: 0.95rem;
+    font-weight: 600;
+    margin: 0 0 0.75rem 0;
+    color: var(--text-primary);
+}
+
+.data-summary ul {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+}
+
+.data-summary li {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    padding: 0.5rem 0;
+    color: var(--text-secondary);
+    font-size: 0.9rem;
+    border-bottom: 1px solid var(--border-color);
+}
+
+.data-summary li:last-child {
+    border-bottom: none;
+}
+
+.data-summary li svg {
+    color: #dc3545;
+    flex-shrink: 0;
+}
+
+.confirm-section {
+    margin-bottom: 2rem;
+}
+
+.confirm-section .form-label {
+    display: block;
+    font-size: 0.95rem;
+    color: var(--text-primary);
+    margin-bottom: 0.75rem;
+    line-height: 1.6;
+}
+
+.confirm-input {
+    width: 100%;
+    padding: 1rem 1.25rem;
+    border: 2px solid var(--border-color);
+    border-radius: var(--radius-lg);
+    font-size: 1rem;
+    transition: border-color 0.3s ease;
+}
+
+.confirm-input:focus {
+    outline: none;
+    border-color: #dc3545;
+}
+
+.error-message {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    color: #dc3545;
+    font-size: 0.85rem;
+    margin-top: 0.5rem;
+}
+
+.form-actions {
+    display: flex;
+    justify-content: flex-end;
+    gap: 1rem;
+}
+
+.btn-cancel {
+    background: var(--surface-elevated);
+    color: var(--text-secondary);
+    border: 2px solid var(--border-color);
+    padding: 0.875rem 1.5rem;
+    border-radius: var(--radius-lg);
+    font-weight: 600;
+    cursor: pointer;
+    text-decoration: none;
+    transition: all 0.3s ease;
+}
+
+.btn-cancel:hover {
+    background: var(--border-color);
+    color: var(--text-primary);
+    text-decoration: none;
+}
+
+.btn-delete {
+    background: #dc3545;
+    color: white;
+    border: none;
+    padding: 0.875rem 2rem;
+    border-radius: var(--radius-lg);
+    font-weight: 600;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    transition: all 0.3s ease;
+    opacity: 0.5;
+    pointer-events: none;
+}
+
+.btn-delete.enabled {
+    opacity: 1;
+    pointer-events: auto;
+}
+
+.btn-delete.enabled:hover {
+    background: #c82333;
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(220, 53, 69, 0.3);
+}
+
+.fade-in {
+    animation: fadeInUp 0.6s ease forwards;
+}
+
+@keyframes fadeInUp {
+    from { opacity: 0; transform: translateY(30px); }
+    to { opacity: 1; transform: translateY(0); }
+}
+
+@media (max-width: 768px) {
+    .delete-account-container { padding: 1rem; }
+    .delete-body { padding: 1.5rem; }
+    .delete-header h1 { font-size: 1.1rem; }
+    .form-actions { flex-direction: column-reverse; }
+    .btn-cancel, .btn-delete { width: 100%; justify-content: center; text-align: center; }
+}
+</style>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const input = document.getElementById('id_confirm_username');
+    const btn = document.getElementById('btn-delete');
+    const expectedUsername = '{{ user.username|escapejs }}';
+
+    input.addEventListener('input', function() {
+        if (this.value === expectedUsername) {
+            btn.classList.add('enabled');
+            btn.disabled = false;
+        } else {
+            btn.classList.remove('enabled');
+            btn.disabled = true;
+        }
+    });
+
+    document.getElementById('delete-form').addEventListener('submit', function(e) {
+        const msg = {% if is_english %}'Are you absolutely sure? This will permanently delete your account and all data.'{% elif is_spanish %}'¿Está absolutamente seguro? Esto eliminará permanentemente su cuenta y todos los datos.'{% elif is_german %}'Sind Sie absolut sicher? Dies wird Ihr Konto und alle Daten dauerhaft löschen.'{% elif is_chinese %}'您确定要永久删除您的账户和所有数据吗？'{% else %}'本当にアカウントを削除しますか？すべてのデータが完全に削除されます。'{% endif %};
+        if (!confirm(msg)) {
+            e.preventDefault();
+        }
+    });
+});
+</script>
+{% endblock %}

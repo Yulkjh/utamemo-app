@@ -46,13 +46,10 @@
                         <div class="upload-preview text-center" id="upload-preview" style="display: none;">
                             <div class="preview-container">
                                 <!-- 単一ファイルプレビュー -->
-                                <div id="single-preview" class="single-preview-wrapper" style="position: relative;">
-                                    <div class="single-preview-image-box">
-                                        <img id="preview-image" alt="{% if is_english %}Preview{% elif is_spanish %}Vista previa{% elif is_german %}Vorschau{% elif is_portuguese %}Visualização{% elif is_chinese %}预览{% else %}プレビュー{% endif %}" class="preview-image">
-                                    </div>
-                                    <button type="button" class="single-preview-remove" id="single-remove-btn">
-                                        <i class="bi bi-trash3"></i>
-                                        <span>{% if is_english %}Remove{% elif is_spanish %}Eliminar{% elif is_german %}Entfernen{% elif is_portuguese %}Remover{% elif is_chinese %}删除{% else %}削除{% endif %}</span>
+                                <div id="single-preview" class="d-flex justify-content-center align-items-center flex-column" style="position: relative;">
+                                    <img id="preview-image" alt="{% if is_english %}Preview{% elif is_spanish %}Vista previa{% elif is_german %}Vorschau{% elif is_portuguese %}Visualização{% elif is_chinese %}预览{% else %}プレビュー{% endif %}" class="preview-image mx-auto">
+                                    <button type="button" class="single-preview-remove" id="single-remove-btn" title="{% if is_english %}Remove{% elif is_spanish %}Eliminar{% elif is_german %}Entfernen{% elif is_portuguese %}Remover{% elif is_chinese %}删除{% else %}削除{% endif %}">
+                                        <i class="bi bi-x"></i>
                                     </button>
                                 </div>
                                 <!-- 複数ファイルプレビュー -->
@@ -232,24 +229,24 @@
     position: absolute;
     top: 4px;
     right: 4px;
-    width: 22px;
-    height: 22px;
+    width: 24px;
+    height: 24px;
     border-radius: 50%;
-    background: rgba(0, 0, 0, 0.5);
+    background: rgba(220, 53, 69, 0.9);
     color: white;
     border: none;
-    font-size: 11px;
+    font-size: 12px;
     cursor: pointer;
     display: flex;
     align-items: center;
     justify-content: center;
-    opacity: 0;
+    opacity: 1;
     transition: all 0.2s ease;
     z-index: 10;
 }
 
 .multi-preview-item .remove-btn:hover {
-    background: rgba(220, 53, 69, 0.9);
+    background: rgba(220, 53, 69, 1);
     transform: scale(1.1);
 }
 
@@ -257,59 +254,29 @@
     opacity: 1;
 }
 
-/* モバイルでは常に表示 */
-@media (hover: none) {
-    .multi-preview-item .remove-btn {
-        opacity: 1;
-    }
-}
-
-/* 単一プレビュー用ラッパー */
-.single-preview-wrapper {
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    gap: 0.75rem;
-}
-
-.single-preview-image-box {
-    position: relative;
-    display: inline-block;
-    border-radius: 12px;
-    overflow: hidden;
-    box-shadow: 0 2px 12px rgba(0, 0, 0, 0.08);
-    border: 2px solid #f0f0f0;
-    background: #fafafa;
-}
-
-.single-preview-image-box .preview-image {
-    display: block;
-}
-
-/* 単一プレビュー用の削除ボタン - テキスト付きボタン */
+/* 単一プレビュー用の削除ボタン */
 .single-preview-remove {
-    display: inline-flex;
-    align-items: center;
-    gap: 0.4rem;
-    padding: 0.4rem 1rem;
-    border-radius: 8px;
-    background: transparent;
-    color: #999;
-    border: 1.5px solid #e0e0e0;
-    font-size: 0.85rem;
-    font-weight: 500;
+    position: absolute;
+    top: 10px;
+    right: 10px;
+    width: 32px;
+    height: 32px;
+    border-radius: 50%;
+    background: rgba(220, 53, 69, 0.9);
+    color: white;
+    border: none;
+    font-size: 16px;
     cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 10;
     transition: all 0.2s ease;
 }
 
 .single-preview-remove:hover {
-    color: #dc3545;
-    border-color: #dc3545;
-    background: #fff5f5;
-}
-
-.single-preview-remove i {
-    font-size: 0.9rem;
+    background: rgba(220, 53, 69, 1);
+    transform: scale(1.1);
 }
 
 .file-count-badge {
@@ -365,7 +332,7 @@
     border-radius: 16px;
     padding: 3rem 2rem;
     background: white;
-    transition: all 0.3s ease;
+    transition: all 0.2s ease;
 }
 
 .upload-area:hover {
@@ -376,12 +343,6 @@
 .upload-area.drag-over {
     border-color: #ff7940;
     background: #fff4f0;
-}
-
-.upload-area.has-preview {
-    border-style: solid;
-    border-color: #f0f0f0;
-    padding: 1.5rem;
 }
 
 .upload-preview {
@@ -400,9 +361,8 @@
 
 .preview-image {
     max-width: 100%;
-    max-height: 280px;
-    border-radius: 0;
-    display: block;
+    max-height: 300px;
+    border-radius: 12px;
 }
 
 .preview-overlay {
@@ -720,7 +680,6 @@ document.addEventListener('DOMContentLoaded', function() {
         uploadPreview.style.display = 'none';
         actionButtons.style.display = 'none';
         document.getElementById('custom-request-section').style.display = 'none';
-        uploadArea.classList.remove('has-preview');
         previewImage.src = '';
         multiPreview.innerHTML = '';
         // 同じファイルを再選択できるようにリセット
@@ -879,7 +838,6 @@ document.addEventListener('DOMContentLoaded', function() {
         actionButtons.style.display = 'flex';
         actionButtons.style.justifyContent = 'center';
         document.getElementById('custom-request-section').style.display = 'block';
-        uploadArea.classList.add('has-preview');
 
         // ファイル数の表示
         const totalSize = selectedFiles.reduce((sum, f) => sum + f.size, 0);
