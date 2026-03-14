@@ -131,7 +131,7 @@
 <style>
 .upgrade-container {
     min-height: 100vh;
-    background: linear-gradient(135deg, #fafafa 0%, #f5f5f5 100%);
+    background: linear-gradient(135deg, #fff8f5 0%, #fff0eb 100%);
     padding: 40px 20px;
 }
 
@@ -376,14 +376,14 @@ document.addEventListener('DOMContentLoaded', function() {
             const plan = this.dataset.plan;
             
             if (!isLoggedIn) {
-                if (confirm('プランを購入するにはログインが必要です。ログインページに移動しますか？')) {
+                if (confirm({% if is_english %}'Login is required to purchase a plan. Go to login page?'{% elif is_spanish %}'¿Se requiere iniciar sesión para comprar un plan. ¿Ir a la página de inicio de sesión?'{% elif is_german %}'Zum Kauf eines Plans ist eine Anmeldung erforderlich. Zur Anmeldeseite gehen?'{% elif is_portuguese %}'Login necessário para comprar um plano. Ir para a página de login?'{% elif is_chinese %}'购买计划需要登录。前往登录页面？'{% else %}'プランを購入するにはログインが必要です。ログインページに移動しますか？'{% endif %})) {
                     window.location.href = '{% url "users:login" %}?next={% url "users:upgrade" %}';
                 }
                 return;
             }
             
             const originalText = this.textContent;
-            this.textContent = '処理中...';
+            this.textContent = {% if is_english %}'Processing...'{% elif is_spanish %}'Procesando...'{% elif is_german %}'Verarbeitung...'{% elif is_portuguese %}'Processando...'{% elif is_chinese %}'处理中...'{% else %}'処理中...'{% endif %};
             this.disabled = true;
             
             try {
@@ -401,11 +401,11 @@ document.addEventListener('DOMContentLoaded', function() {
                 if (data.checkout_url) {
                     window.location.href = data.checkout_url;
                 } else if (data.error) {
-                    alert('エラー: ' + data.error);
+                    alert({% if is_english %}'Error: '{% elif is_spanish %}'Error: '{% elif is_german %}'Fehler: '{% elif is_portuguese %}'Erro: '{% elif is_chinese %}'错误: '{% else %}'エラー: '{% endif %} + data.error);
                 }
             } catch (error) {
                 console.error('Error:', error);
-                alert('エラーが発生しました');
+                alert({% if is_english %}'An error occurred'{% elif is_spanish %}'Ocurrió un error'{% elif is_german %}'Ein Fehler ist aufgetreten'{% elif is_portuguese %}'Ocorreu um erro'{% elif is_chinese %}'发生错误'{% else %}'エラーが発生しました'{% endif %});
             }
             
             this.textContent = originalText;

@@ -527,7 +527,7 @@ document.addEventListener('DOMContentLoaded', function() {
         if (file) {
             // ファイルサイズチェック（5MB）
             if (file.size > 5 * 1024 * 1024) {
-                alert('ファイルサイズは5MB以下にしてください');
+                alert({% if is_english %}'File size must be 5MB or less'{% elif is_spanish %}'El archivo debe ser de 5MB o menos'{% elif is_german %}'Dateigröße darf maximal 5MB sein'{% elif is_portuguese %}'O arquivo deve ter no máximo 5MB'{% elif is_chinese %}'文件大小不能超过5MB'{% else %}'ファイルサイズは5MB以下にしてください'{% endif %});
                 imageInput.value = '';
                 return;
             }
@@ -562,7 +562,7 @@ document.addEventListener('DOMContentLoaded', function() {
     // 画像削除
     if (deleteBtn) {
         deleteBtn.addEventListener('click', function() {
-            if (confirm('プロフィール画像を削除しますか？')) {
+            if (confirm({% if is_english %}'Delete profile image?'{% elif is_spanish %}'¿Eliminar imagen de perfil?'{% elif is_german %}'Profilbild löschen?'{% elif is_portuguese %}'Excluir imagem de perfil?'{% elif is_chinese %}'删除头像？'{% else %}'プロフィール画像を削除しますか？'{% endif %})) {
                 fetch('{% url "users:delete_profile_image" %}', {
                     method: 'POST',
                     headers: {
@@ -574,11 +574,11 @@ document.addEventListener('DOMContentLoaded', function() {
                     if (data.success) {
                         location.reload();
                     } else {
-                        alert('削除に失敗しました');
+                        alert({% if is_english %}'Failed to delete'{% elif is_spanish %}'Error al eliminar'{% elif is_german %}'Löschen fehlgeschlagen'{% elif is_portuguese %}'Falha ao excluir'{% elif is_chinese %}'删除失败'{% else %}'削除に失敗しました'{% endif %});
                     }
                 })
                 .catch(() => {
-                    alert('エラーが発生しました');
+                    alert({% if is_english %}'An error occurred'{% elif is_spanish %}'Ocurrió un error'{% elif is_german %}'Ein Fehler ist aufgetreten'{% elif is_portuguese %}'Ocorreu um erro'{% elif is_chinese %}'发生错误'{% else %}'エラーが発生しました'{% endif %});
                 });
             }
         });

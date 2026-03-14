@@ -121,7 +121,6 @@
                             <div class="spinner"></div>
                             {% if is_english %}Creating...{% elif is_spanish %}Creando...{% elif is_german %}Erstellen...{% elif is_portuguese %}Criando...{% elif is_chinese %}创建中...{% else %}作成中...{% endif %}
                         </div>
-                        </div>
                     </button>
                 </form>
             </div>
@@ -380,6 +379,12 @@ document.addEventListener('DOMContentLoaded', function() {
         usernameInput.placeholder = 'Username';
         {% elif is_chinese %}
         usernameInput.placeholder = '用户名';
+        {% elif is_spanish %}
+        usernameInput.placeholder = 'Nombre de usuario';
+        {% elif is_german %}
+        usernameInput.placeholder = 'Benutzername';
+        {% elif is_portuguese %}
+        usernameInput.placeholder = 'Nome de usuário';
         {% else %}
         usernameInput.placeholder = 'ユーザー名';
         {% endif %}
@@ -389,6 +394,12 @@ document.addEventListener('DOMContentLoaded', function() {
         password1Input.placeholder = 'Password';
         {% elif is_chinese %}
         password1Input.placeholder = '密码';
+        {% elif is_spanish %}
+        password1Input.placeholder = 'Contraseña';
+        {% elif is_german %}
+        password1Input.placeholder = 'Passwort';
+        {% elif is_portuguese %}
+        password1Input.placeholder = 'Senha';
         {% else %}
         password1Input.placeholder = 'パスワード';
         {% endif %}
@@ -398,6 +409,12 @@ document.addEventListener('DOMContentLoaded', function() {
         password2Input.placeholder = 'Confirm password';
         {% elif is_chinese %}
         password2Input.placeholder = '确认密码';
+        {% elif is_spanish %}
+        password2Input.placeholder = 'Confirmar contraseña';
+        {% elif is_german %}
+        password2Input.placeholder = 'Passwort bestätigen';
+        {% elif is_portuguese %}
+        password2Input.placeholder = 'Confirmar senha';
         {% else %}
         password2Input.placeholder = 'パスワード（確認）';
         {% endif %}

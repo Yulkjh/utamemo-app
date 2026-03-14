@@ -7,8 +7,12 @@
 {% csrf_token %}
 <div class="container py-4">
     <!-- ヘッダーセクション -->
-    <div class="mb-4 fade-in">
-        <h1 class="h4 fw-bold mb-0">{% if is_english %}My Songs{% elif is_spanish %}Mis Canciones{% elif is_german %}Meine Songs{% elif is_portuguese %}Minhas Músicas{% elif is_chinese %}我的歌曲{% else %}MY楽曲{% endif %}</h1>
+    <div class="my-songs-header fade-in">
+        <h1 class="my-songs-title">{% if is_english %}My Songs{% elif is_spanish %}Mis Canciones{% elif is_german %}Meine Songs{% elif is_portuguese %}Minhas Músicas{% elif is_chinese %}我的歌曲{% else %}MY楽曲{% endif %}</h1>
+        <a href="{% url 'songs:upload_image' %}" class="btn-create-song">
+            <i class="bi bi-plus-lg"></i>
+            {% if is_english %}New{% elif is_chinese %}新建{% elif is_spanish %}Crear{% elif is_german %}Neu{% elif is_portuguese %}Criar{% else %}新規作成{% endif %}
+        </a>
     </div>
 
     <!-- 楽曲一覧（Spotify風リスト） -->
@@ -120,38 +124,22 @@
 
     {% else %}
     <!-- 楽曲がない場合 -->
-    <div class="text-center py-5 fade-in">
-        <div class="empty-state-icon mx-auto mb-4">
-            <i class="bi bi-music-note-beamed" style="font-size: 4rem; color: var(--text-muted);"></i>
+    <div class="empty-state fade-in">
+        <div class="empty-icon">
+            <i class="bi bi-music-note-beamed"></i>
         </div>
-        <h4 class="text-muted mb-3">{% if is_english %}No songs yet{% elif is_spanish %}Aún no hay canciones{% elif is_german %}Noch keine Songs{% elif is_portuguese %}Ainda não há músicas{% elif is_chinese %}还没有歌曲{% else %}まだ楽曲がありません{% endif %}</h4>
-        <p class="text-muted mb-4">
-            {% if is_english %}
-            Upload a photo of your study material<br>
-            and create your first song!
-            {% elif is_spanish %}
-            ¡Sube una foto de tu material de estudio<br>
-            y crea tu primera canción!
-            {% elif is_german %}
-            Lade ein Foto deines Lernmaterials hoch<br>
-            und erstelle deinen ersten Song!
-            {% elif is_portuguese %}
-            Faça upload de uma foto do seu material de estudo<br>
-            e crie sua primeira música!
-            {% elif is_chinese %}
-            上传你的学习资料照片<br>
-            创作你的第一首歌曲！
-            {% else %}
-            教材の写真をアップロードして、<br>
-            初めての楽曲を作成しましょう！
-            {% endif %}
-        </p>
-        <a href="{% url 'songs:upload_image' %}" class="btn-gradient-primary me-3">
-            <i class="bi bi-camera"></i> {% if is_english %}Upload Image{% elif is_spanish %}Subir Imagen{% elif is_german %}Bild hochladen{% elif is_portuguese %}Enviar Imagem{% elif is_chinese %}上传图片{% else %}画像をアップロード{% endif %}
-        </a>
-        <a href="{% url 'songs:create_song' %}" class="btn-outline-modern">
-            <i class="bi bi-pencil-square"></i> {% if is_english %}Create Directly{% elif is_spanish %}Crear Directamente{% elif is_german %}Direkt erstellen{% elif is_portuguese %}Criar Diretamente{% elif is_chinese %}直接创作{% else %}直接作成{% endif %}
-        </a>
+        <h3 class="empty-title">{% if is_english %}No songs yet{% elif is_chinese %}还没有歌曲{% elif is_spanish %}Aún no hay canciones{% elif is_german %}Noch keine Songs{% elif is_portuguese %}Ainda não há músicas{% else %}まだ楽曲がありません{% endif %}</h3>
+        <p class="empty-desc">{% if is_english %}Upload a photo of your study material and create your first song{% elif is_chinese %}上传学习资料照片，创作你的第一首歌曲{% elif is_spanish %}Sube una foto de tu material de estudio y crea tu primera canción{% elif is_german %}Lade ein Foto deines Lernmaterials hoch und erstelle deinen ersten Song{% elif is_portuguese %}Faça upload de uma foto do seu material de estudo e crie sua primeira música{% else %}教材の写真をアップロードして、初めての楽曲を作成しましょう{% endif %}</p>
+        <div class="empty-actions">
+            <a href="{% url 'songs:upload_image' %}" class="btn-empty-primary">
+                <i class="bi bi-camera"></i>
+                {% if is_english %}Upload Image{% elif is_chinese %}上传图片{% elif is_spanish %}Subir Imagen{% elif is_german %}Bild hochladen{% elif is_portuguese %}Enviar Imagem{% else %}画像をアップロード{% endif %}
+            </a>
+            <a href="{% url 'songs:create_song' %}" class="btn-empty-secondary">
+                <i class="bi bi-pencil-square"></i>
+                {% if is_english %}Create Directly{% elif is_chinese %}直接创作{% elif is_spanish %}Crear{% elif is_german %}Direkt erstellen{% elif is_portuguese %}Criar{% else %}直接作成{% endif %}
+            </a>
+        </div>
     </div>
     {% endif %}
 </div>
@@ -568,15 +556,145 @@
     to { transform: rotate(360deg); }
 }
 
-/* Empty state */
-.empty-state-icon {
-    width: 6rem;
-    height: 6rem;
-    border-radius: var(--radius-xl);
-    background: var(--surface-elevated);
+/* ヘッダー */
+.my-songs-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 1.5rem;
+}
+
+.my-songs-title {
+    font-size: 1.5rem;
+    font-weight: 700;
+    color: #1f2937;
+    margin: 0;
+}
+
+.btn-create-song {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.4rem;
+    padding: 0.5rem 1.1rem;
+    background: linear-gradient(135deg, #ff7940 0%, #ff6b35 100%);
+    color: #fff;
+    border: none;
+    border-radius: 10px;
+    font-weight: 600;
+    font-size: 0.85rem;
+    text-decoration: none;
+    transition: all 0.2s ease;
+    box-shadow: 0 2px 8px rgba(255, 121, 64, 0.2);
+}
+
+.btn-create-song:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 4px 12px rgba(255, 121, 64, 0.3);
+    color: #fff;
+}
+
+/* 空状態 */
+.empty-state {
+    text-align: center;
+    padding: 4rem 2rem;
+    background: white;
+    border-radius: 16px;
+    box-shadow: 0 1px 8px rgba(0, 0, 0, 0.04);
+}
+
+.empty-icon {
+    width: 72px;
+    height: 72px;
+    border-radius: 50%;
+    background: #fff0e8;
     display: flex;
     align-items: center;
     justify-content: center;
+    margin: 0 auto 1.25rem;
+}
+
+.empty-icon i {
+    font-size: 2rem;
+    color: #ff7940;
+}
+
+.empty-title {
+    font-size: 1.15rem;
+    font-weight: 600;
+    color: #1f2937;
+    margin-bottom: 0.5rem;
+}
+
+.empty-desc {
+    font-size: 0.9rem;
+    color: #6b7280;
+    margin-bottom: 1.75rem;
+    line-height: 1.6;
+}
+
+.empty-actions {
+    display: flex;
+    gap: 0.75rem;
+    justify-content: center;
+    flex-wrap: wrap;
+}
+
+.btn-empty-primary {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.4rem;
+    padding: 0.65rem 1.25rem;
+    background: linear-gradient(135deg, #ff7940 0%, #ff6b35 100%);
+    color: #fff;
+    border: none;
+    border-radius: 10px;
+    font-weight: 600;
+    font-size: 0.9rem;
+    text-decoration: none;
+    transition: all 0.2s ease;
+    box-shadow: 0 2px 8px rgba(255, 121, 64, 0.2);
+}
+
+.btn-empty-primary:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 4px 12px rgba(255, 121, 64, 0.3);
+    color: #fff;
+}
+
+.btn-empty-secondary {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.4rem;
+    padding: 0.65rem 1.25rem;
+    background: white;
+    color: #374151;
+    border: 1px solid #e5e7eb;
+    border-radius: 10px;
+    font-weight: 600;
+    font-size: 0.9rem;
+    text-decoration: none;
+    transition: all 0.2s ease;
+}
+
+.btn-empty-secondary:hover {
+    border-color: #d1d5db;
+    background: #f9fafb;
+    color: #374151;
+}
+
+@media (max-width: 576px) {
+    .my-songs-title {
+        font-size: 1.2rem;
+    }
+    
+    .empty-state {
+        padding: 3rem 1.5rem;
+    }
+    
+    .empty-actions {
+        flex-direction: column;
+        align-items: center;
+    }
 }
 
 /* モバイル対応 */

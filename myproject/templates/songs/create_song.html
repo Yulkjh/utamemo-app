@@ -197,20 +197,12 @@
                             <div class="vocal-toggle-container">
                                 <input type="radio" name="vocal_style" id="vocal-female" value="female" class="vocal-toggle-input" checked>
                                 <input type="radio" name="vocal_style" id="vocal-male" value="male" class="vocal-toggle-input">
-                                <input type="radio" name="vocal_style" id="vocal-vocaloid-female" value="vocaloid_female" class="vocal-toggle-input">
-                                <input type="radio" name="vocal_style" id="vocal-vocaloid-male" value="vocaloid_male" class="vocal-toggle-input">
                                 <div class="vocal-toggle-wrapper">
                                     <label for="vocal-female" class="vocal-toggle-btn">
                                         {% if is_english %}Female{% elif is_spanish %}Femenino{% elif is_german %}Weiblich{% elif is_portuguese %}Feminino{% elif is_chinese %}女声{% else %}女性{% endif %}
                                     </label>
                                     <label for="vocal-male" class="vocal-toggle-btn">
                                         {% if is_english %}Male{% elif is_spanish %}Masculino{% elif is_german %}Männlich{% elif is_portuguese %}Masculino{% elif is_chinese %}男声{% else %}男性{% endif %}
-                                    </label>
-                                    <label for="vocal-vocaloid-female" class="vocal-toggle-btn vocal-vocaloid">
-                                        {% if is_english %}Vocaloid ♀{% elif is_spanish %}Vocaloid ♀{% elif is_german %}Vocaloid ♀{% elif is_portuguese %}Vocaloid ♀{% elif is_chinese %}虚拟歌手 ♀{% else %}ボカロ ♀{% endif %}
-                                    </label>
-                                    <label for="vocal-vocaloid-male" class="vocal-toggle-btn vocal-vocaloid">
-                                        {% if is_english %}Vocaloid ♂{% elif is_spanish %}Vocaloid ♂{% elif is_german %}Vocaloid ♂{% elif is_portuguese %}Vocaloid ♂{% elif is_chinese %}虚拟歌手 ♂{% else %}ボカロ ♂{% endif %}
                                     </label>
                                 </div>
                             </div>
@@ -731,12 +723,6 @@
     box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
 }
 
-#vocal-vocaloid-female:checked ~ .vocal-toggle-wrapper label[for="vocal-vocaloid-female"],
-#vocal-vocaloid-male:checked ~ .vocal-toggle-wrapper label[for="vocal-vocaloid-male"] {
-    background: linear-gradient(135deg, #39c5bb, #59d5cb);
-    color: #fff;
-    box-shadow: 0 1px 3px rgba(57, 197, 187, 0.3);
-}
 
 /* アニメーション */
 .fade-in {

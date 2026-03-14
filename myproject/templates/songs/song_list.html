@@ -988,7 +988,6 @@ function recordPlay(songId) {
     .then(response => response.json())
     .then(data => {
         if (data.success) {
-            console.log(`Play recorded for song ${songId}: total ${data.total_plays} times`);
         }
     })
     .catch(error => console.error('Play record error:', error));
@@ -996,14 +995,11 @@ function recordPlay(songId) {
 
 // 行クリックで詳細ページへ遷移
 function navigateToSong(event, element) {
-    console.log('navigateToSong called', event.target);
     // ボタンやリンクがクリックされた場合は遷移しない
     if (event.target.closest('.song-actions')) {
-        console.log('Clicked on song-actions, not navigating');
         return;
     }
     const url = element.dataset.url;
-    console.log('Navigating to:', url);
     if (url) {
         window.location.href = url;
     }
@@ -1011,7 +1007,6 @@ function navigateToSong(event, element) {
 
 // 音楽再生機能
 function playAudio(audioUrl, button, songId) {
-    console.log('playAudio called', audioUrl, songId);
     const icon = button.querySelector('i');
     const textSpan = button.querySelector('span');
     
@@ -1046,13 +1041,11 @@ function playAudio(audioUrl, button, songId) {
     currentPlayButton = button;
     
     currentAudio.play().then(() => {
-        console.log('Playing audio');
         icon.className = 'bi bi-pause-fill';
         textSpan.textContent = '{% if is_english %}Pause{% elif is_spanish %}Pausa{% elif is_german %}Pause{% elif is_chinese %}暂停{% else %}停止{% endif %}';
         // 再生回数を記録
         recordPlay(songId);
     }).catch(error => {
-        console.error('再生エラー:', error);
         // エラー時は詳細ページへ遷移
         window.location.href = `/songs/${songId}/`;
     });
