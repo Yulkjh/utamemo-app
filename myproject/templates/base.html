@@ -1056,7 +1056,7 @@
 </head>
 <body>
     <!-- DEMOバナー -->
-    <div class="demo-banner" id="demoBanner">
+    <div class="demo-banner" id="demoBanner" style="cursor: pointer;" onclick="showDemoModal()">
         <div class="demo-banner-content">
             <i class="bi bi-exclamation-circle"></i>
             <span>
@@ -1069,9 +1069,83 @@
             {% endif %}
             </span>
         </div>
-        <button class="demo-banner-close" onclick="closeDemoBanner()" aria-label="Close">
+        <button class="demo-banner-close" onclick="event.stopPropagation(); closeDemoBanner()" aria-label="Close">
             <i class="bi bi-x"></i>
         </button>
+    </div>
+
+    <!-- DEMOモーダル -->
+    <div class="modal fade" id="demoModal" tabindex="-1" aria-labelledby="demoModalLabel" aria-hidden="true">
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content" style="border-radius: 16px; border: none;">
+                <div class="modal-header" style="border-bottom: 1px solid rgba(0,0,0,0.08); padding: 1.2rem 1.5rem;">
+                    <h5 class="modal-title" id="demoModalLabel" style="font-weight: 700;">
+                        {% if is_english %}About DEMO Version
+                        {% elif is_chinese %}关于演示版
+                        {% elif is_spanish %}Acerca de la versión DEMO
+                        {% elif is_german %}Über die DEMO-Version
+                        {% elif is_portuguese %}Sobre a versão DEMO
+                        {% else %}DEMO版について
+                        {% endif %}
+                    </h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body" style="padding: 1.5rem;">
+                    {% if is_english %}
+                    <p>Due to operational reasons, the subscription billing plans are currently restricted.</p>
+                    <p>As a result, the following limitations may apply:</p>
+                    <ul>
+                        <li>Starter / Pro plan upgrades are unavailable</li>
+                        <li>Some premium features may be limited</li>
+                    </ul>
+                    <p style="margin-bottom: 0;">We appreciate your understanding and patience. All free features remain fully available.</p>
+                    {% elif is_chinese %}
+                    <p>由于运营原因，订阅付费计划目前受到限制。</p>
+                    <p>因此，可能存在以下限制：</p>
+                    <ul>
+                        <li>Starter / Pro 计划升级不可用</li>
+                        <li>部分高级功能可能受限</li>
+                    </ul>
+                    <p style="margin-bottom: 0;">感谢您的理解。所有免费功能仍然完全可用。</p>
+                    {% elif is_spanish %}
+                    <p>Por razones operativas, los planes de suscripción están actualmente restringidos.</p>
+                    <p>Como resultado, pueden aplicarse las siguientes limitaciones:</p>
+                    <ul>
+                        <li>Las actualizaciones a los planes Starter / Pro no están disponibles</li>
+                        <li>Algunas funciones premium pueden estar limitadas</li>
+                    </ul>
+                    <p style="margin-bottom: 0;">Agradecemos su comprensión. Todas las funciones gratuitas siguen disponibles.</p>
+                    {% elif is_german %}
+                    <p>Aus betrieblichen Gründen sind die Abonnement-Pläne derzeit eingeschränkt.</p>
+                    <p>Daher können folgende Einschränkungen gelten:</p>
+                    <ul>
+                        <li>Upgrades auf Starter / Pro sind nicht verfügbar</li>
+                        <li>Einige Premium-Funktionen können eingeschränkt sein</li>
+                    </ul>
+                    <p style="margin-bottom: 0;">Wir danken für Ihr Verständnis. Alle kostenlosen Funktionen bleiben vollständig verfügbar.</p>
+                    {% elif is_portuguese %}
+                    <p>Por razões operacionais, os planos de assinatura estão atualmente restritos.</p>
+                    <p>Como resultado, as seguintes limitações podem se aplicar:</p>
+                    <ul>
+                        <li>Upgrades para os planos Starter / Pro não estão disponíveis</li>
+                        <li>Alguns recursos premium podem ser limitados</li>
+                    </ul>
+                    <p style="margin-bottom: 0;">Agradecemos sua compreensão. Todos os recursos gratuitos permanecem totalmente disponíveis.</p>
+                    {% else %}
+                    <p>諸事情により、現在サブスクリプション課金プランの仕様が制限されております。</p>
+                    <p>そのため、以下の制限がある場合があります：</p>
+                    <ul>
+                        <li>Starter / Pro プランへのアップグレードが利用できません</li>
+                        <li>一部のプレミアム機能が制限される場合があります</li>
+                    </ul>
+                    <p style="margin-bottom: 0;">ご理解のほどよろしくお願いいたします。無料機能はすべてご利用いただけます。</p>
+                    {% endif %}
+                </div>
+                <div class="modal-footer" style="border-top: 1px solid rgba(0,0,0,0.08); padding: 1rem 1.5rem;">
+                    <button type="button" class="btn btn-primary" data-bs-dismiss="modal" style="background: linear-gradient(135deg, #ff7940, #ff5722); border: none; border-radius: 10px; padding: 0.5rem 1.5rem;">OK</button>
+                </div>
+            </div>
+        </div>
     </div>
 
     <!-- ナビゲーション -->
@@ -1377,6 +1451,12 @@
             document.body.classList.add('banner-closed');
             // セッション中は閉じた状態を維持
             sessionStorage.setItem('demoBannerClosed', 'true');
+        }
+
+        // DEMOモーダルを表示する関数
+        function showDemoModal() {
+            var modal = new bootstrap.Modal(document.getElementById('demoModal'));
+            modal.show();
         }
     </script>
 </body>
