@@ -123,6 +123,14 @@
             </div>
         </div>
         {% endif %}
+
+        <!-- 別の楽曲を作成リンク -->
+        <div style="margin-top: 1.5rem;">
+            <a href="{% url 'songs:upload_image' %}?new=true" class="new-song-link">
+                <i class="bi bi-plus-circle"></i>
+                {% if is_english %}Create Another Song{% elif is_chinese %}创建另一首歌曲{% elif is_spanish %}Crear Otra Canción{% elif is_german %}Weiteres Lied erstellen{% elif is_portuguese %}Criar Outra Música{% else %}別の楽曲を作成{% endif %}
+            </a>
+        </div>
     </div>
 </div>
 
@@ -448,6 +456,30 @@
     transform: translateY(-2px);
     box-shadow: 0 4px 15px rgba(255, 121, 64, 0.4);
     color: #fff;
+}
+
+/* 別の楽曲を作成リンク */
+.new-song-link {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 0.6rem 1.2rem;
+    background: transparent;
+    color: #8a6b5a;
+    border: 1px solid #f0e6e0;
+    border-radius: 12px;
+    font-size: 0.85rem;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    text-decoration: none;
+}
+
+.new-song-link:hover {
+    color: #ff7940;
+    border-color: #ff7940;
+    background: rgba(255, 121, 64, 0.05);
+    text-decoration: none;
 }
 
 /* モバイル対応 */

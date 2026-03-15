@@ -662,6 +662,32 @@ class UploadImageView(LoginRequiredMixin, FormView):
     template_name = 'songs/upload_image.html'
     form_class = ImageUploadForm
 
+    def get(self, request, *args, **kwargs):
+        # ?new=true で明示的に新規作成する場合はセッションをクリアしてそのまま表示
+        if request.GET.get('new') == 'true':
+            for key in ['extracted_texts', 'extracted_text', 'generated_lyrics',
+                        'uploaded_image_ids', 'uploaded_image_id', 'custom_request']:
+                request.session.pop(key, None)
+            return super().get(request, *args, **kwargs)
+
+        # 生成中の楽曲がある場合はその生成画面にリダイレクト
+        in_progress_song = Song.objects.filter(
+            created_by=request.user,
+            generation_status__in=['pending', 'generating']
+        ).order_by('-created_at').first()
+        if in_progress_song:
+            return redirect('songs:song_generating', pk=in_progress_song.pk)
+
+        # 歌詞が既に生成済みでセッションにある場合は確認画面へ
+        if request.session.get('generated_lyrics'):
+            return redirect('songs:lyrics_confirmation')
+
+        # 歌詞生成中（テキスト抽出済み）の場合は歌詞生成画面へ
+        if request.session.get('extracted_texts'):
+            return redirect('songs:lyrics_generating')
+
+        return super().get(request, *args, **kwargs)
+
     def form_valid(self, form):
         files = self.request.FILES.getlist('images')
         
@@ -844,6 +870,9 @@ class LyricsGeneratingView(LoginRequiredMixin, TemplateView):
     template_name = 'songs/lyrics_generating.html'
     
     def get(self, request, *args, **kwargs):
+        # 歌詞が既に生成済みなら確認画面へ直接遷移
+        if request.session.get('generated_lyrics'):
+            return redirect('songs:lyrics_confirmation')
         # セッションに抽出テキストがない場合はアップロード画面へ
         extracted_texts = request.session.get('extracted_texts', [])
         if not extracted_texts:

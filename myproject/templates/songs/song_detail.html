@@ -430,6 +430,10 @@
                         <i class="bi bi-bookmark{% if is_favorited %}-fill{% endif %}"></i>
                         <span>{% if is_favorited %}{% if is_english %}Saved{% elif is_spanish %}Guardado{% elif is_german %}Gespeichert{% elif is_portuguese %}Salvo{% elif is_chinese %}已收藏{% else %}お気に入り済み{% endif %}{% else %}{% if is_english %}Save{% elif is_spanish %}Guardar{% elif is_german %}Speichern{% elif is_portuguese %}Salvar{% elif is_chinese %}收藏{% else %}お気に入り{% endif %}{% endif %}</span>
                     </button>
+                    <button class="action-button share-button" onclick="openShareModal()">
+                        <i class="bi bi-share"></i>
+                        <span>{% if is_english %}Share{% elif is_spanish %}Compartir{% elif is_german %}Teilen{% elif is_portuguese %}Compartilhar{% elif is_chinese %}分享{% else %}共有{% endif %}</span>
+                    </button>
                 </div>
                 {% if user == song.created_by %}
                 <div class="owner-actions">
@@ -445,6 +449,10 @@
                     <a href="{% url 'users:login' %}" class="btn-gradient-primary">
                         <i class="bi bi-box-arrow-in-right"></i> {% if is_english %}Login{% elif is_spanish %}Iniciar Sesión{% elif is_german %}Anmelden{% elif is_portuguese %}Entrar{% elif is_chinese %}登录{% else %}ログイン{% endif %}
                     </a>
+                    <button class="action-button share-button" onclick="openShareModal()" style="margin-top: 1rem; width: 100%;">
+                        <i class="bi bi-share"></i>
+                        <span>{% if is_english %}Share{% elif is_spanish %}Compartir{% elif is_german %}Teilen{% elif is_portuguese %}Compartilhar{% elif is_chinese %}分享{% else %}共有{% endif %}</span>
+                    </button>
                 </div>
                 {% endif %}
             </div>
@@ -1503,6 +1511,229 @@
     .flashcard-section h4 {
         font-size: 1rem;
         margin-bottom: 0.6rem !important;
+    }
+}
+
+/* ============================
+ * 共有モーダル（YouTube風）
+ * ============================ */
+.share-modal-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(0, 0, 0, 0.6);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 10000;
+    opacity: 0;
+    visibility: hidden;
+    transition: all 0.3s ease;
+}
+
+.share-modal-overlay.show {
+    opacity: 1;
+    visibility: visible;
+}
+
+.share-modal {
+    background: var(--surface);
+    border-radius: 12px;
+    width: 90%;
+    max-width: 480px;
+    max-height: 90vh;
+    overflow: hidden;
+    transform: scale(0.9);
+    transition: all 0.3s ease;
+    box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25);
+}
+
+.share-modal-overlay.show .share-modal {
+    transform: scale(1);
+}
+
+.share-modal-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 1rem 1.5rem;
+    border-bottom: 1px solid var(--border-color);
+}
+
+.share-modal-header h3 {
+    font-size: 1.25rem;
+    font-weight: 600;
+    color: var(--text-primary);
+    margin: 0;
+}
+
+.share-modal-close {
+    width: 36px;
+    height: 36px;
+    border: none;
+    background: transparent;
+    border-radius: 50%;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: var(--text-secondary);
+    transition: all 0.2s ease;
+}
+
+.share-modal-close:hover {
+    background: var(--surface-elevated);
+    color: var(--text-primary);
+}
+
+.share-modal-close i {
+    font-size: 1.5rem;
+}
+
+.share-modal-body {
+    padding: 1.5rem;
+}
+
+.share-label {
+    font-size: 0.875rem;
+    font-weight: 500;
+    color: var(--text-secondary);
+    margin-bottom: 1rem;
+}
+
+.share-platforms {
+    display: flex;
+    justify-content: center;
+    gap: 1rem;
+    flex-wrap: wrap;
+    margin-bottom: 1.5rem;
+}
+
+.share-platform-btn {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 0.75rem 1rem;
+    border: none;
+    background: transparent;
+    border-radius: 8px;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    min-width: 80px;
+}
+
+.share-platform-btn:hover {
+    background: var(--surface-elevated);
+}
+
+.share-platform-icon {
+    width: 48px;
+    height: 48px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1.5rem;
+    color: white;
+}
+
+.share-platform-icon.line {
+    background: #00B900;
+}
+
+.share-platform-icon.whatsapp {
+    background: #25D366;
+}
+
+.share-platform-icon.email {
+    background: var(--primary-color);
+}
+
+.share-platform-icon.embed {
+    background: #6366F1;
+}
+
+.share-platform-name {
+    font-size: 0.75rem;
+    color: var(--text-secondary);
+    font-weight: 500;
+}
+
+.share-url-section {
+    border-top: 1px solid var(--border-color);
+    padding-top: 1.5rem;
+}
+
+.share-url-container {
+    display: flex;
+    gap: 0.75rem;
+    align-items: center;
+}
+
+.share-url-input {
+    flex: 1;
+    padding: 0.75rem 1rem;
+    border: 1px solid var(--border-color);
+    border-radius: 8px;
+    font-size: 0.875rem;
+    color: var(--text-primary);
+    background: var(--surface-elevated);
+    outline: none;
+    transition: all 0.2s ease;
+}
+
+.share-url-input:focus {
+    border-color: var(--primary-color);
+}
+
+.share-copy-btn {
+    padding: 0.75rem 1.25rem;
+    background: var(--primary-gradient);
+    border: none;
+    border-radius: 8px;
+    color: white;
+    font-weight: 600;
+    font-size: 0.875rem;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    white-space: nowrap;
+}
+
+.share-copy-btn:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 4px 12px rgba(255, 121, 64, 0.4);
+}
+
+.share-copy-btn.copied {
+    background: #10B981;
+}
+
+@media (max-width: 480px) {
+    .share-platforms {
+        gap: 0.5rem;
+    }
+    
+    .share-platform-btn {
+        min-width: 60px;
+        padding: 0.5rem;
+    }
+    
+    .share-platform-icon {
+        width: 40px;
+        height: 40px;
+        font-size: 1.25rem;
+    }
+    
+    .share-url-container {
+        flex-direction: column;
+    }
+    
+    .share-url-input,
+    .share-copy-btn {
+        width: 100%;
     }
 }
 </style>
@@ -3512,6 +3743,122 @@ function executeDeleteSong() {
             btn.disabled = false;
             btn.textContent = '{% if is_english %}Delete{% elif is_spanish %}Eliminar{% elif is_german %}Löschen{% elif is_portuguese %}Excluir{% elif is_chinese %}删除{% else %}削除{% endif %}';
         }
+    });
+}
+
+// ============================
+// 共有モーダル機能
+// ============================
+function openShareModal() {
+    let modal = document.getElementById('shareModalOverlay');
+    if (!modal) {
+        const shareUrl = window.location.href;
+        const shareTitle = '{{ song.title|escapejs }}';
+        const shareText = '{{ song.title|escapejs }}';
+        
+        modal = document.createElement('div');
+        modal.id = 'shareModalOverlay';
+        modal.className = 'share-modal-overlay';
+        modal.onclick = function(e) {
+            if (e.target === modal) closeShareModal();
+        };
+        modal.innerHTML = `
+            <div class="share-modal">
+                <div class="share-modal-header">
+                    <h3>{% if is_english %}Share{% elif is_spanish %}Compartir{% elif is_german %}Teilen{% elif is_portuguese %}Compartilhar{% elif is_chinese %}分享{% else %}共有{% endif %}</h3>
+                    <button class="share-modal-close" onclick="closeShareModal()">
+                        <i class="bi bi-x"></i>
+                    </button>
+                </div>
+                <div class="share-modal-body">
+                    <div class="share-label">{% if is_english %}Share to{% elif is_chinese %}分享到{% else %}共有先{% endif %}</div>
+                    <div class="share-platforms">
+                        <button class="share-platform-btn" onclick="shareToLine()">
+                            <div class="share-platform-icon line">
+                                <i class="bi bi-line"></i>
+                            </div>
+                            <span class="share-platform-name">LINE</span>
+                        </button>
+                        <button class="share-platform-btn" onclick="shareToWhatsApp()">
+                            <div class="share-platform-icon whatsapp">
+                                <i class="bi bi-whatsapp"></i>
+                            </div>
+                            <span class="share-platform-name">WhatsApp</span>
+                        </button>
+                        <button class="share-platform-btn" onclick="shareByEmail()">
+                            <div class="share-platform-icon email">
+                                <i class="bi bi-envelope"></i>
+                            </div>
+                            <span class="share-platform-name">{% if is_english %}Email{% elif is_chinese %}邮件{% else %}メール{% endif %}</span>
+                        </button>
+                    </div>
+                    <div class="share-url-section">
+                        <div class="share-url-container">
+                            <input type="text" class="share-url-input" id="shareUrlInput" value="${shareUrl}" readonly onclick="this.select()">
+                            <button class="share-copy-btn" id="shareCopyBtn" onclick="copyShareUrl()">
+                                {% if is_english %}Copy{% elif is_chinese %}复制{% else %}コピー{% endif %}
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        `;
+        document.body.appendChild(modal);
+    }
+    setTimeout(() => modal.classList.add('show'), 10);
+}
+
+function closeShareModal() {
+    const modal = document.getElementById('shareModalOverlay');
+    if (modal) {
+        modal.classList.remove('show');
+    }
+}
+
+function shareToLine() {
+    const url = encodeURIComponent(window.location.href);
+    const text = encodeURIComponent('{{ song.title|escapejs }}');
+    window.open(`https://social-plugins.line.me/lineit/share?url=${url}&text=${text}`, '_blank', 'width=550,height=420');
+}
+
+function shareToWhatsApp() {
+    const url = encodeURIComponent(window.location.href);
+    const text = encodeURIComponent('{{ song.title|escapejs }} ' + window.location.href);
+    window.open(`https://wa.me/?text=${text}`, '_blank', 'width=550,height=420');
+}
+
+function shareByEmail() {
+    const subject = encodeURIComponent('{{ song.title|escapejs }} - UTAMEMO');
+    const body = encodeURIComponent(window.location.href);
+    window.location.href = `mailto:?subject=${subject}&body=${body}`;
+}
+
+function copyShareUrl() {
+    const input = document.getElementById('shareUrlInput');
+    const btn = document.getElementById('shareCopyBtn');
+    
+    input.select();
+    input.setSelectionRange(0, 99999);
+    
+    navigator.clipboard.writeText(input.value).then(() => {
+        btn.classList.add('copied');
+        btn.innerHTML = '<i class="bi bi-check2"></i> {% if is_english %}Copied!{% elif is_chinese %}已复制！{% else %}コピー完了{% endif %}';
+        
+        setTimeout(() => {
+            btn.classList.remove('copied');
+            btn.textContent = '{% if is_english %}Copy{% elif is_chinese %}复制{% else %}コピー{% endif %}';
+        }, 2000);
+    }).catch(err => {
+        console.error('Copy failed:', err);
+        // Fallback for older browsers
+        document.execCommand('copy');
+        btn.classList.add('copied');
+        btn.innerHTML = '<i class="bi bi-check2"></i> {% if is_english %}Copied!{% elif is_chinese %}已复制！{% else %}コピー完了{% endif %}';
+        
+        setTimeout(() => {
+            btn.classList.remove('copied');
+            btn.textContent = '{% if is_english %}Copy{% elif is_chinese %}复制{% else %}コピー{% endif %}';
+        }, 2000);
     });
 }
 </script>

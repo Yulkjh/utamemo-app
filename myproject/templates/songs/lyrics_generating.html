@@ -71,6 +71,14 @@
                 {% if is_english %}Usually takes 10-30 seconds{% elif is_chinese %}通常需要10-30秒{% else %}通常10〜30秒で完成します{% endif %}
             </p>
         </div>
+
+        <!-- ヒント -->
+        <div class="generating-tip">
+            <i class="bi bi-lightbulb"></i>
+            <span id="tip-text">
+                {% if is_english %}Tip: You can freely edit the lyrics after they're generated!{% elif is_chinese %}提示：生成后可以自由编辑歌词！{% else %}ヒント：生成された歌詞は自由に編集できます！{% endif %}
+            </span>
+        </div>
     </div>
 </div>
 
@@ -495,15 +503,17 @@ document.addEventListener('DOMContentLoaded', function() {
     let tipIndex = 0;
     
     // ヒントを定期的に切り替え
-    setInterval(function() {
-        tipIndex = (tipIndex + 1) % tips.length;
-        tipText.style.opacity = '0';
-        setTimeout(function() {
-            tipText.textContent = tips[tipIndex];
-            tipText.style.opacity = '1';
-        }, 300);
-    }, 6000);
-    tipText.style.transition = 'opacity 0.3s ease';
+    if (tipText) {
+        tipText.style.transition = 'opacity 0.3s ease';
+        setInterval(function() {
+            tipIndex = (tipIndex + 1) % tips.length;
+            tipText.style.opacity = '0';
+            setTimeout(function() {
+                tipText.textContent = tips[tipIndex];
+                tipText.style.opacity = '1';
+            }, 300);
+        }, 6000);
+    }
     
     // ステップをアクティブに
     function updateSteps(activeIndex) {
