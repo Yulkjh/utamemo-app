@@ -464,6 +464,7 @@ document.addEventListener('DOMContentLoaded', function() {
     const manualUrl = lyricsConfirmationUrl + '?manual=true&lang={{ language_mode }}';
     const generateUrl = '{% url "songs:generate_lyrics_api" %}';
     const csrfToken = '{{ csrf_token }}';
+    const lyricsAlreadyGenerated = {{ lyrics_already_generated|yesno:"true,false" }};
     
     // DOM要素
     const progressFill = document.getElementById('progress-fill');
@@ -670,8 +671,24 @@ document.addEventListener('DOMContentLoaded', function() {
             '<i class="bi bi-pencil"></i> {% if is_english %}Enter lyrics manually{% elif is_chinese %}手动输入歌词{% else %}手動で歌詞を入力{% endif %}</a>';
     }
     
-    // 開始
-    generateLyrics();
+    // 開始: 歌詞が既に生成済みなら即座に完了→遷移
+    if (lyricsAlreadyGenerated) {
+        setPhase('completed');
+        page.classList.add('completed');
+        setTimeout(function() {
+            window.location.href = lyricsConfirmationUrl;
+        }, 500);
+    } else {
+        generateLyrics();
+    }
+    
+    // ブラウザの戻るボタンでbfcacheから復元された場合の処理
+    window.addEventListener('pageshow', function(event) {
+        if (event.persisted) {
+            // bfcacheから復元された場合、ページをリロードして最新状態を取得
+            location.reload();
+        }
+    });
 });
 </script>
 {% endblock %}

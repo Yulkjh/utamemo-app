@@ -871,12 +871,10 @@ class LyricsGeneratingView(LoginRequiredMixin, TemplateView):
     template_name = 'songs/lyrics_generating.html'
     
     def get(self, request, *args, **kwargs):
-        # 歌詞が既に生成済みなら確認画面へ直接遷移
-        if request.session.get('generated_lyrics'):
-            return redirect('songs:lyrics_confirmation')
-        # セッションに抽出テキストがない場合はアップロード画面へ
+        # セッションに抽出テキストも生成済み歌詞もない場合はアップロード画面へ
         extracted_texts = request.session.get('extracted_texts', [])
-        if not extracted_texts:
+        generated_lyrics = request.session.get('generated_lyrics')
+        if not extracted_texts and not generated_lyrics:
             return redirect('songs:upload_image')
         return super().get(request, *args, **kwargs)
     
@@ -884,6 +882,9 @@ class LyricsGeneratingView(LoginRequiredMixin, TemplateView):
         context = super().get_context_data(**kwargs)
         language_mode = self.request.session.get('language_mode', 'japanese')
         context['language_mode'] = language_mode
+        
+        # 歌詞が既に生成済みかどうかをテンプレートに渡す（JS側で即遷移用）
+        context['lyrics_already_generated'] = bool(self.request.session.get('generated_lyrics'))
         
         extracted_texts = self.request.session.get('extracted_texts', [])
         if extracted_texts and isinstance(extracted_texts, list):
