@@ -498,12 +498,13 @@ class CreateSongView(LoginRequiredMixin, CreateView):
             else:
                 messages.success(self.request, '楽曲の生成を開始しました。1〜2分で完成します。')
         
-        if 'extracted_text' in self.request.session:
-            del self.request.session['extracted_text']
-        if 'generated_lyrics' in self.request.session:
-            del self.request.session['generated_lyrics']
-        if 'uploaded_image_id' in self.request.session:
-            del self.request.session['uploaded_image_id']
+        # セッションから楽曲作成関連データをすべてクリア
+        keys_to_clear = [
+            'extracted_text', 'extracted_texts', 'generated_lyrics',
+            'uploaded_image_id', 'uploaded_image_ids', 'custom_request',
+        ]
+        for key in keys_to_clear:
+            self.request.session.pop(key, None)
         
         return response
     
@@ -971,6 +972,18 @@ def generate_lyrics_api(request):
     except Exception as e:
         logger.error(f"Lyrics generation API error: {e}", exc_info=True)
         return JsonResponse({'success': False, 'error': str(e)})
+
+
+@login_required
+def reset_lyrics_session(request):
+    """歌詞セッションデータをクリアしてアップロード画面に戻る"""
+    keys_to_clear = [
+        'generated_lyrics', 'extracted_text', 'extracted_texts',
+        'uploaded_image_ids', 'custom_request',
+    ]
+    for key in keys_to_clear:
+        request.session.pop(key, None)
+    return redirect('songs:upload_image')
 
 
 class LyricsConfirmationView(LoginRequiredMixin, TemplateView):

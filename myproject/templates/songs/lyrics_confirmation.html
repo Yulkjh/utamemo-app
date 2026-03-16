@@ -208,7 +208,7 @@
             <!-- アクションボタン -->
             <div class="text-center mt-5">
                 <div class="d-flex flex-column flex-md-row gap-3 justify-content-center">
-                    <a href="{% url 'songs:upload_image' %}" class="btn btn-outline-secondary btn-lg">
+                    <a href="{% url 'songs:reset_lyrics_session' %}" class="btn btn-outline-secondary btn-lg">
                         {% if is_english %}Back{% elif is_chinese %}返回{% else %}戻る{% endif %}
                     </a>
                     <button type="submit" form="lyrics-form" class="btn btn-gradient-primary btn-lg px-5" id="create-song-btn">

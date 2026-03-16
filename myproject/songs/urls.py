@@ -11,6 +11,7 @@ urlpatterns = [
     path('upload/', views.UploadImageView.as_view(), name='upload_image'),
     path('extraction-result/', views.TextExtractionResultView.as_view(), name='text_extraction_result'),
     path('lyrics-confirmation/', views.LyricsConfirmationView.as_view(), name='lyrics_confirmation'),
+    path('reset-lyrics/', views.reset_lyrics_session, name='reset_lyrics_session'),
     path('lyrics-generating/', views.LyricsGeneratingView.as_view(), name='lyrics_generating'),
     path('api/generate-lyrics/', views.generate_lyrics_api, name='generate_lyrics_api'),
     path('my-songs/', views.MySongsView.as_view(), name='my_songs'),
