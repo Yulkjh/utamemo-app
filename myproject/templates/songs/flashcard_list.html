@@ -17,7 +17,7 @@
                         {% if is_english %}Study key terms from your notes{% elif is_chinese %}学习笔记中的关键术语{% elif is_spanish %}Estudia los términos clave de tus notas{% elif is_german %}Lerne Schlüsselbegriffe aus deinen Notizen{% elif is_portuguese %}Estude os termos-chave das suas notas{% else %}写真から重要語句を抽出して暗記{% endif %}
                     </p>
                 </div>
-                <a href="{% url 'songs:upload_image' %}" class="btn-gradient-primary">
+                <a href="{% url 'songs:upload_image' %}?new=true" class="btn-gradient-primary">
                     <i class="bi bi-plus-lg me-1"></i>
                     {% if is_english %}Create Song{% elif is_chinese %}创建歌曲{% elif is_spanish %}Crear Canción{% elif is_german %}Song erstellen{% elif is_portuguese %}Criar Música{% else %}楽曲を作成{% endif %}
                 </a>
@@ -97,7 +97,7 @@
                 <p class="text-muted mb-4">
                     {% if is_english %}Create a song from your study materials, then generate flashcards{% elif is_chinese %}上传学习材料创建歌曲，然后生成闪卡{% elif is_spanish %}Crea una canción a partir de tus materiales y luego genera tarjetas{% elif is_german %}Erstelle einen Song aus deinem Lernmaterial und generiere dann Lernkarten{% elif is_portuguese %}Crie uma música do seu material de estudo e depois gere flashcards{% else %}教材から楽曲を作成すると暗記カードも作れます{% endif %}
                 </p>
-                <a href="{% url 'songs:upload_image' %}" class="btn-gradient-primary btn-lg">
+                <a href="{% url 'songs:upload_image' %}?new=true" class="btn-gradient-primary btn-lg">
                     <i class="bi bi-plus-lg me-2"></i>
                     {% if is_english %}Create a Song{% elif is_chinese %}创建歌曲{% elif is_spanish %}Crear Canción{% elif is_german %}Song erstellen{% elif is_portuguese %}Criar Música{% else %}楽曲を作成する{% endif %}
                 </a>

@@ -169,7 +169,7 @@
                 <h3>{% if is_english %}No songs found{% elif is_spanish %}No se encontraron canciones{% elif is_german %}Keine Lieder gefunden{% elif is_portuguese %}Nenhuma música encontrada{% elif is_chinese %}未找到歌曲{% else %}楽曲がありません{% endif %}</h3>
                 <p>{% if is_english %}Would you like to create the first learning song?{% elif is_spanish %}¿Te gustaría crear la primera canción de aprendizaje?{% elif is_german %}Möchten Sie das erste Lernlied erstellen?{% elif is_portuguese %}Gostaria de criar a primeira música de aprendizado?{% elif is_chinese %}要不要创作第一首学习歌曲？{% else %}最初の学習楽曲を作成しませんか？{% endif %}</p>
                 {% if user.is_authenticated %}
-                <a href="{% url 'songs:upload_image' %}" class="btn-primary">{% if is_english %}Create Song{% elif is_spanish %}Crear Canción{% elif is_german %}Lied Erstellen{% elif is_portuguese %}Criar Música{% elif is_chinese %}创作歌曲{% else %}楽曲を作成{% endif %}</a>
+                <a href="{% url 'songs:upload_image' %}?new=true" class="btn-primary">{% if is_english %}Create Song{% elif is_spanish %}Crear Canción{% elif is_german %}Lied Erstellen{% elif is_portuguese %}Criar Música{% elif is_chinese %}创作歌曲{% else %}楽曲を作成{% endif %}</a>
                 {% else %}
                 <a href="{% url 'users:register' %}" class="btn-primary">{% if is_english %}Get Started{% elif is_spanish %}Comenzar{% elif is_german %}Loslegen{% elif is_portuguese %}Começar{% elif is_chinese %}开始使用{% else %}今すぐ始める{% endif %}</a>
                 {% endif %}

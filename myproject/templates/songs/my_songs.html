@@ -9,7 +9,7 @@
     <!-- ヘッダーセクション -->
     <div class="my-songs-header fade-in">
         <h1 class="my-songs-title">{% if is_english %}My Songs{% elif is_spanish %}Mis Canciones{% elif is_german %}Meine Songs{% elif is_portuguese %}Minhas Músicas{% elif is_chinese %}我的歌曲{% else %}MY楽曲{% endif %}</h1>
-        <a href="{% url 'songs:upload_image' %}" class="btn-create-song">
+        <a href="{% url 'songs:upload_image' %}?new=true" class="btn-create-song">
             <i class="bi bi-plus-lg"></i>
             {% if is_english %}New{% elif is_chinese %}新建{% elif is_spanish %}Crear{% elif is_german %}Neu{% elif is_portuguese %}Criar{% else %}新規作成{% endif %}
         </a>
@@ -131,7 +131,7 @@
         <h3 class="empty-title">{% if is_english %}No songs yet{% elif is_chinese %}还没有歌曲{% elif is_spanish %}Aún no hay canciones{% elif is_german %}Noch keine Songs{% elif is_portuguese %}Ainda não há músicas{% else %}まだ楽曲がありません{% endif %}</h3>
         <p class="empty-desc">{% if is_english %}Upload a photo of your study material and create your first song{% elif is_chinese %}上传学习资料照片，创作你的第一首歌曲{% elif is_spanish %}Sube una foto de tu material de estudio y crea tu primera canción{% elif is_german %}Lade ein Foto deines Lernmaterials hoch und erstelle deinen ersten Song{% elif is_portuguese %}Faça upload de uma foto do seu material de estudo e crie sua primeira música{% else %}教材の写真をアップロードして、初めての楽曲を作成しましょう{% endif %}</p>
         <div class="empty-actions">
-            <a href="{% url 'songs:upload_image' %}" class="btn-empty-primary">
+            <a href="{% url 'songs:upload_image' %}?new=true" class="btn-empty-primary">
                 <i class="bi bi-camera"></i>
                 {% if is_english %}Upload Image{% elif is_chinese %}上传图片{% elif is_spanish %}Subir Imagen{% elif is_german %}Bild hochladen{% elif is_portuguese %}Enviar Imagem{% else %}画像をアップロード{% endif %}
             </a>

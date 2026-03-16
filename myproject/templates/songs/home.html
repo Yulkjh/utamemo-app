@@ -45,7 +45,7 @@
                 <div class="mb-5 text-center">
                     {% if user.is_authenticated %}
                         <div class="d-flex flex-column flex-md-row gap-3 justify-content-center">
-                            <a href="{% url 'songs:upload_image' %}" class="btn btn-primary btn-lg px-5">
+                            <a href="{% url 'songs:upload_image' %}?new=true" class="btn btn-primary btn-lg px-5">
                                 <i class="bi bi-camera-fill me-2"></i>{% if is_english %}Create a Song{% elif is_spanish %}Crear una Canción{% elif is_german %}Song erstellen{% elif is_portuguese %}Criar uma Música{% elif is_chinese %}创作歌曲{% else %}楽曲を作成する{% endif %}
                             </a>
                             <a href="{% url 'songs:song_list' %}" class="btn btn-outline-primary btn-lg px-5">

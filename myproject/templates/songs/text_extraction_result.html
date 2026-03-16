@@ -92,7 +92,7 @@
                     <a href="{% url 'songs:lyrics_confirmation' %}" class="btn-gradient-primary btn-lg me-3">
                         <i class="bi bi-file-text"></i> {% if is_english %}Confirm Lyrics{% elif is_spanish %}Confirmar Letras{% elif is_german %}Texte Bestätigen{% elif is_chinese %}确认歌词{% else %}歌詞を確認{% endif %}
                     </a>
-                    <a href="{% url 'songs:upload_image' %}" class="btn-outline-modern btn-lg">
+                    <a href="{% url 'songs:upload_image' %}?new=true" class="btn-outline-modern btn-lg">
                         <i class="bi bi-arrow-left"></i> {% if is_english %}Upload Another Image{% elif is_spanish %}Subir Otra Imagen{% elif is_german %}Anderes Bild Hochladen{% elif is_chinese %}上传其他图片{% else %}別の画像をアップロード{% endif %}
                     </a>
                 </div>

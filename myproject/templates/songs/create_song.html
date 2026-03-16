@@ -394,7 +394,7 @@
                                 </span>
                                 {% endif %}
                             </button>
-                            <a href="{% url 'songs:upload_image' %}" class="btn-secondary-action">
+                            <a href="{% url 'songs:upload_image' %}?new=true" class="btn-secondary-action">
                                 {% if is_english %}Back to Upload{% elif is_spanish %}Volver a Subir{% elif is_german %}Zurück zum Hochladen{% elif is_chinese %}返回上传{% else %}画像アップロードに戻る{% endif %}
                             </a>
                         </div>

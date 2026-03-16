@@ -249,7 +249,7 @@
         </div>
         <h4>{% if is_english %}No songs to share{% elif is_spanish %}No hay canciones para compartir{% elif is_german %}Keine Lieder zum Teilen{% elif is_portuguese %}Nenhuma música para compartilhar{% elif is_chinese %}没有可分享的歌曲{% else %}共有できる楽曲がありません{% endif %}</h4>
         <p>{% if is_english %}Create a song first or all your songs are already shared{% elif is_spanish %}Crea una canción primero o todas tus canciones ya están compartidas{% elif is_german %}Erstelle zuerst ein Lied oder alle deine Lieder sind bereits geteilt{% elif is_portuguese %}Crie uma música primeiro ou todas as suas músicas já estão compartilhadas{% elif is_chinese %}请先创建歌曲或所有歌曲已被分享{% else %}まず楽曲を作成するか、全ての楽曲が既に共有されています{% endif %}</p>
-        <a href="{% url 'songs:upload_image' %}" class="create-song-btn">
+        <a href="{% url 'songs:upload_image' %}?new=true" class="create-song-btn">
             <i class="bi bi-plus-lg"></i>
             {% if is_english %}Create Song{% elif is_spanish %}Crear Canción{% elif is_german %}Lied erstellen{% elif is_portuguese %}Criar Música{% elif is_chinese %}创建歌曲{% else %}楽曲を作成{% endif %}
         </a>
