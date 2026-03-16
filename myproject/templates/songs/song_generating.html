@@ -712,9 +712,12 @@ document.addEventListener('DOMContentLoaded', function() {
                     mainIcon.className = 'bi bi-check-circle-fill';
                     clearInterval(checkInterval);
                     
+                    // 履歴を置換して戻るボタンでこのページに戻れないようにする
+                    history.replaceState(null, '', songDetailUrl);
+                    
                     // 1.5秒後にsong_detailへ遷移
                     setTimeout(function() {
-                        window.location.href = songDetailUrl;
+                        window.location.replace(songDetailUrl);
                     }, 1500);
                     
                 } else if (data.failed) {

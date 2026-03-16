@@ -604,6 +604,9 @@ document.addEventListener('DOMContentLoaded', function() {
                 createSongBtn.disabled = true;
             }
             
+            // 履歴を置換して戻るボタンでこのページに戻れないようにする
+            history.replaceState(null, '', '{% url "songs:upload_image" %}?new=true');
+            
             // フォームを通常送信
             return true;
         });

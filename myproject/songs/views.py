@@ -990,6 +990,16 @@ class LyricsConfirmationView(LoginRequiredMixin, TemplateView):
     """歌詞確認ビュー（AI生成または手動入力）"""
     template_name = 'songs/lyrics_confirmation.html'
     
+    def get(self, request, *args, **kwargs):
+        """セッションに歌詞データがない場合はアップロード画面へリダイレクト"""
+        manual_mode = request.GET.get('manual', 'false') == 'true'
+        if not manual_mode:
+            has_lyrics = request.session.get('generated_lyrics')
+            has_texts = request.session.get('extracted_texts') or request.session.get('extracted_text')
+            if not has_lyrics and not has_texts:
+                return redirect('songs:upload_image')
+        return super().get(request, *args, **kwargs)
+    
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
         
