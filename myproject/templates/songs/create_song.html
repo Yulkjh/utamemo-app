@@ -313,33 +313,6 @@
                             </small>
                         </div>
                         
-                        <!-- リファレンス曲（スターター以上） -->
-                        <div class="form-group mb-4">
-                            <label for="reference_song" class="form-label">
-                                <i class="bi bi-music-note-beamed me-1"></i>
-                                {% if is_english %}Reference Song (Optional){% elif is_spanish %}Canción de Referencia (Opcional){% elif is_german %}Referenzlied (Optional){% elif is_portuguese %}Música de Referência (Opcional){% elif is_chinese %}参考曲（可选）{% else %}リファレンス曲（任意）{% endif %}
-                                {% if not user.is_starter %}
-                                <span class="badge bg-warning text-dark ms-2">
-                                    <i class="bi bi-lock-fill"></i> {% if is_english %}Starter+{% elif is_spanish %}Starter+{% elif is_german %}Starter+{% elif is_portuguese %}Starter+{% elif is_chinese %}入门+{% else %}スターター以上{% endif %}
-                                </span>
-                                {% endif %}
-                            </label>
-                            {% if user.is_starter %}
-                            <input type="text" name="reference_song" id="reference_song" class="form-control" 
-                                value="{{ prefill_reference_song }}"
-                                placeholder="{% if is_english %}e.g. 'Lemon by Kenshi Yonezu', 'Shape of You style'{% elif is_spanish %}ej. 'Lemon de Kenshi Yonezu', 'Estilo Shape of You'{% elif is_german %}z.B. 'Lemon von Kenshi Yonezu', 'Shape of You Stil'{% elif is_portuguese %}ex. 'Lemon de Kenshi Yonezu', 'Estilo Shape of You'{% elif is_chinese %}例如：'米津玄师的Lemon'、'Shape of You风格'{% else %}例：「米津玄師のLemon」「Shape of You風」{% endif %}">
-                            <small class="text-muted">
-                                {% if is_english %}Enter a song or artist name to use as a style reference{% elif is_spanish %}Ingrese un nombre de canción o artista como referencia de estilo{% elif is_german %}Geben Sie einen Song- oder Künstlernamen als Stilreferenz ein{% elif is_portuguese %}Insira o nome de uma música ou artista como referência de estilo{% elif is_chinese %}输入歌曲或艺术家名称作为风格参考{% else %}スタイルの参考にする曲やアーティスト名を入力できます{% endif %}
-                            </small>
-                            {% else %}
-                            <div class="locked-feature-box">
-                                <i class="bi bi-lock-fill"></i>
-                                <span>{% if is_english %}Upgrade to Starter plan to use reference songs{% elif is_spanish %}Actualiza al plan Starter para usar canciones de referencia{% elif is_german %}Upgrade auf Starter-Plan für Referenzlieder{% elif is_portuguese %}Atualize para o plano Starter para usar músicas de referência{% elif is_chinese %}升级到入门套餐以使用参考曲{% else %}スタータープランにアップグレードするとリファレンス曲を使用できます{% endif %}</span>
-                                <a href="{% url 'users:upgrade' %}" class="btn btn-sm btn-outline-warning">{% if is_english %}Upgrade{% elif is_spanish %}Actualizar{% elif is_german %}Upgrade{% elif is_portuguese %}Atualizar{% elif is_chinese %}升级{% else %}アップグレード{% endif %}</a>
-                            </div>
-                            {% endif %}
-                        </div>
-                        
                         <!-- 元テキスト（隠しフィールド） -->
                         <div style="display: none;">
                             {{ form.original_text }}
@@ -380,6 +353,23 @@
                             </div>
                         </div>
                         {% endif %}
+                        
+                        <!-- Murekaライセンス同意確認 -->
+                        <div class="mt-3 p-3" style="background: rgba(255, 193, 7, 0.08); border-radius: 10px; border: 1px solid rgba(255, 193, 7, 0.3);">
+                            <div class="form-check">
+                                <input class="form-check-input" type="checkbox" id="mureka_license_agree" required>
+                                <label class="form-check-label" for="mureka_license_agree" style="font-size: 0.85rem; color: #666;">
+                                    {% if is_english %}I agree to the <a href="{% url 'terms' %}" target="_blank">Terms of Service</a> and understand that: generated music is licensed to <a href="https://mureka.ai/terms" target="_blank" rel="noopener">Mureka</a> (unrestricted, irrevocable, royalty-free), copyright registration of AI-generated content is not guaranteed, and I have the legal right to use any uploaded content.
+                                    {% elif is_spanish %}Acepto los <a href="{% url 'terms' %}" target="_blank">Términos de Servicio</a> y entiendo que: la música generada se licencia a <a href="https://mureka.ai/terms" target="_blank" rel="noopener">Mureka</a> (sin restricciones, irrevocable, libre de regalías), no se garantiza el registro de derechos de autor del contenido generado por IA, y tengo el derecho legal de usar cualquier contenido subido.
+                                    {% elif is_german %}Ich stimme den <a href="{% url 'terms' %}" target="_blank">Nutzungsbedingungen</a> zu und verstehe: Generierte Musik wird an <a href="https://mureka.ai/terms" target="_blank" rel="noopener">Mureka</a> lizenziert (unbeschränkt, unwiderruflich, lizenzgebührenfrei), eine Urheberrechtsregistrierung von KI-generierten Inhalten ist nicht garantiert, und ich habe das Recht, hochgeladene Inhalte zu verwenden.
+                                    {% elif is_portuguese %}Concordo com os <a href="{% url 'terms' %}" target="_blank">Termos de Serviço</a> e entendo que: a música gerada é licenciada à <a href="https://mureka.ai/terms" target="_blank" rel="noopener">Mureka</a> (irrestrita, irrevogável, isenta de royalties), o registro de direitos autorais do conteúdo gerado por IA não é garantido, e tenho o direito legal de usar qualquer conteúdo enviado.
+                                    {% elif is_chinese %}我同意<a href="{% url 'terms' %}" target="_blank">服务条款</a>，并理解：生成的音乐将授权给<a href="https://mureka.ai/terms" target="_blank" rel="noopener">Mureka</a>（无限制、不可撤销、免版税），AI生成内容的版权注册不被保证，且我有合法权利使用所上传的内容。
+                                    {% else %}<a href="{% url 'terms' %}" target="_blank">利用規約</a>に同意し、以下を理解しました：生成された楽曲は<a href="https://mureka.ai/terms" target="_blank" rel="noopener">Mureka</a>に対してライセンス（無制限・取消不能・ロイヤリティフリー）が付与されること、AI生成コンテンツの著作権登録は保証されないこと、アップロードした素材について適法な利用権を有していること。
+                                    {% endif %}
+                                </label>
+                            </div>
+                        </div>
+
                         <div class="form-actions">
                             <button type="submit" class="btn-create-song {% if paid_plan_all_exhausted %}btn-disabled{% endif %}" {% if paid_plan_all_exhausted %}disabled{% endif %}>
                                 {% if paid_plan_all_exhausted %}

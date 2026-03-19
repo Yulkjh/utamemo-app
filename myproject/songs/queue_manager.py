@@ -197,7 +197,6 @@ class SongGenerationQueue:
             genre = song.genre or 'pop'
             vocal_style = song.vocal_style or 'female'
             music_prompt = getattr(song, 'music_prompt', '') or ''
-            reference_song = getattr(song, 'reference_song', '') or ''
 
             from .ai_services import convert_lyrics_to_hiragana_with_context, detect_lyrics_language
             logger.info(f"Song {song_id}: Original lyrics length: {len(lyrics_content)} chars")
@@ -245,8 +244,7 @@ class SongGenerationQueue:
                         genre=genre.lower() if genre else 'pop',
                         vocal_style=vocal_style,
                         model=song.mureka_model or 'mureka-v8',
-                        music_prompt=music_prompt,
-                        reference_song=reference_song
+                        music_prompt=music_prompt
                     )
                     
                     logger.info(f"Song {song_id}: Generation result: {song_result}")

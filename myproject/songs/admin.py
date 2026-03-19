@@ -40,7 +40,7 @@ class SongAdmin(admin.ModelAdmin):
             'fields': ('title', 'artist', 'genre', 'vocal_style', 'tags')
         }),
         ('AI生成設定', {
-            'fields': ('mureka_model', 'music_prompt', 'reference_song', 'reference_audio_url')
+            'fields': ('mureka_model', 'music_prompt')
         }),
         ('音声・メディア', {
             'fields': ('audio_file', 'audio_url', 'cover_image', 'duration',

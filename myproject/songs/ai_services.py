@@ -270,7 +270,7 @@ class MurekaAIGenerator:
         else:
             logger.info("MurekaAIGenerator: API key not set or disabled.")
     
-    def generate_song(self, lyrics, title="", genre="pop", vocal_style="female", model="mureka-v8", music_prompt="", reference_song=""):
+    def generate_song(self, lyrics, title="", genre="pop", vocal_style="female", model="mureka-v8", music_prompt=""):
         """歌詞から楽曲を生成（Mureka API使用）
         
         Args:
@@ -280,15 +280,14 @@ class MurekaAIGenerator:
             vocal_style: ボーカルスタイル (female/male)
             model: Murekaモデルバージョン (mureka-v8, mureka-o2, mureka-7.6)
             music_prompt: ユーザー指定の音楽スタイルプロンプト
-            reference_song: リファレンス曲名（例：YOASOBIの夜に駆ける）
         """
         
         if not self.use_real_api or not self.api_key:
             raise Exception("Mureka API is not configured. Please set MUREKA_API_KEY and USE_MUREKA_API=True")
         
-        return self._generate_with_mureka_api(lyrics, title, genre, vocal_style, model, music_prompt, reference_song)
+        return self._generate_with_mureka_api(lyrics, title, genre, vocal_style, model, music_prompt)
     
-    def _generate_with_mureka_api(self, lyrics, title, genre, vocal_style, model="mureka-v8", music_prompt="", reference_song=""):
+    def _generate_with_mureka_api(self, lyrics, title, genre, vocal_style, model="mureka-v8", music_prompt=""):
         """Mureka APIを使用して楽曲を生成
         
         Args:
@@ -298,7 +297,6 @@ class MurekaAIGenerator:
             vocal_style: ボーカルスタイル
             model: Murekaモデル (mureka-v8, mureka-o2, mureka-7.6)
             music_prompt: ユーザー指定の音楽スタイルプロンプト
-            reference_song: リファレンス曲名
         """
         import requests
         import time
@@ -451,14 +449,6 @@ class MurekaAIGenerator:
                 prompt_parts.append(music_prompt_en)
         
         full_prompt = ", ".join(prompt_parts)
-        
-        # リファレンス曲をプロンプトに追加（英語で）
-        if reference_song and reference_song.strip():
-            ref = reference_song.strip()
-            # URLでない場合はプロンプトに追加
-            if not ref.startswith('http://') and not ref.startswith('https://'):
-                full_prompt = f"{full_prompt}, in the style of {ref}"
-                logger.info(f"Reference song added to prompt: {ref}")
         
         payload = {
             "lyrics": lyrics,

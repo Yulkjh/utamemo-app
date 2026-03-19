@@ -164,9 +164,14 @@ class SongDetailView(DetailView):
         try:
             if hasattr(song, 'lyrics') and song.lyrics:
                 context['lyrics_content'] = song.lyrics.content or ''
-                context['original_text'] = song.lyrics.original_text or ''
                 context['decrypted_lyrics'] = song.lyrics.content or ''
-                context['decrypted_original_text'] = song.lyrics.original_text or ''
+                # 著作権保護: 教科書原文は作成者本人のみ閲覧可能
+                if self.request.user.is_authenticated and self.request.user == song.created_by:
+                    context['original_text'] = song.lyrics.original_text or ''
+                    context['decrypted_original_text'] = song.lyrics.original_text or ''
+                else:
+                    context['original_text'] = ''
+                    context['decrypted_original_text'] = ''
             else:
                 context['lyrics_content'] = ''
                 context['original_text'] = ''
@@ -308,7 +313,6 @@ class CreateSongView(LoginRequiredMixin, CreateView):
         
         # セッションからプリフィルデータを取得（再生成時）
         context['prefill_music_prompt'] = self.request.session.pop('prefill_music_prompt', '')
-        context['prefill_reference_song'] = self.request.session.pop('prefill_reference_song', '')
         
         return context
     
@@ -357,12 +361,6 @@ class CreateSongView(LoginRequiredMixin, CreateView):
         # カスタム音楽プロンプトを取得
         music_prompt = self.request.POST.get('music_prompt', '').strip()
         form.instance.music_prompt = music_prompt
-        
-        # リファレンス曲を取得（スターター以上のみ）
-        reference_song = self.request.POST.get('reference_song', '').strip()
-        if reference_song and not self.request.user.is_starter:
-            reference_song = ''  # スターター未満の場合はリファレンスを無視
-        form.instance.reference_song = reference_song
         
         # AIモデルを取得
         mureka_model = self.request.POST.get('mureka_model', 'mureka-v8').strip()
@@ -453,10 +451,6 @@ class CreateSongView(LoginRequiredMixin, CreateView):
         create_flashcards = self.request.POST.get('create_flashcards') == 'true'
         if create_flashcards:
             self._create_flashcards_from_session(original_text, title)
-        
-        # セッションからリファレンス音声情報をクリア
-        if 'reference_audio_path' in self.request.session:
-            del self.request.session['reference_audio_path']
         
         app_language = self.request.session.get('app_language', 'ja')
         
@@ -1329,7 +1323,24 @@ def toggle_song_privacy(request, pk):
         if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
             try:
                 data = json.loads(request.body)
-                song.is_public = data.get('is_public', not song.is_public)
+                new_is_public = data.get('is_public', not song.is_public)
+                
+                # 教科書由来の楽曲を公開にする場合、著作権確認が必要
+                if new_is_public and not song.is_public and song.source_image:
+                    if not data.get('copyright_acknowledged', False):
+                        return JsonResponse({
+                            'success': False,
+                            'requires_copyright_confirmation': True,
+                            'message': {
+                                'en': 'This song was generated from uploaded content (e.g., textbook). Publishing it may infringe on the original work\'s copyright. Please confirm you understand this risk.',
+                                'zh': '此歌曲是从上传的内容（如教科书）生成的。公开可能侵犯原作品的版权。请确认您了解此风险。',
+                                'es': 'Esta canción fue generada a partir de contenido subido (ej. libro de texto). Publicarla puede infringir los derechos de autor de la obra original.',
+                                'de': 'Dieses Lied wurde aus hochgeladenem Inhalt (z.B. Lehrbuch) generiert. Die Veröffentlichung kann das Urheberrecht des Originalwerks verletzen.',
+                                'pt': 'Esta música foi gerada a partir de conteúdo enviado (ex. livro didático). Publicá-la pode violar os direitos autorais da obra original.',
+                            }.get(app_language, 'この楽曲はアップロードされた素材（教科書等）から生成されています。公開すると原著作物の著作権を侵害する可能性があります。リスクを理解した上で公開しますか？')
+                        })
+                
+                song.is_public = new_is_public
                 song.save()
                 if app_language == 'en':
                     status = "public" if song.is_public else "private"
@@ -1351,7 +1362,21 @@ def toggle_song_privacy(request, pk):
                     'error': str(e)
                 })
         else:
-            song.is_public = not song.is_public
+            new_is_public = not song.is_public
+            
+            # 教科書由来の楽曲を公開にする場合の警告（非AJAX）
+            if new_is_public and song.source_image:
+                copyright_confirmed = request.POST.get('copyright_acknowledged') == 'true'
+                if not copyright_confirmed:
+                    if app_language == 'en':
+                        messages.warning(request, 'This song was generated from uploaded content. Publishing may infringe copyright. Please use the privacy settings page to confirm.')
+                    elif app_language == 'zh':
+                        messages.warning(request, '此歌曲是从上传内容生成的。公开可能侵犯版权。请使用隐私设置页面确认。')
+                    else:
+                        messages.warning(request, 'この楽曲はアップロードされた素材から生成されています。公開は著作権侵害の可能性があります。プライバシー設定ページから確認してください。')
+                    return redirect('songs:my_songs')
+            
+            song.is_public = new_is_public
             song.save()
             if app_language == 'en':
                 messages.success(request, f'Privacy settings for "{song.title}" updated.')
@@ -1371,8 +1396,11 @@ class SongPrivacyView(LoginRequiredMixin, TemplateView):
     
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
-        context['song'] = self.get_object()
-        context['form'] = SongPrivacyForm(instance=context['song'])
+        song = self.get_object()
+        context['song'] = song
+        context['form'] = SongPrivacyForm(instance=song)
+        # 教科書由来の楽曲かどうかのフラグ（著作権警告表示用）
+        context['has_source_image'] = bool(song.source_image_id)
         return context
     
     def post(self, request, *args, **kwargs):
@@ -2205,6 +2233,14 @@ def audio_proxy(request, pk):
     
     song = get_object_or_404(Song, pk=pk)
     
+    # 非公開楽曲はオーナーのみアクセス可能
+    if not song.is_public:
+        if not request.user.is_authenticated:
+            return HttpResponse('Unauthorized', status=401)
+        if request.user != song.created_by and not request.user.is_staff:
+            logger.warning(f"Audio proxy access denied: user {request.user.id} tried to access private song {pk}")
+            return HttpResponse('Forbidden', status=403)
+    
     # 音声URLを取得
     audio_url = song.audio_url
     if not audio_url:
@@ -2423,7 +2459,6 @@ def recreate_with_lyrics(request, pk):
     request.session['generated_lyrics'] = lyrics.content
     request.session['extracted_text'] = ''  # 元テキストはクリア
     request.session['prefill_music_prompt'] = song.music_prompt or ''
-    request.session['prefill_reference_song'] = getattr(song, 'reference_song', '') or ''
     
     # 楽曲作成画面にリダイレクト（歌詞確認画面をスキップ）
     return redirect('songs:lyrics_confirmation')

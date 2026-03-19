@@ -747,11 +747,24 @@ class ContentFilter:
             if compiled.search(username_lower) or compiled.search(username_stripped):
                 detected_words.append(f'pattern:{compiled.pattern}')
         
+        # 有名人・著名人の名前チェック（権利侵害防止）
+        celebrity_detected = self._check_celebrity_names(username_lower)
+        if celebrity_detected:
+            detected_words.extend(celebrity_detected)
+        
         # 重複除去
         detected_words = list(set(detected_words))
         
         if detected_words:
             logger.warning(f"Inappropriate username detected: '{username}' -> {detected_words}")
+            # 有名人名が検出された場合は専用メッセージ
+            has_celebrity = any(w in self.celebrity_names for w in detected_words)
+            if has_celebrity:
+                return {
+                    'is_inappropriate': True,
+                    'detected_words': detected_words,
+                    'message': '有名人・著名人の名前はユーザー名に使用できません。 / Celebrity or public figure names cannot be used as a username.'
+                }
             return {
                 'is_inappropriate': True,
                 'detected_words': detected_words,
@@ -819,11 +832,24 @@ class ContentFilter:
             if compiled.search(name_lower) or compiled.search(name_stripped):
                 detected_words.append(f'pattern:{compiled.pattern}')
         
+        # 有名人・著名人の名前チェック（権利侵害防止）
+        celebrity_detected = self._check_celebrity_names(name_lower)
+        if celebrity_detected:
+            detected_words.extend(celebrity_detected)
+        
         # 重複除去
         detected_words = list(set(detected_words))
         
         if detected_words:
             logger.warning(f"Inappropriate name detected: '{name}' -> {detected_words}")
+            # 有名人名が検出された場合は専用メッセージ
+            has_celebrity = any(w in self.celebrity_names for w in detected_words)
+            if has_celebrity:
+                return {
+                    'is_inappropriate': True,
+                    'detected_words': detected_words,
+                    'message': '有名人・著名人の名前は使用できません。 / Celebrity or public figure names cannot be used.'
+                }
             return {
                 'is_inappropriate': True,
                 'detected_words': detected_words,
