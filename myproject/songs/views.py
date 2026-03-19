@@ -165,13 +165,8 @@ class SongDetailView(DetailView):
             if hasattr(song, 'lyrics') and song.lyrics:
                 context['lyrics_content'] = song.lyrics.content or ''
                 context['decrypted_lyrics'] = song.lyrics.content or ''
-                # 著作権保護: 教科書原文は作成者本人のみ閲覧可能
-                if self.request.user.is_authenticated and self.request.user == song.created_by:
-                    context['original_text'] = song.lyrics.original_text or ''
-                    context['decrypted_original_text'] = song.lyrics.original_text or ''
-                else:
-                    context['original_text'] = ''
-                    context['decrypted_original_text'] = ''
+                context['original_text'] = song.lyrics.original_text or ''
+                context['decrypted_original_text'] = song.lyrics.original_text or ''
             else:
                 context['lyrics_content'] = ''
                 context['original_text'] = ''
@@ -1325,21 +1320,6 @@ def toggle_song_privacy(request, pk):
                 data = json.loads(request.body)
                 new_is_public = data.get('is_public', not song.is_public)
                 
-                # 教科書由来の楽曲を公開にする場合、著作権確認が必要
-                if new_is_public and not song.is_public and song.source_image:
-                    if not data.get('copyright_acknowledged', False):
-                        return JsonResponse({
-                            'success': False,
-                            'requires_copyright_confirmation': True,
-                            'message': {
-                                'en': 'This song was generated from uploaded content (e.g., textbook). Publishing it may infringe on the original work\'s copyright. Please confirm you understand this risk.',
-                                'zh': '此歌曲是从上传的内容（如教科书）生成的。公开可能侵犯原作品的版权。请确认您了解此风险。',
-                                'es': 'Esta canción fue generada a partir de contenido subido (ej. libro de texto). Publicarla puede infringir los derechos de autor de la obra original.',
-                                'de': 'Dieses Lied wurde aus hochgeladenem Inhalt (z.B. Lehrbuch) generiert. Die Veröffentlichung kann das Urheberrecht des Originalwerks verletzen.',
-                                'pt': 'Esta música foi gerada a partir de conteúdo enviado (ex. livro didático). Publicá-la pode violar os direitos autorais da obra original.',
-                            }.get(app_language, 'この楽曲はアップロードされた素材（教科書等）から生成されています。公開すると原著作物の著作権を侵害する可能性があります。リスクを理解した上で公開しますか？')
-                        })
-                
                 song.is_public = new_is_public
                 song.save()
                 if app_language == 'en':
@@ -1364,18 +1344,6 @@ def toggle_song_privacy(request, pk):
         else:
             new_is_public = not song.is_public
             
-            # 教科書由来の楽曲を公開にする場合の警告（非AJAX）
-            if new_is_public and song.source_image:
-                copyright_confirmed = request.POST.get('copyright_acknowledged') == 'true'
-                if not copyright_confirmed:
-                    if app_language == 'en':
-                        messages.warning(request, 'This song was generated from uploaded content. Publishing may infringe copyright. Please use the privacy settings page to confirm.')
-                    elif app_language == 'zh':
-                        messages.warning(request, '此歌曲是从上传内容生成的。公开可能侵犯版权。请使用隐私设置页面确认。')
-                    else:
-                        messages.warning(request, 'この楽曲はアップロードされた素材から生成されています。公開は著作権侵害の可能性があります。プライバシー設定ページから確認してください。')
-                    return redirect('songs:my_songs')
-            
             song.is_public = new_is_public
             song.save()
             if app_language == 'en':
@@ -1399,8 +1367,6 @@ class SongPrivacyView(LoginRequiredMixin, TemplateView):
         song = self.get_object()
         context['song'] = song
         context['form'] = SongPrivacyForm(instance=song)
-        # 教科書由来の楽曲かどうかのフラグ（著作権警告表示用）
-        context['has_source_image'] = bool(song.source_image_id)
         return context
     
     def post(self, request, *args, **kwargs):
