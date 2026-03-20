@@ -17,9 +17,18 @@ DEFAULT_BASE_MODEL = "meta-llama/Meta-Llama-3-8B-Instruct"
 
 
 def parse_args():
-    parser = argparse.ArgumentParser()
+    parser = argparse.ArgumentParser(
+        description="UTAMEMO 歌詞生成モデル テスト",
+        epilog=(
+            "対応モデル: Llama 3, Gemma 2, Phi 3.5, Qwen 2.5 等\n"
+            "例: python test_model.py --base_model google/gemma-2-9b-it --no_lora"
+        ),
+        formatter_class=argparse.RawDescriptionHelpFormatter,
+    )
     parser.add_argument("--base_model", type=str, default=DEFAULT_BASE_MODEL)
     parser.add_argument("--lora_path", type=str, default=DEFAULT_LORA_PATH)
+    parser.add_argument("--no_lora", action="store_true",
+                        help="LoRA無しでベースモデルのみテスト")
     parser.add_argument("--prompt", type=str, default=None, help="テスト用の学習テキスト")
     parser.add_argument("--genre", type=str, default="pop")
     parser.add_argument("--hf_token", type=str, default=None)
@@ -27,7 +36,11 @@ def parse_args():
 
 
 def generate_lyrics(model, tokenizer, study_text, genre="pop"):
-    """学習テキストから歌詞を生成"""
+    """学習テキストから歌詞を生成
+    
+    tokenizer.apply_chat_template() を使用するため、
+    Llama 3 / Gemma 2 / Phi / Qwen 等どのモデルでも動作する。
+    """
     system_prompt = (
         "あなたは暗記学習用の歌詞を作成する専門AIです。"
         "与えられた学習テキストから、韻を踏んでキャッチーで覚えやすい歌詞を生成します。"
@@ -35,7 +48,6 @@ def generate_lyrics(model, tokenizer, study_text, genre="pop"):
     )
 
     user_prompt = (
-        f"あなたは暗記学習用の歌詞作成の専門家です。"
         f"以下の学習テキストから{genre}ジャンルの歌詞を作成してください。\n"
         f"韻を踏み、キャッチーで覚えやすい歌詞にしてください。\n"
         f"重要な用語・人物名・年号は必ず歌詞に含めてください。\n"
@@ -48,9 +60,18 @@ def generate_lyrics(model, tokenizer, study_text, genre="pop"):
         {"role": "user", "content": user_prompt},
     ]
 
-    input_ids = tokenizer.apply_chat_template(
-        messages, add_generation_prompt=True, return_tensors="pt"
-    ).to(model.device)
+    try:
+        input_ids = tokenizer.apply_chat_template(
+            messages, add_generation_prompt=True, return_tensors="pt"
+        ).to(model.device)
+    except Exception:
+        # system role 非対応モデル → system をユーザーに統合
+        messages_no_sys = [
+            {"role": "user", "content": f"{system_prompt}\n\n{user_prompt}"},
+        ]
+        input_ids = tokenizer.apply_chat_template(
+            messages_no_sys, add_generation_prompt=True, return_tensors="pt"
+        ).to(model.device)
 
     with torch.no_grad():
         outputs = model.generate(
@@ -77,7 +98,10 @@ def main():
 
     # モデルロード
     print(f"ベースモデル: {args.base_model}")
-    print(f"LoRAアダプタ: {args.lora_path}")
+    if args.no_lora:
+        print("LoRA: 無し (ベースモデルのみ)")
+    else:
+        print(f"LoRAアダプタ: {args.lora_path}")
     print("モデルをロード中...")
 
     bnb_config = BitsAndBytesConfig(
@@ -87,6 +111,9 @@ def main():
     )
 
     tokenizer = AutoTokenizer.from_pretrained(args.base_model, token=args.hf_token)
+    if tokenizer.pad_token is None:
+        tokenizer.pad_token = tokenizer.eos_token
+
     base_model = AutoModelForCausalLM.from_pretrained(
         args.base_model,
         quantization_config=bnb_config,
@@ -94,7 +121,11 @@ def main():
         token=args.hf_token,
         torch_dtype=torch.bfloat16,
     )
-    model = PeftModel.from_pretrained(base_model, args.lora_path)
+
+    if args.no_lora:
+        model = base_model
+    else:
+        model = PeftModel.from_pretrained(base_model, args.lora_path)
     model.eval()
 
     print("✅ モデルロード完了\n")

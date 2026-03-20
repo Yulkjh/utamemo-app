@@ -41,12 +41,32 @@ DEFAULT_MODEL = "meta-llama/Meta-Llama-3-8B-Instruct"
 OUTPUT_DIR = "./output/utamemo-lyrics-lora"
 MAX_SEQ_LENGTH = 2048
 
+# 対応モデル一覧 (--model_name にどれでも指定可能)
+SUPPORTED_MODELS = {
+    # Llama 3 系
+    "meta-llama/Meta-Llama-3-8B-Instruct":    "Llama 3 8B (推奨, ~16GB VRAM)",
+    "meta-llama/Meta-Llama-3-70B-Instruct":   "Llama 3 70B (高品質, ~40GB VRAM)",
+    # Gemma 2 系
+    "google/gemma-2-2b-it":                    "Gemma 2 2B (軽量, ~6GB VRAM)",
+    "google/gemma-2-9b-it":                    "Gemma 2 9B (バランス, ~12GB VRAM)",
+    "google/gemma-2-27b-it":                   "Gemma 2 27B (高品質, ~20GB VRAM)",
+    # Phi 系
+    "microsoft/Phi-3.5-mini-instruct":         "Phi 3.5 Mini 3.8B (~8GB VRAM)",
+    # Qwen 2.5 系
+    "Qwen/Qwen2.5-7B-Instruct":               "Qwen 2.5 7B (~12GB VRAM)",
+    "Qwen/Qwen2.5-14B-Instruct":              "Qwen 2.5 14B (~16GB VRAM)",
+}
+
 
 def parse_args():
     parser = argparse.ArgumentParser(description="UTAMEMO LoRA学習")
     parser.add_argument(
         "--model_name", type=str, default=DEFAULT_MODEL,
-        help="ベースモデル名 (Hugging Face Hub)"
+        help="ベースモデル名 (Hugging Face Hub). --list_models で一覧表示"
+    )
+    parser.add_argument(
+        "--list_models", action="store_true",
+        help="対応モデル一覧を表示して終了"
     )
     parser.add_argument(
         "--data_path", type=str, required=True,
@@ -87,8 +107,19 @@ def parse_args():
     return parser.parse_args()
 
 
-def format_training_example(example):
-    """学習データを Llama 3 Instruct のチャットフォーマットに変換"""
+SYSTEM_PROMPT = (
+    "あなたは暗記学習用の歌詞を作成する専門AIです。"
+    "与えられた学習テキストから、韻を踏んでキャッチーで覚えやすい歌詞を生成します。"
+    "重要な用語・人物名・年号・化学式などは必ず正確に歌詞に含めます。"
+)
+
+
+def format_training_example(example, tokenizer):
+    """学習データをモデルのチャットフォーマットに変換
+    
+    tokenizer.apply_chat_template() を使うため、
+    Llama 3 / Gemma 2 / Phi / Qwen 等どのモデルでも正しいフォーマットになる。
+    """
     instruction = example["instruction"]
     input_text = example.get("input", "")
     output_text = example["output"]
@@ -98,23 +129,31 @@ def format_training_example(example):
     else:
         user_message = instruction
 
-    # Llama 3 Instruct フォーマット
-    formatted = (
-        "<|begin_of_text|>"
-        "<|start_header_id|>system<|end_header_id|>\n\n"
-        "あなたは暗記学習用の歌詞を作成する専門AIです。"
-        "与えられた学習テキストから、韻を踏んでキャッチーで覚えやすい歌詞を生成します。"
-        "重要な用語・人物名・年号・化学式などは必ず正確に歌詞に含めます。"
-        "<|eot_id|>"
-        "<|start_header_id|>user<|end_header_id|>\n\n"
-        f"{user_message}<|eot_id|>"
-        "<|start_header_id|>assistant<|end_header_id|>\n\n"
-        f"{output_text}<|eot_id|>"
-    )
+    messages = [
+        {"role": "system", "content": SYSTEM_PROMPT},
+        {"role": "user", "content": user_message},
+        {"role": "assistant", "content": output_text},
+    ]
+
+    # tokenizer のチャットテンプレートで自動フォーマット
+    try:
+        formatted = tokenizer.apply_chat_template(
+            messages, tokenize=False, add_generation_prompt=False
+        )
+    except Exception:
+        # system role 非対応のモデル (一部の古いモデル) → system をユーザーに統合
+        messages_no_sys = [
+            {"role": "user", "content": f"{SYSTEM_PROMPT}\n\n{user_message}"},
+            {"role": "assistant", "content": output_text},
+        ]
+        formatted = tokenizer.apply_chat_template(
+            messages_no_sys, tokenize=False, add_generation_prompt=False
+        )
+
     return formatted
 
 
-def load_training_data(data_path):
+def load_training_data(data_path, tokenizer):
     """学習データを読み込み"""
     logger.info(f"学習データを読み込み: {data_path}")
 
@@ -126,7 +165,7 @@ def load_training_data(data_path):
     # フォーマット変換
     formatted_texts = []
     for example in raw_data:
-        text = format_training_example(example)
+        text = format_training_example(example, tokenizer)
         formatted_texts.append({"text": text})
 
     dataset = Dataset.from_list(formatted_texts)
@@ -212,13 +251,14 @@ def train(args):
     """メイン学習処理"""
     logger.info("=" * 60)
     logger.info("UTAMEMO 歌詞生成LoRA学習 開始")
+    logger.info(f"  ベースモデル: {args.model_name}")
     logger.info("=" * 60)
 
-    # データ読み込み
-    dataset = load_training_data(args.data_path)
-
-    # モデル & トークナイザー
+    # モデル & トークナイザー (先にロードしてチャットテンプレートを確定)
     model, tokenizer = setup_model_and_tokenizer(args.model_name, args.hf_token)
+
+    # データ読み込み (tokenizer のチャットテンプレートでフォーマット)
+    dataset = load_training_data(args.data_path, tokenizer)
 
     # LoRA設定
     model = setup_lora(model, args.lora_rank, args.lora_alpha)
@@ -281,4 +321,11 @@ def train(args):
 
 if __name__ == "__main__":
     args = parse_args()
-    train(args)
+    if args.list_models:
+        print("\n対応モデル一覧 (--model_name に指定可能):\n")
+        for model_id, desc in SUPPORTED_MODELS.items():
+            marker = " ← デフォルト" if model_id == DEFAULT_MODEL else ""
+            print(f"  {model_id:<50} {desc}{marker}")
+        print(f"\n例: python train.py --model_name google/gemma-2-9b-it --data_path data/sample_training_data.json\n")
+    else:
+        train(args)

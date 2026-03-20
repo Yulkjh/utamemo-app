@@ -41,16 +41,35 @@ tokenizer = None
 DEFAULT_LORA_PATH = "./output/utamemo-lyrics-lora"
 DEFAULT_BASE_MODEL = "meta-llama/Meta-Llama-3-8B-Instruct"
 
+# 対応モデル例 (--base_model にどれでも指定可能)
+# Llama 3:  meta-llama/Meta-Llama-3-8B-Instruct
+# Gemma 2:  google/gemma-2-2b-it, google/gemma-2-9b-it, google/gemma-2-27b-it
+# Phi 3.5:  microsoft/Phi-3.5-mini-instruct
+# Qwen 2.5: Qwen/Qwen2.5-7B-Instruct
+
+# 起動中のモデル名 (health エンドポイントで表示用)
+loaded_base_model = ""
+loaded_lora_path = ""
+
 # APIキー (環境変数 UTAMEMO_API_KEY で設定、未設定なら起動時にエラー)
 import os
 API_KEY = os.environ.get("UTAMEMO_API_KEY", "")
 
 
-def load_model(base_model_name, lora_path, hf_token=None):
-    """モデルをロード"""
-    global model, tokenizer
+def load_model(base_model_name, lora_path, hf_token=None, no_lora=False):
+    """モデルをロード
+    
+    Args:
+        base_model_name: ベースモデル (Llama 3 / Gemma 2 / Phi / Qwen 等)
+        lora_path: LoRAアダプタのパス
+        hf_token: Hugging Face トークン
+        no_lora: True の場合、LoRA無しでベースモデルのみ起動
+    """
+    global model, tokenizer, loaded_base_model, loaded_lora_path
 
-    logger.info(f"モデルをロード: {base_model_name} + {lora_path}")
+    logger.info(f"モデルをロード: {base_model_name}")
+    if not no_lora:
+        logger.info(f"  LoRA: {lora_path}")
 
     bnb_config = BitsAndBytesConfig(
         load_in_4bit=True,
@@ -59,7 +78,8 @@ def load_model(base_model_name, lora_path, hf_token=None):
     )
 
     tokenizer = AutoTokenizer.from_pretrained(base_model_name, token=hf_token)
-    tokenizer.pad_token = tokenizer.eos_token
+    if tokenizer.pad_token is None:
+        tokenizer.pad_token = tokenizer.eos_token
 
     base_model = AutoModelForCausalLM.from_pretrained(
         base_model_name,
@@ -69,10 +89,17 @@ def load_model(base_model_name, lora_path, hf_token=None):
         torch_dtype=torch.bfloat16,
     )
 
-    model = PeftModel.from_pretrained(base_model, lora_path)
-    model.eval()
+    if no_lora:
+        model = base_model
+        loaded_lora_path = "(none)"
+        logger.info("✅ ベースモデルのみロード完了 (LoRA無し)")
+    else:
+        model = PeftModel.from_pretrained(base_model, lora_path)
+        loaded_lora_path = lora_path
+        logger.info("✅ モデル + LoRA ロード完了")
 
-    logger.info("✅ モデルロード完了")
+    model.eval()
+    loaded_base_model = base_model_name
 
 
 # =============================================================================
@@ -224,7 +251,8 @@ def health_check():
 
     return jsonify({
         "status": "ok",
-        "model": "utamemo-lyrics-lora",
+        "base_model": loaded_base_model,
+        "lora": loaded_lora_path,
         "gpu": gpu_info,
     })
 
@@ -272,9 +300,21 @@ def generate():
 # =============================================================================
 
 def main():
-    parser = argparse.ArgumentParser()
+    parser = argparse.ArgumentParser(
+        description="UTAMEMO 歌詞生成 推論サーバー",
+        epilog=(
+            "対応モデル例:\n"
+            "  Llama 3:  meta-llama/Meta-Llama-3-8B-Instruct\n"
+            "  Gemma 2:  google/gemma-2-2b-it, google/gemma-2-9b-it\n"
+            "  Phi 3.5:  microsoft/Phi-3.5-mini-instruct\n"
+            "  Qwen 2.5: Qwen/Qwen2.5-7B-Instruct\n"
+        ),
+        formatter_class=argparse.RawDescriptionHelpFormatter,
+    )
     parser.add_argument("--base_model", type=str, default=DEFAULT_BASE_MODEL)
     parser.add_argument("--lora_path", type=str, default=DEFAULT_LORA_PATH)
+    parser.add_argument("--no_lora", action="store_true",
+                        help="LoRA無しでベースモデルのみ起動 (ファインチューン前のテスト用)")
     parser.add_argument("--host", type=str, default="0.0.0.0")
     parser.add_argument("--port", type=int, default=8000)
     parser.add_argument("--hf_token", type=str, default=None)
@@ -287,13 +327,15 @@ def main():
         sys.exit(1)
 
     # モデルロード
-    load_model(args.base_model, args.lora_path, args.hf_token)
+    load_model(args.base_model, args.lora_path, args.hf_token, no_lora=args.no_lora)
 
     # サーバー起動
+    lora_info = "無し (ベースモデルのみ)" if args.no_lora else args.lora_path
     logger.info(f"推論サーバー起動: http://{args.host}:{args.port}")
+    logger.info(f"  ベースモデル:   {args.base_model}")
+    logger.info(f"  LoRA:          {lora_info}")
     logger.info(f"  POST /generate  - 歌詞生成 (language_mode対応: japanese/english/english_vocab/chinese/chinese_vocab)")
     logger.info(f"  GET  /health    - ヘルスチェック")
-    logger.info(f"  LYRICS_BACKEND  - アプリ側設定: gemini / local / auto")
     app.run(host=args.host, port=args.port, debug=False)
 
 

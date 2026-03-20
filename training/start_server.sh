@@ -19,12 +19,16 @@
 set -e
 
 # ---------------------
-# 設定 (必要に応じて変更)
+# 設定 (必要に応じて変更、.env ファイルでも上書き可能)
 # ---------------------
-PORT=8000
-TUNNEL_NAME="utamemo-llm"
-LORA_PATH="./output/utamemo-lyrics-lora"
-BASE_MODEL="meta-llama/Meta-Llama-3-8B-Instruct"
+PORT=${PORT:-8000}
+TUNNEL_NAME=${TUNNEL_NAME:-"utamemo-llm"}
+LORA_PATH=${LORA_PATH:-"./output/utamemo-lyrics-lora"}
+# ベースモデル (Llama 3 / Gemma 2 / Phi / Qwen 等)
+# 例: google/gemma-2-9b-it, microsoft/Phi-3.5-mini-instruct
+BASE_MODEL=${BASE_MODEL:-"meta-llama/Meta-Llama-3-8B-Instruct"}
+# LoRA無しで起動する場合: NO_LORA=1
+NO_LORA=${NO_LORA:-""}
 
 # 色付きログ
 RED='\033[0;31m'
@@ -190,11 +194,13 @@ start() {
         exit 1
     fi
 
-    # LoRAモデルの存在確認
-    if [[ ! -d "${LORA_PATH}" ]]; then
+    # LoRAモデルの存在確認 (NO_LORA 時はスキップ)
+    if [[ -z "${NO_LORA}" ]] && [[ ! -d "${LORA_PATH}" ]]; then
         log_warn "LoRAモデルが見つかりません: ${LORA_PATH}"
         log_warn "先に学習を実行してください:"
         log_warn "  python train.py --data_path data/sample_training_data.json"
+        log_warn ""
+        log_warn "LoRA無しで起動する場合: NO_LORA=1 ./start_server.sh"
         echo ""
         read -p "それでも起動しますか？ (y/N): " CONFIRM
         if [[ "${CONFIRM}" != "y" && "${CONFIRM}" != "Y" ]]; then
@@ -217,6 +223,12 @@ else:
 
     echo ""
     log_info "推論サーバーを起動中 (port ${PORT})..."
+    log_info "  ベースモデル: ${BASE_MODEL}"
+    if [[ -n "${NO_LORA}" ]]; then
+        log_info "  LoRA: 無し (ベースモデルのみ)"
+    else
+        log_info "  LoRA: ${LORA_PATH}"
+    fi
     log_info "Cloudflare Tunnel を起動中..."
     echo ""
 
@@ -226,7 +238,8 @@ else:
         --host "127.0.0.1" \
         --lora_path "${LORA_PATH}" \
         --base_model "${BASE_MODEL}" \
-        ${HF_TOKEN:+--hf_token "${HF_TOKEN}"} &
+        ${HF_TOKEN:+--hf_token "${HF_TOKEN}"} \
+        ${NO_LORA:+--no_lora} &
     SERVE_PID=$!
 
     # serve.pyが起動するまで待つ
