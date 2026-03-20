@@ -1299,6 +1299,35 @@ class LocalLLMLyricsGenerator:
             logger.error(f"LocalLLM: エラー: {e}")
             raise
 
+    def generate_lyrics_from_images(self, images, title="", genre="pop", language_mode="japanese", custom_request="", extracted_text=""):
+        """画像からの歌詞生成 — ローカルLLMは画像処理非対応のためGeminiにデリゲート
+        
+        ローカルLLMはテキスト→歌詞の変換に特化。
+        画像→歌詞はGemini(Vision対応)に常にフォールバックする。
+        """
+        logger.info("LocalLLM: 画像ベース生成はGeminiにデリゲート")
+        gemini = GeminiLyricsGenerator()
+        return gemini.generate_lyrics_from_images(
+            images, title=title, genre=genre,
+            language_mode=language_mode, custom_request=custom_request,
+            extracted_text=extracted_text,
+        )
+
+    def convert_to_hiragana(self, lyrics):
+        """歌詞の漢字をひらがなに変換 — Geminiにデリゲート
+        
+        ひらがな変換はLlama 3では精度が不十分なため、常にGeminiを使う。
+        """
+        return convert_lyrics_to_hiragana_with_context(lyrics)
+
+    @property
+    def model(self):
+        """GeminiLyricsGeneratorとの互換性のため (ダッシュボード表示用)
+        
+        ローカルLLMが利用可能なら True 相当の値を返す。
+        """
+        return self.is_available
+
 
 def get_lyrics_generator():
     """歌詞生成エンジンを取得 (ローカルLLM優先、フォールバックでGemini)

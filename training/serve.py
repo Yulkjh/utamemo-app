@@ -21,6 +21,7 @@ UTAMEMOのRender.comサーバーからHTTP APIで呼び出される。
 import argparse
 import json
 import logging
+import sys
 import time
 
 import torch
@@ -40,9 +41,9 @@ tokenizer = None
 DEFAULT_LORA_PATH = "./output/utamemo-lyrics-lora"
 DEFAULT_BASE_MODEL = "meta-llama/Meta-Llama-3-8B-Instruct"
 
-# APIキー (環境変数 UTAMEMO_API_KEY で設定)
+# APIキー (環境変数 UTAMEMO_API_KEY で設定、未設定なら起動時にエラー)
 import os
-API_KEY = os.environ.get("UTAMEMO_API_KEY", "change-me-in-production")
+API_KEY = os.environ.get("UTAMEMO_API_KEY", "")
 
 
 def load_model(base_model_name, lora_path, hf_token=None):
@@ -74,27 +75,99 @@ def load_model(base_model_name, lora_path, hf_token=None):
     logger.info("✅ モデルロード完了")
 
 
-def generate_lyrics(study_text, genre="pop", language_mode="japanese", custom_request=""):
-    """歌詞を生成"""
-    system_prompt = (
-        "あなたは暗記学習用の歌詞を作成する専門AIです。"
-        "与えられた学習テキストから、韻を踏んでキャッチーで覚えやすい歌詞を生成します。"
-        "重要な用語・人物名・年号・化学式などは必ず正確に歌詞に含めます。"
-    )
+# =============================================================================
+# 言語モード別システムプロンプト
+# =============================================================================
 
+SYSTEM_PROMPTS = {
+    "japanese": (
+        "あなたは暗記学習用の歌詞を作成する専門AIです。"
+        "与えられた学習テキストから、韻を踏んでキャッチーで覚えやすい日本語の歌詞を生成します。"
+        "重要な用語・人物名・年号・化学式などは必ず正確に歌詞に含めます。"
+    ),
+    "english_vocab": (
+        "You are an expert AI that creates study song lyrics for memorization. "
+        "Given English vocabulary or text, create Japanese lyrics that help memorize English words. "
+        "Include the English words directly in the lyrics with Japanese meanings. "
+        "Format: 'English word 日本語の意味' pattern for easy memorization."
+    ),
+    "english": (
+        "You are an expert AI that creates study song lyrics in English for memorization. "
+        "Given study material, create catchy English lyrics with rhymes. "
+        "Include key terms, names, dates, and formulas accurately in the lyrics."
+    ),
+    "chinese": (
+        "你是一位专业的学习歌词创作AI。"
+        "根据给定的学习文本，创作押韵、朗朗上口、便于记忆的中文歌词。"
+        "重要的术语、人名、年份、化学式等必须准确地包含在歌词中。"
+    ),
+    "chinese_vocab": (
+        "你是一位专业的学习歌词创作AI。"
+        "根据给定的中文词汇，创作帮助记忆中文单词的日语歌词。"
+        "在歌词中直接使用中文词汇并附上日语解释。"
+    ),
+}
+
+DEFAULT_SYSTEM_PROMPT = SYSTEM_PROMPTS["japanese"]
+
+
+def _get_user_prompt(study_text, genre, language_mode, custom_request=""):
+    """言語モードに応じたユーザープロンプトを生成"""
+    
     custom_section = ""
     if custom_request:
-        custom_section = f"\n\n■ ユーザーからの追加リクエスト\n{custom_request}"
+        custom_section = f"\n\n■ ユーザーからの追加リクエスト（重要！必ず反映してください）\n{custom_request}"
+    
+    if language_mode == "english_vocab":
+        return (
+            f"以下の英語テキストから{genre}ジャンルの日本語歌詞を作成してください。\n"
+            f"英単語をそのまま歌詞に入れ、直後に日本語の意味を添えてください。\n"
+            f"例：「apple りんご」「beautiful 美しい」\n"
+            f"出力は [Verse 1], [Chorus], [Verse 2] 等のセクションラベル付きの歌詞のみにしてください。\n\n"
+            f"■ 学習テキスト\n{study_text}"
+            f"{custom_section}"
+        )
+    elif language_mode == "english":
+        return (
+            f"Create {genre} genre study song lyrics in English from the following text.\n"
+            f"Make it rhyme, catchy and easy to memorize.\n"
+            f"Include key terms, names, dates accurately.\n"
+            f"Output only lyrics with section labels [Verse 1], [Chorus], [Verse 2] etc.\n\n"
+            f"■ Study Text\n{study_text}"
+            f"{custom_section}"
+        )
+    elif language_mode == "chinese":
+        return (
+            f"请根据以下学习文本创作{genre}风格的中文歌词。\n"
+            f"要押韵、朗朗上口、便于记忆。\n"
+            f"重要术语、人名、年份必须准确包含。\n"
+            f"输出格式：[Verse 1], [Chorus], [Verse 2] 等。\n\n"
+            f"■ 学习文本\n{study_text}"
+            f"{custom_section}"
+        )
+    elif language_mode == "chinese_vocab":
+        return (
+            f"以下の中国語テキストから{genre}ジャンルの日本語歌詞を作成してください。\n"
+            f"中国語の単語をそのまま歌詞に入れ、日本語の意味を添えてください。\n"
+            f"出力は [Verse 1], [Chorus], [Verse 2] 等のセクションラベル付きの歌詞のみにしてください。\n\n"
+            f"■ 学習テキスト\n{study_text}"
+            f"{custom_section}"
+        )
+    else:  # japanese (default)
+        return (
+            f"以下の学習テキストから{genre}ジャンルの歌詞を作成してください。\n"
+            f"韻を踏み、キャッチーで覚えやすい歌詞にしてください。\n"
+            f"重要な用語・人物名・年号は必ず歌詞に含めてください。\n"
+            f"出力は [Verse 1], [Chorus], [Verse 2] 等のセクションラベル付きの歌詞のみにしてください。\n\n"
+            f"■ 学習テキスト\n{study_text}"
+            f"{custom_section}"
+        )
 
-    user_prompt = (
-        f"あなたは暗記学習用の歌詞作成の専門家です。"
-        f"以下の学習テキストから{genre}ジャンルの歌詞を作成してください。\n"
-        f"韻を踏み、キャッチーで覚えやすい歌詞にしてください。\n"
-        f"重要な用語・人物名・年号は必ず歌詞に含めてください。\n"
-        f"出力は [Verse 1], [Chorus], [Verse 2] 等のセクションラベル付きの歌詞のみにしてください。\n\n"
-        f"■ 学習テキスト\n{study_text}"
-        f"{custom_section}"
-    )
+
+def generate_lyrics(study_text, genre="pop", language_mode="japanese", custom_request=""):
+    """歌詞を生成 — 言語モード対応"""
+    system_prompt = SYSTEM_PROMPTS.get(language_mode, DEFAULT_SYSTEM_PROMPT)
+    user_prompt = _get_user_prompt(study_text, genre, language_mode, custom_request)
 
     messages = [
         {"role": "system", "content": system_prompt},
@@ -207,13 +280,20 @@ def main():
     parser.add_argument("--hf_token", type=str, default=None)
     args = parser.parse_args()
 
+    # APIキー必須チェック
+    if not API_KEY:
+        logger.error("❌ UTAMEMO_API_KEY 環境変数が設定されていません！")
+        logger.error("   export UTAMEMO_API_KEY='ランダムな文字列' を実行してください")
+        sys.exit(1)
+
     # モデルロード
     load_model(args.base_model, args.lora_path, args.hf_token)
 
     # サーバー起動
     logger.info(f"推論サーバー起動: http://{args.host}:{args.port}")
-    logger.info(f"  POST /generate  - 歌詞生成")
+    logger.info(f"  POST /generate  - 歌詞生成 (language_mode対応: japanese/english/english_vocab/chinese/chinese_vocab)")
     logger.info(f"  GET  /health    - ヘルスチェック")
+    logger.info(f"  LYRICS_BACKEND  - アプリ側設定: gemini / local / auto")
     app.run(host=args.host, port=args.port, debug=False)
 
 

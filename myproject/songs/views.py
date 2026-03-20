@@ -15,7 +15,7 @@ import logging
 
 from .models import Song, Like, Favorite, Comment, UploadedImage, Lyrics, PlayHistory, Tag
 from .forms import SongCreateForm, ImageUploadForm, CommentForm, SongPrivacyForm
-from .ai_services import GeminiLyricsGenerator, GeminiOCR, MurekaAIGenerator
+from .ai_services import GeminiLyricsGenerator, GeminiOCR, MurekaAIGenerator, get_lyrics_generator
 from .content_filter import check_text_for_inappropriate_content, check_name_for_inappropriate_content
 
 # ロガー設定
@@ -909,7 +909,7 @@ def generate_lyrics_api(request):
     custom_request = request.session.get('custom_request', '')
     
     try:
-        lyrics_generator = GeminiLyricsGenerator()
+        lyrics_generator = get_lyrics_generator()
         
         # 画像がある場合 → 画像直接生成パス（OCRの情報ロスを回避）
         uploaded_image_ids = request.session.get('uploaded_image_ids', [])
@@ -1024,9 +1024,9 @@ class LyricsConfirmationView(LoginRequiredMixin, TemplateView):
             context['manual_mode'] = False
             context['extracted_text'] = extracted_text
         elif extracted_text:
-            # セッションに歌詞がない場合のみGemini呼び出し（直接アクセス時のフォールバック）
+            # セッションに歌詞がない場合のみ歌詞生成呼び出し（直接アクセス時のフォールバック）
             try:
-                lyrics_generator = GeminiLyricsGenerator()
+                lyrics_generator = get_lyrics_generator()
                 generated_lyrics = lyrics_generator.generate_lyrics(extracted_text, language_mode=language_mode, custom_request=custom_request)
                 context['manual_mode'] = False
                 context['extracted_text'] = extracted_text
@@ -1064,7 +1064,7 @@ class LyricsConfirmationView(LoginRequiredMixin, TemplateView):
             
             if extracted_text:
                 try:
-                    lyrics_generator = GeminiLyricsGenerator()
+                    lyrics_generator = get_lyrics_generator()
                     new_lyrics = None
                     
                     # 画像がある場合 → 画像直接生成パス
@@ -1413,6 +1413,17 @@ def api_status_view(request):
         'health': 'unknown'
     }
     
+    # ローカルLLMステータス
+    from .ai_services import LocalLLMLyricsGenerator
+    local_llm = LocalLLMLyricsGenerator()
+    lyrics_backend = getattr(settings, 'LYRICS_BACKEND', 'gemini')
+    local_llm_status = {
+        'available': local_llm.is_available,
+        'url': local_llm.base_url or '未設定',
+        'backend': lyrics_backend,
+        'status': '接続OK' if local_llm.is_available else ('未設定' if not local_llm.base_url else '接続不可'),
+    }
+    
     # Murekaステータス
     mureka_gen = MurekaAIGenerator()
     mureka_status = {
@@ -1461,6 +1472,7 @@ def api_status_view(request):
     context = {
         'gemini_ocr_status': gemini_ocr_status,
         'gemini_lyrics_status': gemini_lyrics_status,
+        'local_llm_status': local_llm_status,
         'mureka_status': mureka_status,
         'queue_stats': queue_stats,
         'recent_errors': list(recent_errors),

@@ -93,7 +93,7 @@ class SongGenerationQueue:
     def _generate_song(self, song_id):
         """実際の楽曲生成処理"""
         from datetime import timedelta
-        from songs.ai_services import GeminiLyricsGenerator, MurekaAIGenerator
+        from songs.ai_services import get_lyrics_generator, MurekaAIGenerator
         
         try:
             song = Song.objects.get(id=song_id)
@@ -110,7 +110,7 @@ class SongGenerationQueue:
             vocal_style = song.vocal_style or 'female'
             
             logger.info(f" Converting lyrics to hiragana...")
-            lyrics_generator = GeminiLyricsGenerator()
+            lyrics_generator = get_lyrics_generator()
             hiragana_lyrics = lyrics_generator.convert_to_hiragana(lyrics_content)
             logger.info(f" Hiragana conversion complete")
             
