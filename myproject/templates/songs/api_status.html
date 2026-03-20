@@ -132,6 +132,86 @@
         </div>
     </div>
 
+    <!-- LLM Backend Status -->
+    <div class="row mb-4">
+        <div class="col-12 mb-3">
+            <h5>
+                <i class="bi bi-cpu"></i> 歌詞生成バックエンド
+                <span class="badge bg-secondary ms-2">{{ local_llm_status.backend }}</span>
+            </h5>
+            <small class="text-muted">
+                現在のバックエンド: 
+                {% if local_llm_status.backend == 'gemini' %}Gemini のみ
+                {% elif local_llm_status.backend == 'cloud' %}クラウドLLM のみ
+                {% elif local_llm_status.backend == 'local' %}ローカルLLM のみ
+                {% elif local_llm_status.backend == 'auto' %}Cloud → Local → Gemini (自動フォールバック)
+                {% else %}{{ local_llm_status.backend }}
+                {% endif %}
+            </small>
+        </div>
+
+        <!-- Cloud LLM -->
+        <div class="col-md-6 mb-3">
+            <div class="card h-100">
+                <div class="card-header text-white" style="background-color: #0d6efd;">
+                    <i class="bi bi-cloud"></i> クラウドLLM
+                </div>
+                <div class="card-body">
+                    <p>
+                        <strong>ステータス:</strong>
+                        {% if cloud_llm_status.available %}
+                        <span class="badge bg-success">Active</span>
+                        {% else %}
+                        <span class="badge bg-secondary">Not Configured</span>
+                        {% endif %}
+                    </p>
+                    <p>
+                        <strong>プロバイダー:</strong> {{ cloud_llm_status.provider }}
+                    </p>
+                    <p>
+                        <strong>モデル:</strong>
+                        <small>{{ cloud_llm_status.model }}</small>
+                    </p>
+                    <p>
+                        <strong>APIキー:</strong>
+                        {% if cloud_llm_status.api_key_set %}
+                        <i class="bi bi-check-circle text-success"></i> 設定済み
+                        {% else %}
+                        <i class="bi bi-x-circle text-muted"></i> 未設定
+                        {% endif %}
+                    </p>
+                    <small class="text-muted">Together AI / Groq / Fireworks AI / OpenRouter</small>
+                </div>
+            </div>
+        </div>
+
+        <!-- Local LLM -->
+        <div class="col-md-6 mb-3">
+            <div class="card h-100">
+                <div class="card-header text-white" style="background-color: #198754;">
+                    <i class="bi bi-gpu-card"></i> ローカルLLM
+                </div>
+                <div class="card-body">
+                    <p>
+                        <strong>ステータス:</strong>
+                        {% if local_llm_status.available %}
+                        <span class="badge bg-success">接続OK</span>
+                        {% elif local_llm_status.url == '未設定' %}
+                        <span class="badge bg-secondary">Not Configured</span>
+                        {% else %}
+                        <span class="badge bg-danger">接続不可</span>
+                        {% endif %}
+                    </p>
+                    <p>
+                        <strong>URL:</strong>
+                        <small>{{ local_llm_status.url }}</small>
+                    </p>
+                    <small class="text-muted">学校GPU / 自宅GPU (Cloudflare Tunnel)</small>
+                </div>
+            </div>
+        </div>
+    </div>
+
     <!-- Stuck Jobs Warning -->
     {% if stuck_jobs %}
     <div class="alert alert-warning mb-4">

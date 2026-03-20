@@ -195,11 +195,18 @@ USE_MUREKA_API = os.getenv('USE_MUREKA_API', 'False').lower() == 'true'
 MUREKA_API_URL = os.getenv('MUREKA_API_URL', 'https://platform.mureka.ai')
 
 # ローカルLLM歌詞生成設定
-# 'gemini' = Geminiのみ, 'local' = ローカルLLMのみ, 'auto' = ローカル優先+Geminiフォールバック
+# 'gemini' = Geminiのみ, 'cloud' = クラウドLLM, 'local' = ローカルLLMのみ, 'auto' = cloud→local→Geminiフォールバック
 LYRICS_BACKEND = os.getenv('LYRICS_BACKEND', 'gemini')
 LOCAL_LLM_URL = os.getenv('LOCAL_LLM_URL', 'http://localhost:8000')
 LOCAL_LLM_API_KEY = os.getenv('LOCAL_LLM_API_KEY', '')
 LOCAL_LLM_TIMEOUT = int(os.getenv('LOCAL_LLM_TIMEOUT', '60'))
+
+# クラウドLLM歌詞生成設定 (OpenAI互換API: Together AI / Fireworks AI / Groq / OpenRouter / vLLM)
+CLOUD_LLM_PROVIDER = os.getenv('CLOUD_LLM_PROVIDER', '')          # together / fireworks / groq / openrouter
+CLOUD_LLM_URL = os.getenv('CLOUD_LLM_URL', '')                    # 空ならプロバイダー別デフォルト
+CLOUD_LLM_API_KEY = os.getenv('CLOUD_LLM_API_KEY', '')
+CLOUD_LLM_MODEL = os.getenv('CLOUD_LLM_MODEL', '')                # 空ならプロバイダー別デフォルト
+CLOUD_LLM_TIMEOUT = int(os.getenv('CLOUD_LLM_TIMEOUT', '90'))
 
 # Stripe決済設定
 STRIPE_PUBLISHABLE_KEY = os.getenv('STRIPE_PUBLISHABLE_KEY', '')

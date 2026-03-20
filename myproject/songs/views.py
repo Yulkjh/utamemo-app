@@ -1414,7 +1414,7 @@ def api_status_view(request):
     }
     
     # ローカルLLMステータス
-    from .ai_services import LocalLLMLyricsGenerator
+    from .ai_services import LocalLLMLyricsGenerator, CloudLLMLyricsGenerator
     local_llm = LocalLLMLyricsGenerator()
     lyrics_backend = getattr(settings, 'LYRICS_BACKEND', 'gemini')
     local_llm_status = {
@@ -1422,6 +1422,17 @@ def api_status_view(request):
         'url': local_llm.base_url or '未設定',
         'backend': lyrics_backend,
         'status': '接続OK' if local_llm.is_available else ('未設定' if not local_llm.base_url else '接続不可'),
+    }
+
+    # クラウドLLMステータス
+    cloud_llm = CloudLLMLyricsGenerator()
+    cloud_llm_status = {
+        'available': cloud_llm.is_available,
+        'provider': cloud_llm.provider or '未設定',
+        'model': cloud_llm.model_name or '未設定',
+        'url': cloud_llm.api_url or '未設定',
+        'api_key_set': bool(cloud_llm.api_key),
+        'status': '有効' if cloud_llm.is_available else '未設定',
     }
     
     # Murekaステータス
@@ -1473,6 +1484,7 @@ def api_status_view(request):
         'gemini_ocr_status': gemini_ocr_status,
         'gemini_lyrics_status': gemini_lyrics_status,
         'local_llm_status': local_llm_status,
+        'cloud_llm_status': cloud_llm_status,
         'mureka_status': mureka_status,
         'queue_stats': queue_stats,
         'recent_errors': list(recent_errors),
