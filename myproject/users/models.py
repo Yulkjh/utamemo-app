@@ -102,6 +102,14 @@ class User(AbstractUser):
         verbose_name='リマインドメールを受け取る'
     )
     
+    # 利用規約同意
+    tos_agreed_at = models.DateTimeField(
+        blank=True,
+        null=True,
+        verbose_name='利用規約同意日時',
+        help_text='ユーザーが利用規約・プライバシーポリシーに同意した日時'
+    )
+    
     created_at = models.DateTimeField(
         auto_now_add=True,
         verbose_name='作成日時'

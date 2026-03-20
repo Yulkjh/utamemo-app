@@ -60,6 +60,7 @@ class UserAdmin(BaseUserAdmin):
         ('権限', {'fields': ('is_active', 'is_staff', 'is_superuser', 'groups', 'user_permissions')}),
         ('BAN管理', {'fields': ('is_banned', 'ban_reason', 'banned_at')}),
         ('日時', {'fields': ('last_login', 'date_joined')}),
+        ('利用規約', {'fields': ('tos_agreed_at',)}),
         ('プラン・課金', {
             'fields': ('plan', 'plan_expires_at', 'stripe_customer_id', 'stripe_subscription_id')
         }),
@@ -81,7 +82,7 @@ class UserAdmin(BaseUserAdmin):
     search_fields = ('username', 'email', 'first_name', 'last_name', 'stripe_customer_id')
     
     # 読み取り専用フィールド
-    readonly_fields = ('last_login', 'date_joined', 'banned_at', 'last_reminder_sent')
+    readonly_fields = ('last_login', 'date_joined', 'banned_at', 'last_reminder_sent', 'tos_agreed_at')
     
     # 一括アクション
     actions = ['ban_users', 'unban_users', 'reset_to_free_plan']

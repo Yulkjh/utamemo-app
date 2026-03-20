@@ -108,6 +108,40 @@
                         {% endif %}
                     </div>
                     
+                    <!-- Terms of Service Agreement -->
+                    <div class="tos-agreement">
+                        <label class="tos-label">
+                            <input type="checkbox" name="agree_tos" id="id_agree_tos" {% if form.agree_tos.value %}checked{% endif %}>
+                            <span class="tos-checkmark"></span>
+                            <span class="tos-text">
+                                {% if is_english %}
+                                    I agree to the <a href="{% url 'terms' %}" target="_blank">Terms of Service</a> and <a href="{% url 'privacy' %}" target="_blank">Privacy Policy</a>
+                                {% elif is_spanish %}
+                                    Acepto los <a href="{% url 'terms' %}" target="_blank">Términos de Servicio</a> y la <a href="{% url 'privacy' %}" target="_blank">Política de Privacidad</a>
+                                {% elif is_german %}
+                                    Ich stimme den <a href="{% url 'terms' %}" target="_blank">Nutzungsbedingungen</a> und der <a href="{% url 'privacy' %}" target="_blank">Datenschutzrichtlinie</a> zu
+                                {% elif is_portuguese %}
+                                    Eu concordo com os <a href="{% url 'terms' %}" target="_blank">Termos de Serviço</a> e a <a href="{% url 'privacy' %}" target="_blank">Política de Privacidade</a>
+                                {% elif is_chinese %}
+                                    我同意<a href="{% url 'terms' %}" target="_blank">服务条款</a>和<a href="{% url 'privacy' %}" target="_blank">隐私政策</a>
+                                {% else %}
+                                    <a href="{% url 'terms' %}" target="_blank">利用規約</a>と<a href="{% url 'privacy' %}" target="_blank">プライバシーポリシー</a>に同意します
+                                {% endif %}
+                                <span class="required">*</span>
+                            </span>
+                        </label>
+                        {% if form.agree_tos.errors %}
+                        <div class="error-message">
+                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                <circle cx="12" cy="12" r="10"/>
+                                <line x1="12" y1="8" x2="12" y2="12"/>
+                                <line x1="12" y1="16" x2="12.01" y2="16"/>
+                            </svg>
+                            {% if is_english %}You must agree to the Terms of Service and Privacy Policy.{% elif is_spanish %}Debe aceptar los Términos de Servicio y la Política de Privacidad.{% elif is_german %}Sie müssen den Nutzungsbedingungen und der Datenschutzrichtlinie zustimmen.{% elif is_portuguese %}Você deve concordar com os Termos de Serviço e a Política de Privacidade.{% elif is_chinese %}您必须同意服务条款和隐私政策。{% else %}利用規約とプライバシーポリシーへの同意が必要です。{% endif %}
+                        </div>
+                        {% endif %}
+                    </div>
+                    
                     <!-- Submit Button -->
                     <button type="submit" class="btn-register">
                         <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
@@ -229,6 +263,79 @@
     background: rgba(220, 53, 69, 0.1);
     border-radius: var(--radius-md);
     border: 1px solid rgba(220, 53, 69, 0.2);
+}
+
+/* Terms of Service Agreement */
+.tos-agreement {
+    margin-bottom: 1.5rem;
+}
+
+.tos-label {
+    display: flex;
+    align-items: flex-start;
+    gap: 0.75rem;
+    cursor: pointer;
+    position: relative;
+    padding-left: 2rem;
+}
+
+.tos-label input[type="checkbox"] {
+    position: absolute;
+    opacity: 0;
+    cursor: pointer;
+    height: 0;
+    width: 0;
+}
+
+.tos-checkmark {
+    position: absolute;
+    left: 0;
+    top: 0.15rem;
+    height: 1.25rem;
+    width: 1.25rem;
+    background: var(--surface);
+    border: 2px solid var(--border-color);
+    border-radius: 0.3rem;
+    transition: all 0.3s ease;
+    flex-shrink: 0;
+}
+
+.tos-label:hover .tos-checkmark {
+    border-color: var(--primary-color);
+}
+
+.tos-label input[type="checkbox"]:checked ~ .tos-checkmark {
+    background: var(--primary-color, #ff7940);
+    border-color: var(--primary-color, #ff7940);
+}
+
+.tos-label input[type="checkbox"]:checked ~ .tos-checkmark::after {
+    content: '';
+    position: absolute;
+    left: 0.3rem;
+    top: 0.1rem;
+    width: 0.35rem;
+    height: 0.65rem;
+    border: solid white;
+    border-width: 0 2px 2px 0;
+    transform: rotate(45deg);
+}
+
+.tos-text {
+    font-size: 0.9rem;
+    color: var(--text-secondary);
+    line-height: 1.5;
+}
+
+.tos-text a {
+    color: var(--primary-color, #ff7940);
+    text-decoration: underline;
+    font-weight: 600;
+    transition: opacity 0.2s ease;
+}
+
+.tos-text a:hover {
+    opacity: 0.8;
 }
 
 .btn-register {

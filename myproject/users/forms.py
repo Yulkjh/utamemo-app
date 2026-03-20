@@ -35,6 +35,14 @@ class UserRegistrationForm(UserCreationForm):
         })
     )
     
+    agree_tos = forms.BooleanField(
+        required=True,
+        error_messages={
+            'required': '利用規約とプライバシーポリシーへの同意が必要です。'
+                        ' / You must agree to the Terms of Service and Privacy Policy.',
+        },
+    )
+    
     class Meta:
         model = User
         fields = ('username', 'email', 'password1', 'password2')

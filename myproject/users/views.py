@@ -31,7 +31,12 @@ class RegisterView(CreateView):
     success_url = reverse_lazy('users:login')
     
     def form_valid(self, form):
-        response = super().form_valid(form)
+        # 利用規約同意日時を記録
+        user = form.save(commit=False)
+        user.tos_agreed_at = timezone.now()
+        user.save()
+        self.object = user
+        
         app_language = self.request.session.get('app_language', 'ja')
         if app_language == 'en':
             messages.success(self.request, 'Account created! Please log in.')
@@ -39,7 +44,7 @@ class RegisterView(CreateView):
             messages.success(self.request, '账户已创建！请登录。')
         else:
             messages.success(self.request, 'アカウントが作成されました！ログインしてください。')
-        return response
+        return redirect(self.success_url)
 
 
 class LoginView(AuthLoginView):
