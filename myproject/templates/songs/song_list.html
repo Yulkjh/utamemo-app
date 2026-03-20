@@ -1050,12 +1050,18 @@ function playAudio(audioUrl, button, songId) {
         window.location.href = `/songs/${songId}/`;
     });
     
-    // 再生終了時
+    // 再生終了時（ループ設定を反映）
     currentAudio.addEventListener('ended', () => {
-        icon.className = 'bi bi-play-fill';
-        textSpan.textContent = '{% if is_english %}Play{% elif is_spanish %}Reproducir{% elif is_german %}Abspielen{% elif is_chinese %}播放{% else %}再生{% endif %}';
-        currentAudio = null;
-        currentPlayButton = null;
+        const loopEnabled = localStorage.getItem('utamemo_loop') === 'true';
+        if (loopEnabled) {
+            currentAudio.currentTime = 0;
+            currentAudio.play().catch(() => {});
+        } else {
+            icon.className = 'bi bi-play-fill';
+            textSpan.textContent = '{% if is_english %}Play{% elif is_spanish %}Reproducir{% elif is_german %}Abspielen{% elif is_chinese %}播放{% else %}再生{% endif %}';
+            currentAudio = null;
+            currentPlayButton = null;
+        }
     });
 }
 

@@ -91,6 +91,12 @@
                             <source src="{{ song.audio_file.url }}" type="audio/mpeg">
                             {% if is_english %}Your browser does not support audio playback.{% elif is_spanish %}Su navegador no soporta la reproducción de audio.{% elif is_german %}Ihr Browser unterstützt keine Audiowiedergabe.{% elif is_portuguese %}Seu navegador não suporta reprodução de áudio.{% elif is_chinese %}您的浏览器不支持音频播放。{% else %}お使いのブラウザは音声の再生をサポートしていません。{% endif %}
                         </audio>
+                        <div class="player-extra-controls">
+                            <button class="btn-loop" id="btn-loop" onclick="toggleLoop()" title="{% if is_english %}Loop{% elif is_spanish %}Repetir{% elif is_german %}Wiederholen{% elif is_portuguese %}Repetir{% elif is_chinese %}循环播放{% else %}ループ再生{% endif %}">
+                                <i class="bi bi-repeat"></i>
+                                <span>{% if is_english %}Loop{% elif is_spanish %}Repetir{% elif is_german %}Wiederholen{% elif is_portuguese %}Repetir{% elif is_chinese %}循环{% else %}ループ{% endif %}</span>
+                            </button>
+                        </div>
                     </div>
                     {% elif song.audio_url %}
                     <!-- 外部音声URL (Mureka等) -->
@@ -99,6 +105,12 @@
                             <source src="{{ song.audio_url }}" type="audio/mpeg">
                             {% if is_english %}Your browser does not support audio playback.{% elif is_spanish %}Su navegador no soporta la reproducción de audio.{% elif is_german %}Ihr Browser unterstützt keine Audiowiedergabe.{% elif is_portuguese %}Seu navegador não suporta reprodução de áudio.{% elif is_chinese %}您的浏览器不支持音频播放。{% else %}お使いのブラウザは音声の再生をサポートしていません。{% endif %}
                         </audio>
+                        <div class="player-extra-controls">
+                            <button class="btn-loop" id="btn-loop" onclick="toggleLoop()" title="{% if is_english %}Loop{% elif is_spanish %}Repetir{% elif is_german %}Wiederholen{% elif is_portuguese %}Repetir{% elif is_chinese %}循环播放{% else %}ループ再生{% endif %}">
+                                <i class="bi bi-repeat"></i>
+                                <span>{% if is_english %}Loop{% elif is_spanish %}Repetir{% elif is_german %}Wiederholen{% elif is_portuguese %}Repetir{% elif is_chinese %}循环{% else %}ループ{% endif %}</span>
+                            </button>
+                        </div>
                     </div>
                     {% elif song.generation_status == 'completed' %}
                     <!-- 生成完了だが音声がない場合（異常状態） -->
@@ -2061,6 +2073,51 @@ audio {
     outline: none;
 }
 
+/* ループ再生ボタン */
+.player-extra-controls {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    margin-top: 0.75rem;
+}
+
+.btn-loop {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.4rem;
+    padding: 0.45rem 1rem;
+    border: 1.5px solid rgba(255, 121, 64, 0.3);
+    border-radius: var(--radius-md);
+    background: transparent;
+    color: var(--text-secondary);
+    font-size: 0.85rem;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all 0.25s ease;
+    user-select: none;
+}
+
+.btn-loop:hover {
+    border-color: rgba(255, 121, 64, 0.6);
+    color: #ff7940;
+    background: rgba(255, 121, 64, 0.05);
+}
+
+.btn-loop.active {
+    background: linear-gradient(135deg, #ff7940 0%, #ff6b35 100%);
+    color: white;
+    border-color: transparent;
+    box-shadow: 0 2px 8px rgba(255, 121, 64, 0.3);
+}
+
+.btn-loop.active:hover {
+    box-shadow: 0 4px 12px rgba(255, 121, 64, 0.4);
+}
+
+.btn-loop i {
+    font-size: 1rem;
+}
+
 .audio-actions {
     display: flex;
     gap: 1rem;
@@ -2190,6 +2247,14 @@ document.addEventListener('DOMContentLoaded', function() {
     const audioPlayer = document.querySelector('.custom-audio-player');
     
     if (audioPlayer) {
+        // ループ状態をlocalStorageから復元
+        const loopEnabled = localStorage.getItem('utamemo_loop') === 'true';
+        if (loopEnabled) {
+            audioPlayer.loop = true;
+            const loopBtn = document.getElementById('btn-loop');
+            if (loopBtn) loopBtn.classList.add('active');
+        }
+
         // 読み込み完了時
         audioPlayer.addEventListener('loadedmetadata', function() {
             console.log('Audio loaded, duration:', audioPlayer.duration);
@@ -2205,6 +2270,19 @@ document.addEventListener('DOMContentLoaded', function() {
         });
     }
 });
+
+// ループ再生の切り替え
+function toggleLoop() {
+    const audioPlayer = document.getElementById('main-audio-player');
+    const loopBtn = document.getElementById('btn-loop');
+    if (!audioPlayer || !loopBtn) return;
+
+    audioPlayer.loop = !audioPlayer.loop;
+    loopBtn.classList.toggle('active', audioPlayer.loop);
+
+    // 状態を保存（次回ページ訪問時も維持）
+    localStorage.setItem('utamemo_loop', audioPlayer.loop);
+}
 
 // CSRFトークンを取得
 function getCSRFToken() {
