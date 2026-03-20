@@ -12,6 +12,7 @@ training/
 ├── train.py                     # LoRA学習スクリプト
 ├── test_model.py                # 学習済みモデルのテスト
 ├── serve.py                     # 推論サーバー (Flask API)
+├── start_server.sh              # ワンコマンド起動 (serve.py + Cloudflare Tunnel)
 └── data/
     └── sample_training_data.json # サンプル学習データ (3件)
 ```
@@ -123,27 +124,62 @@ python test_model.py \
   --hf_token $HF_TOKEN
 ```
 
-### 8. 推論サーバー起動
+### 8. 推論サーバー + Cloudflare Tunnel 起動
+
+Cloudflare Tunnel を使って、学校LAN内のGPU PCをインターネットに安全に公開する。
+ファイアウォール/ポート開放不要、HTTPS自動。
+
+#### 初回セットアップ（1回だけ）
 
 ```bash
-# APIキーを設定
-export UTAMEMO_API_KEY="ランダムな文字列を設定"
+cd /path/to/utamemo-app/training
 
-# サーバー起動
-python serve.py \
-  --host 0.0.0.0 \
-  --port 8000 \
-  --hf_token $HF_TOKEN
+# セットアップウィザード（cloudflaredインストール + Cloudflareログイン + APIキー生成）
+./start_server.sh --setup
 ```
 
-ヘルスチェック:
+セットアップで表示される **APIキー** を控えておく（Render.comに設定する）。
+
+#### 通常起動
+
 ```bash
-curl http://localhost:8000/health
+cd /path/to/utamemo-app/training
+
+# serve.py + Cloudflare Tunnel をまとめて起動
+./start_server.sh
+```
+
+起動後にログに表示される **Cloudflare URL**（`https://xxxx.cfargotunnel.com`）を控える。
+
+#### 手動で起動する場合
+
+```bash
+# 1. APIキーを設定
+export UTAMEMO_API_KEY="ランダムな文字列を設定"
+
+# 2. 推論サーバー起動
+python serve.py \
+  --host 127.0.0.1 \
+  --port 8000 \
+  --hf_token $HF_TOKEN &
+
+# 3. Cloudflare Tunnel 起動
+cloudflared tunnel --url http://127.0.0.1:8000 run utamemo-llm
+```
+
+ヘルスチェック（ローカル）:
+```bash
+curl http://127.0.0.1:8000/health
+```
+
+ヘルスチェック（Cloudflare経由）:
+```bash
+curl https://あなたのトンネルURL/health
 ```
 
 歌詞生成テスト:
 ```bash
-curl -X POST http://localhost:8000/generate \
+curl -X POST https://あなたのトンネルURL/generate \
   -H "Content-Type: application/json" \
   -H "Authorization: Bearer $UTAMEMO_API_KEY" \
   -d '{"text": "光合成とは植物が光エネルギーを使って水と二酸化炭素から酸素とデンプンを作る反応", "genre": "pop"}'
@@ -154,8 +190,8 @@ curl -X POST http://localhost:8000/generate \
 Render.comの環境変数に以下を追加:
 
 ```
-LOCAL_LLM_URL=http://学校PCのIPアドレス:8000
-LOCAL_LLM_API_KEY=上で設定したAPIキー
+LOCAL_LLM_URL=https://あなたのトンネルURL
+LOCAL_LLM_API_KEY=start_server.shのsetupで生成されたAPIキー
 LYRICS_BACKEND=auto
 ```
 
@@ -166,14 +202,16 @@ LYRICS_BACKEND=auto
 
 ## ⚠️ 注意事項
 
-### ネットワーク
-- 学校のGPU PCがRender.comからアクセスできる必要がある
-- 学校のファイアウォールでポート8000を開放する必要があるかも
-- ngrok や Cloudflare Tunnel を使う方法もある
+### ネットワーク（Cloudflare Tunnel）
+- Cloudflare Tunnel を使うのでポート開放やファイアウォール設定は不要
+- HTTPS は Cloudflare が自動で提供
+- トンネルが切れた場合は `./start_server.sh` で再起動
+- Cloudflareの無料プランで十分（商用利用OK）
 
 ### セキュリティ
-- `UTAMEMO_API_KEY` は必ず設定する (推論サーバーへの不正アクセス防止)
-- 本番では HTTPS を使う (ngrok / Cloudflare Tunnel)
+- `UTAMEMO_API_KEY` は必ず設定する（推論サーバーへの不正アクセス防止）
+- serve.py は `127.0.0.1` にバインド（Cloudflare Tunnel経由のみアクセス可）
+- APIキーなしのリクエストは401/403で拒否される
 
 ### GPU利用許可
 - 学校のGPUを商用プロジェクトに使う許可を先生に確認すること
@@ -195,7 +233,10 @@ LYRICS_BACKEND=auto
 - [ ] 学習データ 100件以上準備
 - [ ] LoRA学習完了
 - [ ] テストで品質確認
-- [ ] 推論サーバー起動 & ヘルスチェック通る
-- [ ] UTAMEMOから接続テスト
+- [ ] `./start_server.sh --setup` 完了
+- [ ] `./start_server.sh` でサーバー + トンネル起動
+- [ ] Cloudflare URL でヘルスチェック通る
+- [ ] Render.com に `LOCAL_LLM_URL` / `LOCAL_LLM_API_KEY` 設定
 - [ ] `LYRICS_BACKEND=auto` に変更
+- [ ] UTAMEMOから接続テスト（歌詞生成して確認）
 - [ ] Geminiと品質比較 → 同等以上なら `LYRICS_BACKEND=local` に変更
