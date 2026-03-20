@@ -194,6 +194,13 @@ MUREKA_API_KEY = os.getenv('MUREKA_API_KEY')
 USE_MUREKA_API = os.getenv('USE_MUREKA_API', 'False').lower() == 'true'
 MUREKA_API_URL = os.getenv('MUREKA_API_URL', 'https://platform.mureka.ai')
 
+# ローカルLLM歌詞生成設定
+# 'gemini' = Geminiのみ, 'local' = ローカルLLMのみ, 'auto' = ローカル優先+Geminiフォールバック
+LYRICS_BACKEND = os.getenv('LYRICS_BACKEND', 'gemini')
+LOCAL_LLM_URL = os.getenv('LOCAL_LLM_URL', 'http://localhost:8000')
+LOCAL_LLM_API_KEY = os.getenv('LOCAL_LLM_API_KEY', '')
+LOCAL_LLM_TIMEOUT = int(os.getenv('LOCAL_LLM_TIMEOUT', '60'))
+
 # Stripe決済設定
 STRIPE_PUBLISHABLE_KEY = os.getenv('STRIPE_PUBLISHABLE_KEY', '')
 STRIPE_SECRET_KEY = os.getenv('STRIPE_SECRET_KEY', '')

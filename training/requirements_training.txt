@@ -1,0 +1,35 @@
+# UTAMEMO LoRA学習 & 推論サーバー用の依存パッケージ
+
+# 学校のGPU PCにインストールする
+#
+# インストール:
+#   pip install -r requirements_training.txt
+
+# PyTorch (CUDA 12.x対応版)
+# 学校のCUDAバージョンに合わせて変更が必要な場合あり
+# https://pytorch.org/get-started/locally/ でコマンドを確認
+torch>=2.1.0
+torchvision>=0.16.0
+
+# Hugging Face
+transformers>=4.40.0
+datasets>=2.18.0
+accelerate>=0.27.0
+tokenizers>=0.15.0
+
+# LoRA / PEFT
+peft>=0.10.0
+
+# QLoRA (4bit量子化)
+bitsandbytes>=0.43.0
+
+# SFTTrainer
+trl>=0.8.0
+
+# 推論サーバー
+flask>=3.0.0
+
+# ユーティリティ
+sentencepiece>=0.2.0
+protobuf>=4.25.0
+scipy>=1.12.0

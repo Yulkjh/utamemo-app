@@ -1221,6 +1221,109 @@ class GeminiOCR:
             return ""  # エラー時も空文字を返してクラッシュを防ぐ
 
 
+class LocalLLMLyricsGenerator:
+    """ローカルLLM (学校GPU) を使用した歌詞生成クラス
+    
+    学校のGPU PCで動作する推論サーバー (serve.py) にHTTPリクエストを送る。
+    settings.py の LOCAL_LLM_URL と LOCAL_LLM_API_KEY で設定。
+    
+    Geminiの代替として使用可能。設定がない場合やサーバーがダウンしている場合は
+    GeminiLyricsGenerator にフォールバックする。
+    """
+    
+    def __init__(self):
+        self.base_url = getattr(settings, 'LOCAL_LLM_URL', None)
+        self.api_key = getattr(settings, 'LOCAL_LLM_API_KEY', '')
+        self.timeout = getattr(settings, 'LOCAL_LLM_TIMEOUT', 60)
+    
+    @property
+    def is_available(self):
+        """ローカルLLMが利用可能かチェック"""
+        if not self.base_url:
+            return False
+        try:
+            resp = requests.get(
+                f"{self.base_url}/health",
+                timeout=5
+            )
+            return resp.status_code == 200
+        except Exception:
+            return False
+    
+    def generate_lyrics(self, extracted_text, title="", genre="pop", language_mode="japanese", custom_request=""):
+        """ローカルLLMで歌詞を生成"""
+        if not self.base_url:
+            raise Exception("LOCAL_LLM_URL が設定されていません")
+        
+        # キャッシュチェック
+        cache_input = f"local|{extracted_text}|{genre}|{language_mode}|{custom_request}"
+        cache_key = _get_cache_key(cache_input, 'lyrics')
+        cached = _get_cached_response(cache_key)
+        if cached:
+            logger.info("LocalLLM: Returning cached lyrics")
+            return cached
+        
+        try:
+            response = requests.post(
+                f"{self.base_url}/generate",
+                json={
+                    "text": extracted_text,
+                    "genre": genre,
+                    "language_mode": language_mode,
+                    "custom_request": custom_request,
+                },
+                headers={
+                    "Authorization": f"Bearer {self.api_key}",
+                    "Content-Type": "application/json",
+                },
+                timeout=self.timeout,
+            )
+            response.raise_for_status()
+            
+            data = response.json()
+            if data.get("status") == "success" and data.get("lyrics"):
+                lyrics = data["lyrics"]
+                _set_cached_response(cache_key, lyrics, ttl=3600)
+                logger.info(f"LocalLLM: 歌詞生成成功 ({len(lyrics)} 文字, {data.get('generation_time', '?')}秒)")
+                return lyrics
+            else:
+                raise Exception(f"LocalLLM error: {data.get('error', 'Unknown error')}")
+                
+        except requests.exceptions.Timeout:
+            logger.warning("LocalLLM: タイムアウト")
+            raise Exception("ローカルLLMサーバーがタイムアウトしました")
+        except requests.exceptions.ConnectionError:
+            logger.warning("LocalLLM: 接続エラー")
+            raise Exception("ローカルLLMサーバーに接続できません")
+        except Exception as e:
+            logger.error(f"LocalLLM: エラー: {e}")
+            raise
+
+
+def get_lyrics_generator():
+    """歌詞生成エンジンを取得 (ローカルLLM優先、フォールバックでGemini)
+    
+    settings.LYRICS_BACKEND で切り替え:
+      - "local": ローカルLLMのみ
+      - "gemini": Geminiのみ (デフォルト)
+      - "auto": ローカルLLM優先、ダウン時はGeminiにフォールバック
+    """
+    backend = getattr(settings, 'LYRICS_BACKEND', 'gemini')
+    
+    if backend == 'local':
+        return LocalLLMLyricsGenerator()
+    elif backend == 'auto':
+        local = LocalLLMLyricsGenerator()
+        if local.is_available:
+            logger.info("歌詞生成: ローカルLLMを使用")
+            return local
+        else:
+            logger.info("歌詞生成: ローカルLLM不可、Geminiにフォールバック")
+            return GeminiLyricsGenerator()
+    else:
+        return GeminiLyricsGenerator()
+
+
 class GeminiLyricsGenerator:
     """Gemini を使用した歌詞生成クラス"""
     
