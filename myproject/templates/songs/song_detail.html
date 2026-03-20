@@ -87,38 +87,18 @@
                     {% if song.audio_file %}
                     <!-- ローカル音声ファイル -->
                     <div class="audio-controls">
-                        <audio controls controlsList="nodownload noplaybackrate" class="custom-audio-player" id="main-audio-player">
+                        <audio controls controlsList="nodownload" class="custom-audio-player" id="main-audio-player">
                             <source src="{{ song.audio_file.url }}" type="audio/mpeg">
                             {% if is_english %}Your browser does not support audio playback.{% elif is_spanish %}Su navegador no soporta la reproducción de audio.{% elif is_german %}Ihr Browser unterstützt keine Audiowiedergabe.{% elif is_portuguese %}Seu navegador não suporta reprodução de áudio.{% elif is_chinese %}您的浏览器不支持音频播放。{% else %}お使いのブラウザは音声の再生をサポートしていません。{% endif %}
                         </audio>
-                        <div class="player-extra-controls">
-                            <button class="btn-speed" id="btn-speed" onclick="cyclePlaybackSpeed()" title="{% if is_english %}Playback Speed{% elif is_spanish %}Velocidad{% elif is_german %}Geschwindigkeit{% elif is_portuguese %}Velocidade{% elif is_chinese %}播放速度{% else %}再生速度{% endif %}">
-                                <i class="bi bi-speedometer2"></i>
-                                <span id="speed-label">1x</span>
-                            </button>
-                            <button class="btn-loop" id="btn-loop" onclick="toggleLoop()" title="{% if is_english %}Loop{% elif is_spanish %}Repetir{% elif is_german %}Wiederholen{% elif is_portuguese %}Repetir{% elif is_chinese %}循环播放{% else %}ループ再生{% endif %}">
-                                <i class="bi bi-repeat"></i>
-                                <span>{% if is_english %}Loop{% elif is_spanish %}Repetir{% elif is_german %}Wiederholen{% elif is_portuguese %}Repetir{% elif is_chinese %}循环{% else %}ループ{% endif %}</span>
-                            </button>
-                        </div>
                     </div>
                     {% elif song.audio_url %}
                     <!-- 外部音声URL (Mureka等) -->
                     <div class="audio-controls">
-                        <audio controls controlsList="nodownload noplaybackrate" class="custom-audio-player" id="main-audio-player" preload="none">
+                        <audio controls controlsList="nodownload" class="custom-audio-player" id="main-audio-player" preload="none">
                             <source src="{{ song.audio_url }}" type="audio/mpeg">
                             {% if is_english %}Your browser does not support audio playback.{% elif is_spanish %}Su navegador no soporta la reproducción de audio.{% elif is_german %}Ihr Browser unterstützt keine Audiowiedergabe.{% elif is_portuguese %}Seu navegador não suporta reprodução de áudio.{% elif is_chinese %}您的浏览器不支持音频播放。{% else %}お使いのブラウザは音声の再生をサポートしていません。{% endif %}
                         </audio>
-                        <div class="player-extra-controls">
-                            <button class="btn-speed" id="btn-speed" onclick="cyclePlaybackSpeed()" title="{% if is_english %}Playback Speed{% elif is_spanish %}Velocidad{% elif is_german %}Geschwindigkeit{% elif is_portuguese %}Velocidade{% elif is_chinese %}播放速度{% else %}再生速度{% endif %}">
-                                <i class="bi bi-speedometer2"></i>
-                                <span id="speed-label">1x</span>
-                            </button>
-                            <button class="btn-loop" id="btn-loop" onclick="toggleLoop()" title="{% if is_english %}Loop{% elif is_spanish %}Repetir{% elif is_german %}Wiederholen{% elif is_portuguese %}Repetir{% elif is_chinese %}循环播放{% else %}ループ再生{% endif %}">
-                                <i class="bi bi-repeat"></i>
-                                <span>{% if is_english %}Loop{% elif is_spanish %}Repetir{% elif is_german %}Wiederholen{% elif is_portuguese %}Repetir{% elif is_chinese %}循环{% else %}ループ{% endif %}</span>
-                            </button>
-                        </div>
                     </div>
                     {% elif song.generation_status == 'completed' %}
                     <!-- 生成完了だが音声がない場合（異常状態） -->
@@ -2081,97 +2061,6 @@ audio {
     outline: none;
 }
 
-/* ネイティブの3点メニュー（再生速度等）を非表示にする */
-audio::-webkit-media-controls-overflow-button,
-audio::-webkit-media-controls-enclosure .overflow-button {
-    display: none !important;
-    -webkit-appearance: none;
-}
-
-/* Firefox: 追加メニュー非表示 */
-audio::-moz-media-controls-overflow-button {
-    display: none !important;
-}
-
-/* ループ再生ボタン */
-.player-extra-controls {
-    display: flex;
-    align-items: center;
-    gap: 0.75rem;
-    margin-top: 0.75rem;
-}
-
-/* 再生速度ボタン */
-.btn-speed {
-    display: inline-flex;
-    align-items: center;
-    gap: 0.4rem;
-    padding: 0.45rem 1rem;
-    border: 1.5px solid rgba(255, 121, 64, 0.3);
-    border-radius: var(--radius-md);
-    background: transparent;
-    color: var(--text-secondary);
-    font-size: 0.85rem;
-    font-weight: 500;
-    cursor: pointer;
-    transition: all 0.25s ease;
-    user-select: none;
-}
-
-.btn-speed:hover {
-    border-color: rgba(255, 121, 64, 0.6);
-    color: #ff7940;
-    background: rgba(255, 121, 64, 0.05);
-}
-
-.btn-speed.active {
-    background: linear-gradient(135deg, #ff7940 0%, #ff6b35 100%);
-    color: white;
-    border-color: transparent;
-    box-shadow: 0 2px 8px rgba(255, 121, 64, 0.3);
-}
-
-.btn-speed i {
-    font-size: 1rem;
-}
-
-.btn-loop {
-    display: inline-flex;
-    align-items: center;
-    gap: 0.4rem;
-    padding: 0.45rem 1rem;
-    border: 1.5px solid rgba(255, 121, 64, 0.3);
-    border-radius: var(--radius-md);
-    background: transparent;
-    color: var(--text-secondary);
-    font-size: 0.85rem;
-    font-weight: 500;
-    cursor: pointer;
-    transition: all 0.25s ease;
-    user-select: none;
-}
-
-.btn-loop:hover {
-    border-color: rgba(255, 121, 64, 0.6);
-    color: #ff7940;
-    background: rgba(255, 121, 64, 0.05);
-}
-
-.btn-loop.active {
-    background: linear-gradient(135deg, #ff7940 0%, #ff6b35 100%);
-    color: white;
-    border-color: transparent;
-    box-shadow: 0 2px 8px rgba(255, 121, 64, 0.3);
-}
-
-.btn-loop.active:hover {
-    box-shadow: 0 4px 12px rgba(255, 121, 64, 0.4);
-}
-
-.btn-loop i {
-    font-size: 1rem;
-}
-
 .audio-actions {
     display: flex;
     gap: 1rem;
@@ -2322,57 +2211,6 @@ document.addEventListener('DOMContentLoaded', function() {
             errorDiv.innerHTML = '<i class="bi bi-exclamation-triangle"></i> {% if is_english %}Failed to load audio. Please check the URL directly.{% elif is_chinese %}音频加载失败，请直接检查链接。{% else %}音声の読み込みに失敗しました。URLを直接確認してください。{% endif %}';
             audioPlayer.parentNode.appendChild(errorDiv);
         });
-    }
-});
-
-// ループ再生の切り替え
-function toggleLoop() {
-    const audioPlayer = document.getElementById('main-audio-player');
-    const loopBtn = document.getElementById('btn-loop');
-    if (!audioPlayer || !loopBtn) return;
-
-    audioPlayer.loop = !audioPlayer.loop;
-    loopBtn.classList.toggle('active', audioPlayer.loop);
-
-    // 状態を保存（次回ページ訪問時も維持）
-    localStorage.setItem('utamemo_loop', audioPlayer.loop);
-}
-
-// 再生速度の切り替え
-const PLAYBACK_SPEEDS = [0.5, 0.75, 1, 1.25, 1.5, 2];
-let currentSpeedIndex = 2; // デフォルト: 1x
-
-function cyclePlaybackSpeed() {
-    const audioPlayer = document.getElementById('main-audio-player');
-    const speedBtn = document.getElementById('btn-speed');
-    const speedLabel = document.getElementById('speed-label');
-    if (!audioPlayer || !speedBtn || !speedLabel) return;
-
-    currentSpeedIndex = (currentSpeedIndex + 1) % PLAYBACK_SPEEDS.length;
-    const speed = PLAYBACK_SPEEDS[currentSpeedIndex];
-    audioPlayer.playbackRate = speed;
-    speedLabel.textContent = speed + 'x';
-
-    // 1x以外ならアクティブ表示
-    speedBtn.classList.toggle('active', speed !== 1);
-
-    // 状態を保存
-    localStorage.setItem('utamemo_speed', speed);
-}
-
-// ページ読み込み時に再生速度を復元
-document.addEventListener('DOMContentLoaded', function() {
-    const savedSpeed = parseFloat(localStorage.getItem('utamemo_speed'));
-    if (savedSpeed && PLAYBACK_SPEEDS.includes(savedSpeed)) {
-        const audioPlayer = document.getElementById('main-audio-player');
-        const speedBtn = document.getElementById('btn-speed');
-        const speedLabel = document.getElementById('speed-label');
-        if (audioPlayer && speedBtn && speedLabel) {
-            currentSpeedIndex = PLAYBACK_SPEEDS.indexOf(savedSpeed);
-            audioPlayer.playbackRate = savedSpeed;
-            speedLabel.textContent = savedSpeed + 'x';
-            speedBtn.classList.toggle('active', savedSpeed !== 1);
-        }
     }
 });
 
