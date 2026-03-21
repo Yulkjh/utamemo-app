@@ -1,8 +1,87 @@
 from django import template
 import re
 from datetime import timedelta
+from django.utils.safestring import mark_safe
+from django.utils.html import escape
 
 register = template.Library()
+
+# セクションラベルのパターン
+# [Verse 1], [Chorus], [Pre-Chorus], [Bridge], [Outro], [Intro] 等
+SECTION_LABEL_PATTERN = re.compile(
+    r'^\[('
+    r'Verse|Chorus|Pre-Chorus|Pre Chorus|Bridge|Outro|Intro|Hook|Refrain|Interlude|'
+    r'verse|chorus|pre-chorus|pre chorus|bridge|outro|intro|hook|refrain|interlude|'
+    r'VERSE|CHORUS|PRE-CHORUS|BRIDGE|OUTRO|INTRO|HOOK|REFRAIN|INTERLUDE'
+    r')(?:\s*\d*)?\]\s*$',
+    re.IGNORECASE
+)
+
+
+@register.filter
+def remove_section_labels(value):
+    """歌詞からセクションラベル（[Verse], [Chorus]等）を除去するフィルター
+
+    Mureka APIが返す歌詞に含まれる [Verse 1], [Pre-Chorus], [Chorus] 等の
+    構造ラベルを除去し、空行（セクション区切り）として残す。
+    """
+    if not value:
+        return value
+
+    lines = value.split('\n')
+    filtered_lines = []
+
+    for line in lines:
+        stripped = line.strip()
+        if SECTION_LABEL_PATTERN.match(stripped):
+            # セクションラベルは空行に置換（区切りとして残す）
+            filtered_lines.append('')
+        else:
+            filtered_lines.append(line)
+
+    return '\n'.join(filtered_lines)
+
+
+@register.filter
+def format_lyrics_html(value):
+    """歌詞をセクションラベル付きのHTMLとしてフォーマットするフィルター
+
+    [Verse 1], [Chorus] 等をスタイル付きラベルとして表示し、
+    歌詞本文は段落として表示する。
+    """
+    if not value:
+        return value
+
+    lines = value.split('\n')
+    html_parts = []
+    current_paragraph = []
+
+    def flush_paragraph():
+        if current_paragraph:
+            text = '<br>'.join(escape(line) for line in current_paragraph)
+            html_parts.append(f'<p>{text}</p>')
+            current_paragraph.clear()
+
+    for line in lines:
+        stripped = line.strip()
+        section_match = re.match(
+            r'^\[('
+            r'Verse|Chorus|Pre-Chorus|Pre Chorus|Bridge|Outro|Intro|Hook|Refrain|Interlude'
+            r')(?:\s*\d*)?\]$',
+            stripped,
+            re.IGNORECASE
+        )
+        if section_match:
+            flush_paragraph()
+            # セクションラベルは非表示（空行として扱い区切りを作る）
+            html_parts.append('<div class="lyrics-section-break"></div>')
+        elif not stripped:
+            flush_paragraph()
+        else:
+            current_paragraph.append(stripped)
+
+    flush_paragraph()
+    return mark_safe('\n'.join(html_parts))
 
 
 @register.filter

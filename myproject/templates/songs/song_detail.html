@@ -336,7 +336,7 @@
                 </div>
                 <!-- 通常歌詞表示 -->
                 <div class="lyrics-content" id="lyrics-normal">
-                    {{ lyrics_content|remove_asterisks|remove_circled_numbers|linebreaks }}
+                    {{ lyrics_content|remove_section_labels|remove_asterisks|remove_circled_numbers|linebreaks }}
                 </div>
                 <!-- カラオケモード表示（スターター以上のみ） -->
                 {% if user.is_authenticated and user.is_starter %}
@@ -1903,7 +1903,7 @@ function toggleFavorite(songId) {
                 <div class="card-body">
                     {% if decrypted_lyrics %}
                     <div style="white-space: pre-line; font-size: 0.95rem; line-height: 1.6;">
-                        {{ lyrics_content|remove_asterisks|remove_circled_numbers }}
+                        {{ lyrics_content|remove_section_labels|remove_asterisks|remove_circled_numbers }}
                     </div>
                     {% else %}
                     <div class="text-muted">
@@ -3404,6 +3404,9 @@ document.getElementById('tagModal').addEventListener('click', function(e) {
     };
     
     // === 歌詞をカラオケ用にレンダリング（手動スクロール方式） ===
+    // セクションラベルのパターン（[Verse 1], [Chorus], [Pre-Chorus] 等）
+    const SECTION_LABEL_RE = /^\[(Verse|Chorus|Pre-?Chorus|Bridge|Outro|Intro|Hook|Refrain|Interlude)(?:\s*\d*)?\]\s*$/i;
+
     function renderKaraokeLyrics() {
         const container = document.getElementById('karaoke-lyrics');
         const normalLyrics = document.getElementById('lyrics-normal');
@@ -3418,6 +3421,9 @@ document.getElementById('tagModal').addEventListener('click', function(e) {
             const trimmed = line.trim();
             if (!trimmed) {
                 // 空行 = セクション区切り
+                html += '<div class="karaoke-line section-break">・・・</div>';
+            } else if (SECTION_LABEL_RE.test(trimmed)) {
+                // セクションラベルは区切りとして表示
                 html += '<div class="karaoke-line section-break">・・・</div>';
             } else {
                 html += `<div class="karaoke-line">${trimmed}</div>`;
