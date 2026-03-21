@@ -272,8 +272,6 @@
     overflow: hidden;
     max-width: 100%;
     position: relative;
-    mask-image: linear-gradient(to right, black 90%, transparent 100%);
-    -webkit-mask-image: linear-gradient(to right, black 90%, transparent 100%);
 }
 
 .song-title-text {
@@ -282,10 +280,15 @@
     font-size: 0.95rem;
     white-space: nowrap;
     display: inline-block;
+    max-width: 100%;
+    overflow: hidden;
+    text-overflow: ellipsis;
 }
 
-/* 長いタイトルのスライドアニメーション */
+/* 長いタイトル：マーキー中は ellipsis を無効化 */
 .song-title-wrapper.is-overflowing .song-title-text {
+    overflow: visible;
+    text-overflow: unset;
     animation: marquee-scroll var(--marquee-duration, 8s) linear infinite;
     animation-delay: 1s;
 }
