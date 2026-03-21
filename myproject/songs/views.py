@@ -292,19 +292,11 @@ class CreateSongView(LoginRequiredMixin, CreateView):
         context['days_until_reset'] = days_until_reset
         
         user = self.request.user
-        if not (user.is_starter or user.is_pro or user.is_school):
-            # 無料プランで全モデルの残りが0の場合、上限到達フラグを立てる
-            all_exhausted = all(
-                v == 0 for v in model_remaining.values()
-            )
-            context['free_plan_limit_reached'] = all_exhausted
-            context['free_plan_remaining'] = model_remaining.get('v8', 0)
-        else:
-            # 有料プランで全モデルの残りが0の場合（Proの-1は除く）
-            all_exhausted = all(
-                v == 0 for v in model_remaining.values()
-            )
-            context['paid_plan_all_exhausted'] = all_exhausted
+        # V8の残りで判定（全プラン共通）
+        v8_remaining = model_remaining.get('v8', 0)
+        context['free_plan_remaining'] = v8_remaining
+        context['free_plan_limit_reached'] = v8_remaining == 0
+        context['paid_plan_all_exhausted'] = v8_remaining == 0
         
         # セッションからプリフィルデータを取得（再生成時）
         context['prefill_music_prompt'] = self.request.session.pop('prefill_music_prompt', '')
@@ -357,29 +349,19 @@ class CreateSongView(LoginRequiredMixin, CreateView):
         music_prompt = self.request.POST.get('music_prompt', '').strip()
         form.instance.music_prompt = music_prompt
         
-        # AIモデルを取得
-        mureka_model = self.request.POST.get('mureka_model', 'mureka-v8').strip()
-        valid_models = ['mureka-v8', 'mureka-o2', 'mureka-7.6']
-        if mureka_model not in valid_models:
-            mureka_model = 'mureka-v8'
+        # AIモデルはV8（プレミアム）に固定
+        mureka_model = 'mureka-v8'
         
-        # モデル使用制限のチェック
-        model_key = {'mureka-v8': 'v8', 'mureka-o2': 'o2', 'mureka-7.6': 'v7.6'}.get(mureka_model, 'v8')
-        if not self.request.user.can_use_model(model_key):
-            # 使用制限に達している場合はO2にフォールバック
-            mureka_model = 'mureka-o2'
-            if not self.request.user.can_use_model('o2'):
-                # O2もダメならv7.6にフォールバック
-                mureka_model = 'mureka-7.6'
-                if not self.request.user.can_use_model('v7.6'):
-                    app_language = self.request.session.get('app_language', 'ja')
-                    if app_language == 'en':
-                        messages.error(self.request, 'You have reached your monthly song creation limit.')
-                    elif app_language == 'zh':
-                        messages.error(self.request, '您已达到本月歌曲创建上限。')
-                    else:
-                        messages.error(self.request, '今月の楽曲作成上限に達しました。')
-                    return redirect('users:upgrade')
+        # 使用制限のチェック
+        if not self.request.user.can_use_model('v8'):
+            app_language = self.request.session.get('app_language', 'ja')
+            if app_language == 'en':
+                messages.error(self.request, 'You have reached your monthly song creation limit.')
+            elif app_language == 'zh':
+                messages.error(self.request, '您已达到本月歌曲创建上限。')
+            else:
+                messages.error(self.request, '今月の楽曲作成上限に達しました。')
+            return redirect('users:upgrade')
         
         form.instance.mureka_model = mureka_model
         
@@ -1627,17 +1609,8 @@ def retry_song_generation(request, pk):
         # 2回目以降の再生成は月間生成回数を消費
         if song.retry_count >= 1:
             # モデルの残り回数をチェック
-            model_key = 'v8'  # デフォルト
-            if song.mureka_model == 'mureka-v8':
-                model_key = 'v8'
-            elif song.mureka_model == 'mureka-o2':
-                model_key = 'o2'
-            elif song.mureka_model == 'mureka-7.6':
-                model_key = 'v7.6'
-            else:
-                model_key = 'v8'  # レガシーモデル(v7.5等)はV8としてカウント
-            
-            if not user.can_use_model(model_key):
+            # V8（プレミアム）としてカウント
+            if not user.can_use_model('v8'):
                 if app_language == 'en':
                     error_msg = 'Monthly generation limit reached. Upgrade your plan for more.'
                 elif app_language == 'zh':

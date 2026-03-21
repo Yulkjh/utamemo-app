@@ -125,23 +125,8 @@
                                         </div>
                                     </div>
                                     
-                                    <!-- AIモデル選択（有料プランのみ） -->
-                                    {% if user.is_starter or user.is_pro or user.is_school %}
-                                    <div class="mt-3">
-                                        <label class="form-label fw-bold">
-                                            <i class="bi bi-cpu me-1"></i>
-                                            {% if is_english %}Sound Quality{% elif is_spanish %}Calidad de Sonido{% elif is_german %}Klangqualität{% elif is_chinese %}音质{% else %}音質{% endif %}
-                                        </label>
-                                        <select name="mureka_model" class="form-select">
-                                            <option value="mureka-v8" selected>{% if is_english %}Premium{% elif is_spanish %}Premium{% elif is_german %}Premium{% elif is_chinese %}高级{% else %}プレミアム{% endif %}</option>
-                                            <option value="mureka-o2">{% if is_english %}High Quality{% elif is_spanish %}Alta Calidad{% elif is_german %}Hohe Qualität{% elif is_chinese %}高音质{% else %}高音質{% endif %}</option>
-                                            <option value="mureka-7.6">{% if is_english %}Standard{% elif is_spanish %}Estándar{% elif is_german %}Standard{% elif is_chinese %}标准{% else %}スタンダード{% endif %}</option>
-                                        </select>
-                                    </div>
-                                    {% else %}
-                                    <!-- 無料プランはV8のみ -->
+                                    <!-- AIモデルはV8（プレミアム）固定 -->
                                     <input type="hidden" name="mureka_model" value="mureka-v8">
-                                    {% endif %}
                                 </div>
                                 
                                 <!-- カスタマイズ入力欄（自由記述） -->
