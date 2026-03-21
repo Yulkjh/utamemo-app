@@ -39,7 +39,13 @@
 
             <!-- タイトル -->
             <div class="song-info">
-                <span class="song-title-text">{{ song.title|truncatechars:40 }}</span>
+                <div class="song-title-wrapper">
+                    <span class="song-title-text">{{ song.title }}</span>
+                </div>
+            </div>
+
+            <!-- バッジ（右寄せ） -->
+            <div class="song-badges">
                 {% if song.genre %}
                 <span class="song-genre-badge">{{ song.genre|translate_genre:app_language }}</span>
                 {% endif %}
@@ -260,7 +266,14 @@
     padding: 0 1rem;
     display: flex;
     align-items: center;
-    gap: 0.75rem;
+}
+
+.song-title-wrapper {
+    overflow: hidden;
+    max-width: 100%;
+    position: relative;
+    mask-image: linear-gradient(to right, black 90%, transparent 100%);
+    -webkit-mask-image: linear-gradient(to right, black 90%, transparent 100%);
 }
 
 .song-title-text {
@@ -268,8 +281,34 @@
     font-weight: 600;
     font-size: 0.95rem;
     white-space: nowrap;
-    overflow: hidden;
-    text-overflow: ellipsis;
+    display: inline-block;
+}
+
+/* 長いタイトルのスライドアニメーション */
+.song-title-wrapper.is-overflowing .song-title-text {
+    animation: marquee-scroll var(--marquee-duration, 8s) linear infinite;
+    animation-delay: 1s;
+}
+
+.song-title-wrapper.is-overflowing {
+    mask-image: linear-gradient(to right, black 0%, black 85%, transparent 100%);
+    -webkit-mask-image: linear-gradient(to right, black 0%, black 85%, transparent 100%);
+}
+
+@keyframes marquee-scroll {
+    0%   { transform: translateX(0); }
+    10%  { transform: translateX(0); }
+    90%  { transform: translateX(var(--marquee-offset, -100px)); }
+    100% { transform: translateX(var(--marquee-offset, -100px)); }
+}
+
+/* バッジ（右寄せ） */
+.song-badges {
+    display: flex;
+    align-items: center;
+    gap: 0.4rem;
+    flex-shrink: 0;
+    padding: 0 0.5rem;
 }
 
 .song-genre-badge {
@@ -707,7 +746,7 @@
         padding: 0 0.75rem;
     }
     
-    .song-genre-badge {
+    .song-badges {
         display: none;
     }
     
@@ -980,6 +1019,33 @@ document.addEventListener('DOMContentLoaded', function() {
             });
         });
     });
+
+    // タイトルのオーバーフロー検出 → スライドアニメーション
+    function initMarquee() {
+        document.querySelectorAll('.song-title-wrapper').forEach(wrapper => {
+            const text = wrapper.querySelector('.song-title-text');
+            if (!text) return;
+
+            // リセット
+            wrapper.classList.remove('is-overflowing');
+            text.style.removeProperty('--marquee-offset');
+            text.style.removeProperty('--marquee-duration');
+
+            const wrapperW = wrapper.offsetWidth;
+            const textW = text.scrollWidth;
+
+            if (textW > wrapperW) {
+                const overflow = textW - wrapperW + 20; // 20px余白
+                const duration = Math.max(5, overflow / 30); // 30px/秒、最低5秒
+                wrapper.style.setProperty('--marquee-offset', `-${overflow}px`);
+                wrapper.style.setProperty('--marquee-duration', `${duration}s`);
+                wrapper.classList.add('is-overflowing');
+            }
+        });
+    }
+
+    initMarquee();
+    window.addEventListener('resize', initMarquee);
 
 });
 </script>
