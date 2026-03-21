@@ -7,6 +7,7 @@ urlpatterns = [
     path('', views.HomeView.as_view(), name='home'),
     path('songs/', views.SongListView.as_view(), name='song_list'),
     path('songs/<int:pk>/', views.SongDetailView.as_view(), name='song_detail'),
+    path('s/<str:share_id>/', views.song_share_redirect, name='song_share'),
     path('create/', views.CreateSongView.as_view(), name='create_song'),
     path('upload/', views.UploadImageView.as_view(), name='upload_image'),
     path('extraction-result/', views.TextExtractionResultView.as_view(), name='text_extraction_result'),

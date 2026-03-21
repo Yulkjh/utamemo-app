@@ -1,8 +1,16 @@
 from django.db import models
 from django.contrib.auth import get_user_model
 from django.core.validators import MinLengthValidator
+import secrets
+import string
 
 User = get_user_model()
+
+
+def generate_share_id():
+    """8文字のランダムな共有IDを生成"""
+    alphabet = string.ascii_letters + string.digits
+    return ''.join(secrets.choice(alphabet) for _ in range(8))
 
 
 class Tag(models.Model):
@@ -212,6 +220,14 @@ class Song(models.Model):
         default='none',
         verbose_name='カラオケ処理ステータス'
     )
+    share_id = models.CharField(
+        max_length=8,
+        unique=True,
+        default=generate_share_id,
+        verbose_name='共有ID',
+        help_text='URLに使われるランダムな共有ID',
+        db_index=True,
+    )
     created_at = models.DateTimeField(
         auto_now_add=True,
         verbose_name='作成日時'
@@ -233,6 +249,23 @@ class Song(models.Model):
 
     def __str__(self):
         return f"{self.title} - {self.artist}"
+
+    def get_absolute_url(self):
+        from django.urls import reverse
+        return reverse('songs:song_detail', kwargs={'pk': self.pk})
+
+    def get_share_url(self):
+        """シェア用の短縮URLパスを返す"""
+        from django.urls import reverse
+        return reverse('songs:song_share', kwargs={'share_id': self.share_id})
+
+    def save(self, *args, **kwargs):
+        if not self.share_id:
+            self.share_id = generate_share_id()
+            # ユニーク制約の衝突を回避
+            while Song.objects.filter(share_id=self.share_id).exists():
+                self.share_id = generate_share_id()
+        super().save(*args, **kwargs)
 
 
 class Lyrics(models.Model):

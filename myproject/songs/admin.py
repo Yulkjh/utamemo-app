@@ -17,7 +17,7 @@ class LyricsInline(admin.StackedInline):
 @admin.register(Song)
 class SongAdmin(admin.ModelAdmin):
     list_display = (
-        'id', 'title', 'artist', 'created_by', 'genre', 'vocal_style',
+        'id', 'share_id', 'title', 'artist', 'created_by', 'genre', 'vocal_style',
         'mureka_model', 'generation_status', 'is_public', 'is_encrypted',
         'likes_count', 'total_plays', 'retry_count',
         'karaoke_status', 'created_at',
@@ -27,11 +27,11 @@ class SongAdmin(admin.ModelAdmin):
         'generation_status', 'is_public', 'is_encrypted', 'genre',
         'vocal_style', 'mureka_model', 'karaoke_status', 'created_at',
     )
-    search_fields = ('title', 'artist', 'created_by__username', 'music_prompt', 'error_message')
+    search_fields = ('title', 'artist', 'created_by__username', 'music_prompt', 'error_message', 'share_id')
     ordering = ('-created_at',)
     date_hierarchy = 'created_at'
     list_per_page = 30
-    readonly_fields = ('created_at', 'updated_at', 'started_at', 'completed_at', 'likes_count', 'total_plays')
+    readonly_fields = ('share_id', 'created_at', 'updated_at', 'started_at', 'completed_at', 'likes_count', 'total_plays')
     raw_id_fields = ('created_by', 'source_image')
     inlines = [LyricsInline]
     
@@ -52,7 +52,7 @@ class SongAdmin(admin.ModelAdmin):
                        'error_message', 'started_at', 'completed_at')
         }),
         ('公開・暗号化', {
-            'fields': ('is_public', 'is_encrypted', 'created_by', 'source_image')
+            'fields': ('is_public', 'is_encrypted', 'share_id', 'created_by', 'source_image')
         }),
         ('統計', {
             'fields': ('likes_count', 'total_plays')

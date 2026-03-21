@@ -147,6 +147,12 @@ class SongListView(ListView):
         return context
 
 
+def song_share_redirect(request, share_id):
+    """シェアURL（/s/<share_id>/）から曲詳細ページにリダイレクト"""
+    song = get_object_or_404(Song, share_id=share_id)
+    return redirect('songs:song_detail', pk=song.pk)
+
+
 class SongDetailView(DetailView):
     """楽曲詳細ビュー"""
     model = Song
@@ -212,6 +218,9 @@ class SongDetailView(DetailView):
             context['flashcard_deck'] = FlashcardDeck.objects.filter(
                 source_song=song, user=self.request.user
             ).first()
+        
+        # シェア用URL
+        context['share_url'] = self.request.build_absolute_uri(song.get_share_url())
         
         return context
     

@@ -3856,7 +3856,7 @@ function executeDeleteSong() {
 function openShareModal() {
     let modal = document.getElementById('shareModalOverlay');
     if (!modal) {
-        const shareUrl = window.location.href;
+        const shareUrl = '{{ share_url|escapejs }}';
         const shareTitle = '{{ song.title|escapejs }}';
         const shareText = '{{ song.title|escapejs }}';
         
@@ -3920,20 +3920,20 @@ function closeShareModal() {
 }
 
 function shareToLine() {
-    const url = encodeURIComponent(window.location.href);
+    const url = encodeURIComponent('{{ share_url|escapejs }}');
     const text = encodeURIComponent('{{ song.title|escapejs }}');
     window.open(`https://social-plugins.line.me/lineit/share?url=${url}&text=${text}`, '_blank', 'width=550,height=420');
 }
 
 function shareToWhatsApp() {
-    const url = encodeURIComponent(window.location.href);
-    const text = encodeURIComponent('{{ song.title|escapejs }} ' + window.location.href);
+    const url = '{{ share_url|escapejs }}';
+    const text = encodeURIComponent('{{ song.title|escapejs }} ' + url);
     window.open(`https://wa.me/?text=${text}`, '_blank', 'width=550,height=420');
 }
 
 function shareByEmail() {
     const subject = encodeURIComponent('{{ song.title|escapejs }} - UTAMEMO');
-    const body = encodeURIComponent(window.location.href);
+    const body = encodeURIComponent('{{ share_url|escapejs }}');
     window.location.href = `mailto:?subject=${subject}&body=${body}`;
 }
 
