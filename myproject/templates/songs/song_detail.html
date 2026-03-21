@@ -336,7 +336,7 @@
                 </div>
                 <!-- 通常歌詞表示 -->
                 <div class="lyrics-content" id="lyrics-normal">
-                    {{ lyrics_content|remove_section_labels|remove_asterisks|remove_circled_numbers|linebreaks }}
+                    {{ lyrics_content|remove_asterisks|remove_circled_numbers|format_lyrics_html }}
                 </div>
                 <!-- カラオケモード表示（スターター以上のみ） -->
                 {% if user.is_authenticated and user.is_starter %}
@@ -963,8 +963,19 @@
     font-size: 1.1rem;
     line-height: 1.8;
     color: var(--text-primary);
-    white-space: pre-line;
     background: linear-gradient(135deg, rgba(255, 255, 255, 0.8) 0%, rgba(255, 244, 240, 0.5) 100%);
+}
+
+.lyrics-content p {
+    margin-bottom: 1.2em;
+}
+
+.lyrics-content p:last-child {
+    margin-bottom: 0;
+}
+
+.lyrics-content .lyrics-section-break {
+    margin: 0.5em 0;
 }
 
 .original-text-section {
@@ -1902,8 +1913,8 @@ function toggleFavorite(songId) {
                 </div>
                 <div class="card-body">
                     {% if decrypted_lyrics %}
-                    <div style="white-space: pre-line; font-size: 0.95rem; line-height: 1.6;">
-                        {{ lyrics_content|remove_section_labels|remove_asterisks|remove_circled_numbers }}
+                    <div style="font-size: 0.95rem; line-height: 1.6;">
+                        {{ lyrics_content|remove_asterisks|remove_circled_numbers|format_lyrics_html }}
                     </div>
                     {% else %}
                     <div class="text-muted">
@@ -3404,29 +3415,37 @@ document.getElementById('tagModal').addEventListener('click', function(e) {
     };
     
     // === 歌詞をカラオケ用にレンダリング（手動スクロール方式） ===
-    // セクションラベルのパターン（[Verse 1], [Chorus], [Pre-Chorus] 等）
-    const SECTION_LABEL_RE = /^\[(Verse|Chorus|Pre-?Chorus|Bridge|Outro|Intro|Hook|Refrain|Interlude)(?:\s*\d*)?\]\s*$/i;
+    // セクションラベルのパターン（[Verse 1], Chorus, [Pre-Chorus] 等 — 角括弧あり/なし対応）
+    const SECTION_LABEL_RE = /^\[?(Verse|Chorus|Pre-?Chorus|Bridge|Outro|Intro|Hook|Refrain|Interlude|Post-?Chorus)(?:\s*\d*)?\]?\s*$/i;
 
     function renderKaraokeLyrics() {
         const container = document.getElementById('karaoke-lyrics');
         const normalLyrics = document.getElementById('lyrics-normal');
         if (!container || !normalLyrics) return;
         
-        // 通常歌詞のテキストを取得
+        // 通常歌詞のテキストを取得（format_lyrics_htmlで既にラベル除去済み）
         const lyricsText = normalLyrics.innerText || normalLyrics.textContent || '';
         const lines = lyricsText.split('\n');
         
         let html = '';
+        let lastWasBreak = false;
         for (const line of lines) {
             const trimmed = line.trim();
             if (!trimmed) {
-                // 空行 = セクション区切り
-                html += '<div class="karaoke-line section-break">・・・</div>';
+                // 空行 = セクション区切り（連続する区切りは1つにまとめる）
+                if (!lastWasBreak) {
+                    html += '<div class="karaoke-line section-break">・・・</div>';
+                    lastWasBreak = true;
+                }
             } else if (SECTION_LABEL_RE.test(trimmed)) {
                 // セクションラベルは区切りとして表示
-                html += '<div class="karaoke-line section-break">・・・</div>';
+                if (!lastWasBreak) {
+                    html += '<div class="karaoke-line section-break">・・・</div>';
+                    lastWasBreak = true;
+                }
             } else {
                 html += `<div class="karaoke-line">${trimmed}</div>`;
+                lastWasBreak = false;
             }
         }
         container.innerHTML = html;

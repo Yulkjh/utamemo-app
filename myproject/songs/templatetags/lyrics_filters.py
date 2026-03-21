@@ -8,25 +8,28 @@ register = template.Library()
 
 # セクションラベルのパターン
 # [Verse 1], [Chorus], [Pre-Chorus], [Bridge], [Outro], [Intro] 等
+# 角括弧あり/なし両方に対応
 SECTION_LABEL_PATTERN = re.compile(
-    r'^\[('
-    r'Verse|Chorus|Pre-Chorus|Pre Chorus|Bridge|Outro|Intro|Hook|Refrain|Interlude|'
-    r'verse|chorus|pre-chorus|pre chorus|bridge|outro|intro|hook|refrain|interlude|'
-    r'VERSE|CHORUS|PRE-CHORUS|BRIDGE|OUTRO|INTRO|HOOK|REFRAIN|INTERLUDE'
-    r')(?:\s*\d*)?\]\s*$',
+    r'^\[?('
+    r'Verse|Chorus|Pre-?Chorus|Bridge|Outro|Intro|Hook|Refrain|Interlude|Post-?Chorus'
+    r')(?:\s*\d*)?\]?\s*$',
     re.IGNORECASE
 )
 
 
 @register.filter
 def remove_section_labels(value):
-    """歌詞からセクションラベル（[Verse], [Chorus]等）を除去するフィルター
+    """歌詞からセクションラベル（[Verse], [Chorus], Verse, Chorus等）を除去するフィルター
 
-    Mureka APIが返す歌詞に含まれる [Verse 1], [Pre-Chorus], [Chorus] 等の
+    Mureka API / Gemini が返す歌詞に含まれる [Verse 1], Pre-Chorus, [Chorus] 等の
     構造ラベルを除去し、空行（セクション区切り）として残す。
+    角括弧あり・なし両方に対応。\r\n の正規化も行う。
     """
     if not value:
         return value
+
+    # \r\n → \n に正規化
+    value = value.replace('\r\n', '\n').replace('\r', '\n')
 
     lines = value.split('\n')
     filtered_lines = []
@@ -44,13 +47,31 @@ def remove_section_labels(value):
 
 @register.filter
 def format_lyrics_html(value):
-    """歌詞をセクションラベル付きのHTMLとしてフォーマットするフィルター
+    """歌詞をセクションラベルを除去してHTMLとしてフォーマットするフィルター
 
-    [Verse 1], [Chorus] 等をスタイル付きラベルとして表示し、
-    歌詞本文は段落として表示する。
+    [Verse 1], [Chorus], Pre-Chorus 等のセクションラベルを除去し、
+    歌詞本文を段落(<p>)と改行(<br>)で構造化する。
+    行内に埋め込まれたセクションラベルも除去する。
     """
     if not value:
         return value
+
+    # \r\n → \n に正規化
+    value = value.replace('\r\n', '\n').replace('\r', '\n')
+
+    # 行内に埋め込まれたセクションラベルを改行に変換
+    # 例: "[Verse 1]Cold December" → "\nCold December"
+    # 例: "nighttime[Chorus]Throw it" → "nighttime\nThrow it"
+    inline_label_pattern = re.compile(
+        r'\[?('
+        r'Verse|Chorus|Pre-?Chorus|Bridge|Outro|Intro|Hook|Refrain|Interlude|Post-?Chorus'
+        r')(?:\s*\d*)?\]?',
+        re.IGNORECASE
+    )
+    value = inline_label_pattern.sub('\n', value)
+
+    # 連続する改行を正規化（3つ以上 → 2つ）
+    value = re.sub(r'\n{3,}', '\n\n', value)
 
     lines = value.split('\n')
     html_parts = []
@@ -64,18 +85,7 @@ def format_lyrics_html(value):
 
     for line in lines:
         stripped = line.strip()
-        section_match = re.match(
-            r'^\[('
-            r'Verse|Chorus|Pre-Chorus|Pre Chorus|Bridge|Outro|Intro|Hook|Refrain|Interlude'
-            r')(?:\s*\d*)?\]$',
-            stripped,
-            re.IGNORECASE
-        )
-        if section_match:
-            flush_paragraph()
-            # セクションラベルは非表示（空行として扱い区切りを作る）
-            html_parts.append('<div class="lyrics-section-break"></div>')
-        elif not stripped:
+        if not stripped:
             flush_paragraph()
         else:
             current_paragraph.append(stripped)
