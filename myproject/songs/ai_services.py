@@ -450,6 +450,9 @@ class MurekaAIGenerator:
         
         full_prompt = ", ".join(prompt_parts)
         
+        # アウトロ（インスト）を短くする指示を追加
+        full_prompt += ", short outro, end shortly after vocals finish, minimal instrumental ending"
+        
         payload = {
             "lyrics": lyrics,
             "model": api_model,
