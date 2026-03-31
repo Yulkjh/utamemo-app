@@ -1364,6 +1364,7 @@ class CloudLLMLyricsGenerator:
             "与えられた学習テキストから、韻を踏んでキャッチーで覚えやすい日本語の歌詞を生成します。"
             "重要な用語・人物名・年号・化学式などは必ず正確に歌詞に含めます。"
             "「歌で覚えよう」「覚えよう」「暗記しよう」等の学習行為を促すメタ的な表現は使わず、学習内容そのものを歌詞にしてください。"
+            "「全てが大事」「忘れずに」「大切だよ」「テストに出る」等の励ましや心構えのフレーズも禁止です。"
         ),
         "english_vocab": (
             "You are an expert AI that creates study song lyrics for memorization. "
@@ -1817,6 +1818,7 @@ class GeminiLyricsGenerator:
 ・丸数字（①②③、❶❷❸など）や番号記号は絶対に使わない
 ・元テキストにある番号記号は歌詞に含めず、内容だけを使う
 ・「歌で覚えよう」「覚えよう」「覚えちゃおう」「暗記しよう」「マスターしよう」など、学習行為を促すメタ的な表現は使わない。学習内容そのものを歌詞にすること。
+・「全てが大事」「忘れずに」「大切だよ」「しっかり覚えて」「ポイントだ」「テストに出る」など、学習への心構えや励ましのフレーズも使わない。
 """
 
     def _get_english_prompt(self, extracted_text, genre, custom_request=""):
@@ -1916,6 +1918,7 @@ class GeminiLyricsGenerator:
 ・Sound like a professional English pop song
 ・Only use information from the provided text
 ・Do NOT use meta-phrases like "let's memorize", "let's learn", "let's study", "time to learn", "remember this". Just present the actual content as lyrics.
+・Do NOT use filler encouragement like "everything matters", "don't forget", "this is important", "key point", "it'll be on the test". Only concrete facts, terms, and definitions.
 """
 
     def _get_chinese_prompt(self, extracted_text, genre, custom_request=""):
@@ -2015,6 +2018,7 @@ class GeminiLyricsGenerator:
 ・听起来像专业的中文流行歌曲
 ・只使用提供的文本中的信息
 ・禁止使用「用歌来记住吧」「记住吧」「学习吧」「背下来吧」等促进学习行为的元表达。只将学习内容本身写入歌词。
+・禁止使用「都很重要」「别忘了」「很重要哦」「好好记住」「考试会考」等鼓励性空话。只写具体的事实、术语和定义。
 """
 
     def _get_chinese_vocab_prompt(self, extracted_text, genre, custom_request=""):
@@ -2114,6 +2118,7 @@ class GeminiLyricsGenerator:
 ・听起来像专业的中文流行歌曲
 ・只使用提供的文本中的信息
 ・禁止使用「用歌来记住吧」「记住吧」「学习吧」「背下来吧」等促进学习行为的元表达。只将学习内容本身写入歌词。
+・禁止使用「都很重要」「别忘了」「很重要哦」「好好记住」「考试会考」等鼓励性空话。只写具体的事实、术语和定义。
 """
 
     def _get_japanese_prompt(self, extracted_text, genre, custom_request=""):
@@ -2217,6 +2222,7 @@ class GeminiLyricsGenerator:
 ・専門用語・人物名・地名は漢字表記を維持
 ・必ず単語の区切りにスペースを入れて、聴き取りやすくする
 ・「歌で覚えよう」「覚えよう」「覚えちゃおう」「暗記しよう」「マスターしよう」「学ぼう」「勉強しよう」など、学習行為そのものを促すメタ的な表現は使わない。学習内容そのものを歌詞にすること。
+・「全てが大事」「忘れずに」「大切だよ」「しっかり覚えて」「ポイントだ」「テストに出る」など、学習への心構えや励ましのフレーズも使わない。具体的な事実・用語・定義だけを歌詞にすること。
 """
     
     def convert_to_hiragana(self, lyrics):
@@ -3152,7 +3158,18 @@ def convert_lyrics_to_hiragana_with_context(lyrics):
    - 「君」→「きみ」
    - 「僕」→「ぼく」
 
-2. 数字は日本語の読みに変換
+2. 外国の地名・国名は現代の一般的な読み方を使用（漢文読みにしない！）
+   - 「台北」→「たいぺい」（×「だいほく」は不可）
+   - 「台湾」→「たいわん」
+   - 「北京」→「ぺきん」（×「ほくけい」は不可）
+   - 「上海」→「しゃんはい」
+   - 「南京」→「なんきん」
+   - 「香港」→「ほんこん」
+   - 「韓国」→「かんこく」
+   - 「朝鮮」→「ちょうせん」
+   - 外国地名は日本語として定着している現代の読みを優先すること
+
+3. 数字は日本語の読みに変換
    - 「1」→「いち」、「2」→「に」、「10」→「じゅう」、「100」→「ひゃく」
 
 3. 助詞の発音変換（重要！歌の発音に合わせる）
