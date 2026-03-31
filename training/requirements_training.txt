@@ -1,9 +1,12 @@
 # UTAMEMO LoRA学習 & 推論サーバー用の依存パッケージ
 
-# 学校のGPU PCにインストールする
+# 学校のGPU PCにインストールする (RTX 4080 x2)
 #
 # インストール:
 #   pip install -r requirements_training.txt
+#
+# vLLM (高速推論) を使う場合:
+#   pip install vllm
 
 # PyTorch (CUDA 12.x対応版)
 # 学校のCUDAバージョンに合わせて変更が必要な場合あり
@@ -33,3 +36,14 @@ flask>=3.0.0
 sentencepiece>=0.2.0
 protobuf>=4.25.0
 scipy>=1.12.0
+
+# --- オプション (必要に応じてインストール) ---
+
+# W&B (学習ログの可視化)
+# pip install wandb
+
+# vLLM (高速推論エンジン - 2x-5x高速化)
+# pip install vllm
+
+# DeepSpeed (マルチGPU学習の高速化)
+# pip install deepspeed

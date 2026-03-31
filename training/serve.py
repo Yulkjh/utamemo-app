@@ -5,9 +5,17 @@ UTAMEMO 歌詞生成 推論サーバー
 学習済みLoRAモデルを使って歌詞生成APIを提供する。
 UTAMEMOのRender.comサーバーからHTTP APIで呼び出される。
 
+推論エンジン:
+  1. transformers (デフォルト) - QLoRA + PEFT
+  2. vLLM (--engine vllm) - 高速推論 (連続バッチ処理、PagedAttention)
+
 使い方 (学校のGPU PCで):
+  # transformers (デフォルト)
   python serve.py
   python serve.py --port 8000 --host 0.0.0.0
+
+  # vLLM 高速推論モード (LoRAマージ済みモデルが必要)
+  python serve.py --engine vllm --base_model ./output/merged-model
 
 エンドポイント:
   POST /generate
@@ -37,6 +45,8 @@ app = Flask(__name__)
 # グローバル変数 (起動時にロード)
 model = None
 tokenizer = None
+vllm_engine = None  # vLLMエンジン (--engine vllm 時のみ)
+inference_engine = "transformers"  # "transformers" or "vllm"
 
 DEFAULT_LORA_PATH = "./output/utamemo-lyrics-lora"
 DEFAULT_BASE_MODEL = "meta-llama/Meta-Llama-3-8B-Instruct"
@@ -100,6 +110,51 @@ def load_model(base_model_name, lora_path, hf_token=None, no_lora=False):
 
     model.eval()
     loaded_base_model = base_model_name
+
+
+def load_vllm_model(model_path, hf_token=None):
+    """vLLMエンジンでモデルをロード (高速推論)
+    
+    vLLMを使う場合はLoRAをマージ済みのモデルが必要。
+    マージ方法: python -c "
+        from peft import PeftModel
+        from transformers import AutoModelForCausalLM
+        base = AutoModelForCausalLM.from_pretrained('meta-llama/Meta-Llama-3-8B-Instruct')
+        model = PeftModel.from_pretrained(base, './output/utamemo-lyrics-lora')
+        merged = model.merge_and_unload()
+        merged.save_pretrained('./output/merged-model')
+    "
+    """
+    global vllm_engine, tokenizer, loaded_base_model, loaded_lora_path, inference_engine
+
+    try:
+        from vllm import LLM, SamplingParams  # noqa: F401
+    except ImportError:
+        logger.error("vLLMがインストールされていません。pip install vllm")
+        sys.exit(1)
+
+    logger.info(f"vLLMでモデルをロード: {model_path}")
+    
+    from transformers import AutoTokenizer as AT
+    tokenizer = AT.from_pretrained(model_path, token=hf_token)
+    if tokenizer.pad_token is None:
+        tokenizer.pad_token = tokenizer.eos_token
+
+    # vLLMエンジン初期化 (マルチGPU自動検出)
+    gpu_count = torch.cuda.device_count() if torch.cuda.is_available() else 1
+    vllm_engine = LLM(
+        model=model_path,
+        tokenizer=model_path,
+        tensor_parallel_size=min(gpu_count, 2),  # 最大2GPU
+        dtype="bfloat16",
+        max_model_len=2048,
+        gpu_memory_utilization=0.85,
+    )
+    
+    inference_engine = "vllm"
+    loaded_base_model = model_path
+    loaded_lora_path = "(vllm-merged)"
+    logger.info(f"✅ vLLMモデルロード完了 (GPU: {gpu_count}台)")
 
 
 # =============================================================================
@@ -192,7 +247,7 @@ def _get_user_prompt(study_text, genre, language_mode, custom_request=""):
 
 
 def generate_lyrics(study_text, genre="pop", language_mode="japanese", custom_request=""):
-    """歌詞を生成 — 言語モード対応"""
+    """歌詞を生成 — 言語モード対応、推論エンジン自動選択"""
     system_prompt = SYSTEM_PROMPTS.get(language_mode, DEFAULT_SYSTEM_PROMPT)
     user_prompt = _get_user_prompt(study_text, genre, language_mode, custom_request)
 
@@ -201,6 +256,14 @@ def generate_lyrics(study_text, genre="pop", language_mode="japanese", custom_re
         {"role": "user", "content": user_prompt},
     ]
 
+    if inference_engine == "vllm":
+        return _generate_with_vllm(messages)
+    else:
+        return _generate_with_transformers(messages)
+
+
+def _generate_with_transformers(messages):
+    """transformers + PEFT で推論"""
     input_ids = tokenizer.apply_chat_template(
         messages, add_generation_prompt=True, return_tensors="pt"
     ).to(model.device)
@@ -218,6 +281,25 @@ def generate_lyrics(study_text, genre="pop", language_mode="japanese", custom_re
 
     response = tokenizer.decode(outputs[0][input_ids.shape[-1]:], skip_special_tokens=True)
     return response.strip()
+
+
+def _generate_with_vllm(messages):
+    """vLLMエンジンで高速推論"""
+    from vllm import SamplingParams
+
+    prompt = tokenizer.apply_chat_template(
+        messages, add_generation_prompt=True, tokenize=False
+    )
+
+    sampling_params = SamplingParams(
+        max_tokens=1024,
+        temperature=0.7,
+        top_p=0.9,
+        repetition_penalty=1.1,
+    )
+
+    outputs = vllm_engine.generate([prompt], sampling_params)
+    return outputs[0].outputs[0].text.strip()
 
 
 # =============================================================================
@@ -251,6 +333,7 @@ def health_check():
 
     return jsonify({
         "status": "ok",
+        "engine": inference_engine,
         "base_model": loaded_base_model,
         "lora": loaded_lora_path,
         "gpu": gpu_info,
@@ -315,6 +398,9 @@ def main():
     parser.add_argument("--lora_path", type=str, default=DEFAULT_LORA_PATH)
     parser.add_argument("--no_lora", action="store_true",
                         help="LoRA無しでベースモデルのみ起動 (ファインチューン前のテスト用)")
+    parser.add_argument("--engine", type=str, default="transformers",
+                        choices=["transformers", "vllm"],
+                        help="推論エンジン: transformers (デフォルト) or vllm (高速)")
     parser.add_argument("--host", type=str, default="0.0.0.0")
     parser.add_argument("--port", type=int, default=8000)
     parser.add_argument("--hf_token", type=str, default=None)
@@ -327,11 +413,17 @@ def main():
         sys.exit(1)
 
     # モデルロード
-    load_model(args.base_model, args.lora_path, args.hf_token, no_lora=args.no_lora)
+    if args.engine == "vllm":
+        load_vllm_model(args.base_model, args.hf_token)
+    else:
+        load_model(args.base_model, args.lora_path, args.hf_token, no_lora=args.no_lora)
 
     # サーバー起動
     lora_info = "無し (ベースモデルのみ)" if args.no_lora else args.lora_path
+    if args.engine == "vllm":
+        lora_info = "(vLLM merged)"
     logger.info(f"推論サーバー起動: http://{args.host}:{args.port}")
+    logger.info(f"  エンジン:       {args.engine}")
     logger.info(f"  ベースモデル:   {args.base_model}")
     logger.info(f"  LoRA:          {lora_info}")
     logger.info(f"  POST /generate  - 歌詞生成 (language_mode対応: japanese/english/english_vocab/chinese/chinese_vocab)")

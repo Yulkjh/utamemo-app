@@ -170,42 +170,32 @@ class User(AbstractUser):
         return limits.get(self.plan, 15)
     
     def get_model_limits(self):
-        """AIモデル別の月間制限を取得（-1は無制限）"""
+        """月間楽曲生成制限を取得（-1は無制限）"""
         # 管理者は無制限
         if self.is_staff or self.is_superuser:
-            return {'v8': -1, 'o2': -1, 'v7.6': -1}
+            return {'v8': -1}
         limits = {
-            'free': {'v8': 15, 'o2': 0, 'v7.6': 0},  # フリーはV8のみ月15曲
-            'starter': {'v8': 35, 'o2': 20, 'v7.6': 15},  # スターター月70曲
-            'pro': {'v8': -1, 'o2': -1, 'v7.6': -1},  # 無制限
-            'school': {'v8': 40, 'o2': 25, 'v7.6': 35},
+            'free': {'v8': 15},       # フリー月15曲
+            'starter': {'v8': 70},    # スターター月70曲
+            'pro': {'v8': -1},        # 無制限
+            'school': {'v8': 100},    # スクール月100曲
         }
         return limits.get(self.plan, limits['free'])
 
     def get_monthly_model_usage(self):
-        """今月のAIモデル別使用回数を取得"""
+        """今月の楽曲生成使用回数を取得"""
         from django.utils import timezone
         from songs.models import Song
         
         now = timezone.now()
         first_day = now.replace(day=1, hour=0, minute=0, second=0, microsecond=0)
         
-        songs = Song.objects.filter(
+        count = Song.objects.filter(
             created_by=self,
             created_at__gte=first_day
-        ).values_list('mureka_model', flat=True)
+        ).count()
         
-        usage = {'v8': 0, 'o2': 0, 'v7.6': 0}
-        for model in songs:
-            if model == 'mureka-v8':
-                usage['v8'] += 1
-            elif model == 'mureka-o2':
-                usage['o2'] += 1
-            elif model == 'mureka-7.6':
-                usage['v7.6'] += 1
-            # mureka-7.5のレガシーデータはカウントしない（制限なし）
-        
-        return usage
+        return {'v8': count}
 
     def get_remaining_model_usage(self):
         """今月の残り使用可能回数を取得"""

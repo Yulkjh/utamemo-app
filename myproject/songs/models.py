@@ -82,10 +82,7 @@ class Song(models.Model):
     mureka_model = models.CharField(
         max_length=20,
         choices=[
-            ('mureka-v8', 'V8 - 最高品質・感情表現豊か'),
-            ('mureka-o2', 'O2 - 高品質・プロ向け'),
-            ('mureka-7.6', 'V7.6 - スタンダード'),
-            ('mureka-7.5', 'V7.5 - レガシー'),
+            ('mureka-v8', 'V8 - 最新モデル'),
         ],
         default='mureka-v8',
         verbose_name='Murekaモデル'

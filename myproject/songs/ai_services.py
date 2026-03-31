@@ -330,21 +330,12 @@ class MurekaAIGenerator:
             raise Exception("Lyrics too short for song generation (minimum 50 characters)")
         
         # モデルバージョンの検証と設定
-        # DB/UI上の値 → 実際のMureka APIモデル名にマッピング
-        # Mureka APIの有効なモデル名: "auto", "mureka-6", "mureka-5.5" 等
-        # "auto" は最新モデル（現在はV8）を自動選択する
-        MODEL_API_MAPPING = {
-            'mureka-v8': 'auto',       # V8 = 最新モデル → autoで自動選択
-            'mureka-o2': 'mureka-o2',   # O2はそのまま送信
-            'mureka-7.6': 'mureka-7.6', # 7.6はそのまま送信
-        }
-        valid_models = list(MODEL_API_MAPPING.keys())
-        if model not in valid_models:
-            logger.warning(f"Invalid model '{model}', defaulting to auto (V8)")
+        # V8のみ使用 — Mureka APIの "auto" は最新モデルを自動選択する
+        if model != 'mureka-v8':
+            logger.warning(f"Invalid model '{model}', defaulting to mureka-v8")
             model = 'mureka-v8'
         
-        # APIに送信するモデル名に変換
-        api_model = MODEL_API_MAPPING.get(model, 'auto')
+        api_model = 'auto'  # V8 = 最新モデル → autoで自動選択
         logger.info(f"Model mapping: DB='{model}' → API='{api_model}'")
         
         # ジャンルを英語に変換（Mureka APIは英語プロンプトのほうが精度が高い）

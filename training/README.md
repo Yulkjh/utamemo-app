@@ -1,6 +1,6 @@
 # UTAMEMO ローカルLLM 歌詞生成モデル
 
-学校のGPU PC (RTX 4090) を使って、Gemini APIの代わりに歌詞を生成するローカルLLMをセットアップする手順。
+学校のGPU PC (RTX 4080 × 2) を使って、Gemini APIの代わりに歌詞を生成するローカルLLMをセットアップする手順。
 
 ## 📁 ファイル構成
 
@@ -9,9 +9,9 @@ training/
 ├── README.md                    # このファイル
 ├── requirements_training.txt    # GPU PCにインストールするパッケージ
 ├── export_training_data.py      # DBから学習データを抽出するスクリプト
-├── train.py                     # LoRA学習スクリプト
+├── train.py                     # LoRA学習スクリプト (マルチGPU / 評価 / W&B対応)
 ├── test_model.py                # 学習済みモデルのテスト
-├── serve.py                     # 推論サーバー (Flask API)
+├── serve.py                     # 推論サーバー (Flask API / vLLM対応)
 ├── start_server.sh              # ワンコマンド起動 (serve.py + Cloudflare Tunnel)
 └── data/
     └── sample_training_data.json # サンプル学習データ (3件)
@@ -49,8 +49,25 @@ source venv/bin/activate
 # パッケージインストール
 pip install -r requirements_training.txt
 
-# CUDA確認
-python3 -c "import torch; print(f'CUDA: {torch.cuda.is_available()}, GPU: {torch.cuda.get_device_name(0)}')"
+# CUDA確認 (2枚のGPU両方が見えること)
+python3 -c "import torch; print(f'CUDA: {torch.cuda.is_available()}, GPUs: {torch.cuda.device_count()}'); [print(f'  GPU {i}: {torch.cuda.get_device_name(i)}') for i in range(torch.cuda.device_count())]"
+```
+
+**オプション: vLLM (高速推論)**
+
+推論サーバーでvLLMエンジンを使う場合（2x〜5x高速化）:
+
+```bash
+pip install vllm
+```
+
+**オプション: W&B (学習ログ可視化)**
+
+学習ログをWeb上で確認したい場合:
+
+```bash
+pip install wandb
+wandb login
 ```
 
 ### 4. Hugging Face トークン取得
@@ -112,6 +129,61 @@ python train.py \
 
 学習が完了すると `output/utamemo-lyrics-lora/` にLoRAアダプタが保存される。
 
+#### 学習オプション一覧
+
+| オプション | デフォルト | 説明 |
+|-----------|-----------|------|
+| `--data_path` | `data/sample_training_data.json` | 学習データのパス |
+| `--model_name` | `meta-llama/Meta-Llama-3-8B-Instruct` | ベースモデル |
+| `--output_dir` | `output/utamemo-lyrics-lora` | LoRA保存先 |
+| `--epochs` | `3` | エポック数 |
+| `--batch_size` | `1` | バッチサイズ |
+| `--lora_rank` | `16` | LoRAランク (8/16/32/64) |
+| `--lora_alpha` | `32` | LoRAアルファ |
+| `--eval_split` | `0.1` | 検証データの割合 (0で無効) |
+| `--early_stopping_patience` | `0` | Early Stopping (0で無効、3推奨) |
+| `--wandb_project` | なし | W&Bプロジェクト名 (指定でW&B有効) |
+| `--resume_from_checkpoint` | なし | チェックポイントから学習再開 |
+| `--hf_token` | なし | Hugging Faceトークン |
+
+#### マルチGPU学習 (RTX 4080 × 2)
+
+```bash
+# accelerate で2枚のGPUを使った学習
+accelerate launch --num_processes 2 train.py \
+  --data_path data/lyrics_training_data.json \
+  --epochs 3 \
+  --batch_size 2 \
+  --lora_rank 32 \
+  --eval_split 0.1 \
+  --early_stopping_patience 3 \
+  --hf_token $HF_TOKEN
+```
+
+#### W&B (Weights & Biases) で学習ログを可視化
+
+```bash
+python train.py \
+  --data_path data/lyrics_training_data.json \
+  --wandb_project utamemo-lyrics \
+  --hf_token $HF_TOKEN
+```
+
+学習後 https://wandb.ai で loss カーブ、eval loss、GPU使用量などを確認可能。
+
+#### 対応モデル
+
+train.py はモデルファミリーを自動検出し、最適なLoRAターゲットモジュールを設定:
+
+| モデル | パラメータ | VRAM (QLoRA) | 備考 |
+|--------|----------|-------------|------|
+| `meta-llama/Meta-Llama-3-8B-Instruct` | 8B | ~10GB | デフォルト、推奨 |
+| `meta-llama/Meta-Llama-3.1-8B-Instruct` | 8B | ~10GB | Llama 3.1 |
+| `google/gemma-2-9b-it` | 9B | ~12GB | 日本語良好 |
+| `microsoft/Phi-3-mini-4k-instruct` | 3.8B | ~5GB | 軽量、テスト向け |
+| `Qwen/Qwen2.5-7B-Instruct` | 7B | ~8GB | 中国語/日本語に強い |
+| `Qwen/Qwen2.5-32B-Instruct` | 32B | ~20GB | 高品質、2枚必要 |
+
 ### 7. モデルテスト
 
 ```bash
@@ -128,6 +200,15 @@ python test_model.py \
 
 Cloudflare Tunnel を使って、学校LAN内のGPU PCをインターネットに安全に公開する。
 ファイアウォール/ポート開放不要、HTTPS自動。
+
+#### 推論エンジンの選択
+
+serve.py は2つの推論エンジンに対応:
+
+| エンジン | 特徴 | いつ使う |
+|---------|------|---------|
+| `transformers` (デフォルト) | 標準的、追加インストール不要 | テスト・少量リクエスト |
+| `vllm` | 2x〜5x高速、マルチGPU対応 | 本番運用・高速化したい時 |
 
 #### 初回セットアップ（1回だけ）
 
@@ -157,10 +238,17 @@ cd /path/to/utamemo-app/training
 # 1. APIキーを設定
 export UTAMEMO_API_KEY="ランダムな文字列を設定"
 
-# 2. 推論サーバー起動
+# 2. 推論サーバー起動 (transformers エンジン)
 python serve.py \
   --host 127.0.0.1 \
   --port 8000 \
+  --hf_token $HF_TOKEN &
+
+# 2b. または vLLM エンジンで高速起動 (2枚のGPUで並列推論)
+python serve.py \
+  --host 127.0.0.1 \
+  --port 8000 \
+  --engine vllm \
   --hf_token $HF_TOKEN &
 
 # 3. Cloudflare Tunnel 起動
@@ -217,13 +305,16 @@ LYRICS_BACKEND=auto
 - 学校のGPUを商用プロジェクトに使う許可を先生に確認すること
 - 学習済みモデルの持ち出し可否も確認
 
-## 📊 リソース目安
+## 📊 リソース目安 (RTX 4080 × 2, 16GB VRAM × 2)
 
 | 作業 | GPU | VRAM | 時間 |
 |------|-----|------|------|
-| LoRA学習 (100件) | 4090 x1 | ~16GB | 1〜2時間 |
-| LoRA学習 (1000件) | 4090 x1 | ~16GB | 4〜8時間 |
-| 推論サーバー | 4090 x1 | ~10GB | 常時 |
+| LoRA学習 8Bモデル (100件) | 4080 x1 | ~10GB | 1〜2時間 |
+| LoRA学習 8Bモデル (1000件) | 4080 x1 | ~10GB | 4〜8時間 |
+| LoRA学習 32Bモデル (100件) | 4080 x2 | ~20GB | 3〜5時間 |
+| 推論サーバー (transformers) | 4080 x1 | ~10GB | 常時 |
+| 推論サーバー (vLLM, 8B) | 4080 x1 | ~10GB | 常時、2x〜5x高速 |
+| 推論サーバー (vLLM, 32B) | 4080 x2 | ~20GB | 常時、高品質 |
 
 ## 🔄 Geminiからの移行チェックリスト
 

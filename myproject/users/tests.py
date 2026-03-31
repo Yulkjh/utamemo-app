@@ -92,11 +92,6 @@ class UserPlanLimitsTest(TestCase):
         user = User.objects.create_user(username='testuser', password='testpass123')
         self.assertTrue(user.can_use_model('v8'))
     
-    def test_free_user_cannot_use_o2(self):
-        """無料ユーザーがo2モデルを使用できないこと"""
-        user = User.objects.create_user(username='testuser', password='testpass123')
-        self.assertFalse(user.can_use_model('o2'))
-    
     def test_remaining_usage_no_songs(self):
         """曲未生成ユーザーの残り使用回数が正しいこと"""
         user = User.objects.create_user(username='testuser', password='testpass123')
