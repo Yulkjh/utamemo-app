@@ -47,6 +47,9 @@ urlpatterns = [
     # Mureka APIデバッグ（管理者のみ）
     path('staff/mureka-debug/', views.mureka_api_debug, name='mureka_debug'),
     
+    # 曲クオリティチェック（管理者のみ）
+    path('staff/quality-check/', views.quality_check, name='quality_check'),
+    
     # コンテンツ違反ページ
     path('content-violation/', views.content_violation_view, name='content_violation'),
     

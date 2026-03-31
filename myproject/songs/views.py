@@ -2874,3 +2874,69 @@ def training_api_status_json(request):
             'updated_at': s.updated_at.isoformat(),
         })
     return JsonResponse({'sessions': result})
+
+
+@staff_member_required
+def quality_check(request):
+    """曲のクオリティチェック用スタッフページ"""
+    from django.db.models import Avg
+
+    songs = Song.objects.filter(
+        generation_status='completed',
+    ).select_related('created_by', 'lyrics').prefetch_related('tags').order_by('-created_at')
+
+    # フィルタ
+    genre = request.GET.get('genre', '')
+    vocal = request.GET.get('vocal', '')
+    sort = request.GET.get('sort', '-created_at')
+    q = request.GET.get('q', '')
+
+    if genre:
+        songs = songs.filter(genre__icontains=genre)
+    if vocal:
+        songs = songs.filter(vocal_style=vocal)
+    if q:
+        songs = songs.filter(
+            Q(title__icontains=q) | Q(created_by__username__icontains=q)
+        )
+
+    allowed_sorts = {
+        '-created_at': '-created_at',
+        'created_at': 'created_at',
+        '-total_plays': '-total_plays',
+        '-likes_count': '-likes_count',
+    }
+    songs = songs.order_by(allowed_sorts.get(sort, '-created_at'))
+
+    # 統計情報
+    stats = Song.objects.filter(generation_status='completed').aggregate(
+        total=Count('id'),
+        avg_plays=Avg('total_plays'),
+        avg_likes=Avg('likes_count'),
+    )
+
+    # ジャンル一覧（フィルタ用）
+    genres = (
+        Song.objects.filter(generation_status='completed')
+        .exclude(genre='')
+        .values_list('genre', flat=True)
+        .distinct()
+        .order_by('genre')
+    )
+
+    # ページネーション
+    from django.core.paginator import Paginator
+    paginator = Paginator(songs, 20)
+    page = request.GET.get('page', 1)
+    songs_page = paginator.get_page(page)
+
+    context = {
+        'songs': songs_page,
+        'stats': stats,
+        'genres': list(genres),
+        'current_genre': genre,
+        'current_vocal': vocal,
+        'current_sort': sort,
+        'current_q': q,
+    }
+    return render(request, 'songs/quality_check.html', context)

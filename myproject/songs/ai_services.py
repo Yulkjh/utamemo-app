@@ -2396,8 +2396,212 @@ def kanji_and_numbers_to_hiragana(text):
     Gemini APIを使わず、fugashi形態素解析 + 歌詞特化の読み替え辞書で
     高品質なひらがな変換を行う。助詞の発音変換（は→わ、へ→え、を→お）も対応。
     改行や句読点を保持して、歌詞の構造を維持する。
+    英語単語はカタカナに変換し、Mureka APIが一貫した発音を生成できるようにする。
     """
     
+    # === 英語→カタカナ辞書（日本語楽曲でよく使われる英単語） ===
+    # fugashi (unidic-lite) は英語にカタカナ読みを付与しないため、
+    # 辞書ベースで変換する。Mureka APIに一貫した日本語スクリプトを送信し
+    # 混在スクリプトによる発音異常を防ぐ。
+    ENGLISH_TO_KATAKANA = {
+        # ── 感情・愛 ──
+        'love': 'ラブ', 'like': 'ライク', 'hate': 'ヘイト',
+        'miss': 'ミス', 'kiss': 'キス', 'hug': 'ハグ',
+        'heart': 'ハート', 'soul': 'ソウル', 'passion': 'パッション',
+        'emotion': 'エモーション', 'feeling': 'フィーリング',
+        'sweet': 'スウィート', 'bitter': 'ビター', 'lonely': 'ロンリー',
+        'happy': 'ハッピー', 'sad': 'サッド', 'angry': 'アングリー',
+        'smile': 'スマイル', 'cry': 'クライ', 'tears': 'ティアーズ',
+        'pain': 'ペイン', 'joy': 'ジョイ', 'fear': 'フィア',
+        'hope': 'ホープ', 'faith': 'フェイス', 'trust': 'トラスト',
+        'jealousy': 'ジェラシー', 'pride': 'プライド',
+        'gentle': 'ジェントル', 'tender': 'テンダー', 'warm': 'ウォーム',
+        'cold': 'コールド', 'hurt': 'ハート',
+        'happiness': 'ハピネス', 'sadness': 'サッドネス',
+        'kindness': 'カインドネス', 'loneliness': 'ロンリネス',
+        'tenderness': 'テンダネス', 'warmth': 'ウォームス',
+        'sorrow': 'ソロー', 'anger': 'アンガー',
+
+        # ── 人・呼びかけ ──
+        'baby': 'ベイビー', 'darling': 'ダーリン', 'honey': 'ハニー',
+        'angel': 'エンジェル', 'friend': 'フレンド', 'boy': 'ボーイ',
+        'girl': 'ガール', 'lady': 'レディー', 'man': 'マン',
+        'woman': 'ウーマン', 'children': 'チルドレン', 'child': 'チャイルド',
+        'king': 'キング', 'queen': 'クイーン', 'prince': 'プリンス',
+        'princess': 'プリンセス', 'hero': 'ヒーロー',
+
+        # ── 時間 ──
+        'time': 'タイム', 'day': 'デイ', 'night': 'ナイト',
+        'morning': 'モーニング', 'evening': 'イブニング',
+        'tonight': 'トゥナイト', 'today': 'トゥデイ',
+        'tomorrow': 'トゥモロー', 'yesterday': 'イエスタデイ',
+        'forever': 'フォーエバー', 'never': 'ネバー', 'always': 'オールウェイズ',
+        'moment': 'モーメント', 'season': 'シーズン', 'summer': 'サマー',
+        'winter': 'ウィンター', 'spring': 'スプリング', 'autumn': 'オータム',
+        'future': 'フューチャー', 'past': 'パスト',
+
+        # ── 自然・天体 ──
+        'star': 'スター', 'stars': 'スターズ', 'moon': 'ムーン',
+        'sun': 'サン', 'sky': 'スカイ', 'rain': 'レイン',
+        'rainbow': 'レインボー', 'snow': 'スノー', 'wind': 'ウィンド',
+        'storm': 'ストーム', 'thunder': 'サンダー',
+        'ocean': 'オーシャン', 'sea': 'シー', 'wave': 'ウェイブ',
+        'flower': 'フラワー', 'flowers': 'フラワーズ', 'rose': 'ローズ',
+        'fire': 'ファイア', 'flame': 'フレイム', 'light': 'ライト',
+        'shadow': 'シャドウ', 'darkness': 'ダークネス', 'dark': 'ダーク',
+        'bright': 'ブライト', 'shine': 'シャイン', 'glow': 'グロウ',
+        'earth': 'アース', 'world': 'ワールド', 'planet': 'プラネット',
+        'sunset': 'サンセット', 'sunrise': 'サンライズ',
+        'starlight': 'スターライト', 'moonlight': 'ムーンライト',
+        'sunlight': 'サンライト', 'sunshine': 'サンシャイン',
+
+        # ── 音楽・芸術 ──
+        'song': 'ソング', 'music': 'ミュージック', 'melody': 'メロディー',
+        'rhythm': 'リズム', 'beat': 'ビート', 'dance': 'ダンス',
+        'sing': 'シング', 'voice': 'ヴォイス', 'sound': 'サウンド',
+        'rock': 'ロック', 'blues': 'ブルース', 'jazz': 'ジャズ',
+        'story': 'ストーリー', 'fantasy': 'ファンタジー',
+
+        # ── 生活・場所 ──
+        'home': 'ホーム', 'house': 'ハウス', 'room': 'ルーム',
+        'door': 'ドア', 'window': 'ウィンドウ', 'street': 'ストリート',
+        'road': 'ロード', 'way': 'ウェイ', 'city': 'シティ',
+        'town': 'タウン', 'garden': 'ガーデン', 'heaven': 'ヘブン',
+        'paradise': 'パラダイス', 'place': 'プレイス',
+
+        # ── 抽象概念 ──
+        'dream': 'ドリーム', 'dreams': 'ドリームズ', 'wish': 'ウィッシュ',
+        'miracle': 'ミラクル', 'magic': 'マジック', 'power': 'パワー',
+        'freedom': 'フリーダム', 'peace': 'ピース', 'truth': 'トゥルース',
+        'life': 'ライフ', 'death': 'デス', 'destiny': 'デスティニー',
+        'fate': 'フェイト', 'chance': 'チャンス', 'promise': 'プロミス',
+        'secret': 'シークレット', 'treasure': 'トレジャー',
+        'memory': 'メモリー', 'memories': 'メモリーズ',
+        'silence': 'サイレンス', 'loneliness': 'ロンリネス',
+        'eternity': 'エタニティ', 'infinity': 'インフィニティ',
+        'courage': 'カレッジ', 'grace': 'グレイス',
+
+        # ── 形容詞 ──
+        'beautiful': 'ビューティフル', 'wonderful': 'ワンダフル',
+        'precious': 'プレシャス', 'perfect': 'パーフェクト',
+        'crazy': 'クレイジー', 'true': 'トゥルー', 'real': 'リアル',
+        'pure': 'ピュア', 'deep': 'ディープ', 'high': 'ハイ',
+        'blue': 'ブルー', 'red': 'レッド', 'white': 'ホワイト',
+        'black': 'ブラック', 'golden': 'ゴールデン', 'silver': 'シルバー',
+        'brand': 'ブランド', 'new': 'ニュー', 'old': 'オールド',
+        'good': 'グッド', 'bad': 'バッド', 'great': 'グレイト',
+        'strong': 'ストロング', 'brave': 'ブレイブ', 'proud': 'プラウド',
+        'free': 'フリー', 'wild': 'ワイルド', 'cool': 'クール',
+        'little': 'リトル', 'big': 'ビッグ', 'long': 'ロング',
+        'last': 'ラスト', 'first': 'ファースト', 'final': 'ファイナル',
+        'only': 'オンリー', 'special': 'スペシャル', 'favorite': 'フェイバリット',
+        'lonely': 'ロンリー', 'endless': 'エンドレス', 'eternal': 'エターナル',
+
+        # ── 動詞 ──
+        'believe': 'ビリーブ', 'fly': 'フライ', 'run': 'ラン',
+        'go': 'ゴー', 'come': 'カム', 'stay': 'ステイ',
+        'hold': 'ホールド', 'touch': 'タッチ', 'feel': 'フィール',
+        'break': 'ブレイク', 'fall': 'フォール', 'rise': 'ライズ',
+        'fight': 'ファイト', 'pray': 'プレイ', 'call': 'コール',
+        'remember': 'リメンバー', 'forget': 'フォーゲット',
+        'start': 'スタート', 'stop': 'ストップ', 'change': 'チェンジ',
+        'save': 'セイブ', 'find': 'ファインド', 'lose': 'ルーズ',
+        'give': 'ギブ', 'take': 'テイク', 'make': 'メイク',
+        'need': 'ニード', 'want': 'ウォント', 'know': 'ノウ',
+        'see': 'シー', 'look': 'ルック', 'watch': 'ウォッチ',
+        'wait': 'ウェイト', 'walk': 'ウォーク', 'drive': 'ドライブ',
+        'burn': 'バーン', 'play': 'プレイ', 'sing': 'シング',
+        'open': 'オープン', 'close': 'クローズ', 'live': 'リブ',
+        'die': 'ダイ', 'wake': 'ウェイク', 'sleep': 'スリープ',
+        'try': 'トライ', 'say': 'セイ', 'said': 'セッド',
+        'let': 'レット', 'set': 'セット', 'get': 'ゲット',
+        'got': 'ゴット', 'put': 'プット', 'tell': 'テル',
+        'show': 'ショー', 'turn': 'ターン', 'keep': 'キープ',
+        'move': 'ムーブ', 'stand': 'スタンド', 'reach': 'リーチ',
+        'wish': 'ウィッシュ', 'born': 'ボーン', 'heal': 'ヒール',
+        'shout': 'シャウト', 'scream': 'スクリーム', 'breathe': 'ブリーズ',
+        'shine': 'シャイン', 'hiding': 'ハイディング', 'crying': 'クライング',
+        'falling': 'フォーリング', 'shining': 'シャイニング',
+        'running': 'ランニング', 'loving': 'ラビング', 'living': 'リビング',
+
+        # ── 挨拶・感嘆 ──
+        'hello': 'ハロー', 'goodbye': 'グッバイ', 'sorry': 'ソーリー',
+        'please': 'プリーズ', 'thank': 'サンク', 'thanks': 'サンクス',
+        'yes': 'イエス', 'no': 'ノー', 'oh': 'オー', 'hey': 'ヘイ',
+        'yeah': 'イェー', 'wow': 'ワオ', 'bye': 'バイ',
+
+        # ── 代名詞・冠詞・接続詞 ──
+        'i': 'アイ', 'my': 'マイ', 'your': 'ユア', 'our': 'アワー',
+        'you': 'ユー', 'me': 'ミー', 'we': 'ウィー',
+        'she': 'シー', 'he': 'ヒー', 'they': 'ゼイ',
+        'it': 'イット', 'its': 'イッツ',
+        'this': 'ディス', 'that': 'ザット',
+        'the': 'ザ', 'a': 'ア',
+        'and': 'アンド', 'or': 'オア',
+        'but': 'バット', 'so': 'ソー', 'just': 'ジャスト',
+        'all': 'オール', 'one': 'ワン', 'two': 'トゥー',
+        'three': 'スリー',
+        'is': 'イズ', 'are': 'アー', 'was': 'ワズ',
+        'not': 'ノット', 'no': 'ノー',
+        'in': 'イン', 'on': 'オン', 'at': 'アット',
+        'to': 'トゥー', 'for': 'フォー', 'with': 'ウィズ',
+        'of': 'オブ', 'from': 'フロム',
+        'if': 'イフ', 'when': 'ウェン', 'where': 'ウェア',
+        'what': 'ワット', 'who': 'フー', 'how': 'ハウ', 'why': 'ホワイ',
+        'do': 'ドゥー', 'can': 'キャン', 'will': 'ウィル',
+        'be': 'ビー', 'been': 'ビーン', 'am': 'アム',
+        'have': 'ハブ', 'has': 'ハズ', 'had': 'ハド',
+
+        # ── その他（J-POPでよく使われる） ──
+        'again': 'アゲイン', 'away': 'アウェイ', 'back': 'バック',
+        'down': 'ダウン', 'here': 'ヒア', 'there': 'ゼア',
+        'now': 'ナウ', 'out': 'アウト', 'up': 'アップ',
+        'together': 'トゥゲザー', 'alone': 'アローン',
+        'somebody': 'サムバディ', 'nobody': 'ノーバディ',
+        'everybody': 'エブリバディ', 'everything': 'エブリシング',
+        'nothing': 'ナッシング', 'something': 'サムシング',
+        'anywhere': 'エニウェア', 'somewhere': 'サムウェア',
+        'nowhere': 'ノーウェア', 'everywhere': 'エブリウェア',
+        'game': 'ゲーム', 'party': 'パーティー', 'color': 'カラー',
+        'smile': 'スマイル', 'style': 'スタイル', 'scene': 'シーン',
+        'side': 'サイド', 'step': 'ステップ', 'sign': 'サイン',
+        'cross': 'クロス', 'chain': 'チェイン', 'ring': 'リング',
+        'wing': 'ウィング', 'wings': 'ウィングス',
+        'diamond': 'ダイヤモンド', 'crystal': 'クリスタル',
+        'pearl': 'パール', 'gold': 'ゴールド',
+        'Christmas': 'クリスマス', 'birthday': 'バースデイ',
+        'anymore': 'エニモア', 'alright': 'オーライ',
+        'maybe': 'メイビー', 'really': 'リアリー', 'already': 'オールレディー',
+        'enough': 'イナフ', 'myself': 'マイセルフ', 'yourself': 'ユアセルフ',
+        'reason': 'リーズン', 'answer': 'アンサー',
+        'end': 'エンド', 'beginning': 'ビギニング',
+        'tonight': 'トゥナイト', 'every': 'エブリ',
+        'under': 'アンダー', 'over': 'オーバー', 'through': 'スルー',
+        'into': 'イントゥ', 'around': 'アラウンド', 'across': 'アクロス',
+        'against': 'アゲインスト', 'between': 'ビトウィーン',
+    }
+
+    # === アポストロフィ付き英語→カタカナ辞書 ===
+    # fugashiが "don't" → ["don", "'", "t"] と分割するため、
+    # 結合後に辞書検索する
+    APOSTROPHE_ENGLISH = {
+        "don't": 'ドント', "doesn't": 'ダズント',
+        "can't": 'キャント', "won't": 'ウォント',
+        "isn't": 'イズント', "aren't": 'アーント',
+        "wasn't": 'ワズント', "weren't": 'ワーント',
+        "couldn't": 'クドゥント', "wouldn't": 'ウドゥント',
+        "shouldn't": 'シュドゥント', "haven't": 'ハブント',
+        "didn't": 'ディドゥント',
+        "i'm": 'アイム', "i've": 'アイブ', "i'll": 'アイル', "i'd": 'アイド',
+        "you're": 'ユアー', "you've": 'ユーブ', "you'll": 'ユール', "you'd": 'ユード',
+        "we're": 'ウィアー', "we've": 'ウィーブ', "we'll": 'ウィール',
+        "they're": 'ゼイアー', "they've": 'ゼイブ', "they'll": 'ゼイル',
+        "he's": 'ヒーズ', "she's": 'シーズ', "it's": 'イッツ',
+        "that's": 'ザッツ', "what's": 'ワッツ', "there's": 'ゼアーズ',
+        "here's": 'ヒアーズ', "who's": 'フーズ',
+        "let's": 'レッツ',
+    }
+
     # === 歌詞用読み替え辞書 ===
     # fugashiのデフォルト読みが歌詞に不自然な場合に上書きする
     # キー: (surface, fugashiのカナ読み) → 値: 正しいひらがな読み
@@ -2786,6 +2990,21 @@ def kanji_and_numbers_to_hiragana(text):
         elif has_kanji:
             return surface
         elif re.match(r'^[A-Za-zａ-ｚＡ-Ｚ]+$', surface):
+            # 英語単語をカタカナに変換（Mureka APIの発音精度向上）
+            # fugashi (unidic-lite) は英語にkana=Noneを返すため辞書で変換
+            if kana:
+                return kana  # fugashiがカタカナ読みを持つ場合はそれを使用
+            lookup = surface.lower()
+            if lookup in ENGLISH_TO_KATAKANA:
+                return ENGLISH_TO_KATAKANA[lookup]
+            # 大文字小文字の原形でも検索（例: "Forever" → "forever"）
+            return surface  # 辞書にない英語はそのまま（Murekaが処理）
+        elif re.match(r'^[A-Za-zａ-ｚＡ-Ｚ\'-]+$', surface):
+            # アポストロフィやハイフンを含む英語 (don't, I'm, etc.)
+            # 基本形で辞書検索
+            lookup = surface.lower().replace("'", "").replace("'", "")
+            if lookup in ENGLISH_TO_KATAKANA:
+                return ENGLISH_TO_KATAKANA[lookup]
             return surface
         elif re.match(r'^[ァ-ヴー]+$', surface):
             return surface
@@ -2844,6 +3063,34 @@ def kanji_and_numbers_to_hiragana(text):
                         break
                 
                 if not compound_matched:
+                    # --- ハイフン付き英語の結合チェック ---
+                    # fugashiが "good-bye" → ["good", "-", "bye"] と分割する場合
+                    # ハイフンを除去して結合し、辞書で検索する
+                    if (re.match(r'^[A-Za-z]+$', word.surface) and
+                            i + 2 < len(words) and
+                            words[i + 1].surface == '-' and
+                            re.match(r'^[A-Za-z]+$', words[i + 2].surface)):
+                        combined = word.surface + words[i + 2].surface
+                        lookup = combined.lower()
+                        if lookup in ENGLISH_TO_KATAKANA:
+                            result.append(ENGLISH_TO_KATAKANA[lookup])
+                            skip_until = i + 2
+                            continue
+                    
+                    # --- アポストロフィ付き英語の結合チェック ---
+                    # fugashiが "don't" → ["don", "'", "t"] と分割する場合
+                    # 結合して APOSTROPHE_ENGLISH 辞書で検索する
+                    if (re.match(r'^[A-Za-z]+$', word.surface) and
+                            i + 2 < len(words) and
+                            words[i + 1].surface in ("'", "'", "'") and
+                            re.match(r'^[A-Za-z]+$', words[i + 2].surface)):
+                        combined = word.surface + "'" + words[i + 2].surface
+                        lookup = combined.lower()
+                        if lookup in APOSTROPHE_ENGLISH:
+                            result.append(APOSTROPHE_ENGLISH[lookup])
+                            skip_until = i + 2
+                            continue
+                    
                     result.append(convert_token(word, words, i))
             
             converted_segments.append(''.join(result))

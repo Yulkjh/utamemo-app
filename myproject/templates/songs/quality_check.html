@@ -1,0 +1,221 @@
+{% extends 'base.html' %}
+
+{% block title %}曲クオリティチェック - UTAMEMO{% endblock %}
+
+{% block content %}
+<div class="container py-4">
+    <h2 class="mb-4" style="color: #ff7940;">
+        <i class="bi bi-music-note-beamed"></i> 曲クオリティチェック
+    </h2>
+
+    <!-- 統計サマリー -->
+    <div class="row mb-4">
+        <div class="col-md-4 col-6 mb-3">
+            <div class="card text-center h-100">
+                <div class="card-body py-3">
+                    <h3 class="mb-1" style="color: #ff7940;">{{ stats.total|default:0 }}</h3>
+                    <small class="text-muted">生成完了曲数</small>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-4 col-6 mb-3">
+            <div class="card text-center h-100">
+                <div class="card-body py-3">
+                    <h3 class="text-primary mb-1">{{ stats.avg_plays|floatformat:1|default:"0" }}</h3>
+                    <small class="text-muted">平均再生回数</small>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-4 col-6 mb-3">
+            <div class="card text-center h-100">
+                <div class="card-body py-3">
+                    <h3 class="text-danger mb-1">{{ stats.avg_likes|floatformat:1|default:"0" }}</h3>
+                    <small class="text-muted">平均いいね数</small>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- フィルタ & 検索 -->
+    <div class="card mb-4">
+        <div class="card-body">
+            <form method="get" class="row g-3 align-items-end">
+                <div class="col-md-3">
+                    <label class="form-label small text-muted">検索</label>
+                    <input type="text" name="q" class="form-control" placeholder="タイトル / ユーザー名" value="{{ current_q }}">
+                </div>
+                <div class="col-md-2">
+                    <label class="form-label small text-muted">ジャンル</label>
+                    <select name="genre" class="form-select">
+                        <option value="">すべて</option>
+                        {% for g in genres %}
+                        <option value="{{ g }}" {% if g == current_genre %}selected{% endif %}>{{ g }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <div class="col-md-2">
+                    <label class="form-label small text-muted">ボーカル</label>
+                    <select name="vocal" class="form-select">
+                        <option value="">すべて</option>
+                        <option value="female" {% if current_vocal == 'female' %}selected{% endif %}>女性ボーカル</option>
+                        <option value="male" {% if current_vocal == 'male' %}selected{% endif %}>男性ボーカル</option>
+                        <option value="female_cute" {% if current_vocal == 'female_cute' %}selected{% endif %}>かわいい系女性</option>
+                        <option value="female_cool" {% if current_vocal == 'female_cool' %}selected{% endif %}>クール系女性</option>
+                        <option value="male_high" {% if current_vocal == 'male_high' %}selected{% endif %}>ハイトーン系男性</option>
+                        <option value="duet" {% if current_vocal == 'duet' %}selected{% endif %}>デュエット</option>
+                        <option value="vocaloid_female" {% if current_vocal == 'vocaloid_female' %}selected{% endif %}>ボカロ風（女性）</option>
+                        <option value="vocaloid_male" {% if current_vocal == 'vocaloid_male' %}selected{% endif %}>ボカロ風（男性）</option>
+                    </select>
+                </div>
+                <div class="col-md-2">
+                    <label class="form-label small text-muted">並び順</label>
+                    <select name="sort" class="form-select">
+                        <option value="-created_at" {% if current_sort == '-created_at' %}selected{% endif %}>新しい順</option>
+                        <option value="created_at" {% if current_sort == 'created_at' %}selected{% endif %}>古い順</option>
+                        <option value="-total_plays" {% if current_sort == '-total_plays' %}selected{% endif %}>再生数順</option>
+                        <option value="-likes_count" {% if current_sort == '-likes_count' %}selected{% endif %}>いいね順</option>
+                    </select>
+                </div>
+                <div class="col-md-3">
+                    <button type="submit" class="btn w-100" style="background: linear-gradient(135deg, #ff7940, #ff6b35); color: #fff;">
+                        <i class="bi bi-search"></i> フィルタ
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- 曲一覧 -->
+    <div class="qc-song-list">
+        {% for song in songs %}
+        <div class="card mb-3 qc-song-card" id="song-card-{{ song.pk }}">
+            <div class="card-body">
+                <div class="row align-items-center">
+                    <!-- 情報 -->
+                    <div class="col-lg-4 mb-2 mb-lg-0">
+                        <h5 class="mb-1">
+                            <a href="{% url 'songs:song_detail' song.pk %}" target="_blank" style="color: #ff7940; text-decoration: none;">
+                                {{ song.title }}
+                            </a>
+                        </h5>
+                        <div class="small text-muted">
+                            <span><i class="bi bi-person"></i> {{ song.created_by.username }}</span>
+                            <span class="ms-2"><i class="bi bi-calendar"></i> {{ song.created_at|date:"Y/m/d H:i" }}</span>
+                        </div>
+                        <div class="mt-1">
+                            {% if song.genre %}
+                            <span class="badge bg-light text-dark border">{{ song.genre }}</span>
+                            {% endif %}
+                            <span class="badge bg-light text-dark border">{{ song.get_vocal_style_display }}</span>
+                            {% if song.mureka_model %}
+                            <span class="badge" style="background: #ff794020; color: #ff7940;">{{ song.mureka_model }}</span>
+                            {% endif %}
+                        </div>
+                        <div class="mt-1 small text-muted">
+                            <span><i class="bi bi-play-fill"></i> {{ song.total_plays }}</span>
+                            <span class="ms-2"><i class="bi bi-heart-fill text-danger"></i> {{ song.likes_count }}</span>
+                            {% if song.is_public %}
+                            <span class="ms-2 badge bg-success">公開</span>
+                            {% else %}
+                            <span class="ms-2 badge bg-secondary">非公開</span>
+                            {% endif %}
+                        </div>
+                    </div>
+
+                    <!-- プレーヤー -->
+                    <div class="col-lg-5 mb-2 mb-lg-0">
+                        {% if song.audio_url %}
+                        <audio controls controlsList="nodownload" class="w-100 qc-audio" preload="none" data-song-id="{{ song.pk }}">
+                            <source src="{% url 'songs:audio_proxy' song.pk %}" type="audio/mpeg">
+                        </audio>
+                        {% elif song.audio_file %}
+                        <audio controls controlsList="nodownload" class="w-100 qc-audio" preload="none" data-song-id="{{ song.pk }}">
+                            <source src="{{ song.audio_file.url }}" type="audio/mpeg">
+                        </audio>
+                        {% else %}
+                        <span class="text-muted">音声なし</span>
+                        {% endif %}
+                    </div>
+
+                    <!-- 歌詞プレビュー -->
+                    <div class="col-lg-3">
+                        {% if song.lyrics %}
+                        <button class="btn btn-sm btn-outline-secondary w-100" type="button" 
+                                data-bs-toggle="collapse" data-bs-target="#lyrics-{{ song.pk }}">
+                            <i class="bi bi-file-text"></i> 歌詞を表示
+                        </button>
+                        {% endif %}
+                    </div>
+                </div>
+
+                <!-- 折りたたみ歌詞 -->
+                {% if song.lyrics %}
+                <div class="collapse mt-3" id="lyrics-{{ song.pk }}">
+                    <div class="card card-body bg-light" style="max-height: 300px; overflow-y: auto; white-space: pre-wrap; font-size: 0.85rem;">{{ song.lyrics.content }}</div>
+                </div>
+                {% endif %}
+            </div>
+        </div>
+        {% empty %}
+        <div class="text-center py-5 text-muted">
+            <i class="bi bi-music-note-list" style="font-size: 3rem;"></i>
+            <p class="mt-3">条件に一致する曲がありません</p>
+        </div>
+        {% endfor %}
+    </div>
+
+    <!-- ページネーション -->
+    {% if songs.has_other_pages %}
+    <nav class="mt-4">
+        <ul class="pagination justify-content-center">
+            {% if songs.has_previous %}
+            <li class="page-item">
+                <a class="page-link" href="?page={{ songs.previous_page_number }}&q={{ current_q }}&genre={{ current_genre }}&vocal={{ current_vocal }}&sort={{ current_sort }}">&laquo;</a>
+            </li>
+            {% endif %}
+            {% for num in songs.paginator.page_range %}
+                {% if songs.number == num %}
+                <li class="page-item active"><span class="page-link" style="background: #ff7940; border-color: #ff7940;">{{ num }}</span></li>
+                {% elif num > songs.number|add:'-3' and num < songs.number|add:'3' %}
+                <li class="page-item">
+                    <a class="page-link" href="?page={{ num }}&q={{ current_q }}&genre={{ current_genre }}&vocal={{ current_vocal }}&sort={{ current_sort }}">{{ num }}</a>
+                </li>
+                {% endif %}
+            {% endfor %}
+            {% if songs.has_next %}
+            <li class="page-item">
+                <a class="page-link" href="?page={{ songs.next_page_number }}&q={{ current_q }}&genre={{ current_genre }}&vocal={{ current_vocal }}&sort={{ current_sort }}">&raquo;</a>
+            </li>
+            {% endif %}
+        </ul>
+    </nav>
+    {% endif %}
+</div>
+
+<style>
+.qc-song-card {
+    transition: box-shadow 0.2s;
+    border: 1px solid #eee;
+}
+.qc-song-card:hover {
+    box-shadow: 0 4px 16px rgba(255, 121, 64, 0.15);
+}
+.qc-audio {
+    height: 40px;
+}
+.qc-song-card .badge {
+    font-size: 0.75rem;
+}
+</style>
+
+<script>
+// 1つの曲を再生したら他を停止
+document.querySelectorAll('.qc-audio').forEach(audio => {
+    audio.addEventListener('play', function() {
+        document.querySelectorAll('.qc-audio').forEach(other => {
+            if (other !== this) other.pause();
+        });
+    });
+});
+</script>
+{% endblock %}

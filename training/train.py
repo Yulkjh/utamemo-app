@@ -28,17 +28,18 @@ import os
 import sys
 from pathlib import Path
 
+# Windows WDDM環境での Access Violation を回避（import前に適用）
+try:
+    import transformers.modeling_utils as _mu_early
+    if hasattr(_mu_early, 'caching_allocator_warmup'):
+        _mu_early.caching_allocator_warmup = lambda *a, **kw: None
+except Exception:
+    pass
+
 import torch
-from datasets import Dataset
-from peft import LoraConfig, get_peft_model, prepare_model_for_kbit_training, TaskType
-from transformers import (
-    AutoModelForCausalLM,
-    AutoTokenizer,
-    BitsAndBytesConfig,
-    EarlyStoppingCallback,
-)
-from transformers import TrainerCallback
-from trl import SFTTrainer, SFTConfig
+
+# 注意: peft, trl, datasets, transformers のモデル系クラスは
+# メモリ節約のため関数内で遅延importする (ページングファイルエラー対策)
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
@@ -346,6 +347,7 @@ def format_training_example(example, tokenizer):
 
 def load_training_data(data_path, tokenizer, eval_split=0.1):
     """学習データを読み込み、train/eval分割"""
+    from datasets import Dataset
     logger.info(f"学習データを読み込み: {data_path}")
 
     with open(data_path, 'r', encoding='utf-8') as f:
@@ -386,6 +388,15 @@ def load_training_data(data_path, tokenizer, eval_split=0.1):
 
 def setup_model_and_tokenizer(model_name, hf_token=None):
     """4bit量子化でモデルとトークナイザーをロード"""
+    import gc
+    from transformers import AutoModelForCausalLM, AutoTokenizer, BitsAndBytesConfig
+    from peft import prepare_model_for_kbit_training
+
+    # モデルロード前にメモリを最大限解放
+    gc.collect()
+    if torch.cuda.is_available():
+        torch.cuda.empty_cache()
+
     logger.info(f"モデルをロード: {model_name}")
 
     # Windows WDDM環境でのAccess Violationを回避
@@ -416,9 +427,12 @@ def setup_model_and_tokenizer(model_name, hf_token=None):
         model_name,
         quantization_config=bnb_config,
         device_map="auto",
+        max_memory={0: "14GiB", "cpu": "1GiB"},
         token=hf_token,
         trust_remote_code=True,
         torch_dtype=torch.bfloat16,
+        offload_folder="offload",
+        low_cpu_mem_usage=True,
     )
 
     model = prepare_model_for_kbit_training(model)
@@ -439,6 +453,8 @@ def setup_model_and_tokenizer(model_name, hf_token=None):
 
 def setup_lora(model, model_name, lora_rank, lora_alpha):
     """LoRAアダプタを設定（モデルファミリー自動判定）"""
+    from peft import LoraConfig, get_peft_model, TaskType
+
     family = detect_model_family(model_name)
     target_modules = MODEL_TARGET_MODULES.get(family, MODEL_TARGET_MODULES["llama"])
 
@@ -468,6 +484,9 @@ def setup_lora(model, model_name, lora_rank, lora_alpha):
 
 def train(args):
     """メイン学習処理"""
+    from trl import SFTTrainer, SFTConfig
+    from transformers import TrainerCallback
+
     logger.info("=" * 60)
     logger.info("UTAMEMO 歌詞生成LoRA学習 開始")
     logger.info(f"  ベースモデル: {args.model_name}")
@@ -582,9 +601,13 @@ def train(args):
                 msg = f"[Epoch {epoch}] eval_loss={eval_loss:.4f}  accuracy={accuracy*100:.1f}%"
                 logger.info(msg)
                 reporter.add_log(msg)
+                try:
+                    epoch_int = int(float(epoch))
+                except (ValueError, TypeError):
+                    epoch_int = 0
                 reporter.send(
                     status='training',
-                    current_epoch=int(float(epoch)),
+                    current_epoch=epoch_int,
                     eval_loss=eval_loss,
                     accuracy=round(accuracy * 100, 1),
                 )
