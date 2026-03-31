@@ -57,4 +57,9 @@ urlpatterns = [
     path('flashcards/<int:pk>/study/', views.flashcard_study, name='flashcard_study'),
     path('flashcards/<int:pk>/mastery/', views.flashcard_update_mastery, name='flashcard_update_mastery'),
     path('flashcards/<int:pk>/delete/', views.flashcard_deck_delete, name='flashcard_deck_delete'),
+    
+    # トレーニング監視
+    path('staff/training/', views.training_dashboard, name='training_dashboard'),
+    path('api/training/update/', views.training_api_update, name='training_api_update'),
+    path('api/training/status/', views.training_api_status_json, name='training_api_status'),
 ]

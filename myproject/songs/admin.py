@@ -3,7 +3,7 @@ from django.utils import timezone
 from .models import (
     Song, Lyrics, Like, Favorite, Comment, UploadedImage,
     Tag, PlayHistory, Classroom, ClassroomMembership, ClassroomSong,
-    FlashcardDeck, Flashcard,
+    FlashcardDeck, Flashcard, TrainingSession,
 )
 
 
@@ -243,3 +243,13 @@ class FlashcardAdmin(admin.ModelAdmin):
     def definition_short(self, obj):
         return obj.definition[:80] + '...' if len(obj.definition) > 80 else obj.definition
     definition_short.short_description = '定義'
+
+
+@admin.register(TrainingSession)
+class TrainingSessionAdmin(admin.ModelAdmin):
+    list_display = ('id', 'machine_name', 'status', 'model_name', 'current_epoch', 'total_epochs', 'train_loss', 'eval_loss', 'updated_at')
+    list_filter = ('status', 'machine_name')
+    search_fields = ('machine_name', 'model_name')
+    readonly_fields = ('api_key', 'created_at', 'updated_at')
+    ordering = ('-updated_at',)
+    list_per_page = 20

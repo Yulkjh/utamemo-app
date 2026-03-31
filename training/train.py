@@ -25,6 +25,7 @@ import argparse
 import json
 import logging
 import os
+import sys
 from pathlib import Path
 
 import torch
@@ -34,20 +35,34 @@ from transformers import (
     AutoModelForCausalLM,
     AutoTokenizer,
     BitsAndBytesConfig,
-    TrainingArguments,
     EarlyStoppingCallback,
 )
-from trl import SFTTrainer
+from transformers import TrainerCallback
+from trl import SFTTrainer, SFTConfig
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
+
+
+def setup_file_logging(log_path):
+    """ファイルへのログ出力を設定（リアルタイム監視用）"""
+    os.makedirs(os.path.dirname(log_path), exist_ok=True)
+    file_handler = logging.FileHandler(log_path, encoding="utf-8", mode="w")
+    file_handler.setLevel(logging.INFO)
+    file_handler.setFormatter(logging.Formatter(
+        "%(asctime)s [%(levelname)s] %(message)s", datefmt="%H:%M:%S"
+    ))
+    logging.getLogger().addHandler(file_handler)
+    logger.info(f"ログファイル: {log_path}")
+    logger.info(f"リアルタイム監視: Get-Content -Wait -Tail 30 '{log_path}'")
+    return log_path
 
 # =============================================================================
 # 設定
 # =============================================================================
 DEFAULT_MODEL = "meta-llama/Meta-Llama-3-8B-Instruct"
 OUTPUT_DIR = "./output/utamemo-lyrics-lora"
-MAX_SEQ_LENGTH = 2048
+MAX_SEQ_LENGTH = 1024
 
 # 対応モデル一覧 (--model_name にどれでも指定可能)
 SUPPORTED_MODELS = {
@@ -192,7 +207,94 @@ def parse_args():
         "--resume_from_checkpoint", type=str, default=None,
         help="チェックポイントから学習再開 (パスを指定)"
     )
+    parser.add_argument(
+        "--report_url", type=str, default=None,
+        help="UTAMEMOダッシュボードへの進捗通知URL (例: https://utamemo.com/api/training/update/)"
+    )
+    parser.add_argument(
+        "--api_key", type=str, default=None,
+        help="トレーニング監視APIキー (環境変数 UTAMEMO_TRAINING_API_KEY でも可)"
+    )
     return parser.parse_args()
+
+
+# =============================================================================
+# リモート監視レポーター
+# =============================================================================
+
+class TrainingReporter:
+    """UTAMEMOダッシュボードへトレーニング進捗を送信"""
+
+    def __init__(self, report_url=None, api_key=None):
+        self.report_url = report_url
+        self.api_key = api_key or os.getenv('UTAMEMO_TRAINING_API_KEY', '')
+        self.enabled = bool(self.report_url and self.api_key)
+        self._log_lines = []
+        self._max_log_lines = 50
+
+        if self.enabled:
+            logger.info(f"リモート監視: {self.report_url}")
+        else:
+            logger.info("リモート監視: 無効 (--report_url と --api_key を設定で有効化)")
+
+    def _get_machine_info(self):
+        import platform
+        import socket
+        hostname = platform.node()
+        try:
+            ip = socket.gethostbyname(socket.gethostname())
+        except Exception:
+            ip = None
+        return hostname, ip
+
+    def _get_gpu_info(self):
+        if not torch.cuda.is_available():
+            return {}, {}
+        try:
+            name = torch.cuda.get_device_name(0)
+            used = torch.cuda.memory_allocated(0) / 1024**3
+            total = torch.cuda.get_device_properties(0).total_memory / 1024**3
+            return {'gpu_name': name, 'gpu_memory_used': round(used, 1), 'gpu_memory_total': round(total, 1)}, {}
+        except Exception:
+            return {}, {}
+
+    def add_log(self, message):
+        self._log_lines.append(message)
+        if len(self._log_lines) > self._max_log_lines:
+            self._log_lines = self._log_lines[-self._max_log_lines:]
+
+    def send(self, **kwargs):
+        if not self.enabled:
+            return
+        import urllib.request
+        import urllib.error
+
+        hostname, ip = self._get_machine_info()
+        gpu_info, _ = self._get_gpu_info()
+
+        payload = {
+            'machine_name': hostname,
+            'machine_ip': ip,
+            'log_tail': '\n'.join(self._log_lines[-30:]),
+            **gpu_info,
+            **kwargs,
+        }
+
+        try:
+            data = json.dumps(payload).encode('utf-8')
+            req = urllib.request.Request(
+                self.report_url,
+                data=data,
+                headers={
+                    'Content-Type': 'application/json',
+                    'X-Training-Api-Key': self.api_key,
+                },
+                method='POST',
+            )
+            with urllib.request.urlopen(req, timeout=10) as resp:
+                pass
+        except Exception as e:
+            logger.debug(f"レポート送信失敗: {e}")
 
 
 # =============================================================================
@@ -315,7 +417,7 @@ def setup_model_and_tokenizer(model_name, hf_token=None):
     if torch.cuda.is_available():
         for i in range(torch.cuda.device_count()):
             gpu_name = torch.cuda.get_device_name(i)
-            gpu_mem = torch.cuda.get_device_properties(i).total_mem / 1024**3
+            gpu_mem = torch.cuda.get_device_properties(i).total_memory / 1024**3
             logger.info(f"  GPU {i}: {gpu_name} ({gpu_mem:.1f} GB)")
         if torch.cuda.device_count() > 1:
             logger.info(f"  -> マルチGPU検出: {torch.cuda.device_count()}台で自動分散")
@@ -391,14 +493,33 @@ def train(args):
         except ImportError:
             logger.warning("wandbがインストールされていません。pip install wandb")
 
+    # リモート監視
+    reporter = TrainingReporter(
+        report_url=args.report_url,
+        api_key=args.api_key,
+    )
+    reporter.add_log("モデルをロード中...")
+    reporter.send(
+        status='loading',
+        model_name=args.model_name,
+        total_epochs=args.epochs,
+        training_config={
+            'batch_size': args.batch_size,
+            'learning_rate': args.learning_rate,
+            'lora_rank': args.lora_rank,
+            'lora_alpha': args.lora_alpha,
+            'gradient_accumulation': args.gradient_accumulation,
+            'max_seq_length': MAX_SEQ_LENGTH,
+        },
+    )
+
     model, tokenizer = setup_model_and_tokenizer(args.model_name, args.hf_token)
     train_dataset, eval_dataset = load_training_data(args.data_path, tokenizer, args.eval_split)
     model = setup_lora(model, args.model_name, args.lora_rank, args.lora_alpha)
 
     eval_strategy = "epoch" if eval_dataset else "no"
-    load_best = eval_dataset is not None
 
-    training_args = TrainingArguments(
+    training_args = SFTConfig(
         output_dir=args.output_dir,
         num_train_epochs=args.epochs,
         per_device_train_batch_size=args.batch_size,
@@ -406,42 +527,72 @@ def train(args):
         gradient_accumulation_steps=args.gradient_accumulation,
         learning_rate=args.learning_rate,
         weight_decay=0.01,
-        warmup_ratio=0.03,
+        warmup_steps=10,
         lr_scheduler_type="cosine",
         logging_steps=5,
         eval_strategy=eval_strategy,
-        save_strategy="epoch",
-        save_total_limit=3,
-        load_best_model_at_end=load_best,
-        metric_for_best_model="eval_loss" if eval_dataset else None,
-        greater_is_better=False if eval_dataset else None,
+        save_strategy="no",
+        load_best_model_at_end=False,
         bf16=True,
-        optim="paged_adamw_32bit",
+        optim="adamw_torch",
         max_grad_norm=0.3,
         report_to=report_to,
         seed=42,
         gradient_checkpointing=True,
         gradient_checkpointing_kwargs={"use_reentrant": False},
-        dataloader_num_workers=2,
-        dataloader_pin_memory=True,
-    )
-
-    callbacks = []
-    if eval_dataset and args.early_stopping_patience > 0:
-        callbacks.append(
-            EarlyStoppingCallback(early_stopping_patience=args.early_stopping_patience)
-        )
-        logger.info(f"  Early Stopping: patience={args.early_stopping_patience}")
-
-    trainer = SFTTrainer(
-        model=model,
-        tokenizer=tokenizer,
-        train_dataset=train_dataset,
-        eval_dataset=eval_dataset,
-        args=training_args,
+        dataloader_num_workers=0,
+        dataloader_pin_memory=False,
         max_seq_length=MAX_SEQ_LENGTH,
         dataset_text_field="text",
         packing=True,
+    )
+
+    # ログファイル設定
+    log_file = os.path.join(args.output_dir, "training_progress.log")
+    setup_file_logging(log_file)
+
+    class ProgressCallback(TrainerCallback):
+        """エポック完了時にログファイル・リモートダッシュボードへ書き出すコールバック"""
+        def on_log(self, args, state, control, logs=None, **kwargs):
+            if logs:
+                parts = []
+                for k, v in logs.items():
+                    if isinstance(v, float):
+                        parts.append(f"{k}={v:.4f}")
+                    else:
+                        parts.append(f"{k}={v}")
+                msg = "  ".join(parts)
+                logger.info(msg)
+                reporter.add_log(msg)
+
+        def on_evaluate(self, args, state, control, metrics=None, **kwargs):
+            if metrics:
+                epoch = metrics.get("epoch", "?")
+                eval_loss = metrics.get("eval_loss", 0)
+                accuracy = metrics.get("eval_mean_token_accuracy", 0)
+                msg = f"[Epoch {epoch}] eval_loss={eval_loss:.4f}  accuracy={accuracy*100:.1f}%"
+                logger.info(msg)
+                reporter.add_log(msg)
+                reporter.send(
+                    status='training',
+                    current_epoch=int(float(epoch)),
+                    eval_loss=eval_loss,
+                    accuracy=round(accuracy * 100, 1),
+                )
+
+        def on_train_end(self, args, state, control, **kwargs):
+            logger.info("学習ループ完了。モデル保存に進みます...")
+            reporter.add_log("学習ループ完了。モデル保存中...")
+            reporter.send(status='saving')
+
+    callbacks = [ProgressCallback()]
+
+    trainer = SFTTrainer(
+        model=model,
+        processing_class=tokenizer,
+        train_dataset=train_dataset,
+        eval_dataset=eval_dataset,
+        args=training_args,
         callbacks=callbacks if callbacks else None,
     )
 
@@ -455,13 +606,36 @@ def train(args):
     if eval_dataset:
         logger.info(f"  検証: {len(eval_dataset)} 件 (毎エポック)")
 
-    trainer.train(resume_from_checkpoint=args.resume_from_checkpoint)
+    reporter.add_log(f"学習開始: {args.epochs}エポック, batch={args.batch_size}")
+    reporter.send(status='training', current_epoch=0)
+
+    try:
+        trainer.train(resume_from_checkpoint=args.resume_from_checkpoint)
+    except Exception as e:
+        error_msg = str(e)
+        logger.error(f"学習中にエラー: {error_msg}")
+        reporter.add_log(f"ERROR: {error_msg}")
+        reporter.send(status='failed', error_message=error_msg[:1000])
+        raise
+
+    # trainerからログを先に退避
+    log_history = trainer.state.log_history
+
+    # trainer・optimizer等を削除してメモリ解放
+    import gc
+    del trainer
+    gc.collect()
+    torch.cuda.empty_cache()
+    gc.collect()
+
+    # モデルをCPUに移動してGPUメモリを完全解放
+    model = model.cpu()
+    torch.cuda.empty_cache()
+    gc.collect()
 
     logger.info(f"LoRAアダプタを保存: {args.output_dir}")
-    model.save_pretrained(args.output_dir)
+    model.save_pretrained(args.output_dir, safe_serialization=False)
     tokenizer.save_pretrained(args.output_dir)
-
-    log_history = trainer.state.log_history
     log_path = os.path.join(args.output_dir, "training_log.json")
     with open(log_path, "w", encoding="utf-8") as f:
         json.dump(log_history, f, ensure_ascii=False, indent=2)
@@ -487,6 +661,13 @@ def train(args):
     logger.info("  1. python test_model.py でテスト")
     logger.info("  2. python serve.py で推論サーバー起動")
     logger.info("=" * 60)
+
+    reporter.add_log(f"学習完了! Train Loss={final_loss}, Eval Loss={final_eval_loss}")
+    reporter.send(
+        status='completed',
+        train_loss=final_loss,
+        eval_loss=final_eval_loss,
+    )
 
 
 if __name__ == "__main__":
@@ -514,4 +695,7 @@ if __name__ == "__main__":
             print("エラー: --data_path を指定してください")
             print("例: python train.py --data_path data/sample_training_data.json")
             exit(1)
+        log_file = os.path.join(args.output_dir, "training_progress.log")
+        print(f"\n📊 トレーニング進捗をリアルタイム確認するには、別ターミナルで:")
+        print(f"   Get-Content -Wait -Tail 30 '{log_file}'\n")
         train(args)

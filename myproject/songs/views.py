@@ -8,6 +8,7 @@ from django.http import JsonResponse
 from django.urls import reverse_lazy
 from django.contrib.admin.views.decorators import staff_member_required
 from django.views.decorators.http import require_POST
+from django.views.decorators.csrf import csrf_exempt
 from django.db.models import Q, Count, F
 from django.conf import settings
 import json
@@ -2752,3 +2753,96 @@ def flashcard_deck_delete(request, pk):
     deck.delete()
     messages.success(request, 'デッキを削除しました。')
     return redirect('songs:flashcard_list')
+
+
+# =============================================================================
+# トレーニング監視ダッシュボード
+# =============================================================================
+
+@staff_member_required
+def training_dashboard(request):
+    """LLMトレーニング監視ダッシュボード（管理者のみ）"""
+    from .models import TrainingSession
+
+    sessions = TrainingSession.objects.all()[:20]
+    active_sessions = [s for s in sessions if s.is_active]
+
+    return render(request, 'songs/training_dashboard.html', {
+        'sessions': sessions,
+        'active_sessions': active_sessions,
+        'page_title': 'LLM Training Monitor',
+    })
+
+
+@csrf_exempt
+@require_POST
+def training_api_update(request):
+    """トレーニングスクリプトから進捗を受信するAPIエンドポイント"""
+    from .models import TrainingSession
+    from django.utils import timezone
+    import hmac
+
+    api_key = request.headers.get('X-Training-Api-Key', '')
+    if not api_key:
+        return JsonResponse({'error': 'API key required'}, status=401)
+
+    try:
+        session = TrainingSession.objects.get(api_key=api_key)
+    except TrainingSession.DoesNotExist:
+        return JsonResponse({'error': 'Invalid API key'}, status=403)
+
+    try:
+        data = json.loads(request.body)
+    except json.JSONDecodeError:
+        return JsonResponse({'error': 'Invalid JSON'}, status=400)
+
+    allowed_fields = {
+        'status', 'machine_name', 'machine_ip', 'model_name',
+        'current_epoch', 'total_epochs', 'train_loss', 'eval_loss',
+        'accuracy', 'gpu_name', 'gpu_memory_used', 'gpu_memory_total',
+        'training_config', 'log_tail', 'error_message',
+    }
+
+    for field, value in data.items():
+        if field in allowed_fields:
+            setattr(session, field, value)
+
+    if data.get('status') == 'training' and not session.started_at:
+        session.started_at = timezone.now()
+    if data.get('status') in ('completed', 'failed') and not session.completed_at:
+        session.completed_at = timezone.now()
+
+    session.save()
+
+    return JsonResponse({'ok': True, 'session_id': session.id})
+
+
+@staff_member_required
+def training_api_status_json(request):
+    """ダッシュボードのAuto-refresh用 JSON API"""
+    from .models import TrainingSession
+
+    sessions = TrainingSession.objects.all()[:20]
+    result = []
+    for s in sessions:
+        result.append({
+            'id': s.id,
+            'machine_name': s.machine_name,
+            'status': s.status,
+            'model_name': s.model_name,
+            'current_epoch': s.current_epoch,
+            'total_epochs': s.total_epochs,
+            'progress_percent': s.progress_percent,
+            'train_loss': s.train_loss,
+            'eval_loss': s.eval_loss,
+            'accuracy': s.accuracy,
+            'gpu_name': s.gpu_name,
+            'gpu_memory_used': s.gpu_memory_used,
+            'gpu_memory_total': s.gpu_memory_total,
+            'log_tail': s.log_tail,
+            'error_message': s.error_message,
+            'is_active': s.is_active,
+            'started_at': s.started_at.isoformat() if s.started_at else None,
+            'updated_at': s.updated_at.isoformat(),
+        })
+    return JsonResponse({'sessions': result})

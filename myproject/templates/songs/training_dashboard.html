@@ -1,0 +1,204 @@
+{% extends 'base.html' %}
+
+{% block title %}{{ page_title }} - UTAMEMO{% endblock %}
+
+{% block content %}
+<div class="container py-4">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h2 style="color: #ff7940;">
+            <i class="bi bi-gpu-card"></i> {{ page_title }}
+        </h2>
+        <div>
+            <span class="badge bg-secondary" id="auto-refresh-badge">Auto-refresh: 10s</span>
+            <a href="{% url 'songs:api_status' %}" class="btn btn-outline-secondary btn-sm ms-2">
+                <i class="bi bi-arrow-left"></i> API Status
+            </a>
+        </div>
+    </div>
+
+    {% if not sessions %}
+    <div class="alert alert-info">
+        <h5><i class="bi bi-info-circle"></i> まだトレーニングセッションがありません</h5>
+        <p class="mb-2">Django Adminからセッションを作成し、APIキーをトレーニングスクリプトに設定してください。</p>
+        <ol class="mb-0">
+            <li><a href="/admin/songs/trainingsession/add/">Admin → TrainingSession → 追加</a>でマシンを登録</li>
+            <li>表示されるAPIキーをトレーニングスクリプトの環境変数 <code>UTAMEMO_TRAINING_API_KEY</code> に設定</li>
+            <li><code>--report_url https://utamemo.com/api/training/update/</code> を引数に追加して実行</li>
+        </ol>
+    </div>
+    {% endif %}
+
+    <!-- Active Sessions -->
+    {% for session in sessions %}
+    <div class="card mb-4 session-card" data-session-id="{{ session.id }}">
+        <div class="card-header d-flex justify-content-between align-items-center
+            {% if session.is_active %}bg-success text-white
+            {% elif session.status == 'completed' %}bg-primary text-white
+            {% elif session.status == 'failed' %}bg-danger text-white
+            {% else %}bg-secondary text-white{% endif %}">
+            <div>
+                <i class="bi bi-pc-display-horizontal"></i>
+                <strong>{{ session.machine_name }}</strong>
+                {% if session.machine_ip %}
+                <small class="ms-2 opacity-75">({{ session.machine_ip }})</small>
+                {% endif %}
+            </div>
+            <div>
+                <span class="badge bg-light text-dark status-badge">{{ session.get_status_display }}</span>
+                {% if session.gpu_name %}
+                <span class="badge bg-dark ms-1">{{ session.gpu_name }}</span>
+                {% endif %}
+            </div>
+        </div>
+        <div class="card-body">
+            <div class="row">
+                <!-- Progress -->
+                <div class="col-md-6">
+                    <h6>モデル: <span class="text-muted model-name">{{ session.model_name|default:"N/A" }}</span></h6>
+
+                    {% if session.total_epochs > 0 %}
+                    <div class="mb-3">
+                        <div class="d-flex justify-content-between mb-1">
+                            <small>Epoch <span class="current-epoch">{{ session.current_epoch }}</span> / <span class="total-epochs">{{ session.total_epochs }}</span></small>
+                            <small class="progress-pct">{{ session.progress_percent }}%</small>
+                        </div>
+                        <div class="progress" style="height: 24px;">
+                            <div class="progress-bar progress-bar-striped {% if session.is_active %}progress-bar-animated{% endif %} bg-warning"
+                                 role="progressbar"
+                                 style="width: {{ session.progress_percent }}%">
+                                {{ session.progress_percent }}%
+                            </div>
+                        </div>
+                    </div>
+                    {% endif %}
+
+                    <!-- Metrics -->
+                    <div class="row text-center">
+                        <div class="col-4">
+                            <div class="border rounded p-2">
+                                <div class="fw-bold train-loss" style="color: #ff7940;">
+                                    {% if session.train_loss %}{{ session.train_loss|floatformat:4 }}{% else %}-{% endif %}
+                                </div>
+                                <small class="text-muted">Train Loss</small>
+                            </div>
+                        </div>
+                        <div class="col-4">
+                            <div class="border rounded p-2">
+                                <div class="fw-bold eval-loss" style="color: #ff7940;">
+                                    {% if session.eval_loss %}{{ session.eval_loss|floatformat:4 }}{% else %}-{% endif %}
+                                </div>
+                                <small class="text-muted">Eval Loss</small>
+                            </div>
+                        </div>
+                        <div class="col-4">
+                            <div class="border rounded p-2">
+                                <div class="fw-bold accuracy" style="color: #ff7940;">
+                                    {% if session.accuracy %}{{ session.accuracy|floatformat:1 }}%{% else %}-{% endif %}
+                                </div>
+                                <small class="text-muted">Accuracy</small>
+                            </div>
+                        </div>
+                    </div>
+
+                    {% if session.gpu_memory_used and session.gpu_memory_total %}
+                    <div class="mt-2">
+                        <small class="text-muted">VRAM:</small>
+                        <div class="progress" style="height: 16px;">
+                            <div class="progress-bar bg-info" style="width: {% widthratio session.gpu_memory_used session.gpu_memory_total 100 %}%">
+                                {{ session.gpu_memory_used|floatformat:1 }} / {{ session.gpu_memory_total|floatformat:1 }} GB
+                            </div>
+                        </div>
+                    </div>
+                    {% endif %}
+                </div>
+
+                <!-- Log -->
+                <div class="col-md-6">
+                    <h6><i class="bi bi-terminal"></i> ログ</h6>
+                    <pre class="bg-dark text-light p-2 rounded log-tail" style="max-height: 200px; overflow-y: auto; font-size: 0.75rem; white-space: pre-wrap;">{{ session.log_tail|default:"ログなし" }}</pre>
+                    
+                    {% if session.error_message %}
+                    <div class="alert alert-danger py-1 px-2 mt-1 mb-0" style="font-size: 0.8rem;">
+                        <i class="bi bi-exclamation-triangle"></i> {{ session.error_message|truncatechars:300 }}
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+
+            <!-- Footer info -->
+            <div class="row mt-2">
+                <div class="col text-muted" style="font-size: 0.8rem;">
+                    {% if session.started_at %}
+                    <span><i class="bi bi-play-circle"></i> 開始: {{ session.started_at|date:"Y/m/d H:i" }}</span>
+                    {% endif %}
+                    {% if session.completed_at %}
+                    <span class="ms-3"><i class="bi bi-check-circle"></i> 完了: {{ session.completed_at|date:"Y/m/d H:i" }}</span>
+                    {% endif %}
+                    <span class="ms-3 updated-at"><i class="bi bi-clock"></i> 最終更新: {{ session.updated_at|date:"H:i:s" }}</span>
+                </div>
+            </div>
+        </div>
+    </div>
+    {% endfor %}
+</div>
+
+<script>
+// Auto-refresh: 10秒ごとにJSON APIからデータ取得
+(function() {
+    const REFRESH_INTERVAL = 10000;
+    
+    function refreshData() {
+        fetch("{% url 'songs:training_api_status' %}")
+            .then(r => r.json())
+            .then(data => {
+                data.sessions.forEach(s => {
+                    const card = document.querySelector(`.session-card[data-session-id="${s.id}"]`);
+                    if (!card) return;
+                    
+                    // Update metrics
+                    const tl = card.querySelector('.train-loss');
+                    if (tl) tl.textContent = s.train_loss ? s.train_loss.toFixed(4) : '-';
+                    const el = card.querySelector('.eval-loss');
+                    if (el) el.textContent = s.eval_loss ? s.eval_loss.toFixed(4) : '-';
+                    const ac = card.querySelector('.accuracy');
+                    if (ac) ac.textContent = s.accuracy ? s.accuracy.toFixed(1) + '%' : '-';
+                    
+                    // Update progress
+                    const ce = card.querySelector('.current-epoch');
+                    if (ce) ce.textContent = s.current_epoch;
+                    const pct = card.querySelector('.progress-pct');
+                    if (pct) pct.textContent = s.progress_percent + '%';
+                    const bar = card.querySelector('.progress-bar.bg-warning');
+                    if (bar) {
+                        bar.style.width = s.progress_percent + '%';
+                        bar.textContent = s.progress_percent + '%';
+                        if (s.is_active) bar.classList.add('progress-bar-animated');
+                        else bar.classList.remove('progress-bar-animated');
+                    }
+                    
+                    // Update status badge
+                    const badge = card.querySelector('.status-badge');
+                    if (badge) badge.textContent = s.status;
+                    
+                    // Update log
+                    const log = card.querySelector('.log-tail');
+                    if (log && s.log_tail) {
+                        log.textContent = s.log_tail;
+                        log.scrollTop = log.scrollHeight;
+                    }
+                    
+                    // Update time
+                    const ua = card.querySelector('.updated-at');
+                    if (ua && s.updated_at) {
+                        const d = new Date(s.updated_at);
+                        ua.innerHTML = `<i class="bi bi-clock"></i> 最終更新: ${d.toLocaleTimeString('ja-JP')}`;
+                    }
+                });
+            })
+            .catch(err => console.warn('Refresh failed:', err));
+    }
+    
+    setInterval(refreshData, REFRESH_INTERVAL);
+})();
+</script>
+{% endblock %}

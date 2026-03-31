@@ -709,3 +709,63 @@ class Flashcard(models.Model):
 
     def __str__(self):
         return f"{self.term} → {self.definition[:50]}"
+
+
+class TrainingSession(models.Model):
+    """LLMトレーニング監視用モデル"""
+    STATUS_CHOICES = [
+        ('idle', 'Idle'),
+        ('loading', 'Loading Model'),
+        ('training', 'Training'),
+        ('saving', 'Saving'),
+        ('completed', 'Completed'),
+        ('failed', 'Failed'),
+    ]
+
+    machine_name = models.CharField(max_length=100, verbose_name='マシン名')
+    machine_ip = models.GenericIPAddressField(blank=True, null=True, verbose_name='IP')
+    status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='idle', verbose_name='ステータス')
+    model_name = models.CharField(max_length=200, blank=True, verbose_name='モデル名')
+    current_epoch = models.IntegerField(default=0, verbose_name='現在のエポック')
+    total_epochs = models.IntegerField(default=0, verbose_name='総エポック数')
+    train_loss = models.FloatField(null=True, blank=True, verbose_name='Train Loss')
+    eval_loss = models.FloatField(null=True, blank=True, verbose_name='Eval Loss')
+    accuracy = models.FloatField(null=True, blank=True, verbose_name='Accuracy')
+    gpu_name = models.CharField(max_length=100, blank=True, verbose_name='GPU')
+    gpu_memory_used = models.FloatField(null=True, blank=True, verbose_name='VRAM使用量(GB)')
+    gpu_memory_total = models.FloatField(null=True, blank=True, verbose_name='VRAM合計(GB)')
+    training_config = models.JSONField(default=dict, blank=True, verbose_name='設定')
+    log_tail = models.TextField(blank=True, verbose_name='最新ログ')
+    error_message = models.TextField(blank=True, verbose_name='エラー')
+    started_at = models.DateTimeField(null=True, blank=True, verbose_name='開始日時')
+    completed_at = models.DateTimeField(null=True, blank=True, verbose_name='完了日時')
+    updated_at = models.DateTimeField(auto_now=True, verbose_name='最終更新')
+    created_at = models.DateTimeField(auto_now_add=True, verbose_name='作成日時')
+    api_key = models.CharField(max_length=64, unique=True, verbose_name='APIキー')
+
+    class Meta:
+        verbose_name = 'トレーニングセッション'
+        verbose_name_plural = 'トレーニングセッション'
+        ordering = ['-updated_at']
+
+    def save(self, *args, **kwargs):
+        if not self.api_key:
+            self.api_key = secrets.token_hex(32)
+        super().save(*args, **kwargs)
+
+    def __str__(self):
+        return f"{self.machine_name} - {self.status} ({self.model_name})"
+
+    @property
+    def progress_percent(self):
+        if self.total_epochs > 0:
+            return int(self.current_epoch / self.total_epochs * 100)
+        return 0
+
+    @property
+    def is_active(self):
+        from django.utils import timezone
+        from datetime import timedelta
+        if self.status in ('training', 'loading', 'saving'):
+            return self.updated_at >= timezone.now() - timedelta(minutes=5)
+        return False

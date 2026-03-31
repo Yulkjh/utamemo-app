@@ -63,7 +63,7 @@ def generate_lyrics(model, tokenizer, study_text, genre="pop"):
     try:
         input_ids = tokenizer.apply_chat_template(
             messages, add_generation_prompt=True, return_tensors="pt"
-        ).to(model.device)
+        )
     except Exception:
         # system role 非対応モデル → system をユーザーに統合
         messages_no_sys = [
@@ -71,11 +71,16 @@ def generate_lyrics(model, tokenizer, study_text, genre="pop"):
         ]
         input_ids = tokenizer.apply_chat_template(
             messages_no_sys, add_generation_prompt=True, return_tensors="pt"
-        ).to(model.device)
+        )
+
+    # apply_chat_template が dict (BatchEncoding) を返す場合の対応
+    if hasattr(input_ids, 'keys'):
+        input_ids = input_ids["input_ids"]
+    input_ids = input_ids.to(model.device)
 
     with torch.no_grad():
         outputs = model.generate(
-            input_ids,
+            input_ids=input_ids,
             max_new_tokens=1024,
             temperature=0.7,
             top_p=0.9,
