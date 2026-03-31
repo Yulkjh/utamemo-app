@@ -2814,7 +2814,34 @@ def training_api_update(request):
 
     session.save()
 
-    return JsonResponse({'ok': True, 'session_id': session.id})
+    # コマンドがあれば返して消す
+    command = session.pending_command
+    if command != 'none':
+        session.pending_command = 'none'
+        session.save(update_fields=['pending_command'])
+
+    return JsonResponse({'ok': True, 'session_id': session.id, 'command': command})
+
+
+@staff_member_required
+@require_POST
+def training_send_command(request):
+    """ダッシュボードからトレーニングコマンドを送信"""
+    from .models import TrainingSession
+
+    session_id = request.POST.get('session_id')
+    command = request.POST.get('command', '')
+    if command not in ('start', 'stop'):
+        return JsonResponse({'error': 'Invalid command'}, status=400)
+
+    try:
+        session = TrainingSession.objects.get(id=session_id)
+    except TrainingSession.DoesNotExist:
+        return JsonResponse({'error': 'Session not found'}, status=404)
+
+    session.pending_command = command
+    session.save(update_fields=['pending_command'])
+    return JsonResponse({'ok': True, 'command': command})
 
 
 @staff_member_required
@@ -2842,6 +2869,7 @@ def training_api_status_json(request):
             'log_tail': s.log_tail,
             'error_message': s.error_message,
             'is_active': s.is_active,
+            'pending_command': s.pending_command,
             'started_at': s.started_at.isoformat() if s.started_at else None,
             'updated_at': s.updated_at.isoformat(),
         })

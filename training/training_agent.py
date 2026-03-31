@@ -1,0 +1,179 @@
+#!/usr/bin/env python3
+"""
+UTAMEMO トレーニングエージェント
+
+ローカルPCで常駐し、サイトのダッシュボードからのコマンドを待ち受けて
+トレーニングを自動開始する。
+
+使い方:
+  python training_agent.py --api_key YOUR_KEY --report_url https://utamemo.onrender.com/api/training/update/
+"""
+
+import argparse
+import json
+import logging
+import os
+import subprocess
+import sys
+import time
+import urllib.request
+import urllib.error
+
+logging.basicConfig(
+    level=logging.INFO,
+    format="%(asctime)s [%(levelname)s] %(message)s",
+    datefmt="%H:%M:%S",
+)
+logger = logging.getLogger(__name__)
+
+POLL_INTERVAL = 10  # 秒
+
+
+def send_status(report_url, api_key, **kwargs):
+    """サーバーにステータスを送信し、コマンドを受け取る"""
+    import platform
+    import socket
+
+    hostname = platform.node()
+    try:
+        ip = socket.gethostbyname(socket.gethostname())
+    except Exception:
+        ip = None
+
+    payload = {
+        'machine_name': hostname,
+        'machine_ip': ip,
+        **kwargs,
+    }
+
+    try:
+        data = json.dumps(payload).encode('utf-8')
+        req = urllib.request.Request(
+            report_url,
+            data=data,
+            headers={
+                'Content-Type': 'application/json',
+                'X-Training-Api-Key': api_key,
+            },
+            method='POST',
+        )
+        with urllib.request.urlopen(req, timeout=15) as resp:
+            result = json.loads(resp.read().decode('utf-8'))
+            return result.get('command', 'none')
+    except Exception as e:
+        logger.warning(f"通信失敗: {e}")
+        return 'none'
+
+
+def run_training(args):
+    """トレーニングを実行 (subprocess)"""
+    script_dir = os.path.dirname(os.path.abspath(__file__))
+    train_script = os.path.join(script_dir, 'train.py')
+
+    # Python実行ファイルを決定
+    venv_python = os.path.join(script_dir, 'venv', 'Scripts', 'python.exe')
+    if os.path.exists(venv_python):
+        python_exe = venv_python
+    else:
+        python_exe = sys.executable
+
+    cmd = [
+        python_exe, '-u', train_script,
+        '--data_path', args.data_path,
+        '--model_name', args.model_name,
+        '--epochs', str(args.epochs),
+        '--batch_size', str(args.batch_size),
+        '--gradient_accumulation', str(args.gradient_accumulation),
+        '--output_dir', args.output_dir,
+        '--report_url', args.report_url,
+        '--api_key', args.api_key,
+    ]
+
+    logger.info(f"トレーニング開始: {' '.join(cmd)}")
+    process = subprocess.Popen(
+        cmd,
+        cwd=script_dir,
+        stdout=subprocess.PIPE,
+        stderr=subprocess.STDOUT,
+        text=True,
+        bufsize=1,
+    )
+
+    for line in process.stdout:
+        line = line.rstrip()
+        if line:
+            logger.info(f"  [train] {line}")
+
+    process.wait()
+    return process.returncode
+
+
+def main():
+    parser = argparse.ArgumentParser(description="UTAMEMO トレーニングエージェント")
+    parser.add_argument('--report_url', type=str, required=True,
+                        help='ダッシュボードAPI URL')
+    parser.add_argument('--api_key', type=str,
+                        default=os.getenv('UTAMEMO_TRAINING_API_KEY', ''),
+                        help='APIキー')
+    parser.add_argument('--data_path', type=str,
+                        default='data/lyrics_training_data.json',
+                        help='学習データパス')
+    parser.add_argument('--model_name', type=str,
+                        default='Qwen/Qwen2.5-7B-Instruct',
+                        help='モデル名')
+    parser.add_argument('--epochs', type=int, default=5)
+    parser.add_argument('--batch_size', type=int, default=1)
+    parser.add_argument('--gradient_accumulation', type=int, default=8)
+    parser.add_argument('--output_dir', type=str, default='C:\\temp\\utamemo-lora')
+    args = parser.parse_args()
+
+    if not args.api_key:
+        logger.error("APIキーが必要です (--api_key または UTAMEMO_TRAINING_API_KEY)")
+        sys.exit(1)
+
+    logger.info("=" * 50)
+    logger.info("UTAMEMO Training Agent 起動")
+    logger.info(f"  サーバー: {args.report_url}")
+    logger.info(f"  ポーリング間隔: {POLL_INTERVAL}秒")
+    logger.info(f"  モデル: {args.model_name}")
+    logger.info("  ダッシュボードから「トレーニング開始」で実行されます")
+    logger.info("  Ctrl+C で終了")
+    logger.info("=" * 50)
+
+    # 初回: idle状態を送信
+    send_status(args.report_url, args.api_key, status='idle')
+
+    training_running = False
+
+    while True:
+        try:
+            if not training_running:
+                # サーバーにポーリング → コマンド取得
+                cmd = send_status(args.report_url, args.api_key, status='idle')
+
+                if cmd == 'start':
+                    logger.info(">>> 開始コマンド受信! トレーニングを開始します")
+                    training_running = True
+                    exit_code = run_training(args)
+                    training_running = False
+
+                    if exit_code == 0:
+                        logger.info("トレーニング完了!")
+                    else:
+                        logger.error(f"トレーニング失敗 (exit code: {exit_code})")
+
+                    logger.info("待機状態に戻ります...")
+
+                elif cmd == 'stop':
+                    logger.info("停止コマンド受信 (既にアイドル状態)")
+
+            time.sleep(POLL_INTERVAL)
+
+        except KeyboardInterrupt:
+            logger.info("エージェント停止")
+            send_status(args.report_url, args.api_key, status='idle')
+            break
+
+
+if __name__ == '__main__':
+    main()

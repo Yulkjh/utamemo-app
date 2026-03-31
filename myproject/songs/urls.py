@@ -62,4 +62,5 @@ urlpatterns = [
     path('staff/training/', views.training_dashboard, name='training_dashboard'),
     path('api/training/update/', views.training_api_update, name='training_api_update'),
     path('api/training/status/', views.training_api_status_json, name='training_api_status'),
+    path('api/training/command/', views.training_send_command, name='training_send_command'),
 ]

@@ -48,9 +48,25 @@
                 {% if session.gpu_name %}
                 <span class="badge bg-dark ms-1">{{ session.gpu_name }}</span>
                 {% endif %}
+                {% if session.pending_command == 'start' %}
+                <span class="badge bg-warning text-dark ms-1 pending-badge">開始待ち...</span>
+                {% endif %}
             </div>
         </div>
         <div class="card-body">
+            <!-- コマンドボタン -->
+            <div class="mb-3 d-flex gap-2 command-buttons">
+                {% if session.status == 'idle' or session.status == 'completed' or session.status == 'failed' %}
+                <button class="btn btn-success btn-sm cmd-start" data-session="{{ session.id }}"
+                    {% if session.pending_command == 'start' %}disabled{% endif %}>
+                    <i class="bi bi-play-fill"></i> トレーニング開始
+                </button>
+                {% elif session.is_active %}
+                <button class="btn btn-danger btn-sm cmd-stop" data-session="{{ session.id }}">
+                    <i class="bi bi-stop-fill"></i> 停止
+                </button>
+                {% endif %}
+            </div>
             <div class="row">
                 <!-- Progress -->
                 <div class="col-md-6">
@@ -143,6 +159,34 @@
 </div>
 
 <script>
+// コマンド送信
+function sendCommand(sessionId, command) {
+    const form = new FormData();
+    form.append('session_id', sessionId);
+    form.append('command', command);
+    fetch("{% url 'songs:training_send_command' %}", {
+        method: 'POST',
+        headers: {'X-CSRFToken': '{{ csrf_token }}'},
+        body: form
+    }).then(r => r.json()).then(data => {
+        if (data.ok) {
+            location.reload();
+        } else {
+            alert('Error: ' + (data.error || 'unknown'));
+        }
+    }).catch(err => alert('送信失敗: ' + err));
+}
+document.querySelectorAll('.cmd-start').forEach(btn => {
+    btn.addEventListener('click', () => sendCommand(btn.dataset.session, 'start'));
+});
+document.querySelectorAll('.cmd-stop').forEach(btn => {
+    btn.addEventListener('click', () => {
+        if (confirm('トレーニングを停止しますか？')) {
+            sendCommand(btn.dataset.session, 'stop');
+        }
+    });
+});
+
 // Auto-refresh: 10秒ごとにJSON APIからデータ取得
 (function() {
     const REFRESH_INTERVAL = 10000;

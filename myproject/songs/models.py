@@ -722,6 +722,12 @@ class TrainingSession(models.Model):
         ('failed', 'Failed'),
     ]
 
+    COMMAND_CHOICES = [
+        ('none', 'None'),
+        ('start', 'Start Training'),
+        ('stop', 'Stop Training'),
+    ]
+
     machine_name = models.CharField(max_length=100, verbose_name='マシン名')
     machine_ip = models.GenericIPAddressField(blank=True, null=True, verbose_name='IP')
     status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='idle', verbose_name='ステータス')
@@ -737,6 +743,7 @@ class TrainingSession(models.Model):
     training_config = models.JSONField(default=dict, blank=True, verbose_name='設定')
     log_tail = models.TextField(blank=True, verbose_name='最新ログ')
     error_message = models.TextField(blank=True, verbose_name='エラー')
+    pending_command = models.CharField(max_length=20, choices=COMMAND_CHOICES, default='none', verbose_name='コマンド')
     started_at = models.DateTimeField(null=True, blank=True, verbose_name='開始日時')
     completed_at = models.DateTimeField(null=True, blank=True, verbose_name='完了日時')
     updated_at = models.DateTimeField(auto_now=True, verbose_name='最終更新')

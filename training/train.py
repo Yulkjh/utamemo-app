@@ -388,6 +388,15 @@ def setup_model_and_tokenizer(model_name, hf_token=None):
     """4bit量子化でモデルとトークナイザーをロード"""
     logger.info(f"モデルをロード: {model_name}")
 
+    # Windows WDDM環境でのAccess Violationを回避
+    try:
+        import transformers.modeling_utils as _mu
+        if hasattr(_mu, 'caching_allocator_warmup'):
+            _mu.caching_allocator_warmup = lambda *a, **kw: None
+            logger.info("  caching_allocator_warmup をパッチ済み (Windows WDDM対策)")
+    except Exception:
+        pass
+
     bnb_config = BitsAndBytesConfig(
         load_in_4bit=True,
         bnb_4bit_quant_type="nf4",
