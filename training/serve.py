@@ -166,6 +166,7 @@ SYSTEM_PROMPTS = {
         "あなたは暗記学習用の歌詞を作成する専門AIです。"
         "与えられた学習テキストから、韻を踏んでキャッチーで覚えやすい日本語の歌詞を生成します。"
         "重要な用語・人物名・年号・化学式などは必ず正確に歌詞に含めます。"
+        "「歌で覚えよう」「覚えよう」「暗記しよう」等の学習行為を促すメタ的な表現は使わず、学習内容そのものを歌詞にしてください。"
     ),
     "english_vocab": (
         "You are an expert AI that creates study song lyrics for memorization. "
@@ -240,6 +241,7 @@ def _get_user_prompt(study_text, genre, language_mode, custom_request=""):
             f"以下の学習テキストから{genre}ジャンルの歌詞を作成してください。\n"
             f"韻を踏み、キャッチーで覚えやすい歌詞にしてください。\n"
             f"重要な用語・人物名・年号は必ず歌詞に含めてください。\n"
+            f"「歌で覚えよう」「覚えよう」等の学習を促す表現は使わず、学習内容そのものを歌詞にしてください。\n"
             f"出力は [Verse 1], [Chorus], [Verse 2] 等のセクションラベル付きの歌詞のみにしてください。\n\n"
             f"■ 学習テキスト\n{study_text}"
             f"{custom_section}"
