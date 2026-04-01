@@ -328,6 +328,13 @@ class SongGenerationQueue:
                         song.save()
                         logger.info(f"Song {song_id}: Saved with audio_url: {audio_url}")
                         
+                        # ユーザーの利用回数キャッシュをクリア
+                        try:
+                            from django.core.cache import cache as app_cache
+                            app_cache.delete(f'user_usage_{song.created_by_id}')
+                        except Exception:
+                            pass
+                        
                         # lyrics_sectionsの情報もログに残す
                         mureka_sections = song_result.get('lyrics_sections', [])
                         if mureka_sections:

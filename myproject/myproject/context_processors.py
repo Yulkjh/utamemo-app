@@ -1,13 +1,21 @@
 """
 カスタムコンテキストプロセッサ - 全テンプレートで使用可能な変数を提供
 """
+from django.core.cache import cache
+
 
 def user_usage_context(request):
-    """ユーザーの利用回数情報をテンプレートに提供"""
+    """ユーザーの利用回数情報をテンプレートに提供（60秒キャッシュ）"""
     if not request.user.is_authenticated:
         return {}
     
     user = request.user
+    cache_key = f'user_usage_{user.pk}'
+    cached = cache.get(cache_key)
+    
+    if cached is not None:
+        return cached
+    
     remaining = user.get_remaining_model_usage()
     limits = user.get_model_limits()
     
@@ -19,7 +27,7 @@ def user_usage_context(request):
         total_remaining = sum(v for v in remaining.values() if v != -1)
         total_limit = sum(v for v in limits.values() if v != -1)
     
-    return {
+    result = {
         'user_remaining_usage': remaining,
         'user_usage_limits': limits,
         'user_total_remaining': total_remaining,
@@ -27,6 +35,9 @@ def user_usage_context(request):
         'user_plan': user.plan,
         'user_is_pro': user.is_pro,
     }
+    
+    cache.set(cache_key, result, 60)  # 60秒キャッシュ
+    return result
 
 
 # 対応言語リスト

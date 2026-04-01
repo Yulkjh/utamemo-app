@@ -330,10 +330,15 @@ if REDIS_URL:
         }
     }
 
-# セッション設定 - DBバックエンドを使用（複数ワーカー環境で確実に同期）
-SESSION_ENGINE = 'django.contrib.sessions.backends.db'
-SESSION_COOKIE_AGE = 86400 * 14  # 14日間（セキュリティのため短縮）
-SESSION_SAVE_EVERY_REQUEST = True  # 毎リクエストでセッションを保存
+# セッション設定
+# Redisが利用可能な場合はセッションもRedisに保存（DB WRITEゼロ）
+if REDIS_URL:
+    SESSION_ENGINE = 'django.contrib.sessions.backends.cache'
+    SESSION_CACHE_ALIAS = 'default'
+else:
+    SESSION_ENGINE = 'django.contrib.sessions.backends.db'
+SESSION_COOKIE_AGE = 86400 * 14  # 14日間
+SESSION_SAVE_EVERY_REQUEST = False  # セッション変更時のみ保存（DB負荷軽減）
 SESSION_COOKIE_HTTPONLY = True  # JavaScriptからアクセス不可
 SESSION_COOKIE_SAMESITE = 'Lax'  # CSRF対策
 CSRF_COOKIE_SAMESITE = 'Lax'  # CSRF対策
