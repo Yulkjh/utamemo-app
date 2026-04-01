@@ -13,7 +13,17 @@ logger = logging.getLogger(__name__)
 
 
 class SecureAdminSite(AdminSite):
-    """セキュリティ強化された管理サイト"""
+    """セキュリティ強化された管理サイト - staff権限のみアクセス可能"""
+    
+    def has_permission(self, request):
+        """
+        staff権限のみadminアクセスを許可。
+        superuserでもis_staff=Falseならアクセス不可。
+        """
+        return (
+            request.user.is_active
+            and request.user.is_staff
+        )
     
     def login(self, request, extra_context=None):
         """管理画面ログインにアカウントロック機能を追加"""
@@ -55,9 +65,9 @@ secure_admin_site = SecureAdminSite(name='secure_admin')
 @admin.register(User)
 class UserAdmin(BaseUserAdmin):
     fieldsets = (
-        ('認証情報', {'fields': ('username',)}),
+        ('認証情報', {'fields': ('username', 'password')}),
         ('個人情報', {'fields': ('first_name', 'last_name', 'email')}),
-        ('権限', {'fields': ('is_active', 'is_staff', 'is_superuser', 'groups', 'user_permissions')}),
+        ('権限', {'fields': ('is_active', 'is_staff', 'groups', 'user_permissions')}),
         ('BAN管理', {'fields': ('is_banned', 'ban_reason', 'banned_at')}),
         ('日時', {'fields': ('last_login', 'date_joined')}),
         ('利用規約', {'fields': ('tos_agreed_at',)}),
@@ -71,10 +81,10 @@ class UserAdmin(BaseUserAdmin):
     # 一覧表示
     list_display = (
         'id', 'username', 'email', 'plan', 'plan_expires_at',
-        'song_count', 'is_banned', 'is_superuser', 'is_staff', 'is_active', 'date_joined',
+        'song_count', 'is_banned', 'is_staff', 'is_active', 'date_joined',
     )
     list_display_links = ('id', 'username')
-    list_filter = ('is_banned', 'is_superuser', 'is_staff', 'is_active', 'plan')
+    list_filter = ('is_banned', 'is_staff', 'is_active', 'plan')
     ordering = ('-date_joined',)
     date_hierarchy = 'date_joined'
     list_per_page = 30
@@ -96,8 +106,8 @@ class UserAdmin(BaseUserAdmin):
     @admin.action(description='選択したユーザーをBANする')
     def ban_users(self, request, queryset):
         """選択したユーザーをBANする"""
-        # スーパーユーザー・スタッフはBANできない
-        queryset = queryset.exclude(is_superuser=True).exclude(is_staff=True)
+        # スタッフはBANできない
+        queryset = queryset.exclude(is_staff=True)
         count = queryset.filter(is_banned=False).update(
             is_banned=True,
             banned_at=timezone.now(),

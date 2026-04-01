@@ -37,7 +37,7 @@
                             
                             <div class="mt-3">
                                 <small class="text-muted">
-                                    {% if is_english %}JPG, PNG, JPEG, PDF formats • Max 10MB{% elif is_spanish %}Formatos JPG, PNG, JPEG, PDF • Máx 10MB{% elif is_german %}JPG, PNG, JPEG, PDF Formate • Max 10MB{% elif is_portuguese %}Formatos JPG, PNG, JPEG, PDF • Máx 10MB{% elif is_chinese %}JPG、PNG、JPEG、PDF格式 • 最大10MB{% else %}JPG、PNG、JPEG、PDF形式 • 最大10MB{% endif %}
+                                    {% if is_english %}JPG, PNG, JPEG, PDF formats • Max 10MB • Up to 10 files{% elif is_spanish %}Formatos JPG, PNG, JPEG, PDF • Máx 10MB • Hasta 10 archivos{% elif is_german %}JPG, PNG, JPEG, PDF Formate • Max 10MB • Bis zu 10 Dateien{% elif is_portuguese %}Formatos JPG, PNG, JPEG, PDF • Máx 10MB • Até 10 arquivos{% elif is_chinese %}JPG、PNG、JPEG、PDF格式 • 最大10MB • 最多10个文件{% else %}JPG、PNG、JPEG、PDF形式 • 最大10MB • 最大10ファイル{% endif %}
                                 </small>
                             </div>
                         </div>
@@ -803,6 +803,25 @@ document.addEventListener('DOMContentLoaded', function() {
             selectedFiles = [...selectedFiles, ...validFiles];
         } else {
             selectedFiles = validFiles;
+        }
+
+        // 10ファイル制限
+        const MAX_FILES = 10;
+        if (selectedFiles.length > MAX_FILES) {
+            selectedFiles = selectedFiles.slice(0, MAX_FILES);
+            {% if is_english %}
+            alert('You can upload up to 10 files at a time. Only the first 10 files have been kept.');
+            {% elif is_chinese %}
+            alert('一次最多可上传10个文件。仅保留前10个文件。');
+            {% elif is_spanish %}
+            alert('Puedes subir hasta 10 archivos a la vez. Solo se han conservado los primeros 10.');
+            {% elif is_german %}
+            alert('Sie können maximal 10 Dateien gleichzeitig hochladen. Nur die ersten 10 wurden beibehalten.');
+            {% elif is_portuguese %}
+            alert('Você pode enviar até 10 arquivos por vez. Apenas os 10 primeiros foram mantidos.');
+            {% else %}
+            alert('一度にアップロードできるのは最大10ファイルです。最初の10ファイルのみ保持されます。');
+            {% endif %}
         }
 
         syncFileInput();

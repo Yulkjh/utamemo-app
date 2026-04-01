@@ -124,9 +124,9 @@ class User(AbstractUser):
     
     @property
     def is_pro(self):
-        """有料プランかどうかを判定（管理者は常にTrue）"""
-        # スタッフまたはスーパーユーザーは常にすべての機能にアクセス可能
-        if self.is_staff or self.is_superuser:
+        """有料プランかどうかを判定（スタッフは常にTrue）"""
+        # スタッフは常にすべての機能にアクセス可能
+        if self.is_staff:
             return True
         from django.utils import timezone
         if self.plan == 'free':
@@ -138,28 +138,28 @@ class User(AbstractUser):
     @property
     def is_starter(self):
         """スタータープラン以上かどうか"""
-        if self.is_staff or self.is_superuser:
+        if self.is_staff:
             return True
         return self.plan in ['starter', 'pro', 'school'] and self.is_pro
     
     @property
     def is_pro_plan(self):
         """プロプラン以上かどうか"""
-        if self.is_staff or self.is_superuser:
+        if self.is_staff:
             return True
         return self.plan in ['pro', 'school'] and self.is_pro
     
     @property
     def is_school(self):
         """スクールプランかどうか"""
-        if self.is_staff or self.is_superuser:
+        if self.is_staff:
             return True
         return self.plan == 'school' and self.is_pro
     
     def get_monthly_song_limit(self):
         """月間作成可能曲数を取得（-1は無制限）"""
-        # 管理者は無制限
-        if self.is_staff or self.is_superuser:
+        # スタッフは無制限
+        if self.is_staff:
             return -1
         limits = {
             'free': 5,  # 月5曲
@@ -171,8 +171,8 @@ class User(AbstractUser):
     
     def get_model_limits(self):
         """月間楽曲生成制限を取得（-1は無制限）"""
-        # 管理者は無制限
-        if self.is_staff or self.is_superuser:
+        # スタッフは無制限
+        if self.is_staff:
             return {'v8': -1}
         limits = {
             'free': {'v8': 5},        # フリー月5曲

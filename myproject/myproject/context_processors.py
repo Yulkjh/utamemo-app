@@ -12,7 +12,7 @@ def user_usage_context(request):
     limits = user.get_model_limits()
     
     # 合計の残り回数を計算（無制限の場合は-1）
-    if user.plan == 'pro' or user.is_staff or user.is_superuser:
+    if user.plan == 'pro' or user.is_staff:
         total_remaining = -1  # 無制限
         total_limit = -1
     else:

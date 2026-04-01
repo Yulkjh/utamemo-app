@@ -684,6 +684,23 @@ class UploadImageView(LoginRequiredMixin, FormView):
                 messages.error(self.request, 'ファイルが選択されていません。')
             return redirect('songs:upload_image')
         
+        # 10ファイル制限
+        MAX_FILES = 10
+        if len(files) > MAX_FILES:
+            if app_language == 'en':
+                messages.error(self.request, f'You can upload up to {MAX_FILES} files at a time.')
+            elif app_language == 'zh':
+                messages.error(self.request, f'一次最多可上传{MAX_FILES}个文件。')
+            elif app_language == 'es':
+                messages.error(self.request, f'Puedes subir hasta {MAX_FILES} archivos a la vez.')
+            elif app_language == 'de':
+                messages.error(self.request, f'Sie können maximal {MAX_FILES} Dateien gleichzeitig hochladen.')
+            elif app_language == 'pt':
+                messages.error(self.request, f'Você pode enviar até {MAX_FILES} arquivos por vez.')
+            else:
+                messages.error(self.request, f'一度にアップロードできるのは最大{MAX_FILES}ファイルです。')
+            return redirect('songs:upload_image')
+        
         # ファイルの検証
         validation_errors = []
         valid_files = []
@@ -2439,8 +2456,8 @@ def recreate_with_lyrics(request, pk):
 
 @login_required
 def mureka_api_debug(request):
-    """Mureka APIのレスポンスフィールド調査用（管理者のみ）"""
-    if not request.user.is_superuser:
+    """Mureka APIのレスポンスフィールド調査用（スタッフのみ）"""
+    if not request.user.is_staff:
         return JsonResponse({'error': 'Forbidden'}, status=403)
     
     from .ai_services import MurekaAIGenerator
