@@ -18,7 +18,9 @@ from .models import Song
 logger = logging.getLogger(__name__)
 
 # 並列処理の設定（環境変数で変更可能）
-MAX_CONCURRENT_GENERATIONS = int(getattr(settings, 'MAX_CONCURRENT_GENERATIONS', 3))
+# Mureka APIの同時リクエスト制限に合わせること:
+#   $30プラン → 1, $1,000プラン → 5, $3,000プラン → 15
+MAX_CONCURRENT_GENERATIONS = int(getattr(settings, 'MAX_CONCURRENT_GENERATIONS', 1))
 STUCK_TIMEOUT_MINUTES = int(getattr(settings, 'STUCK_TIMEOUT_MINUTES', 8))
 
 

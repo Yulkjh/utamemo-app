@@ -385,7 +385,9 @@ RETRY_BACKOFF_BASE = int(os.getenv('RETRY_BACKOFF_BASE', 30))
 # キューポーリング間隔（秒）
 QUEUE_POLL_INTERVAL = int(os.getenv('QUEUE_POLL_INTERVAL', 5))
 # 同時生成数（並列処理ワーカー数）
-MAX_CONCURRENT_GENERATIONS = int(os.getenv('MAX_CONCURRENT_GENERATIONS', 3))
+# Mureka APIの同時リクエスト制限に合わせて設定:
+#   $30プラン → 1, $1,000プラン → 5, $3,000プラン → 15
+MAX_CONCURRENT_GENERATIONS = int(os.getenv('MAX_CONCURRENT_GENERATIONS', 1))
 # generating状態のタイムアウト（分）
 STUCK_TIMEOUT_MINUTES = int(os.getenv('STUCK_TIMEOUT_MINUTES', 8))
 
