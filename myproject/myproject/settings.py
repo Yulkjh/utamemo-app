@@ -318,6 +318,18 @@ CACHES = {
     }
 }
 
+# Redis が利用可能な場合はキャッシュにも使用（複数ワーカー間で共有可能）
+if REDIS_URL:
+    CACHES = {
+        'default': {
+            'BACKEND': 'django.core.cache.backends.redis.RedisCache',
+            'LOCATION': REDIS_URL,
+            'OPTIONS': {
+                'db': '1',  # Channel Layers とは別のDB番号
+            },
+        }
+    }
+
 # セッション設定 - DBバックエンドを使用（複数ワーカー環境で確実に同期）
 SESSION_ENGINE = 'django.contrib.sessions.backends.db'
 SESSION_COOKIE_AGE = 86400 * 14  # 14日間（セキュリティのため短縮）
@@ -372,6 +384,10 @@ MAX_GENERATION_RETRIES = int(os.getenv('MAX_GENERATION_RETRIES', 3))
 RETRY_BACKOFF_BASE = int(os.getenv('RETRY_BACKOFF_BASE', 30))
 # キューポーリング間隔（秒）
 QUEUE_POLL_INTERVAL = int(os.getenv('QUEUE_POLL_INTERVAL', 5))
+# 同時生成数（並列処理ワーカー数）
+MAX_CONCURRENT_GENERATIONS = int(os.getenv('MAX_CONCURRENT_GENERATIONS', 3))
+# generating状態のタイムアウト（分）
+STUCK_TIMEOUT_MINUTES = int(os.getenv('STUCK_TIMEOUT_MINUTES', 8))
 
 # ========================================
 # API設定

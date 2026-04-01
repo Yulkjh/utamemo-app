@@ -1,14 +1,25 @@
-"""曲生成キュー管理システム"""
+"""曲生成キュー管理システム（並列処理対応版）
+
+変更点（スケーラビリティ改善）:
+- ThreadPoolExecutorで同時に最大3曲を並列生成
+- タイムアウトを5分→8分に延長（Mureka APIの遅延に対応）
+- 処理中の曲数をトラッキング
+"""
 import threading
 import time
 import logging
-from django.db import transaction
+from concurrent.futures import ThreadPoolExecutor
+from django.db import transaction, close_old_connections
 from django.utils import timezone
 from django.conf import settings
 from .models import Song
 
 # ロギング設定
 logger = logging.getLogger(__name__)
+
+# 並列処理の設定（環境変数で変更可能）
+MAX_CONCURRENT_GENERATIONS = int(getattr(settings, 'MAX_CONCURRENT_GENERATIONS', 3))
+STUCK_TIMEOUT_MINUTES = int(getattr(settings, 'STUCK_TIMEOUT_MINUTES', 8))
 
 
 def send_progress_update(song_id, status, progress, message, audio_url=None):
@@ -36,11 +47,9 @@ def send_progress_update(song_id, status, progress, message, audio_url=None):
 
 
 class SongGenerationQueue:
-    """曲生成キューのシングルトン"""
+    """曲生成キューのシングルトン（並列処理対応）"""
     _instance = None
     _lock = threading.Lock()
-    _processing = False
-    _processing_lock = threading.Lock()
     
     def __new__(cls):
         if cls._instance is None:
@@ -52,114 +61,156 @@ class SongGenerationQueue:
     def __init__(self):
         if not hasattr(self, 'initialized'):
             self.initialized = True
-            self._start_worker()
+            # 現在処理中の曲IDを追跡
+            self._active_songs = set()
+            self._active_songs_lock = threading.Lock()
+            # ThreadPoolExecutorで並列処理
+            self._executor = ThreadPoolExecutor(
+                max_workers=MAX_CONCURRENT_GENERATIONS,
+                thread_name_prefix='song-gen'
+            )
+            self._should_run = True
+            self._start_dispatcher()
+            logger.info(f"Queue initialized: max_concurrent={MAX_CONCURRENT_GENERATIONS}, stuck_timeout={STUCK_TIMEOUT_MINUTES}min")
     
-    def _start_worker(self):
-        """自動復旧機能付きのバックグラウンドワーカースレッドを開始"""
-        self._worker_thread = None
-        self._should_run = True
-        self._start_worker_thread()
+    def _start_dispatcher(self):
+        """ディスパッチャースレッドを開始"""
+        self._dispatcher_thread = threading.Thread(
+            target=self._dispatcher_wrapper, daemon=True, name='queue-dispatcher'
+        )
+        self._dispatcher_thread.start()
+        logger.info("Queue dispatcher thread started")
     
-    def _start_worker_thread(self):
-        """ワーカースレッドを開始または再起動"""
-        self._worker_thread = threading.Thread(target=self._worker_wrapper, daemon=True)
-        self._worker_thread.start()
-        logger.info("Queue worker thread started")
-    
-    def _worker_wrapper(self):
-        """クラッシュ時の自動復旧付きワーカーラッパー"""
+    def _dispatcher_wrapper(self):
+        """クラッシュ時の自動復旧付きディスパッチャーラッパー"""
         while self._should_run:
             try:
-                self._process_queue()
+                self._dispatch_loop()
             except Exception as e:
-                logger.critical(f"Worker crashed unexpectedly: {e}", exc_info=True)
-                # 再起動前に待機
+                logger.critical(f"Dispatcher crashed unexpectedly: {e}", exc_info=True)
                 time.sleep(10)
-                logger.info("Attempting to restart worker...")
+                logger.info("Attempting to restart dispatcher...")
     
     def add_to_queue(self, song_id, lyrics_content, title, genre, vocal_style='female'):
         """曲をキューに追加"""
         logger.info(f"Song {song_id} added to queue (vocal: {vocal_style})")
         # 曲のステータスは既にpendingに設定済み
-        # ワーカースレッドが自動的に処理
+        # ディスパッチャーが自動的に処理
         
-        # ワーカーの健全性をチェックし、必要に応じて再起動
-        self._check_worker_health()
+        # ディスパッチャーの健全性をチェック
+        self._check_dispatcher_health()
     
-    def _check_worker_health(self):
-        """ワーカースレッドが生きているかチェックし、必要なら再起動"""
-        if self._worker_thread is None or not self._worker_thread.is_alive():
-            logger.warning("Worker thread not running, restarting...")
-            self._start_worker_thread()
+    def _check_dispatcher_health(self):
+        """ディスパッチャースレッドが生きているかチェックし、必要なら再起動"""
+        if self._dispatcher_thread is None or not self._dispatcher_thread.is_alive():
+            logger.warning("Dispatcher thread not running, restarting...")
+            self._start_dispatcher()
     
-    def _process_queue(self):
-        """キューワーカー"""
+    @property
+    def active_count(self):
+        """現在処理中の曲数"""
+        with self._active_songs_lock:
+            return len(self._active_songs)
+    
+    @property
+    def can_accept_more(self):
+        """新しい曲を処理できるか"""
+        return self.active_count < MAX_CONCURRENT_GENERATIONS
+    
+    def _dispatch_loop(self):
+        """メインディスパッチループ - pendingの曲を見つけてワーカーに割り当て"""
         poll_interval = getattr(settings, 'QUEUE_POLL_INTERVAL', 5)
-        logger.info(f"Queue worker processing started (poll interval: {poll_interval}s)")
+        logger.info(f"Dispatcher started (poll: {poll_interval}s, max_concurrent: {MAX_CONCURRENT_GENERATIONS})")
         
         while self._should_run:
             try:
-                # スタックしたgenerating曲をタイムアウト（5分超過でfailed）
+                # スタックしたgenerating曲をタイムアウト
                 self._timeout_stuck_songs()
                 
-                # 処理中フラグをチェック
-                with self._processing_lock:
-                    if self._processing:
-                        time.sleep(poll_interval)
-                        continue
-                    
-                    # 次の処理対象の曲を取得
-                    with transaction.atomic():
-                        pending_song = Song.objects.select_for_update().filter(
-                            generation_status='pending'
-                        ).order_by('created_at').first()
-                        
-                        if pending_song:
-                            # 処理開始
-                            pending_song.generation_status = 'generating'
-                            pending_song.started_at = timezone.now()
-                            pending_song.error_message = None  # 前回のエラーをクリア
-                            pending_song.save()
-                            self._processing = True
-                            song_id = pending_song.id
-                            # WebSocket更新を送信
-                            send_progress_update(song_id, 'generating', 20, '生成を開始しています...')
-                        else:
-                            song_id = None
+                # 処理中の曲数を確認
+                if not self.can_accept_more:
+                    time.sleep(poll_interval)
+                    continue
+                
+                # 次の処理対象を取得
+                song_id = self._claim_next_pending_song()
                 
                 if song_id:
-                    logger.info(f"Starting generation for Song {song_id}")
-                    try:
-                        self._generate_song(song_id)
-                    except Exception as e:
-                        error_msg = str(e)
-                        logger.error(f"Error generating Song {song_id}: {error_msg}", exc_info=True)
-                        # エラー時にステータスを更新
-                        try:
-                            with transaction.atomic():
-                                song = Song.objects.select_for_update().get(id=song_id)
-                                song.generation_status = 'failed'
-                                song.queue_position = None
-                                song.error_message = error_msg[:1000]  # エラーメッセージの長さを制限
-                                song.save()
-                        except Exception:
-                            pass
-                    finally:
-                        with self._processing_lock:
-                            self._processing = False
-                        logger.info(f"Completed processing Song {song_id}")
-                        
-                        # キューの位置を更新
-                        self._update_queue_positions()
+                    logger.info(f"Dispatching Song {song_id} to worker (active: {self.active_count}/{MAX_CONCURRENT_GENERATIONS})")
+                    # ThreadPoolExecutorにジョブを投入
+                    self._executor.submit(self._worker_task, song_id)
                 else:
                     # キューが空なら待機
                     time.sleep(poll_interval)
                     
             except Exception as e:
-                logger.error(f"Queue worker error: {e}", exc_info=True)
-                with self._processing_lock:
-                    self._processing = False
+                logger.error(f"Dispatcher error: {e}", exc_info=True)
                 time.sleep(poll_interval)
+    
+    def _claim_next_pending_song(self):
+        """次のpending曲を取得してgenerating状態に変更（排他制御付き）"""
+        try:
+            with transaction.atomic():
+                # 現在処理中のIDを除外して取得
+                with self._active_songs_lock:
+                    active_ids = list(self._active_songs)
+                
+                pending_song = Song.objects.select_for_update(skip_locked=True).filter(
+                    generation_status='pending'
+                ).exclude(
+                    id__in=active_ids
+                ).order_by('created_at').first()
+                
+                if pending_song:
+                    pending_song.generation_status = 'generating'
+                    pending_song.started_at = timezone.now()
+                    pending_song.error_message = None
+                    pending_song.save()
+                    
+                    with self._active_songs_lock:
+                        self._active_songs.add(pending_song.id)
+                    
+                    send_progress_update(pending_song.id, 'generating', 20, '生成を開始しています...')
+                    return pending_song.id
+            
+            return None
+        except Exception as e:
+            logger.error(f"Error claiming next song: {e}")
+            return None
+    
+    def _worker_task(self, song_id):
+        """個別の曲生成ワーカータスク（ThreadPoolExecutor内で実行）"""
+        try:
+            # 新しいスレッドではDB接続をリフレッシュ
+            close_old_connections()
+            
+            logger.info(f"Worker started for Song {song_id}")
+            self._generate_song(song_id)
+            
+        except Exception as e:
+            error_msg = str(e)
+            logger.error(f"Worker error for Song {song_id}: {error_msg}", exc_info=True)
+            try:
+                with transaction.atomic():
+                    song = Song.objects.select_for_update().get(id=song_id)
+                    song.generation_status = 'failed'
+                    song.queue_position = None
+                    song.error_message = error_msg[:1000]
+                    song.save()
+            except Exception:
+                pass
+        finally:
+            # 処理中リストから削除
+            with self._active_songs_lock:
+                self._active_songs.discard(song_id)
+            
+            logger.info(f"Worker finished for Song {song_id} (active: {self.active_count}/{MAX_CONCURRENT_GENERATIONS})")
+            
+            # キューの位置を更新
+            self._update_queue_positions()
+            
+            # DB接続をクリーンアップ
+            close_old_connections()
     
     def _generate_song(self, song_id):
         """リトライロジックとエラー追跡付きの曲生成"""
@@ -343,10 +394,10 @@ class SongGenerationQueue:
                 pass
     
     def _timeout_stuck_songs(self):
-        """5分以上generating状態の曲をfailedに変更"""
+        """一定時間以上generating状態の曲をfailedに変更"""
         try:
             from datetime import timedelta
-            cutoff = timezone.now() - timedelta(minutes=5)
+            cutoff = timezone.now() - timedelta(minutes=STUCK_TIMEOUT_MINUTES)
             stuck = Song.objects.filter(
                 generation_status='generating',
                 started_at__lt=cutoff
@@ -358,6 +409,11 @@ class SongGenerationQueue:
                 song.queue_position = None
                 song.error_message = f'生成がタイムアウトしました（{int(elapsed)}秒経過）。再生成してください。'
                 song.save()
+                
+                # active_songsからも削除
+                with self._active_songs_lock:
+                    self._active_songs.discard(song.id)
+                    
         except Exception as e:
             logger.warning(f"Timeout check error: {e}")
 
