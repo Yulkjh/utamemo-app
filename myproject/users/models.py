@@ -162,12 +162,12 @@ class User(AbstractUser):
         if self.is_staff or self.is_superuser:
             return -1
         limits = {
-            'free': 15,  # 月15曲
+            'free': 5,  # 月5曲
             'starter': 70,  # 月70曲
             'pro': -1,  # 無制限
             'school': 100,
         }
-        return limits.get(self.plan, 15)
+        return limits.get(self.plan, 5)
     
     def get_model_limits(self):
         """月間楽曲生成制限を取得（-1は無制限）"""
@@ -175,7 +175,7 @@ class User(AbstractUser):
         if self.is_staff or self.is_superuser:
             return {'v8': -1}
         limits = {
-            'free': {'v8': 15},       # フリー月15曲
+            'free': {'v8': 5},        # フリー月5曲
             'starter': {'v8': 70},    # スターター月70曲
             'pro': {'v8': -1},        # 無制限
             'school': {'v8': 100},    # スクール月100曲
