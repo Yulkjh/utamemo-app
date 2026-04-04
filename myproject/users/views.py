@@ -387,7 +387,6 @@ def create_checkout_session(request):
 @login_required
 def upgrade_success(request):
     """アップグレード成功後のコールバック"""
-    free_upgrade = request.GET.get('free_upgrade')
     session_id = request.GET.get('session_id')
     plan = request.GET.get('plan', 'starter')
     
@@ -400,16 +399,7 @@ def upgrade_success(request):
     }
     plan_name = plan_names.get(plan, plan_names['starter']).get(app_language, plan)
     
-    if free_upgrade:
-        # テストモード: 無料アップグレード済み
-        if app_language == 'en':
-            messages.success(request, f'Welcome to {plan_name}! Your plan has been activated.')
-        elif app_language == 'zh':
-            messages.success(request, f'欢迎加入{plan_name}！您的计划已激活。')
-        else:
-            messages.success(request, f'{plan_name}プランへようこそ！プランが有効になりました。')
-    
-    elif session_id:
+    if session_id:
         # 本番モード: Stripe決済後
         try:
             import stripe

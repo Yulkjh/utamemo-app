@@ -970,7 +970,7 @@ def generate_lyrics_api(request):
             return JsonResponse({'success': False, 'error': 'Generated lyrics was empty'})
     except Exception as e:
         logger.error(f"Lyrics generation API error: {e}", exc_info=True)
-        return JsonResponse({'success': False, 'error': str(e)})
+        return JsonResponse({'success': False, 'error': 'An error occurred during lyrics generation. Please try again.'})
 
 
 @login_required
@@ -1114,9 +1114,10 @@ class LyricsConfirmationView(LoginRequiredMixin, TemplateView):
                         'lyrics': new_lyrics
                     })
                 except Exception as e:
+                    logger.error(f"Lyrics regeneration error: {e}", exc_info=True)
                     return JsonResponse({
                         'success': False,
-                        'error': f'歌詞生成に失敗しました: {str(e)}'
+                        'error': '歌詞生成に失敗しました。もう一度お試しください。'
                     })
             else:
                 return JsonResponse({
@@ -1346,9 +1347,10 @@ def toggle_song_privacy(request, pk):
                     'message': msg
                 })
             except Exception as e:
+                logger.error(f"Toggle privacy error for song {song.pk}: {e}")
                 return JsonResponse({
                     'success': False,
-                    'error': str(e)
+                    'error': 'An error occurred. Please try again.'
                 })
         else:
             new_is_public = not song.is_public
@@ -1549,7 +1551,7 @@ def add_tag_to_song(request, pk):
     
     except Exception as e:
         logger.error(f"Error adding tag to song {pk}: {e}")
-        return JsonResponse({'success': False, 'error': str(e)}, status=500)
+        return JsonResponse({'success': False, 'error': 'An error occurred.'}, status=500)
 
 
 @login_required
@@ -1576,7 +1578,8 @@ def remove_tag_from_song(request, pk):
         return JsonResponse({'success': True})
     
     except Exception as e:
-        return JsonResponse({'success': False, 'error': str(e)}, status=500)
+        logger.error(f"Error removing tag from song {pk}: {e}")
+        return JsonResponse({'success': False, 'error': 'An error occurred.'}, status=500)
 
 
 @login_required
@@ -1620,7 +1623,8 @@ def update_song_title(request, pk):
         })
     
     except Exception as e:
-        return JsonResponse({'success': False, 'error': str(e)}, status=500)
+        logger.error(f"Error updating title for song {pk}: {e}")
+        return JsonResponse({'success': False, 'error': 'An error occurred.'}, status=500)
 
 
 @login_required
@@ -1693,17 +1697,18 @@ def retry_song_generation(request, pk):
                 return redirect('songs:song_generating', pk=song.pk)
                 
             except Exception as e:
+                logger.error(f"Retry generation error for song {song.pk}: {e}")
                 if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
                     return JsonResponse({
                         'success': False,
-                        'error': str(e)
+                        'error': 'An error occurred. Please try again.'
                     })
                 if app_language == 'en':
-                    messages.error(request, f'Regeneration failed: {e}')
+                    messages.error(request, 'Regeneration failed. Please try again.')
                 elif app_language == 'zh':
-                    messages.error(request, f'重新生成失败：{e}')
+                    messages.error(request, '重新生成失败。请重试。')
                 else:
-                    messages.error(request, f'再生成に失敗しました: {e}')
+                    messages.error(request, '再生成に失敗しました。もう一度お試しください。')
         else:
             if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
                 if app_language == 'en':
@@ -2757,7 +2762,8 @@ def flashcard_update_mastery(request, pk):
             'progress_percent': int(mastered / total * 100) if total > 0 else 0,
         })
     except Exception as e:
-        return JsonResponse({'success': False, 'error': str(e)}, status=400)
+        logger.error(f"Flashcard mastery update error: {e}")
+        return JsonResponse({'success': False, 'error': 'An error occurred.'}, status=400)
 
 
 @login_required

@@ -298,6 +298,7 @@ class AudioProxyDomainTest(TestCase):
             title='テスト曲', created_by=self.user,
             audio_url='https://evil.example.com/audio.mp3',
             generation_status='completed',
+            is_public=True,
         )
         response = self.client.get(reverse('songs:audio_proxy', args=[song.pk]))
         self.assertEqual(response.status_code, 403)
@@ -307,6 +308,7 @@ class AudioProxyDomainTest(TestCase):
         song = Song.objects.create(
             title='テスト曲', created_by=self.user,
             audio_url='', generation_status='completed',
+            is_public=True,
         )
         response = self.client.get(reverse('songs:audio_proxy', args=[song.pk]))
         self.assertEqual(response.status_code, 404)

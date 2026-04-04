@@ -135,7 +135,8 @@ class UserRegistrationTest(TestCase):
             'password1': 'TestPass123!',
             'password2': 'TestPass123!',
             'email': 'test@example.com',
-            'agree_terms': True,
+            'birth_date': '2000-01-15',
+            'agree_tos': True,
         })
         self.assertTrue(User.objects.filter(username='newuser').exists())
     
