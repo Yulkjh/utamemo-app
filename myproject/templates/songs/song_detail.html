@@ -121,7 +121,7 @@
                         {% if user == song.created_by %}
                         <form method="post" action="{% url 'songs:retry_song' song.pk %}" style="margin-top: 1rem;">
                             {% csrf_token %}
-                            <button type="submit" class="btn-download" style="background: linear-gradient(135deg, #ff7940 0%, #ff6b35 100%);">
+                            <button type="submit" class="btn-retry" style="background: linear-gradient(135deg, #ff7940 0%, #ff6b35 100%);">
                                 <i class="bi bi-arrow-clockwise"></i> {% if is_english %}Retry{% elif is_spanish %}Reintentar{% elif is_german %}Wiederholen{% elif is_portuguese %}Tentar Novamente{% elif is_chinese %}重试{% else %}再生成する{% endif %}
                             </button>
                         </form>
@@ -162,7 +162,7 @@
                             {% if user == song.created_by %}
                                 <form method="post" action="{% url 'songs:retry_song' song.pk %}" style="margin-top: 1rem;">
                                     {% csrf_token %}
-                                    <button type="submit" class="btn-download" style="background: linear-gradient(135deg, #ff7940 0%, #ff6b35 100%);">
+                                    <button type="submit" class="btn-retry" style="background: linear-gradient(135deg, #ff7940 0%, #ff6b35 100%);">
                                         <i class="bi bi-arrow-clockwise"></i> {% if is_english %}Retry{% elif is_spanish %}Reintentar{% elif is_german %}Wiederholen{% elif is_portuguese %}Tentar Novamente{% elif is_chinese %}重试{% else %}再生成する{% endif %}
                                         {% if song.retry_count >= 1 %}
                                         <span style="font-size: 0.75rem; opacity: 0.8;">（{% if is_english %}uses monthly quota{% elif is_chinese %}消耗月度额度{% else %}月間回数を消費{% endif %}）</span>
@@ -554,69 +554,12 @@
             {% endif %}
             {% endif %}
 
-            <!-- ダウンロードセクション -->
-            {% if song.audio_file or song.audio_url %}
-            <div class="download-section fade-in">
-                <h4>{% if is_english %}Download{% elif is_spanish %}Descargar{% elif is_german %}Herunterladen{% elif is_portuguese %}Download{% elif is_chinese %}下载{% else %}ダウンロード{% endif %}</h4>
-                <div class="download-buttons">
-                    {% if user.is_authenticated and user.is_starter %}
-                    {% if song.audio_file %}
-                    <a href="{{ song.audio_file.url }}" download="{{ song.title }}.mp3" class="btn-download">
-                        <i class="bi bi-download"></i> {% if is_english %}Download MP3{% elif is_spanish %}Descargar MP3{% elif is_german %}MP3 herunterladen{% elif is_portuguese %}Baixar MP3{% elif is_chinese %}下载MP3{% else %}MP3ダウンロード{% endif %}
-                    </a>
-                    {% elif song.audio_url %}
-                    <a href="{{ song.audio_url }}" download="{{ song.title }}.mp3" class="btn-download" target="_blank">
-                        <i class="bi bi-download"></i> {% if is_english %}Download MP3{% elif is_spanish %}Descargar MP3{% elif is_german %}MP3 herunterladen{% elif is_portuguese %}Baixar MP3{% elif is_chinese %}下载MP3{% else %}MP3ダウンロード{% endif %}
-                    </a>
-                    {% if song.api_provider == 'mureka' %}
-                    <button type="button" class="btn-download-advanced" onclick="downloadMurekaAudio('{{ song.audio_url }}', '{{ song.title }}')">
-                        <i class="bi bi-cloud-download"></i> {% if is_english %}HD Download{% elif is_spanish %}Descarga HD{% elif is_german %}HD-Download{% elif is_portuguese %}Download HD{% elif is_chinese %}高清下载{% else %}高音質ダウンロード{% endif %}
-                    </button>
-                    {% endif %}
-                    {% endif %}
-                    {% else %}
-                    <a href="{% url 'users:upgrade' %}" class="btn-download-locked">
-                        <i class="bi bi-lock"></i> {% if is_english %}Starter Plan Required{% elif is_spanish %}Plan Starter Requerido{% elif is_german %}Starter-Plan erforderlich{% elif is_portuguese %}Plano Iniciante Necessário{% elif is_chinese %}需要入门套餐{% else %}スターター以上で利用可能{% endif %}
-                    </a>
-                    {% endif %}
-                </div>
-            </div>
-            {% endif %}
+
         </div>
     </div>
 </div>
 
 <style>
-/* ダウンロードセクション */
-.download-section {
-    background: var(--surface);
-    border-radius: var(--radius-xl);
-    padding: 2rem;
-    box-shadow: var(--shadow-md);
-    border: 1px solid rgba(255, 121, 64, 0.1);
-    margin-top: 1.5rem;
-    margin-bottom: 1.5rem;
-}
-
-.download-section h4 {
-    margin: 0 0 1rem 0;
-    color: var(--text-primary);
-    font-size: 1rem;
-    font-weight: 600;
-}
-
-.download-buttons {
-    display: flex;
-    flex-direction: column;
-    gap: 0.75rem;
-}
-
-.download-buttons .btn-download,
-.download-buttons .btn-download-advanced {
-    width: 100%;
-    justify-content: center;
-}
-
 /* 関連楽曲リスト */
 .related-song-item {
     display: flex;
@@ -1358,7 +1301,7 @@
     }
 }
 
-/* モバイル：カラオケ・ダウンロードをプレイヤー直後に移動（JSで対応） */
+/* モバイル：カラオケをプレイヤー直後に移動（JSで対応） */
 
 /* カラオケモード */
 .lyrics-header-actions {
@@ -2137,7 +2080,7 @@ audio {
     justify-content: center;
 }
 
-.btn-download {
+.btn-retry {
     background: var(--primary-gradient);
     color: white;
     padding: 0.75rem 1.5rem;
@@ -2152,28 +2095,9 @@ audio {
     cursor: pointer;
 }
 
-.btn-download:hover {
+.btn-retry:hover {
     color: white;
     text-decoration: none;
-    transform: translateY(-2px);
-    box-shadow: var(--shadow-md);
-}
-
-.btn-download-advanced {
-    background: linear-gradient(135deg, #28a745 0%, #20c997 100%);
-    color: white;
-    padding: 0.75rem 1.5rem;
-    border-radius: var(--radius-md);
-    font-weight: 600;
-    display: inline-flex;
-    align-items: center;
-    gap: 0.5rem;
-    transition: all 0.3s ease;
-    border: none;
-    cursor: pointer;
-}
-
-.btn-download-advanced:hover {
     transform: translateY(-2px);
     box-shadow: var(--shadow-md);
 }
@@ -2209,48 +2133,6 @@ function shareVia(method) {
         navigator.clipboard.writeText(url).then(() => {
             alert('{% if is_english %}URL copied to clipboard!{% elif is_chinese %}链接已复制到剪贴板！{% else %}URLがクリップボードにコピーされました！{% endif %}');
         });
-    }
-}
-
-// Mureka音声ダウンロード機能
-function downloadMurekaAudio(audioUrl, songTitle) {
-    // ダウンロードボタンを無効化
-    const button = event.target.closest('button');
-    const originalText = button.innerHTML;
-    button.disabled = true;
-    button.innerHTML = '<i class="bi bi-hourglass-split"></i> {% if is_english %}Downloading...{% elif is_chinese %}下载中...{% else %}ダウンロード中...{% endif %}';
-    
-    try {
-        // 新しいwindowでダウンロード開始
-        const link = document.createElement('a');
-        link.href = audioUrl;
-        link.download = `${songTitle}.mp3`;
-        link.target = '_blank';
-        link.rel = 'noopener noreferrer';
-        
-        // 一時的にbodyに追加してクリック
-        document.body.appendChild(link);
-        link.click();
-        document.body.removeChild(link);
-        
-        // 成功メッセージ
-        setTimeout(() => {
-            button.disabled = false;
-            button.innerHTML = '<i class="bi bi-check"></i> {% if is_english %}Download started!{% elif is_chinese %}下载已开始！{% else %}ダウンロード開始！{% endif %}';
-            
-            setTimeout(() => {
-                button.innerHTML = originalText;
-            }, 2000);
-        }, 1000);
-        
-    } catch (error) {
-        console.error('Download error:', error);
-        button.disabled = false;
-        button.innerHTML = '<i class="bi bi-x"></i> {% if is_english %}Error{% elif is_chinese %}错误{% else %}エラー{% endif %}';
-        
-        setTimeout(() => {
-            button.innerHTML = originalText;
-        }, 2000);
     }
 }
 
@@ -3729,36 +3611,25 @@ document.getElementById('tagModal').addEventListener('click', function(e) {
         }
     });
     
-    // === モバイル：カラオケ・ダウンロードセクション移動 ===
+    // === モバイル：カラオケセクション移動 ===
     function reorderForMobile() {
         const isMobile = window.innerWidth <= 768;
         const player = document.querySelector('.music-player-card');
         const karaoke = document.querySelector('.karaoke-section');
-        const download = document.querySelector('.download-section');
         const colLeft = document.querySelector('.col-lg-8');
         
         if (!player || !colLeft) return;
         
         if (isMobile) {
             const afterPlayer = player.nextElementSibling;
-            if (download && download.parentElement !== colLeft) {
-                if (afterPlayer) {
-                    colLeft.insertBefore(download, afterPlayer);
-                } else {
-                    colLeft.appendChild(download);
-                }
-            }
             if (karaoke && karaoke.parentElement !== colLeft) {
-                colLeft.insertBefore(karaoke, download || afterPlayer);
+                colLeft.insertBefore(karaoke, afterPlayer);
             }
         } else {
             const colRight = document.querySelector('.col-lg-4');
             if (!colRight) return;
             if (karaoke && karaoke.parentElement !== colRight) {
                 colRight.appendChild(karaoke);
-            }
-            if (download && download.parentElement !== colRight) {
-                colRight.appendChild(download);
             }
         }
     }
