@@ -277,7 +277,8 @@
                 </div>
             </div>
 
-            <!-- 公開設定（所有者のみ） -->
+            <!-- 公開設定（所有者のみ）- 現在非表示 -->
+            {% comment %}
             {% if user == song.created_by %}
             <div class="privacy-settings-card fade-in">
                 <div class="privacy-header">
@@ -319,6 +320,7 @@
                 </div>
             </div>
             {% endif %}
+            {% endcomment %}
 
             <!-- 歌詞セクション -->
             {% if song.lyrics %}
@@ -1923,18 +1925,6 @@ audio {
 </style>
 
 <script>
-// 共有機能
-function shareVia(method) {
-    const url = window.location.href;
-    const title = '{{ song.title }} - UTAMEMO';
-    
-    if (method === 'copy') {
-        navigator.clipboard.writeText(url).then(() => {
-            alert('{% if is_english %}URL copied to clipboard!{% elif is_chinese %}链接已复制到剪贴板！{% else %}URLがクリップボードにコピーされました！{% endif %}');
-        });
-    }
-}
-
 // オーディオプレーヤー制御
 document.addEventListener('DOMContentLoaded', function() {
     const audioPlayer = document.querySelector('.custom-audio-player');
@@ -2095,193 +2085,11 @@ document.addEventListener('DOMContentLoaded', function() {
     {% endif %}
 });
 
-// 公開設定機能
-function confirmAndPublish(songId) {
-    if (confirm('{% if is_english %}Make this song public?\n\nOnce public, other users can discover and listen to this song. Please make sure it does not contain personal study content.{% elif is_chinese %}公开这首歌曲？\n\n公开后，其他用户可以在歌曲列表中发现并收听这首歌曲。请确保不包含个人学习内容。{% else %}この楽曲を公開しますか？\n\n公開すると、他のユーザーも楽曲一覧でこの楽曲を発見して聴くことができるようになります。個人的な学習内容が含まれていないか確認してください。{% endif %}')) {
-        togglePrivacy(songId, true);
-    }
-}
-
-function togglePrivacy(songId, makePublic) {
-    console.log('Toggle privacy called with:', songId, makePublic);
-    
-    // CSRFトークンの確認
-    const csrfToken = document.querySelector('[name=csrfmiddlewaretoken]');
-    if (!csrfToken) {
-        console.error('CSRF token not found');
-        alert('{% if is_english %}Error: CSRF token not found. Please reload the page.{% elif is_chinese %}错误：找不到CSRF令牌。请刷新页面。{% else %}エラー: CSRFトークンが見つかりません。ページを再読み込みしてください。{% endif %}');
-        return;
-    }
-
-    fetch(`/songs/${songId}/toggle-privacy/`, {
-        method: 'POST',
-        headers: {
-            'X-Requested-With': 'XMLHttpRequest',
-            'X-CSRFToken': csrfToken.value,
-            'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-            'is_public': makePublic
-        })
-    })
-    .then(response => {
-        console.log('Response status:', response.status);
-        if (!response.ok) {
-            throw new Error(`HTTP error! status: ${response.status}`);
-        }
-        return response.json();
-    })
-    .then(data => {
-        console.log('Response data:', data);
-        if (data.success) {
-            // ページを再読み込みして状態を更新
-            location.reload();
-        } else {
-            alert('{% if is_english %}An error occurred: {% elif is_chinese %}发生错误：{% else %}エラーが発生しました: {% endif %}' + (data.error || '{% if is_english %}Unknown error{% elif is_chinese %}未知错误{% else %}不明なエラー{% endif %}'));
-        }
-    })
-    .catch(error => {
-        console.error('Error:', error);
-        alert('{% if is_english %}An error occurred: {% elif is_chinese %}发生错误：{% else %}エラーが発生しました: {% endif %}' + error.message);
-    });
-}
 </script>
 
-<!-- 公開設定用CSS -->
+<!-- 公開設定用CSS（現在非表示のため省略） -->
+
 <style>
-.privacy-settings-card {
-    background: var(--surface);
-    border-radius: var(--radius-xl);
-    box-shadow: var(--shadow-md);
-    overflow: hidden;
-    margin-bottom: 2rem;
-    border: 1px solid rgba(255, 121, 64, 0.1);
-}
-
-.privacy-header {
-    background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
-    padding: 1.5rem;
-    display: flex;
-    align-items: center;
-    gap: 1rem;
-    border-bottom: 1px solid var(--border-color);
-}
-
-.privacy-icon {
-    width: 50px;
-    height: 50px;
-    border-radius: 50%;
-    background: var(--primary-gradient);
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    color: white;
-    font-size: 1.5rem;
-}
-
-.privacy-header h3 {
-    margin: 0;
-    color: var(--text-primary);
-    font-weight: 700;
-}
-
-.privacy-header p {
-    margin: 0;
-    color: var(--text-secondary);
-    font-size: 0.9rem;
-}
-
-.privacy-body {
-    padding: 2rem;
-}
-
-.current-status {
-    margin-bottom: 2rem;
-}
-
-.status-public {
-    display: flex;
-    align-items: center;
-    gap: 0.75rem;
-    color: #28a745;
-    font-size: 1.1rem;
-    margin-bottom: 0.5rem;
-}
-
-.status-private {
-    display: flex;
-    align-items: center;
-    gap: 0.75rem;
-    color: #6c757d;
-    font-size: 1.1rem;
-    margin-bottom: 0.5rem;
-}
-
-.status-description {
-    color: var(--text-secondary);
-    font-size: 0.95rem;
-    line-height: 1.5;
-    margin: 0;
-    padding-left: 2rem;
-}
-
-.privacy-actions {
-    display: flex;
-    justify-content: center;
-}
-
-.btn-privacy-action {
-    padding: 1rem 2rem;
-    border: none;
-    border-radius: var(--radius-lg);
-    font-size: 1rem;
-    font-weight: 600;
-    display: flex;
-    align-items: center;
-    gap: 0.75rem;
-    transition: all 0.3s ease;
-    cursor: pointer;
-    box-shadow: var(--shadow-sm);
-}
-
-.btn-make-public {
-    background: var(--primary-gradient);
-    color: white;
-}
-
-.btn-make-public:hover {
-    transform: translateY(-2px);
-    box-shadow: var(--shadow-md);
-}
-
-.btn-make-private {
-    background: #6c757d;
-    color: white;
-}
-
-.btn-make-private:hover {
-    background: #545b62;
-    transform: translateY(-2px);
-    box-shadow: var(--shadow-md);
-}
-
-@media (max-width: 768px) {
-    .privacy-header {
-        padding: 1rem;
-        flex-direction: column;
-        text-align: center;
-    }
-    
-    .privacy-body {
-        padding: 1.5rem;
-    }
-    
-    .status-description {
-        padding-left: 0;
-        margin-top: 0.5rem;
-    }
-}
-
 /* タイトル編集 */
 .title-edit-container {
     display: flex;

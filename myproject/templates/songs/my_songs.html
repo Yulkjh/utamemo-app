@@ -49,11 +49,6 @@
                 {% if song.genre %}
                 <span class="song-genre-badge">{{ song.genre|translate_genre:app_language }}</span>
                 {% endif %}
-                {% if song.is_public %}
-                <span class="song-public-badge">{% if is_english %}Public{% elif is_spanish %}Público{% elif is_german %}Öffentlich{% elif is_portuguese %}Público{% elif is_chinese %}公开{% else %}公開{% endif %}</span>
-                {% else %}
-                <span class="song-private-badge">{% if is_english %}Private{% elif is_spanish %}Privado{% elif is_german %}Privat{% elif is_portuguese %}Privado{% elif is_chinese %}私密{% else %}非公開{% endif %}</span>
-                {% endif %}
                 {% if song.generation_status == 'pending' and song.queue_position %}
                 <span class="queue-badge">#{{ song.queue_position }}</span>
                 {% endif %}

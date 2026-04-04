@@ -25,7 +25,8 @@
                 <div class="plan-description">{% if is_english %}For those who want to try first{% elif is_spanish %}Para quienes quieren probar primero{% elif is_german %}Für alle, die es erst ausprobieren möchten{% elif is_portuguese %}Para quem quer experimentar primeiro{% elif is_chinese %}适合想先试用的用户{% else %}まずは試してみたい方に{% endif %}</div>
                 <ul class="plan-features">
                     <li class="available"><i class="bi bi-check"></i>{% if is_english %}Up to 5 songs/month{% elif is_spanish %}Hasta 5 canciones/mes{% elif is_german %}Bis zu 5 Lieder/Monat{% elif is_portuguese %}Até 5 músicas/mês{% elif is_chinese %}每月最多5首{% else %}月5曲まで生成{% endif %}</li>
-                    <li class="available"><i class="bi bi-check"></i>{% if is_english %}Premium quality{% elif is_spanish %}Calidad Premium{% elif is_german %}Premium-Qualität{% elif is_portuguese %}Qualidade Premium{% elif is_chinese %}高级音质{% else %}プレミアム音質{% endif %}</li>
+                    <li class="available"><i class="bi bi-check"></i>{% if is_english %}AI song generation{% elif is_spanish %}Generación de canciones con IA{% elif is_german %}KI-Songsgenerierung{% elif is_portuguese %}Geração de músicas com IA{% elif is_chinese %}AI歌曲生成{% else %}AI楽曲生成{% endif %}</li>
+                    <li class="available"><i class="bi bi-check"></i>{% if is_english %}Flashcards{% elif is_spanish %}Tarjetas{% elif is_german %}Lernkarten{% elif is_portuguese %}Flashcards{% elif is_chinese %}闪卡{% else %}暗記カード{% endif %}</li>
                     <li class="unavailable"><i class="bi bi-x"></i>{% if is_english %}Karaoke mode{% elif is_spanish %}Modo karaoke{% elif is_german %}Karaoke-Modus{% elif is_portuguese %}Modo karaokê{% elif is_chinese %}卡拉OK模式{% else %}カラオケモード{% endif %}</li>
                 </ul>
                 {% if current_plan == 'free' %}
@@ -48,8 +49,8 @@
                 <div class="plan-description">{% if is_english %}For individual serious users{% elif is_spanish %}Para usuarios individuales serios{% elif is_german %}Für ernsthafte Einzelnutzer{% elif is_portuguese %}Para usuários individuais sérios{% elif is_chinese %}适合认真使用的个人用户{% else %}個人でしっかり使いたい方に{% endif %}</div>
                 <ul class="plan-features">
                     <li class="available"><i class="bi bi-check"></i>{% if is_english %}Up to 70 songs/month{% elif is_spanish %}Hasta 70 canciones/mes{% elif is_german %}Bis zu 70 Lieder/Monat{% elif is_portuguese %}Até 70 músicas/mês{% elif is_chinese %}每月最多70首{% else %}月70曲まで生成{% endif %}</li>
-                    <li class="available"><i class="bi bi-check"></i>{% if is_english %}All models available{% elif is_spanish %}Todos los modelos disponibles{% elif is_german %}Alle Modelle verfügbar{% elif is_portuguese %}Todos os modelos disponíveis{% elif is_chinese %}所有模型可用{% else %}全モデル利用可能{% endif %}</li>
                     <li class="available"><i class="bi bi-check"></i>{% if is_english %}Karaoke mode{% elif is_spanish %}Modo karaoke{% elif is_german %}Karaoke-Modus{% elif is_portuguese %}Modo karaokê{% elif is_chinese %}卡拉OK模式{% else %}カラオケモード{% endif %}</li>
+                    <li class="available"><i class="bi bi-check"></i>{% if is_english %}Flashcards{% elif is_spanish %}Tarjetas{% elif is_german %}Lernkarten{% elif is_portuguese %}Flashcards{% elif is_chinese %}闪卡{% else %}暗記カード{% endif %}</li>
                     <li class="available"><i class="bi bi-check"></i>{% if is_english %}No ads{% elif is_spanish %}Sin anuncios{% elif is_german %}Keine Werbung{% elif is_portuguese %}Sem anúncios{% elif is_chinese %}无广告{% else %}広告非表示{% endif %}</li>
                 </ul>
                 {% if current_plan == 'starter' %}
@@ -71,8 +72,8 @@
                 <div class="plan-description">{% if is_english %}For heavy users{% elif is_spanish %}Para usuarios intensivos{% elif is_german %}Für Power-User{% elif is_portuguese %}Para usuários intensivos{% elif is_chinese %}适合重度用户{% else %}ヘビーユーザー向け{% endif %}</div>
                 <ul class="plan-features">
                     <li class="available"><i class="bi bi-check"></i>{% if is_english %}Unlimited songs{% elif is_spanish %}Canciones ilimitadas{% elif is_german %}Unbegrenzte Lieder{% elif is_portuguese %}Músicas ilimitadas{% elif is_chinese %}无限歌曲{% else %}曲数無制限{% endif %}</li>
-                    <li class="available"><i class="bi bi-check"></i>{% if is_english %}Unlimited all models{% elif is_spanish %}Todos los modelos ilimitados{% elif is_german %}Alle Modelle unbegrenzt{% elif is_portuguese %}Todos os modelos ilimitados{% elif is_chinese %}所有模型无限制{% else %}全モデル無制限{% endif %}</li>
                     <li class="available"><i class="bi bi-check"></i>{% if is_english %}Karaoke mode{% elif is_spanish %}Modo karaoke{% elif is_german %}Karaoke-Modus{% elif is_portuguese %}Modo karaokê{% elif is_chinese %}卡拉OK模式{% else %}カラオケモード{% endif %}</li>
+                    <li class="available"><i class="bi bi-check"></i>{% if is_english %}Flashcards{% elif is_spanish %}Tarjetas{% elif is_german %}Lernkarten{% elif is_portuguese %}Flashcards{% elif is_chinese %}闪卡{% else %}暗記カード{% endif %}</li>
                     <li class="available"><i class="bi bi-check"></i>{% if is_english %}Priority queue{% elif is_spanish %}Cola prioritaria{% elif is_german %}Prioritätswarteschlange{% elif is_portuguese %}Fila prioritária{% elif is_chinese %}优先队列{% else %}優先キュー{% endif %}</li>
                 </ul>
                 {% if current_plan == 'pro' %}
@@ -94,7 +95,7 @@
                 <div class="plan-description">{% if is_english %}For educational institutions{% elif is_spanish %}Para instituciones educativas{% elif is_german %}Für Bildungseinrichtungen{% elif is_portuguese %}Para instituições educacionais{% elif is_chinese %}适合教育机构{% else %}教育機関向け{% endif %}</div>
                 <ul class="plan-features">
                     <li class="available"><i class="bi bi-check"></i>{% if is_english %}100 songs/student/month{% elif is_spanish %}100 canciones/estudiante/mes{% elif is_german %}100 Lieder/Schüler/Monat{% elif is_portuguese %}100 músicas/aluno/mês{% elif is_chinese %}每学生每月100首{% else %}生徒1人あたり月100曲{% endif %}</li>
-                    <li class="available"><i class="bi bi-check"></i>{% if is_english %}All models available{% elif is_spanish %}Todos los modelos disponibles{% elif is_german %}Alle Modelle verfügbar{% elif is_portuguese %}Todos os modelos disponíveis{% elif is_chinese %}所有模型可用{% else %}全モデル利用可能{% endif %}</li>
+                    <li class="available"><i class="bi bi-check"></i>{% if is_english %}Karaoke mode{% elif is_spanish %}Modo karaoke{% elif is_german %}Karaoke-Modus{% elif is_portuguese %}Modo karaokê{% elif is_chinese %}卡拉OK模式{% else %}カラオケモード{% endif %}</li>
                     <li class="available"><i class="bi bi-check"></i>{% if is_english %}Class sharing{% elif is_spanish %}Compartir en clase{% elif is_german %}Klassenfreigabe{% elif is_portuguese %}Compartilhamento de turma{% elif is_chinese %}班级共享{% else %}クラス共有機能{% endif %}</li>
                     <li class="available"><i class="bi bi-check"></i>{% if is_english %}Teacher dashboard{% elif is_spanish %}Panel del profesor{% elif is_german %}Lehrer-Dashboard{% elif is_portuguese %}Painel do professor{% elif is_chinese %}教师仪表板{% else %}教師用ダッシュボード{% endif %}</li>
                     <li class="available"><i class="bi bi-check"></i>{% if is_english %}Bulk management{% elif is_spanish %}Gestión masiva{% elif is_german %}Massenverwaltung{% elif is_portuguese %}Gerenciamento em massa{% elif is_chinese %}批量管理{% else %}一括管理{% endif %}</li>
