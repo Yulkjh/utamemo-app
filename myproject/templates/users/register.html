@@ -81,9 +81,6 @@
                             {{ form.birth_date.errors.0|translate_error:app_language }}
                         </div>
                         {% endif %}
-                        <div class="field-hint">
-                            {% if is_english %}Required for age verification{% elif is_spanish %}Necesario para la verificación de edad{% elif is_german %}Erforderlich für die Altersüberprüfung{% elif is_portuguese %}Necessário para verificação de idade{% elif is_chinese %}用于年龄验证{% else %}年齢確認のために必要です{% endif %}
-                        </div>
                     </div>
                     
                     <!-- Password Field -->
@@ -554,11 +551,21 @@ document.addEventListener('DOMContentLoaded', function() {
         {% endif %}
     }
 
-    // 生年月日の最大値を今日に設定
+    // 生年月日入力のフォーマット補助
     const birthDateInput = document.getElementById('{{ form.birth_date.id_for_label }}');
     if (birthDateInput) {
-        const today = new Date().toISOString().split('T')[0];
-        birthDateInput.setAttribute('max', today);
+        // 入力時に自動でハイフンを挿入
+        birthDateInput.addEventListener('input', function(e) {
+            let val = this.value.replace(/[^\d]/g, '');
+            if (val.length > 8) val = val.slice(0, 8);
+            if (val.length >= 6) {
+                this.value = val.slice(0, 4) + '-' + val.slice(4, 6) + '-' + val.slice(6);
+            } else if (val.length >= 4) {
+                this.value = val.slice(0, 4) + '-' + val.slice(4);
+            } else {
+                this.value = val;
+            }
+        });
     }
 
     const form = document.querySelector('.register-form');

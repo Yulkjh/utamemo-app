@@ -37,13 +37,17 @@ class UserRegistrationForm(UserCreationForm):
     
     birth_date = forms.DateField(
         required=True,
-        widget=forms.DateInput(attrs={
-            'type': 'date',
-            'max': '',  # JSで動的に設定
+        widget=forms.TextInput(attrs={
+            'placeholder': 'YYYY-MM-DD',
+            'pattern': r'\d{4}-\d{2}-\d{2}',
+            'inputmode': 'numeric',
+            'autocomplete': 'bday',
+            'maxlength': '10',
         }),
+        input_formats=['%Y-%m-%d', '%Y/%m/%d', '%m/%d/%Y', '%d/%m/%Y'],
         error_messages={
             'required': '生年月日を入力してください。 / Please enter your date of birth.',
-            'invalid': '正しい日付を入力してください。 / Please enter a valid date.',
+            'invalid': '正しい日付を入力してください（例: 2000-01-15）。 / Please enter a valid date (e.g. 2000-01-15).',
         },
     )
     
@@ -123,10 +127,15 @@ class ProfileEditForm(forms.ModelForm):
     
     birth_date = forms.DateField(
         required=False,
-        widget=forms.DateInput(attrs={
-            'type': 'date',
+        widget=forms.TextInput(attrs={
+            'placeholder': 'YYYY-MM-DD',
             'class': 'form-control',
+            'pattern': r'\d{4}-\d{2}-\d{2}',
+            'inputmode': 'numeric',
+            'autocomplete': 'bday',
+            'maxlength': '10',
         }),
+        input_formats=['%Y-%m-%d', '%Y/%m/%d', '%m/%d/%Y', '%d/%m/%Y'],
         label='生年月日 / Date of Birth',
     )
     
