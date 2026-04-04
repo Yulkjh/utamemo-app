@@ -316,10 +316,6 @@ class UpgradeView(TemplateView):
         return context
 
 
-# テストモード: Trueの間は無料で即アップグレード、Falseで本番Stripe決済
-FREE_UPGRADE_MODE = False
-
-
 @login_required
 @require_POST
 def create_checkout_session(request):
@@ -349,14 +345,7 @@ def create_checkout_session(request):
                 'reason': reason,
             }, status=403)
         
-        # テストモード: 無料で即アップグレード
-        if FREE_UPGRADE_MODE:
-            user.plan = plan
-            user.plan_expires_at = timezone.now() + timedelta(days=30)
-            user.save()
-            return JsonResponse({'checkout_url': f'{domain}/users/upgrade/success/?free_upgrade=1&plan={plan}'})
-        
-        # 本番モード: Stripe決済
+        # Stripe決済
         import stripe
         stripe.api_key = getattr(settings, 'STRIPE_SECRET_KEY', '')
         
@@ -391,7 +380,8 @@ def create_checkout_session(request):
         return JsonResponse({'checkout_url': checkout_session.url})
         
     except Exception as e:
-        return JsonResponse({'error': str(e)}, status=500)
+        logger.error(f'Checkout session error: {e}')
+        return JsonResponse({'error': 'An error occurred. Please try again.'}, status=500)
 
 
 @login_required
