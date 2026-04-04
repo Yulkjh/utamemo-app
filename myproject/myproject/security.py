@@ -4,17 +4,21 @@
 1. ログイン試行回数制限（アカウントロック）
 2. 管理画面アクセス制限
 3. 不審IPアドレスのレート制限
+4. 管理画面メール二段階認証（2FA）
 """
 
 import logging
 import hashlib
+import random
+import string
 from datetime import timedelta
 from django.core.cache import cache
 from django.http import HttpResponseForbidden, HttpResponse
-from django.shortcuts import redirect
+from django.shortcuts import redirect, render
 from django.contrib import messages as django_messages
 from django.utils import timezone
 from django.conf import settings
+from django.core.mail import send_mail
 
 logger = logging.getLogger(__name__)
 
@@ -138,6 +142,27 @@ class SecurityMiddleware:
                 if self._is_rate_limited(ip_address, '/admin/login/'):
                     logger.warning(f'管理画面ログイン レート制限: IP={ip_address}')
                     return self._styled_error_response(429, 'リクエスト制限', 'リクエストが多すぎます。しばらくしてからお試しください。')
+            
+            # ========================================
+            # 管理画面 二段階認証（2FA）
+            # ========================================
+            if (request.user.is_authenticated 
+                    and request.user.is_staff
+                    and not any(path.startswith(p) or path == p for p in ADMIN_2FA_EXEMPT_PATHS)
+                    and not path.startswith('/admin/jsi18n')):
+                
+                if not is_admin_2fa_verified(request):
+                    # まだ2FAコードを送信していない場合、送信する
+                    if not request.session.get(ADMIN_2FA_PENDING_KEY):
+                        if request.user.email:
+                            send_2fa_code(request.user)
+                            request.session[ADMIN_2FA_PENDING_KEY] = True
+                            logger.info(f'Admin 2FA required: user={request.user.username}')
+                        else:
+                            logger.warning(f'Admin 2FA skip (no email): user={request.user.username}')
+                    
+                    # 2FA確認ページへリダイレクト
+                    return redirect('/admin/2fa/')
         
         # ========================================
         # ユーザーログインへのレート制限
@@ -235,3 +260,94 @@ class SecurityMiddleware:
 </body>
 </html>'''
         return HttpResponse(html, status=status_code)
+
+
+# ========================================
+# 管理画面メール二段階認証（2FA）
+# ========================================
+ADMIN_2FA_CODE_LENGTH = 6
+ADMIN_2FA_CODE_EXPIRY = 10 * 60  # 10分
+ADMIN_2FA_SESSION_KEY = 'admin_2fa_verified'
+ADMIN_2FA_SESSION_EXPIRY = 'admin_2fa_expires'
+ADMIN_2FA_PENDING_KEY = 'admin_2fa_pending'
+
+# 2FA検証をスキップするパス
+ADMIN_2FA_EXEMPT_PATHS = [
+    '/admin/login/',
+    '/admin/logout/',
+    '/admin/2fa/',
+]
+
+
+def generate_2fa_code():
+    """6桁の認証コードを生成"""
+    return ''.join(random.choices(string.digits, k=ADMIN_2FA_CODE_LENGTH))
+
+
+def get_2fa_cache_key(user_id):
+    """2FAコードのキャッシュキーを生成"""
+    return f'admin_2fa_code_{user_id}'
+
+
+def send_2fa_code(user):
+    """管理者にメールで2FAコードを送信"""
+    code = generate_2fa_code()
+    cache_key = get_2fa_cache_key(user.pk)
+    cache.set(cache_key, code, ADMIN_2FA_CODE_EXPIRY)
+    
+    try:
+        send_mail(
+            subject='【UTAMEMO】管理画面 認証コード',
+            message=(
+                f'{user.username} 様\n\n'
+                f'管理画面へのアクセスが検出されました。\n'
+                f'以下の認証コードを入力してください。\n\n'
+                f'認証コード: {code}\n\n'
+                f'有効期限: 10分\n\n'
+                f'※ 心当たりのない場合は、パスワードを変更してください。'
+            ),
+            from_email=settings.DEFAULT_FROM_EMAIL,
+            recipient_list=[user.email],
+            fail_silently=False,
+        )
+        logger.info(f'Admin 2FA code sent to user={user.username}')
+        return True
+    except Exception as e:
+        logger.error(f'Admin 2FA code send failed: user={user.username}, error={e}')
+        return False
+
+
+def verify_2fa_code(user_id, code):
+    """2FAコードを検証"""
+    cache_key = get_2fa_cache_key(user_id)
+    stored_code = cache.get(cache_key)
+    
+    if stored_code and stored_code == code:
+        cache.delete(cache_key)  # 使用済みコードを削除
+        return True
+    return False
+
+
+def is_admin_2fa_verified(request):
+    """現在のセッションで2FA認証済みか確認"""
+    if not request.session.get(ADMIN_2FA_SESSION_KEY):
+        return False
+    
+    # 有効期限チェック（セッション内のタイムスタンプ）
+    expires = request.session.get(ADMIN_2FA_SESSION_EXPIRY, 0)
+    if timezone.now().timestamp() > expires:
+        # 期限切れ → セッションから削除
+        request.session.pop(ADMIN_2FA_SESSION_KEY, None)
+        request.session.pop(ADMIN_2FA_SESSION_EXPIRY, None)
+        return False
+    
+    return True
+
+
+def mark_admin_2fa_verified(request):
+    """セッションに2FA認証済みを記録（8時間有効）"""
+    request.session[ADMIN_2FA_SESSION_KEY] = True
+    request.session[ADMIN_2FA_SESSION_EXPIRY] = (
+        timezone.now() + timedelta(hours=8)
+    ).timestamp()
+    request.session.pop(ADMIN_2FA_PENDING_KEY, None)

@@ -24,6 +24,7 @@ from django.views.decorators.cache import cache_page
 from .media_views import serve_protected_media
 from .legal_views import terms, privacy, contact, tokushoho
 from .sitemaps import StaticViewSitemap, SongSitemap
+from .security_views import admin_2fa_verify
 
 sitemaps = {
     'static': StaticViewSitemap,
@@ -41,6 +42,7 @@ def robots_txt(request):
     return HttpResponse("\n".join(lines), content_type="text/plain")
 
 urlpatterns = [
+    path('admin/2fa/', admin_2fa_verify, name='admin_2fa_verify'),
     path('admin/', admin.site.urls),
     path('robots.txt', robots_txt, name='robots_txt'),
     path('sitemap.xml', sitemap, {'sitemaps': sitemaps}, name='django.contrib.sitemaps.views.sitemap'),
