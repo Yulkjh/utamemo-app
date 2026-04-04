@@ -35,6 +35,18 @@ class UserRegistrationForm(UserCreationForm):
         })
     )
     
+    birth_date = forms.DateField(
+        required=True,
+        widget=forms.DateInput(attrs={
+            'type': 'date',
+            'max': '',  # JSで動的に設定
+        }),
+        error_messages={
+            'required': '生年月日を入力してください。 / Please enter your date of birth.',
+            'invalid': '正しい日付を入力してください。 / Please enter a valid date.',
+        },
+    )
+    
     agree_tos = forms.BooleanField(
         required=True,
         error_messages={
@@ -45,7 +57,7 @@ class UserRegistrationForm(UserCreationForm):
     
     class Meta:
         model = User
-        fields = ('username', 'email', 'password1', 'password2')
+        fields = ('username', 'email', 'birth_date', 'password1', 'password2')
         widgets = {
             'username': forms.TextInput(attrs={
                 'placeholder': 'ユーザー名'
@@ -54,6 +66,26 @@ class UserRegistrationForm(UserCreationForm):
         help_texts = {
             'username': '半角英数字、アンダースコア、ハイフンが使用できます（150文字以内）'
         }
+    
+    def clean_birth_date(self):
+        from datetime import date
+        birth_date = self.cleaned_data.get('birth_date')
+        if birth_date:
+            today = date.today()
+            # 未来の日付チェック
+            if birth_date > today:
+                raise ValidationError(
+                    '未来の日付は入力できません。 / Date cannot be in the future.'
+                )
+            # 不合理な過去の日付チェック（120歳以上）
+            age = today.year - birth_date.year - (
+                (today.month, today.day) < (birth_date.month, birth_date.day)
+            )
+            if age > 120:
+                raise ValidationError(
+                    '正しい生年月日を入力してください。 / Please enter a valid date of birth.'
+                )
+        return birth_date
     
     def clean_username(self):
         username = self.cleaned_data.get('username')
@@ -89,9 +121,18 @@ class AccountDeleteForm(forms.Form):
 class ProfileEditForm(forms.ModelForm):
     """プロフィール編集フォーム"""
     
+    birth_date = forms.DateField(
+        required=False,
+        widget=forms.DateInput(attrs={
+            'type': 'date',
+            'class': 'form-control',
+        }),
+        label='生年月日 / Date of Birth',
+    )
+    
     class Meta:
         model = User
-        fields = ('profile_image', 'bio')
+        fields = ('profile_image', 'bio', 'birth_date')
         widgets = {
             'profile_image': forms.FileInput(attrs={
                 'accept': 'image/*',
@@ -107,3 +148,21 @@ class ProfileEditForm(forms.ModelForm):
             'profile_image': 'プロフィール画像',
             'bio': '自己紹介',
         }
+    
+    def clean_birth_date(self):
+        from datetime import date
+        birth_date = self.cleaned_data.get('birth_date')
+        if birth_date:
+            today = date.today()
+            if birth_date > today:
+                raise ValidationError(
+                    '未来の日付は入力できません。 / Date cannot be in the future.'
+                )
+            age = today.year - birth_date.year - (
+                (today.month, today.day) < (birth_date.month, birth_date.day)
+            )
+            if age > 120:
+                raise ValidationError(
+                    '正しい生年月日を入力してください。 / Please enter a valid date of birth.'
+                )
+        return birth_date

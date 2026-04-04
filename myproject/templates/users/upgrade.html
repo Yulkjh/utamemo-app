@@ -128,6 +128,38 @@
     </div>
 </div>
 
+<!-- 保護者同意モーダル -->
+<div id="parentalConsentModal" style="display:none; position:fixed; top:0; left:0; right:0; bottom:0; background:rgba(0,0,0,0.6); z-index:9999; align-items:center; justify-content:center;">
+    <div style="background:#fff; border-radius:16px; max-width:500px; width:90%; padding:32px; margin:auto; position:relative; box-shadow:0 20px 40px rgba(0,0,0,0.2);">
+        <button onclick="closeConsentModal()" style="position:absolute; top:12px; right:16px; background:none; border:none; font-size:24px; cursor:pointer; color:#999;">&times;</button>
+        
+        <div style="text-align:center; margin-bottom:20px;">
+            <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="#ff7940" stroke-width="2" style="margin-bottom:12px;">
+                <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/>
+            </svg>
+            <h3 style="font-size:1.3rem; font-weight:700; color:#333; margin:0;">
+                {% if is_english %}Parental Consent Required{% elif is_spanish %}Se Requiere Consentimiento Parental{% elif is_german %}Elterliche Zustimmung Erforderlich{% elif is_portuguese %}Consentimento dos Pais Necessário{% elif is_chinese %}需要家长同意{% else %}保護者の同意が必要です{% endif %}
+            </h3>
+        </div>
+        
+        <p style="color:#666; font-size:0.95rem; line-height:1.6; margin-bottom:20px;">
+            {% if is_english %}Since you are under 18, parental or guardian consent is required before purchasing a paid plan. Please confirm that your parent or guardian has reviewed and approved this purchase.{% elif is_spanish %}Como eres menor de 18 años, se requiere el consentimiento de un padre o tutor antes de comprar un plan de pago. Por favor confirma que tu padre o tutor ha revisado y aprobado esta compra.{% elif is_german %}Da Sie unter 18 Jahre alt sind, ist die Zustimmung eines Elternteils oder Erziehungsberechtigten erforderlich, bevor Sie einen kostenpflichtigen Plan kaufen. Bitte bestätigen Sie, dass Ihr Elternteil oder Erziehungsberechtigter diesen Kauf überprüft und genehmigt hat.{% elif is_portuguese %}Como você é menor de 18 anos, o consentimento dos pais ou responsável é necessário antes de adquirir um plano pago. Por favor, confirme que seu pai ou responsável revisou e aprovou esta compra.{% elif is_chinese %}由于您未满18岁，在购买付费方案之前需要获得家长或监护人的同意。请确认您的家长或监护人已审查并批准了此次购买。{% else %}あなたは18歳未満のため、有料プランを購入するには保護者の同意が必要です。保護者がこの購入を確認し、承認したことを確認してください。{% endif %}
+        </p>
+        
+        <label style="display:flex; align-items:flex-start; gap:10px; padding:16px; background:#fff8f5; border-radius:10px; border:1px solid #ffe0d0; cursor:pointer; margin-bottom:20px;">
+            <input type="checkbox" id="consentCheckbox" style="margin-top:3px; accent-color:#ff7940; width:18px; height:18px; flex-shrink:0;">
+            <span style="color:#444; font-size:0.9rem; line-height:1.5;">
+                {% if is_english %}I confirm that my parent or legal guardian has reviewed and consents to this subscription purchase.{% elif is_spanish %}Confirmo que mi padre o tutor legal ha revisado y consiente esta compra de suscripción.{% elif is_german %}Ich bestätige, dass mein Elternteil oder gesetzlicher Vormund diesen Abonnementkauf überprüft hat und zustimmt.{% elif is_portuguese %}Confirmo que meu pai ou responsável legal revisou e consente com esta compra de assinatura.{% elif is_chinese %}我确认我的父母或法定监护人已审查并同意此订阅购买。{% else %}保護者または法定代理人がこのサブスクリプション購入を確認し、同意したことを確認します。{% endif %}
+            </span>
+        </label>
+        
+        <button id="consentSubmitBtn" onclick="submitParentalConsent()" disabled
+            style="width:100%; padding:14px; background:linear-gradient(135deg, #ff7940, #ff6020); color:#fff; border:none; border-radius:10px; font-size:1rem; font-weight:600; cursor:not-allowed; opacity:0.5; transition:all 0.3s;">
+            {% if is_english %}Agree and Continue{% elif is_spanish %}Aceptar y Continuar{% elif is_german %}Zustimmen und Fortfahren{% elif is_portuguese %}Concordar e Continuar{% elif is_chinese %}同意并继续{% else %}同意して続行{% endif %}
+        </button>
+    </div>
+</div>
+
 <style>
 .upgrade-container {
     min-height: 100vh;
@@ -369,8 +401,23 @@
 <script>
 document.addEventListener('DOMContentLoaded', function() {
     const isLoggedIn = {{ user.is_authenticated|yesno:"true,false" }};
+    const needsConsent = {% if needs_parental_consent %}true{% else %}false{% endif %};
+    const birthDateMissing = {% if birth_date_missing %}true{% else %}false{% endif %};
     const checkoutBtns = document.querySelectorAll('.checkout-btn');
-    
+    let pendingPlan = null;
+    let pendingBtn = null;
+
+    // 保護者同意チェックボックスの制御
+    const consentCheckbox = document.getElementById('consentCheckbox');
+    const consentSubmitBtn = document.getElementById('consentSubmitBtn');
+    if (consentCheckbox) {
+        consentCheckbox.addEventListener('change', function() {
+            consentSubmitBtn.disabled = !this.checked;
+            consentSubmitBtn.style.opacity = this.checked ? '1' : '0.5';
+            consentSubmitBtn.style.cursor = this.checked ? 'pointer' : 'not-allowed';
+        });
+    }
+
     checkoutBtns.forEach(btn => {
         btn.addEventListener('click', async function() {
             const plan = this.dataset.plan;
@@ -381,37 +428,110 @@ document.addEventListener('DOMContentLoaded', function() {
                 }
                 return;
             }
-            
-            const originalText = this.textContent;
-            this.textContent = {% if is_english %}'Processing...'{% elif is_spanish %}'Procesando...'{% elif is_german %}'Verarbeitung...'{% elif is_portuguese %}'Processando...'{% elif is_chinese %}'处理中...'{% else %}'処理中...'{% endif %};
-            this.disabled = true;
-            
-            try {
-                const response = await fetch('{% url "users:create_checkout" %}', {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json',
-                        'X-CSRFToken': '{{ csrf_token }}',
-                    },
-                    body: JSON.stringify({ plan: plan })
-                });
-                
-                const data = await response.json();
-                
-                if (data.checkout_url) {
-                    window.location.href = data.checkout_url;
-                } else if (data.error) {
-                    alert({% if is_english %}'Error: '{% elif is_spanish %}'Error: '{% elif is_german %}'Fehler: '{% elif is_portuguese %}'Erro: '{% elif is_chinese %}'错误: '{% else %}'エラー: '{% endif %} + data.error);
-                }
-            } catch (error) {
-                console.error('Error:', error);
-                alert({% if is_english %}'An error occurred'{% elif is_spanish %}'Ocurrió un error'{% elif is_german %}'Ein Fehler ist aufgetreten'{% elif is_portuguese %}'Ocorreu um erro'{% elif is_chinese %}'发生错误'{% else %}'エラーが発生しました'{% endif %});
+
+            // 生年月日未登録の場合（既存ユーザー対応）
+            if (birthDateMissing) {
+                alert({% if is_english %}'Please set your date of birth in your profile settings before purchasing.'{% elif is_spanish %}'Por favor, establezca su fecha de nacimiento en la configuración de su perfil antes de comprar.'{% elif is_german %}'Bitte geben Sie Ihr Geburtsdatum in Ihren Profileinstellungen ein, bevor Sie kaufen.'{% elif is_portuguese %}'Por favor, defina sua data de nascimento nas configurações do perfil antes de comprar.'{% elif is_chinese %}'请在购买前在个人资料设置中设置您的出生日期。'{% else %}'購入前にプロフィール設定から生年月日を登録してください。'{% endif %});
+                window.location.href = '{% url "users:profile_edit" %}';
+                return;
+            }
+
+            // 未成年で保護者同意が必要な場合
+            if (needsConsent) {
+                pendingPlan = plan;
+                pendingBtn = this;
+                showConsentModal();
+                return;
             }
             
-            this.textContent = originalText;
-            this.disabled = false;
+            await proceedToCheckout(plan, this);
         });
     });
+
+    window.proceedToCheckout = async function(plan, btn) {
+        const originalText = btn.textContent;
+        btn.textContent = {% if is_english %}'Processing...'{% elif is_spanish %}'Procesando...'{% elif is_german %}'Verarbeitung...'{% elif is_portuguese %}'Processando...'{% elif is_chinese %}'处理中...'{% else %}'処理中...'{% endif %};
+        btn.disabled = true;
+        
+        try {
+            const response = await fetch('{% url "users:create_checkout" %}', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRFToken': '{{ csrf_token }}',
+                },
+                body: JSON.stringify({ plan: plan })
+            });
+            
+            const data = await response.json();
+            
+            if (data.checkout_url) {
+                window.location.href = data.checkout_url;
+            } else if (data.reason === 'parental_consent_required') {
+                pendingPlan = plan;
+                pendingBtn = btn;
+                showConsentModal();
+            } else if (data.error) {
+                alert({% if is_english %}'Error: '{% elif is_spanish %}'Error: '{% elif is_german %}'Fehler: '{% elif is_portuguese %}'Erro: '{% elif is_chinese %}'错误: '{% else %}'エラー: '{% endif %} + data.error);
+            }
+        } catch (error) {
+            console.error('Error:', error);
+            alert({% if is_english %}'An error occurred'{% elif is_spanish %}'Ocurrió un error'{% elif is_german %}'Ein Fehler ist aufgetreten'{% elif is_portuguese %}'Ocorreu um erro'{% elif is_chinese %}'发生错误'{% else %}'エラーが発生しました'{% endif %});
+        }
+        
+        btn.textContent = originalText;
+        btn.disabled = false;
+    };
+
+    window.showConsentModal = function() {
+        const modal = document.getElementById('parentalConsentModal');
+        modal.style.display = 'flex';
+    };
+
+    window.closeConsentModal = function() {
+        const modal = document.getElementById('parentalConsentModal');
+        modal.style.display = 'none';
+        if (consentCheckbox) consentCheckbox.checked = false;
+        if (consentSubmitBtn) {
+            consentSubmitBtn.disabled = true;
+            consentSubmitBtn.style.opacity = '0.5';
+            consentSubmitBtn.style.cursor = 'not-allowed';
+        }
+    };
+
+    window.submitParentalConsent = async function() {
+        const btn = document.getElementById('consentSubmitBtn');
+        btn.disabled = true;
+        btn.textContent = {% if is_english %}'Processing...'{% elif is_spanish %}'Procesando...'{% elif is_german %}'Verarbeitung...'{% elif is_portuguese %}'Processando...'{% elif is_chinese %}'处理中...'{% else %}'処理中...'{% endif %};
+
+        try {
+            const response = await fetch('{% url "users:parental_consent" %}', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRFToken': '{{ csrf_token }}',
+                }
+            });
+            const data = await response.json();
+            if (data.success) {
+                closeConsentModal();
+                // 同意完了後、チェックアウトに進む
+                if (pendingPlan && pendingBtn) {
+                    await proceedToCheckout(pendingPlan, pendingBtn);
+                } else {
+                    location.reload();
+                }
+            } else {
+                alert(data.error || 'Error');
+            }
+        } catch (error) {
+            console.error('Error:', error);
+            alert({% if is_english %}'An error occurred'{% elif is_spanish %}'Ocurrió un error'{% elif is_german %}'Ein Fehler ist aufgetreten'{% elif is_portuguese %}'Ocorreu um erro'{% elif is_chinese %}'发生错误'{% else %}'エラーが発生しました'{% endif %});
+        }
+
+        btn.disabled = false;
+        btn.textContent = {% if is_english %}'Agree and Continue'{% elif is_spanish %}'Aceptar y Continuar'{% elif is_german %}'Zustimmen und Fortfahren'{% elif is_portuguese %}'Concordar e Continuar'{% elif is_chinese %}'同意并继续'{% else %}'同意して続行'{% endif %};
+    };
 });
 </script>
 {% endblock %}

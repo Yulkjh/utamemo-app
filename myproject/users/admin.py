@@ -71,6 +71,9 @@ class UserAdmin(BaseUserAdmin):
         ('BAN管理', {'fields': ('is_banned', 'ban_reason', 'banned_at')}),
         ('日時', {'fields': ('last_login', 'date_joined')}),
         ('利用規約', {'fields': ('tos_agreed_at',)}),
+        ('年齢確認・保護者同意', {
+            'fields': ('birth_date', 'parental_consent_at')
+        }),
         ('プラン・課金', {
             'fields': ('plan', 'plan_expires_at', 'stripe_customer_id', 'stripe_subscription_id')
         }),
@@ -81,6 +84,7 @@ class UserAdmin(BaseUserAdmin):
     # 一覧表示
     list_display = (
         'id', 'username', 'email', 'plan', 'plan_expires_at',
+        'birth_date', 'is_minor_display',
         'song_count', 'is_banned', 'is_staff', 'is_active', 'date_joined',
     )
     list_display_links = ('id', 'username')
@@ -92,10 +96,17 @@ class UserAdmin(BaseUserAdmin):
     search_fields = ('username', 'email', 'first_name', 'last_name', 'stripe_customer_id')
     
     # 読み取り専用フィールド
-    readonly_fields = ('last_login', 'date_joined', 'banned_at', 'last_reminder_sent', 'tos_agreed_at')
+    readonly_fields = ('last_login', 'date_joined', 'banned_at', 'last_reminder_sent', 'tos_agreed_at', 'parental_consent_at')
     
     # 一括アクション
     actions = ['ban_users', 'unban_users', 'reset_to_free_plan']
+    
+    def is_minor_display(self, obj):
+        """未成年かどうかを表示"""
+        if obj.birth_date is None:
+            return '-'
+        return '⚠️ 未成年' if obj.is_minor else '成人'
+    is_minor_display.short_description = '年齢区分'
     
     def song_count(self, obj):
         """ユーザーの楽曲数を表示"""

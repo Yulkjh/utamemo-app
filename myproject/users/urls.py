@@ -16,6 +16,7 @@ urlpatterns = [
     path('upgrade/', views.UpgradeView.as_view(), name='upgrade'),
     path('upgrade/checkout/', views.create_checkout_session, name='create_checkout'),
     path('upgrade/success/', views.upgrade_success, name='upgrade_success'),
+    path('upgrade/parental-consent/', views.record_parental_consent, name='parental_consent'),
     path('webhook/stripe/', views.stripe_webhook, name='stripe_webhook'),
     path('school-inquiry/', views.SchoolInquiryView.as_view(), name='school_inquiry'),
     path('school-inquiry/complete/', views.SchoolInquiryCompleteView.as_view(), name='school_inquiry_complete'),

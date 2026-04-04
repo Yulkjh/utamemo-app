@@ -91,6 +91,20 @@ class User(AbstractUser):
         verbose_name='BAN日時'
     )
     
+    # 年齢確認・保護者同意
+    birth_date = models.DateField(
+        blank=True,
+        null=True,
+        verbose_name='生年月日',
+        help_text='年齢確認のために使用（課金時の未成年チェック）'
+    )
+    parental_consent_at = models.DateTimeField(
+        blank=True,
+        null=True,
+        verbose_name='保護者同意日時',
+        help_text='未成年ユーザーが課金する際の保護者同意記録'
+    )
+    
     # リマインドメール
     last_reminder_sent = models.DateTimeField(
         blank=True,
@@ -122,6 +136,39 @@ class User(AbstractUser):
     # 暗号化キーの自動生成を削除（セキュリティリスク）
     # 平文でキーを保存するのは危険なため
     
+    @property
+    def age(self):
+        """現在の年齢を計算"""
+        if not self.birth_date:
+            return None
+        from datetime import date
+        today = date.today()
+        return today.year - self.birth_date.year - (
+            (today.month, today.day) < (self.birth_date.month, self.birth_date.day)
+        )
+    
+    @property
+    def is_minor(self):
+        """未成年（18歳未満）かどうか"""
+        age = self.age
+        if age is None:
+            return None  # 生年月日未設定
+        return age < 18
+    
+    @property
+    def has_parental_consent(self):
+        """保護者同意があるかどうか"""
+        return self.parental_consent_at is not None
+    
+    def can_purchase(self):
+        """課金可能かチェック（未成年は保護者同意が必要）"""
+        if self.is_minor is None:
+            # 生年月日未設定 → 課金前に入力を求める
+            return False, 'birth_date_required'
+        if self.is_minor and not self.has_parental_consent:
+            return False, 'parental_consent_required'
+        return True, 'ok'
+
     @property
     def is_pro(self):
         """有料プランかどうかを判定（スタッフは常にTrue）"""

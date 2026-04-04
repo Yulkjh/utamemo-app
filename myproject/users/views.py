@@ -300,9 +300,17 @@ class UpgradeView(TemplateView):
         if self.request.user.is_authenticated:
             context['current_plan'] = self.request.user.plan
             context['is_pro'] = self.request.user.is_pro
+            context['is_minor'] = self.request.user.is_minor
+            context['has_parental_consent'] = self.request.user.has_parental_consent
+            context['needs_parental_consent'] = self.request.user.is_minor and not self.request.user.has_parental_consent
+            context['birth_date_missing'] = self.request.user.birth_date is None
         else:
             context['current_plan'] = None
             context['is_pro'] = False
+            context['is_minor'] = False
+            context['has_parental_consent'] = False
+            context['needs_parental_consent'] = False
+            context['birth_date_missing'] = False
         context['stripe_publishable_key'] = getattr(settings, 'STRIPE_PUBLISHABLE_KEY', '')
         context['stripe_price_ids'] = getattr(settings, 'STRIPE_PRICE_IDS', {})
         return context
@@ -328,6 +336,18 @@ def create_checkout_session(request):
         valid_plans = ['starter', 'pro', 'school']
         if plan not in valid_plans:
             return JsonResponse({'error': 'Invalid plan'}, status=400)
+        
+        # 年齢・保護者同意チェック
+        can_buy, reason = user.can_purchase()
+        if not can_buy:
+            error_messages = {
+                'birth_date_required': 'Birth date is required. Please update your profile.',
+                'parental_consent_required': 'Parental consent is required for minors.',
+            }
+            return JsonResponse({
+                'error': error_messages.get(reason, 'Cannot purchase'),
+                'reason': reason,
+            }, status=403)
         
         # テストモード: 無料で即アップグレード
         if FREE_UPGRADE_MODE:
@@ -676,4 +696,30 @@ def delete_account(request):
         'favorite_count': favorite_count,
         'like_count': like_count,
     })
+
+
+@login_required
+@require_POST
+def record_parental_consent(request):
+    """未成年ユーザーの保護者同意を記録"""
+    import logging
+    logger = logging.getLogger(__name__)
+    
+    user = request.user
+    
+    if not user.birth_date:
+        return JsonResponse({'error': 'Birth date is required'}, status=400)
+    
+    if not user.is_minor:
+        return JsonResponse({'error': 'Not a minor'}, status=400)
+    
+    if user.has_parental_consent:
+        return JsonResponse({'success': True, 'message': 'Already consented'})
+    
+    user.parental_consent_at = timezone.now()
+    user.save(update_fields=['parental_consent_at'])
+    
+    logger.info(f'保護者同意記録: user_id={user.id}, username={user.username}')
+    
+    return JsonResponse({'success': True})
 
