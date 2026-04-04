@@ -37,12 +37,10 @@ class UserRegistrationForm(UserCreationForm):
     
     birth_date = forms.DateField(
         required=True,
-        widget=forms.TextInput(attrs={
-            'placeholder': 'YYYY-MM-DD',
-            'pattern': r'\d{4}-\d{2}-\d{2}',
-            'inputmode': 'numeric',
+        widget=forms.DateInput(attrs={
+            'type': 'date',
             'autocomplete': 'bday',
-            'maxlength': '10',
+            'max': '9999-12-31',
         }),
         input_formats=['%Y-%m-%d', '%Y/%m/%d', '%m/%d/%Y', '%d/%m/%Y'],
         error_messages={
@@ -127,13 +125,11 @@ class ProfileEditForm(forms.ModelForm):
     
     birth_date = forms.DateField(
         required=False,
-        widget=forms.TextInput(attrs={
-            'placeholder': 'YYYY-MM-DD',
+        widget=forms.DateInput(attrs={
+            'type': 'date',
             'class': 'form-control',
-            'pattern': r'\d{4}-\d{2}-\d{2}',
-            'inputmode': 'numeric',
             'autocomplete': 'bday',
-            'maxlength': '10',
+            'max': '9999-12-31',
         }),
         input_formats=['%Y-%m-%d', '%Y/%m/%d', '%m/%d/%Y', '%d/%m/%Y'],
         label='生年月日 / Date of Birth',

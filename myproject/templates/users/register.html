@@ -551,23 +551,6 @@ document.addEventListener('DOMContentLoaded', function() {
         {% endif %}
     }
 
-    // 生年月日入力のフォーマット補助
-    const birthDateInput = document.getElementById('{{ form.birth_date.id_for_label }}');
-    if (birthDateInput) {
-        // 入力時に自動でハイフンを挿入
-        birthDateInput.addEventListener('input', function(e) {
-            let val = this.value.replace(/[^\d]/g, '');
-            if (val.length > 8) val = val.slice(0, 8);
-            if (val.length >= 6) {
-                this.value = val.slice(0, 4) + '-' + val.slice(4, 6) + '-' + val.slice(6);
-            } else if (val.length >= 4) {
-                this.value = val.slice(0, 4) + '-' + val.slice(4);
-            } else {
-                this.value = val;
-            }
-        });
-    }
-
     const form = document.querySelector('.register-form');
     const submitBtn = document.querySelector('.btn-register');
     const btnText = submitBtn.querySelector('.btn-text');
