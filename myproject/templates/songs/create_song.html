@@ -286,6 +286,20 @@
                             </div>
                         </div>
 
+                        <!-- 著作権に関する注意事項 -->
+                        <div class="mt-2 p-3" style="background: rgba(108, 117, 125, 0.06); border-radius: 10px; border: 1px solid rgba(108, 117, 125, 0.2);">
+                            <p class="mb-0" style="font-size: 0.83rem; color: #666;">
+                                <i class="bi bi-info-circle me-1"></i>
+                                {% if is_english %}Songs generated from copyrighted materials such as textbooks should be kept private for copyright protection purposes.
+                                {% elif is_spanish %}Las canciones generadas a partir de materiales con derechos de autor, como libros de texto, deben mantenerse privadas para fines de protección de derechos de autor.
+                                {% elif is_german %}Lieder, die aus urheberrechtlich geschütztem Material wie Lehrbüchern generiert wurden, sollten zum Schutz des Urheberrechts privat gehalten werden.
+                                {% elif is_portuguese %}Músicas geradas a partir de materiais protegidos por direitos autorais, como livros didáticos, devem ser mantidas privadas para fins de proteção de direitos autorais.
+                                {% elif is_chinese %}使用教科书等受版权保护的材料生成的歌曲，请设为非公开以保护版权。
+                                {% else %}教科書等の著作物から生成した楽曲は、著作権保護のため非公開でご利用ください。
+                                {% endif %}
+                            </p>
+                        </div>
+
                         <div class="form-actions">
                             <button type="submit" class="btn-create-song {% if paid_plan_all_exhausted %}btn-disabled{% endif %}" {% if paid_plan_all_exhausted %}disabled{% endif %}>
                                 {% if paid_plan_all_exhausted %}

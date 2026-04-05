@@ -108,6 +108,30 @@
             </div>
         </div>
 
+        <!-- Legal Links -->
+        <div class="text-center mt-4 mb-4 fade-in" style="font-size: 0.85rem; color: #888;">
+            <p class="mb-1">
+                {% if is_english %}By subscribing, you agree to our:
+                {% elif is_spanish %}Al suscribirse, acepta nuestros:
+                {% elif is_german %}Mit dem Abonnement stimmen Sie zu:
+                {% elif is_portuguese %}Ao assinar, você concorda com nossos:
+                {% elif is_chinese %}订阅即表示您同意我们的：
+                {% else %}ご購入前に以下をご確認ください：
+                {% endif %}
+            </p>
+            <a href="{% url 'terms' %}" target="_blank" class="text-decoration-none">
+                {% if is_english %}Terms of Service{% elif is_spanish %}Términos de Servicio{% elif is_german %}Nutzungsbedingungen{% elif is_portuguese %}Termos de Serviço{% elif is_chinese %}服务条款{% else %}利用規約{% endif %}
+            </a>
+            <span class="mx-2">|</span>
+            <a href="{% url 'privacy' %}" target="_blank" class="text-decoration-none">
+                {% if is_english %}Privacy Policy{% elif is_spanish %}Política de Privacidad{% elif is_german %}Datenschutzrichtlinie{% elif is_portuguese %}Política de Privacidade{% elif is_chinese %}隐私政策{% else %}プライバシーポリシー{% endif %}
+            </a>
+            <span class="mx-2">|</span>
+            <a href="{% url 'tokushoho' %}" target="_blank" class="text-decoration-none">
+                {% if is_english %}Commercial Transactions Act{% elif is_spanish %}Ley de Transacciones Comerciales{% elif is_german %}Handelsgesetz{% elif is_portuguese %}Lei de Transações Comerciais{% elif is_chinese %}特定商业交易法{% else %}特定商取引法に基づく表記{% endif %}
+            </a>
+        </div>
+
         <!-- FAQ Section -->
         <div class="faq-section fade-in">
             <h2 class="faq-title">{% if is_english %}Frequently Asked Questions{% elif is_spanish %}Preguntas Frecuentes{% elif is_german %}Häufig Gestellte Fragen{% elif is_portuguese %}Perguntas Frequentes{% elif is_chinese %}常见问题{% else %}よくある質問{% endif %}</h2>

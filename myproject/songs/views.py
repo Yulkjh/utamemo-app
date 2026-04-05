@@ -1330,6 +1330,13 @@ def toggle_song_privacy(request, pk):
                 data = json.loads(request.body)
                 new_is_public = data.get('is_public', not song.is_public)
                 
+                # 無料ユーザーは公開設定を許可しない
+                if new_is_public and not request.user.is_starter:
+                    return JsonResponse({
+                        'success': False,
+                        'error': 'Public sharing is available for paid plans only.'
+                    }, status=403)
+                
                 song.is_public = new_is_public
                 song.save()
                 if app_language == 'en':
@@ -1354,6 +1361,16 @@ def toggle_song_privacy(request, pk):
                 })
         else:
             new_is_public = not song.is_public
+            
+            # 無料ユーザーは公開設定を許可しない
+            if new_is_public and not request.user.is_starter:
+                if app_language == 'en':
+                    messages.error(request, 'Public sharing is available for paid plans only.')
+                elif app_language == 'zh':
+                    messages.error(request, '公开分享仅限付费用户使用。')
+                else:
+                    messages.error(request, '楽曲の公開は有料プラン限定の機能です。')
+                return redirect('songs:my_songs')
             
             song.is_public = new_is_public
             song.save()
