@@ -1757,7 +1757,8 @@ class GeminiLyricsGenerator:
 ■ ユーザーからの追加リクエスト（重要！必ず反映してください）
 {custom_request}
 """
-        return f"""あなたは英単語暗記用の歌詞作成の専門家です。以下の英語テキストから{genre}ジャンルの日本語歌詞を作成してください。
+        return f"""あなたはエグスプロージョン（「本能寺の変」で有名）のように、英単語をノリノリのリズムに乗せて覚えさせるプロの作詞家です。
+聴いた人が思わず口ずさんでしまい、気づいたら英単語を覚えているような、キャッチーで中毒性のある{genre}ジャンルの日本語歌詞を作成してください。
 
 ■ テキスト内容
 {extracted_text}
@@ -1783,10 +1784,12 @@ class GeminiLyricsGenerator:
 ・動詞、名詞、形容詞などを自然に歌詞で説明
 ・例：「run 走る 動詞だよ」「happy 幸せ 形容詞」
 
-【楽曲スタイル要件】
+【★ 楽曲スタイル要件（最重要）】
+・エグスプロージョンの「本能寺の変」のようにテンポよく畳みかけるリズム感
 ・日本語がメインで、英単語が自然に混ざる
-・リズムに乗せやすいシンプルな構成
-・耳に残りやすいフレーズ
+・ラップ調・語呂合わせ・掛け合いも積極活用
+・一度聞いたら頭から離れないキャッチーなフレーズ
+・堅苦しさゼロ — 楽しい歌として成立させる
 ・全体として約180秒（3分）相当の分量（歌詞行数40〜60行を目安に）
 ・韻を踏むことを意識する
 
@@ -1830,7 +1833,9 @@ class GeminiLyricsGenerator:
 ■ ADDITIONAL USER REQUEST (IMPORTANT! Must be reflected in the lyrics)
 {custom_request}
 """
-        return f"""You are an expert songwriter creating catchy, memorable {genre} style lyrics in PURE ENGLISH. Create lyrics from the following text to help memorize personal content.
+        return f"""You are an expert songwriter who turns textbook content into irresistibly catchy, viral-worthy songs — think Schoolhouse Rock ("Conjunction Junction"), Animaniacs ("Yakko's World"), or the rhythm and energy of educational rap battles. Your songs make people sing along without even trying, and before they know it, the content is stuck in their head forever.
+
+Create {genre} style lyrics in PURE ENGLISH from the following text.
 
 ■ Text Content
 {extracted_text}
@@ -1842,10 +1847,13 @@ class GeminiLyricsGenerator:
 
 ■ Songwriting Techniques for Memory
 
-【Make It Catchy】
-・Use rhyming patterns (AABB, ABAB)
-・Create memorable hooks and phrases
-・Use natural English rhythm and flow
+【★ MAKE IT ADDICTIVELY CATCHY (TOP PRIORITY)】
+・Think Schoolhouse Rock energy — fun, fast-paced, impossible not to sing along
+・Use rhyming patterns aggressively (AABB, ABAB) — every line should rhyme or near-rhyme
+・Create hooks so catchy they get stuck in your head for days
+・Use rap-style rhythmic flow, call-and-response, wordplay, and clever phrasing
+・The Chorus must be an earworm — a short, punchy, repeatable chant
+・Zero textbook vibes — it should feel like a real hit song that happens to teach you something
 
 【Key Information Focus】
 ・Turn facts into singable lines
@@ -1930,7 +1938,9 @@ class GeminiLyricsGenerator:
 ■ 用户额外要求（重要！必须在歌词中体现）
 {custom_request}
 """
-        return f"""你是一位专业的作词人，擅长创作朗朗上口、令人难忘的{genre}风格纯中文歌词。请根据以下文本创作歌词，帮助记忆个人内容。
+        return f"""你是一位像"凤凰传奇"或"洗脑神曲"风格的天才作词人，擅长把教科书内容变成让人听一遍就忘不掉的洗脑歌曲。
+你的歌词节奏感强、朗朗上口、有魔性般的感染力。听众会不自觉地跟唱，在不知不觉中就记住了所有内容。
+请创作{genre}风格的纯中文歌词。
 
 ■ 文本内容
 {extracted_text}
@@ -1942,10 +1952,13 @@ class GeminiLyricsGenerator:
 
 ■ 记忆歌词创作技巧
 
-【使其朗朗上口】
-・使用押韵模式
-・创造令人难忘的钩子和短语
-・使用自然的中文节奏和韵律
+【★ 洗脑级别的上头感（最重要）】
+・像"凤凰传奇"一样节奏鲜明、一听就上头
+・大量使用押韵 — 每一行都要押韵或近似押韵
+・说唱节奏、顺口溜、对口相声式的节奏感都可以用
+・副歌必须是一个魔性的、可以无限循环的洗脑段落
+・零教科书感 — 必须是一首好听的歌，只是恰好教了你知识
+・小学生到大学生都能不自觉地跟着唱
 
 【关键信息聚焦】
 ・将事实转化为可唱的歌词
@@ -2030,7 +2043,8 @@ class GeminiLyricsGenerator:
 ■ 用户额外要求（重要！必须在歌词中体现）
 {custom_request}
 """
-        return f"""你是一位专业的作词人，擅长创作朗朗上口、令人难忘的{genre}风格纯中文歌词。请根据以下文本创作歌词，帮助记忆词汇和内容。
+        return f"""你是一位像"凤凰传奇"或"洗脑神曲"风格的天才作词人，擅长把词汇内容变成让人听一遍就忘不掉的洗脑歌曲。
+你的歌词节奏感强、朗朗上口、有魔性般的感染力。请创作{genre}风格的纯中文歌词，帮助记忆词汇和内容。
 
 ■ 文本内容
 {extracted_text}
@@ -2042,9 +2056,11 @@ class GeminiLyricsGenerator:
 
 ■ 记忆歌词创作技巧
 
-【使其朗朗上口】
-・使用押韵模式
-・创造令人难忘的钩子和短语
+【★ 洗脑级别的上头感（最重要）】
+・像"凤凰传奇"一样节奏鲜明、一听就上头
+・大量使用押韵、说唱节奏、顺口溜
+・副歌必须是魔性的洗脑段落
+・零教科书感 — 必须是好听的歌
 ・使用自然的中文节奏和韵律
 
 【词汇强调】
@@ -2129,7 +2145,8 @@ class GeminiLyricsGenerator:
 ■ ユーザーからの追加リクエスト（重要！必ず反映してください）
 {custom_request}
 """
-        return f"""あなたは暗記学習用の歌詞作成の専門家です。以下のテキストから{genre}ジャンルの歌詞を作成してください。
+        return f"""あなたはエグスプロージョン（「本能寺の変」で有名）のように、教科書の内容をノリノリのリズムに乗せて歌にするプロの作詞家です。
+聴いた人が思わず口ずさんでしまい、気づいたら内容を覚えているような、キャッチーで中毒性のある{genre}ジャンルの歌詞を作成してください。
 
 ■ テキスト内容
 {extracted_text}
@@ -2153,11 +2170,13 @@ class GeminiLyricsGenerator:
 ・シンプルに単語＋説明の形で並べる
 
 【★ 歌としてのクオリティ（最重要）】
-・韻を踏むことを意識する（行末の母音を揃える）
-・リズムに乗せやすいテンポ感を重視
-・口ずさみやすいメロディアスな言葉選び
-・Chorusは一度聞いたら覚えてしまうキャッチーなフレーズに
-・小学生〜中学生でも口ずさみやすい音感を重視
+・エグスプロージョンの「本能寺の変」のように、テンポよく畳みかけるリズム感
+・韻を踏むことを強く意識する（行末の母音を揃える）
+・リズムに乗せやすいテンポ感を最重視 — ラップ調・語呂合わせ・掛け合いも積極活用
+・口ずさみやすく、一度聞いたら頭から離れないキャッチーなフレーズ
+・Chorusは「本能寺の変！本能寺の変！」のような中毒性のあるリフレインに
+・小学生〜中学生でも思わずノリノリで口ずさめる楽しさ重視
+・堅苦しさゼロ、教科書感ゼロ — あくまで「楽しい歌」として成立させる
 
 【テキスト情報の取り込み】
 ・テキスト内で【】で囲まれた語句（下線・太字・マーカー・色付き文字で強調された内容）は最重要として必ず歌詞に含める

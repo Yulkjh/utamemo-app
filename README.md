@@ -99,14 +99,14 @@ UTAMEMO（ウタメモ）
 │  UTAMEMO (Render.com)            │
 │  Django 5.x                      │
 │                                  │
-│  LYRICS_BACKEND 設定:            │
+│  LYRICS_BACKEND 設定:             │
 │  ┌────────────────────────────┐  │
-│  │ "gemini" → Gemini API     │  │
-│  │ "cloud"  → Cloud LLM     │  │
-│  │ "local"  → Local LLM     │  │
-│  │ "auto"   → Cloud → Local │  │
-│  │            → Gemini       │  │
-│  │           (フォールバック) │  │
+│  │ "gemini" → Gemini API      │  │
+│  │ "cloud"  → Cloud LLM       │  │
+│  │ "local"  → Local LLM       │  │
+│  │ "auto"   → Cloud → Local   │  │
+│  │            → Gemini        │  │
+│  │           (フォールバック)    │  │
 │  └────────────────────────────┘  │
 └──────┬──────────┬──────────┬─────┘
        │          │          │

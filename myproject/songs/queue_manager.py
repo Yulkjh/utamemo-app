@@ -150,7 +150,6 @@ class SongGenerationQueue:
                 time.sleep(poll_interval)
     
     def _claim_next_pending_song(self):
-        """次のpending曲を取得してgenerating状態に変更（排他制御付き）"""
         try:
             with transaction.atomic():
                 # 現在処理中のIDを除外して取得
@@ -217,7 +216,7 @@ class SongGenerationQueue:
     def _generate_song(self, song_id):
         """リトライロジックとエラー追跡付きの曲生成"""
         from datetime import timedelta
-        from .ai_services import MurekaAIGenerator
+        from .ai_services import MurekaAIGenerater
         
         max_retries = getattr(settings, 'MAX_GENERATION_RETRIES', 3)
         backoff_base = getattr(settings, 'RETRY_BACKOFF_BASE', 5)  # 5秒（30秒→5秒に短縮）
