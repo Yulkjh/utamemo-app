@@ -216,7 +216,7 @@ class SongGenerationQueue:
     def _generate_song(self, song_id):
         """リトライロジックとエラー追跡付きの曲生成"""
         from datetime import timedelta
-        from .ai_services import MurekaAIGenerater
+        from .ai_services import MurekaAIGenerator
         
         max_retries = getattr(settings, 'MAX_GENERATION_RETRIES', 3)
         backoff_base = getattr(settings, 'RETRY_BACKOFF_BASE', 5)  # 5秒（30秒→5秒に短縮）
