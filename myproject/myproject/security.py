@@ -152,17 +152,20 @@ class SecurityMiddleware:
                     and not path.startswith('/admin/jsi18n')):
                 
                 if not is_admin_2fa_verified(request):
-                    # まだ2FAコードを送信していない場合、送信する
-                    if not request.session.get(ADMIN_2FA_PENDING_KEY):
-                        if request.user.email:
+                    # メール未設定の場合は2FAをスキップ（ロックアウト防止）
+                    if not request.user.email:
+                        logger.warning(f'Admin 2FA skip (no email): user={request.user.username}')
+                        mark_admin_2fa_verified(request)
+                        # そのまま管理画面へ通す（リダイレクトしない）
+                    else:
+                        # まだ2FAコードを送信していない場合、送信する
+                        if not request.session.get(ADMIN_2FA_PENDING_KEY):
                             send_2fa_code(request.user)
                             request.session[ADMIN_2FA_PENDING_KEY] = True
                             logger.info(f'Admin 2FA required: user={request.user.username}')
-                        else:
-                            logger.warning(f'Admin 2FA skip (no email): user={request.user.username}')
                     
-                    # 2FA確認ページへリダイレクト
-                    return redirect('/admin/2fa/')
+                        # 2FA確認ページへリダイレクト
+                        return redirect('/admin/2fa/')
         
         # ========================================
         # ユーザーログインへのレート制限
