@@ -255,6 +255,11 @@
     font-size: 1rem;
     transition: all 0.3s ease;
     background: var(--surface);
+    box-sizing: border-box;
+    max-width: 100%;
+    -webkit-appearance: none;
+    -moz-appearance: none;
+    appearance: none;
 }
 
     color: var(--text-primary);
@@ -494,6 +499,15 @@
     
     .features-info {
         padding: 1.25rem;
+    }
+    
+    .form-group-modern input {
+        padding: 0.875rem 1rem;
+        font-size: 1rem;
+    }
+    
+    .form-group-modern input[type="date"] {
+        min-height: 3rem;
     }
 }
 </style>
