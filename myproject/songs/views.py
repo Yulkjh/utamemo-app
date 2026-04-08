@@ -2785,11 +2785,14 @@ def training_api_update(request):
 
     session.save()
 
-    # コマンドがあれば返して消す
-    command = session.pending_command
-    if command != 'none':
-        session.pending_command = 'none'
-        session.save(update_fields=['pending_command'])
+    # コマンドがあれば返して消す（poll=Trueの場合のみ = エージェントからのポーリング）
+    # train.pyからの進捗報告ではコマンドを消費しない
+    command = 'none'
+    if data.get('poll'):
+        command = session.pending_command
+        if command != 'none':
+            session.pending_command = 'none'
+            session.save(update_fields=['pending_command'])
 
     return JsonResponse({'ok': True, 'session_id': session.id, 'command': command})
 

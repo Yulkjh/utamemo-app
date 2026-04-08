@@ -43,6 +43,7 @@ def send_status(report_url, api_key, **kwargs):
     payload = {
         'machine_name': hostname,
         'machine_ip': ip,
+        'poll': True,
         **kwargs,
     }
 
@@ -196,7 +197,15 @@ def main():
                 # サーバーにポーリング → コマンド取得
                 cmd = send_status(args.report_url, args.api_key, status='idle')
 
-                if cmd == 'start' or auto_loop:
+                if cmd == 'stop':
+                    # 停止コマンドは常に最優先
+                    if auto_loop:
+                        logger.info("停止コマンド受信: 自動ループを停止します")
+                        auto_loop = False
+                    else:
+                        logger.info("停止コマンド受信 (既にアイドル状態)")
+
+                elif cmd == 'start' or auto_loop:
                     if auto_loop:
                         logger.info(">>> 自動ループ: 次のサイクルを開始します")
                     else:
@@ -205,32 +214,39 @@ def main():
 
                     training_running = True
 
-                    # Step 1: Geminiで学習データを自動生成
-                    if args.gemini_key:
-                        logger.info("--- Step 1/2: 学習データ生成 ---")
-                        gen_code = run_data_generation(args)
-                        if gen_code != 0:
-                            logger.warning(f"データ生成に問題 (exit code: {gen_code}), 学習は既存データで続行")
-                    else:
-                        logger.info("データ生成スキップ (Gemini APIキー未設定)")
+                    try:
+                        # Step 1: Geminiで学習データを自動生成
+                        if args.gemini_key:
+                            logger.info("--- Step 1/2: 学習データ生成 ---")
+                            gen_code = run_data_generation(args)
+                            if gen_code != 0:
+                                logger.warning(f"データ生成に問題 (exit code: {gen_code}), 学習は既存データで続行")
+                        else:
+                            logger.info("データ生成スキップ (Gemini APIキー未設定)")
 
-                    # Step 2: LoRA学習
-                    logger.info("--- Step 2/2: LoRA学習 ---")
-                    exit_code = run_training(args)
-                    training_running = False
+                        # Step 1.5: 停止コマンドが来ていないかチェック
+                        check_cmd = send_status(args.report_url, args.api_key, status='training')
+                        if check_cmd == 'stop':
+                            logger.info("停止コマンド受信: 学習をスキップしてアイドルに戻ります")
+                            auto_loop = False
+                            training_running = False
+                            continue
 
-                    if exit_code == 0:
-                        logger.info("トレーニング完了! 次のサイクルに進みます...")
-                    else:
-                        logger.error(f"トレーニング失敗 (exit code: {exit_code})")
+                        # Step 2: LoRA学習
+                        logger.info("--- Step 2/2: LoRA学習 ---")
+                        exit_code = run_training(args)
+
+                        if exit_code == 0:
+                            logger.info("トレーニング完了! 次のサイクルに進みます...")
+                        else:
+                            logger.error(f"トレーニング失敗 (exit code: {exit_code})")
+                            logger.info("10秒後にリトライします...")
+
+                    except Exception as e:
+                        logger.error(f"サイクル中にエラー: {e}")
                         logger.info("10秒後にリトライします...")
-
-                elif cmd == 'stop':
-                    if auto_loop:
-                        logger.info("停止コマンド受信: 自動ループを停止します")
-                        auto_loop = False
-                    else:
-                        logger.info("停止コマンド受信 (既にアイドル状態)")
+                    finally:
+                        training_running = False
 
             time.sleep(POLL_INTERVAL)
 
