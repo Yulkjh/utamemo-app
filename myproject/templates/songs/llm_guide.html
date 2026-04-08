@@ -1,12 +1,12 @@
 {% extends 'base.html' %}
 
-{% block title %}ローカルLLM 学習ガイド - UTAMEMO{% endblock %}
+{% block title %}ローカルLLM ガイド - UTAMEMO{% endblock %}
 
 {% block content %}
 <div class="container py-4">
     <div class="d-flex justify-content-between align-items-center mb-4">
         <h2 style="color: #ff7940;">
-            <i class="bi bi-robot"></i> ローカルLLM 学習プラットフォーム ガイド
+            <i class="bi bi-robot"></i> ローカルLLM ガイド
         </h2>
         <div>
             <a href="{% url 'songs:training_dashboard' %}" class="btn btn-outline-secondary btn-sm">
@@ -18,32 +18,97 @@
         </div>
     </div>
 
-    <!-- 全体像 -->
-    <div class="card mb-4">
+    <!-- クイックスタート (最上部) -->
+    <div class="card mb-4" style="border: 2px solid #ff7940;">
         <div class="card-header" style="background: linear-gradient(135deg, #ff7940, #ff9966); color: white;">
-            <h4 class="mb-0"><i class="bi bi-diagram-3"></i> プロジェクト全体像</h4>
+            <h4 class="mb-0"><i class="bi bi-lightning-charge"></i> クイックスタート</h4>
+        </div>
+        <div class="card-body">
+            <p>以下をコピペすればすぐに動きます。</p>
+            <pre class="bg-dark text-light p-3 rounded"><code># 1. リポジトリをクローン
+git clone https://github.com/Yulkjh/utamemo-app.git
+cd utamemo-app/training
+
+# 2. 依存インストール (初回のみ)
+pip install -r requirements_training.txt
+
+# 3. Gradio UI 起動 → http://localhost:7860 で操作
+python -m platform.app</code></pre>
+            <p class="mb-0 text-muted"><small>Gradio UIからスコアリング・SSH接続・学習管理・歌詞生成テストがすべてブラウザで操作できます。</small></p>
+        </div>
+    </div>
+
+    <!-- 環境セットアップ -->
+    <div class="card mb-4">
+        <div class="card-header bg-white">
+            <h4 class="mb-0"><i class="bi bi-download"></i> 環境セットアップ</h4>
+        </div>
+        <div class="card-body">
+            <h5>必須ソフトウェア</h5>
+            <table class="table table-bordered table-sm">
+                <thead class="table-light">
+                    <tr><th>ソフトウェア</th><th>ダウンロード</th><th>備考</th></tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td>Python 3.12+</td>
+                        <td><a href="https://www.python.org/downloads/" target="_blank" rel="noopener">python.org <i class="bi bi-box-arrow-up-right"></i></a></td>
+                        <td>インストール時に「Add to PATH」にチェック</td>
+                    </tr>
+                    <tr>
+                        <td>Git</td>
+                        <td><a href="https://git-scm.com/downloads" target="_blank" rel="noopener">git-scm.com <i class="bi bi-box-arrow-up-right"></i></a></td>
+                        <td>デフォルト設定でOK</td>
+                    </tr>
+                    <tr>
+                        <td>CUDA Toolkit 12.x</td>
+                        <td><a href="https://developer.nvidia.com/cuda-downloads" target="_blank" rel="noopener">developer.nvidia.com <i class="bi bi-box-arrow-up-right"></i></a></td>
+                        <td>NVIDIA GPU必須</td>
+                    </tr>
+                    <tr>
+                        <td>VS Code (推奨)</td>
+                        <td><a href="https://code.visualstudio.com/download" target="_blank" rel="noopener">code.visualstudio.com <i class="bi bi-box-arrow-up-right"></i></a></td>
+                        <td>エディタ・ターミナル統合</td>
+                    </tr>
+                </tbody>
+            </table>
+
+            <h5 class="mt-4">PyTorch のインストール</h5>
+            <p><a href="https://pytorch.org/get-started/locally/" target="_blank" rel="noopener">公式セレクタ <i class="bi bi-box-arrow-up-right"></i></a> で環境に合ったコマンドを確認してください。</p>
+            <pre class="bg-dark text-light p-3 rounded"><code># CUDA 12.x の場合:
+pip install torch torchvision torchaudio --index-url https://download.pytorch.org/whl/cu124</code></pre>
+
+            <h5 class="mt-4">Hugging Face ログイン</h5>
+            <p>一部モデルのダウンロードに必要です。<a href="https://huggingface.co/join" target="_blank" rel="noopener">アカウント作成</a> → <a href="https://huggingface.co/settings/tokens" target="_blank" rel="noopener">トークン発行</a> (Read権限) → 以下を実行:</p>
+            <pre class="bg-dark text-light p-3 rounded"><code>pip install huggingface_hub
+huggingface-cli login</code></pre>
+        </div>
+    </div>
+
+    <!-- プロジェクト概要 -->
+    <div class="card mb-4">
+        <div class="card-header bg-white">
+            <h4 class="mb-0"><i class="bi bi-diagram-3"></i> プロジェクト概要</h4>
         </div>
         <div class="card-body">
             <div class="row">
                 <div class="col-md-6">
-                    <h5>🎯 2つのLLMを開発中</h5>
-                    <div class="card border-primary mb-3">
-                        <div class="card-body">
-                            <h6 class="text-primary"><i class="bi bi-bookmark-star"></i> LLM-1: ノート重要度スコアリング</h6>
-                            <p class="mb-1">コクヨノートのOCRテキストから重要ワードをスコア付け</p>
-                            <small class="text-muted">赤字・太字・下線 → ルールベース + LLMリファイン</small>
-                        </div>
-                    </div>
-                    <div class="card border-success mb-3">
-                        <div class="card-body">
-                            <h6 class="text-success"><i class="bi bi-music-note-beamed"></i> LLM-2: 歌詞生成 (本能寺の変スタイル)</h6>
-                            <p class="mb-1">学習内容をエグスプロージョン風のキャッチーな歌詞に変換</p>
-                            <small class="text-muted">韻・繰り返しサビ・合いの手で覚えやすく</small>
-                        </div>
-                    </div>
+                    <h5>2つのLLMを開発中</h5>
+                    <table class="table table-sm">
+                        <tbody>
+                            <tr>
+                                <td><span class="badge bg-primary">LLM-1</span></td>
+                                <td><strong>ノート重要度スコアリング</strong><br><small class="text-muted">コクヨノートのOCRテキストから重要ワードをスコア付け</small></td>
+                            </tr>
+                            <tr>
+                                <td><span class="badge bg-success">LLM-2</span></td>
+                                <td><strong>歌詞生成 (本能寺の変スタイル)</strong><br><small class="text-muted">学習内容をエグスプロージョン風の歌詞に変換</small></td>
+                            </tr>
+                        </tbody>
+                    </table>
                 </div>
                 <div class="col-md-6">
-                    <h5>💻 ハードウェア</h5>
+                    <h5>ハードウェア</h5>
                     <table class="table table-sm">
                         <thead><tr><th>マシン</th><th>GPU</th><th>VRAM</th><th>用途</th></tr></thead>
                         <tbody>
@@ -51,21 +116,204 @@
                             <tr><td>学校PC</td><td>RTX 4080 x2</td><td>16GB x2</td><td>本格学習・大モデル</td></tr>
                         </tbody>
                     </table>
-                    <div class="alert alert-info py-2 mb-0">
-                        <small><i class="bi bi-wifi"></i> 学校PCは学校WiFi内からSSHでアクセス</small>
+                    <small class="text-muted"><i class="bi bi-wifi"></i> 学校PCは学校WiFi内からSSHでアクセス</small>
+                </div>
+            </div>
+
+        </div>
+    </div>
+
+    <!-- コクヨノートからLLM学習までの流れ -->
+    <div class="card mb-4">
+        <div class="card-header" style="background: linear-gradient(135deg, #0d6efd, #6ea8fe); color: white;">
+            <h4 class="mb-0"><i class="bi bi-arrow-right-circle"></i> コクヨノートの写真 → LLM学習までの全体フロー</h4>
+        </div>
+        <div class="card-body">
+            <p>コクヨノートの写真がどうやってLLMの学習データになるか、ステップごとに説明します。</p>
+
+            <!-- ステップ図 -->
+            <div class="row text-center mb-4">
+                <div class="col">
+                    <div class="border rounded p-2 bg-light h-100">
+                        <div class="fw-bold" style="color: #ff7940;">STEP A</div>
+                        <i class="bi bi-camera fs-3"></i>
+                        <div class="small">ノートを撮影</div>
+                    </div>
+                </div>
+                <div class="col-auto d-flex align-items-center"><i class="bi bi-chevron-right"></i></div>
+                <div class="col">
+                    <div class="border rounded p-2 bg-light h-100">
+                        <div class="fw-bold" style="color: #ff7940;">STEP B</div>
+                        <i class="bi bi-eye fs-3"></i>
+                        <div class="small">Gemini OCR</div>
+                    </div>
+                </div>
+                <div class="col-auto d-flex align-items-center"><i class="bi bi-chevron-right"></i></div>
+                <div class="col">
+                    <div class="border rounded p-2 bg-light h-100">
+                        <div class="fw-bold" style="color: #ff7940;">STEP C</div>
+                        <i class="bi bi-star fs-3"></i>
+                        <div class="small">重要度スコア</div>
+                    </div>
+                </div>
+                <div class="col-auto d-flex align-items-center"><i class="bi bi-chevron-right"></i></div>
+                <div class="col">
+                    <div class="border rounded p-2 bg-light h-100">
+                        <div class="fw-bold" style="color: #ff7940;">STEP D</div>
+                        <i class="bi bi-music-note fs-3"></i>
+                        <div class="small">歌詞データ化</div>
+                    </div>
+                </div>
+                <div class="col-auto d-flex align-items-center"><i class="bi bi-chevron-right"></i></div>
+                <div class="col">
+                    <div class="border rounded p-2 bg-light h-100">
+                        <div class="fw-bold" style="color: #ff7940;">STEP E</div>
+                        <i class="bi bi-gpu-card fs-3"></i>
+                        <div class="small">LLM学習</div>
                     </div>
                 </div>
             </div>
 
-            <h5 class="mt-4">📊 開発フロー</h5>
-            <div class="bg-light p-3 rounded" style="font-family: monospace; font-size: 0.9rem;">
-                コクヨノート画像 → OCR (マーカー付き) → scorer.py (重要ワード抽出)<br>
-                &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;↓<br>
-                &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;build_lyrics_dataset.py (歌詞データ化)<br>
-                &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;↓<br>
-                &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;train.py / train_scorer.py (学校GPUで学習)<br>
-                &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;↓<br>
-                &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;serve.py (推論サーバー起動)
+            <!-- 各ステップの詳細 -->
+            <div class="accordion" id="pipelineAccordion">
+                <!-- STEP A -->
+                <div class="accordion-item">
+                    <h2 class="accordion-header">
+                        <button class="accordion-button" type="button" data-bs-toggle="collapse" data-bs-target="#stepA">
+                            STEP A: コクヨノートをスマホで撮影する
+                        </button>
+                    </h2>
+                    <div id="stepA" class="accordion-collapse collapse show" data-bs-parent="#pipelineAccordion">
+                        <div class="accordion-body">
+                            <ul>
+                                <li>ノートを<strong>できるだけ平らに</strong>して撮影 (歪みがあるとOCR精度が落ちる)</li>
+                                <li>明るい場所で影が入らないように</li>
+                                <li><strong>赤字・蛍光ペン・枠囲み</strong>がハッキリ写るようにする (これが重要度判定の元になる)</li>
+                                <li>1ページずつ撮影。複数ページもOK</li>
+                            </ul>
+                            <div class="alert alert-warning py-2 mb-0">
+                                <small><i class="bi bi-lightbulb"></i> ノートに<strong>赤字や太字で書いた部分</strong>がそのまま「重要ワード」として抽出されます。普段のノートの書き方がそのまま学習データの品質に直結します。</small>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- STEP B -->
+                <div class="accordion-item">
+                    <h2 class="accordion-header">
+                        <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#stepB">
+                            STEP B: Gemini API で画像をOCR (テキスト化 + マーカー付与)
+                        </button>
+                    </h2>
+                    <div id="stepB" class="accordion-collapse collapse" data-bs-parent="#pipelineAccordion">
+                        <div class="accordion-body">
+                            <p>Google Gemini (Vision) が画像を読み取り、テキストに変換します。このとき<strong>色・太さ・装飾も認識</strong>してマーカーを付けます。</p>
+                            <div class="row">
+                                <div class="col-md-6">
+                                    <h6>入力 (ノート写真)</h6>
+                                    <div class="bg-light p-3 rounded" style="font-size: 0.85rem;">
+                                        <span style="color: red; font-weight: bold;">織田信長</span>は<span style="text-decoration: underline;">1534年</span>に生まれた。<br>
+                                        <span style="background: yellow;">桶狭間の戦い</span>で今川義元を破り...<br>
+                                        <span style="border: 1px solid #333; padding: 0 4px;">天下布武</span>を掲げた。
+                                    </div>
+                                </div>
+                                <div class="col-md-6">
+                                    <h6>出力 (OCRテキスト)</h6>
+                                    <pre class="bg-dark text-light p-3 rounded mb-0" style="font-size: 0.85rem;"><code>[red]織田信長[/red]は[underline]1534年[/underline]に生まれた。
+[highlight]桶狭間の戦い[/highlight]で今川義元を破り...
+[box]天下布武[/box]を掲げた。</code></pre>
+                                </div>
+                            </div>
+                            <p class="mt-3 mb-0 text-muted"><small>UTAMEMOアプリで画像をアップロードすると自動的にこの処理が行われます。手動でテキストファイルを用意してマーカーを付けてもOKです。</small></p>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- STEP C -->
+                <div class="accordion-item">
+                    <h2 class="accordion-header">
+                        <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#stepC">
+                            STEP C: scorer.py で重要ワードをスコアリング
+                        </button>
+                    </h2>
+                    <div id="stepC" class="accordion-collapse collapse" data-bs-parent="#pipelineAccordion">
+                        <div class="accordion-body">
+                            <p>OCRテキストのマーカーを解析して、各ワードに重要度スコアを付けます。</p>
+                            <table class="table table-sm">
+                                <thead><tr><th>ワード</th><th>検出マーカー</th><th>スコア</th></tr></thead>
+                                <tbody>
+                                    <tr><td>織田信長</td><td><code>[red]</code> 赤字</td><td class="fw-bold text-danger">10.0</td></tr>
+                                    <tr><td>天下布武</td><td><code>[box]</code> 枠囲み</td><td class="fw-bold text-danger">9.0</td></tr>
+                                    <tr><td>桶狭間の戦い</td><td><code>[highlight]</code> 蛍光ペン</td><td class="fw-bold text-warning">7.0</td></tr>
+                                    <tr><td>1534年</td><td><code>[underline]</code> 下線</td><td>6.0</td></tr>
+                                    <tr><td>今川義元</td><td>なし (出現頻度で検出)</td><td>2.0</td></tr>
+                                </tbody>
+                            </table>
+                            <pre class="bg-dark text-light p-3 rounded mb-0"><code># 実行コマンド
+python -m note_importance.scorer --input ocr_output.txt --mode rule
+# → results.jsonl にスコア付きデータが出力される</code></pre>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- STEP D -->
+                <div class="accordion-item">
+                    <h2 class="accordion-header">
+                        <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#stepD">
+                            STEP D: build_lyrics_dataset.py で歌詞学習データに変換
+                        </button>
+                    </h2>
+                    <div id="stepD" class="accordion-collapse collapse" data-bs-parent="#pipelineAccordion">
+                        <div class="accordion-body">
+                            <p>スコアの高いワードをサビで繰り返す「本能寺の変」スタイルの歌詞データを作成します。</p>
+                            <div class="row">
+                                <div class="col-md-6">
+                                    <h6>入力 (スコア結果)</h6>
+                                    <pre class="bg-light p-2 rounded" style="font-size: 0.8rem;"><code>織田信長 → 10.0
+天下布武 → 9.0
+桶狭間の戦い → 7.0</code></pre>
+                                </div>
+                                <div class="col-md-6">
+                                    <h6>出力 (歌詞データ)</h6>
+                                    <pre class="bg-light p-2 rounded" style="font-size: 0.8rem;"><code>{
+  "instruction": "織田信長について歌詞を作って",
+  "output": "信長 信長 織田信長\n天下布武を掲げたぜ\n桶狭間で奇襲だ..."
+}</code></pre>
+                                </div>
+                            </div>
+                            <pre class="bg-dark text-light p-3 rounded mt-2 mb-0"><code># スコア結果 → 歌詞データ
+python build_lyrics_dataset.py \
+  --input data/importance_results.jsonl \
+  --output data/lyrics_training.json</code></pre>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- STEP E -->
+                <div class="accordion-item">
+                    <h2 class="accordion-header">
+                        <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#stepE">
+                            STEP E: train.py でLLMを学習させる
+                        </button>
+                    </h2>
+                    <div id="stepE" class="accordion-collapse collapse" data-bs-parent="#pipelineAccordion">
+                        <div class="accordion-body">
+                            <p>歌詞データで既存のLLM (Qwen等) をQLoRAファインチューニングします。元のモデルの知識を保ちつつ、「エグスプロージョン風」の歌詞生成を学習します。</p>
+                            <pre class="bg-dark text-light p-3 rounded"><code># 学習実行
+python train.py \
+  --data_path data/lyrics_training.json \
+  --model_name Qwen/Qwen2.5-7B-Instruct \
+  --epochs 5</code></pre>
+                            <p class="mb-0">学習後のモデルは <code>serve.py</code> で推論サーバーとして起動し、UTAMEMOアプリから呼び出せます。</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- まとめ -->
+            <div class="alert alert-light border mt-3 mb-0">
+                <strong>まとめ:</strong> ノートに赤字や蛍光ペンで書いた部分が自動的に「重要ワード」になり、それを中心にした歌詞学習データが作られます。<br>
+                つまり <strong>普段のノートの取り方</strong> → そのまま <strong>LLMの学習データの品質</strong> に直結します。
             </div>
         </div>
     </div>
@@ -77,302 +325,96 @@
         </div>
         <div class="card-body">
             <pre class="bg-light p-3 rounded mb-0" style="font-size: 0.85rem;"><code>training/
-├── <strong style="color: #ff7940;">platform/</strong>                     ← Gradio UI プラットフォーム
-│   ├── app.py                       メインUI (全機能統合)
-│   └── ssh_manager.py               SSH経由で学校GPUを操作
-│
-├── <strong style="color: #0d6efd;">note_importance/</strong>              ← 重要度スコアリング
-│   ├── scorer.py                    ルールベース + LLMハイブリッド
-│   └── train_scorer.py              スコアリングモデルQLoRA学習
-│
-├── <strong style="color: #198754;">train.py</strong>                       ← 歌詞生成モデル学習 (既存)
-├── <strong style="color: #198754;">serve.py</strong>                       ← 推論サーバー (既存)
-├── <strong style="color: #198754;">build_lyrics_dataset.py</strong>        ← 本能寺の変スタイル歌詞データ生成
-├── build_importance_dataset.py      重要度データセット生成
-├── training_agent.py                学習エージェント (自動化)
-├── run_home.bat                     自宅PC用起動スクリプト
-├── run_school.bat                   学校PC用起動スクリプト
-└── requirements_training.txt        依存パッケージ</code></pre>
+├── platform/
+│   ├── app.py                  Gradio UI (全機能統合)
+│   └── ssh_manager.py          SSH経由で学校GPUを操作
+├── note_importance/
+│   ├── scorer.py               ルールベース + LLMハイブリッド
+│   └── train_scorer.py         スコアリングモデル学習
+├── train.py                    歌詞生成モデル学習
+├── serve.py                    推論サーバー
+├── build_lyrics_dataset.py     歌詞データ生成
+├── build_importance_dataset.py 重要度データセット生成
+├── run_home.bat                自宅PC起動スクリプト
+├── run_school.bat              学校PC起動スクリプト
+└── requirements_training.txt   依存パッケージ</code></pre>
         </div>
     </div>
 
-    <!-- STEP 0: 環境セットアップ & ダウンロード -->
+    <!-- 使い方: Gradio UI -->
     <div class="card mb-4">
         <div class="card-header bg-white">
-            <h4 class="mb-0"><span class="badge bg-secondary">STEP 0</span> 必要なソフトウェア & ダウンロード</h4>
+            <h4 class="mb-0"><span class="badge" style="background: #ff7940;">1</span> Gradio UI で操作する</h4>
         </div>
         <div class="card-body">
-            <p>LLM学習・推論を始める前に、以下のソフトウェアをインストールしてください。</p>
-
-            <h5><i class="bi bi-download"></i> 必須ソフトウェア</h5>
-            <table class="table table-bordered">
-                <thead class="table-light">
-                    <tr><th>ソフトウェア</th><th>用途</th><th>ダウンロード</th></tr>
-                </thead>
-                <tbody>
-                    <tr>
-                        <td><strong>Python 3.12+</strong></td>
-                        <td>すべてのスクリプト実行</td>
-                        <td><a href="https://www.python.org/downloads/" target="_blank" rel="noopener">python.org/downloads <i class="bi bi-box-arrow-up-right"></i></a></td>
-                    </tr>
-                    <tr>
-                        <td><strong>Git</strong></td>
-                        <td>ソースコード管理</td>
-                        <td><a href="https://git-scm.com/downloads" target="_blank" rel="noopener">git-scm.com/downloads <i class="bi bi-box-arrow-up-right"></i></a></td>
-                    </tr>
-                    <tr>
-                        <td><strong>CUDA Toolkit 12.x</strong></td>
-                        <td>GPU計算 (NVIDIA必須)</td>
-                        <td><a href="https://developer.nvidia.com/cuda-downloads" target="_blank" rel="noopener">developer.nvidia.com/cuda-downloads <i class="bi bi-box-arrow-up-right"></i></a></td>
-                    </tr>
-                    <tr>
-                        <td><strong>VS Code</strong></td>
-                        <td>コードエディタ (推奨)</td>
-                        <td><a href="https://code.visualstudio.com/download" target="_blank" rel="noopener">code.visualstudio.com/download <i class="bi bi-box-arrow-up-right"></i></a></td>
-                    </tr>
-                </tbody>
-            </table>
-
-            <h5 class="mt-4"><i class="bi bi-box-seam"></i> Pythonパッケージ (pip install)</h5>
-            <pre class="bg-dark text-light p-3 rounded"><code># PyTorch (CUDA 12.x対応版) — 公式セレクタで確認:
-# <a href="https://pytorch.org/get-started/locally/" class="text-info" target="_blank" rel="noopener">https://pytorch.org/get-started/locally/</a>
-pip install torch torchvision torchaudio --index-url https://download.pytorch.org/whl/cu124
-
-# LLM学習・推論に必要なパッケージ (一括インストール)
-pip install -r training/requirements_training.txt
-
-# 個別にインストールする場合:
-pip install transformers accelerate peft trl bitsandbytes
-pip install gradio datasets sentencepiece protobuf</code></pre>
-
-            <h5 class="mt-4"><i class="bi bi-robot"></i> Hugging Face セットアップ</h5>
-            <p>モデルのダウンロードに Hugging Face アカウントとトークンが必要です。</p>
-            <ol>
-                <li><a href="https://huggingface.co/join" target="_blank" rel="noopener">Hugging Face でアカウント作成 <i class="bi bi-box-arrow-up-right"></i></a></li>
-                <li><a href="https://huggingface.co/settings/tokens" target="_blank" rel="noopener">アクセストークンを発行 <i class="bi bi-box-arrow-up-right"></i></a> (Read権限でOK)</li>
-                <li>CLIでログイン:
-                    <pre class="bg-dark text-light p-3 rounded mt-2"><code>pip install huggingface_hub
-huggingface-cli login</code></pre>
-                </li>
-            </ol>
-
-            <h5 class="mt-4"><i class="bi bi-gpu-card"></i> 推奨モデル ダウンロードリンク</h5>
-            <table class="table table-bordered">
-                <thead class="table-light">
-                    <tr><th>モデル</th><th>VRAM目安</th><th>Hugging Face ページ</th></tr>
-                </thead>
-                <tbody>
-                    <tr>
-                        <td>Qwen2.5-1.5B-Instruct</td>
-                        <td>~4GB</td>
-                        <td><a href="https://huggingface.co/Qwen/Qwen2.5-1.5B-Instruct" target="_blank" rel="noopener">Qwen/Qwen2.5-1.5B-Instruct <i class="bi bi-box-arrow-up-right"></i></a></td>
-                    </tr>
-                    <tr>
-                        <td>Qwen2.5-7B-Instruct</td>
-                        <td>~8GB</td>
-                        <td><a href="https://huggingface.co/Qwen/Qwen2.5-7B-Instruct" target="_blank" rel="noopener">Qwen/Qwen2.5-7B-Instruct <i class="bi bi-box-arrow-up-right"></i></a></td>
-                    </tr>
-                    <tr>
-                        <td>Llama 3 8B Instruct</td>
-                        <td>~10GB</td>
-                        <td><a href="https://huggingface.co/meta-llama/Meta-Llama-3-8B-Instruct" target="_blank" rel="noopener">meta-llama/Meta-Llama-3-8B-Instruct <i class="bi bi-box-arrow-up-right"></i></a></td>
-                    </tr>
-                    <tr>
-                        <td>Qwen2.5-14B-Instruct</td>
-                        <td>~16GB</td>
-                        <td><a href="https://huggingface.co/Qwen/Qwen2.5-14B-Instruct" target="_blank" rel="noopener">Qwen/Qwen2.5-14B-Instruct <i class="bi bi-box-arrow-up-right"></i></a></td>
-                    </tr>
-                    <tr>
-                        <td>Gemma 2 9B IT</td>
-                        <td>~12GB</td>
-                        <td><a href="https://huggingface.co/google/gemma-2-9b-it" target="_blank" rel="noopener">google/gemma-2-9b-it <i class="bi bi-box-arrow-up-right"></i></a></td>
-                    </tr>
-                </tbody>
-            </table>
-            <div class="alert alert-info mb-0">
-                <i class="bi bi-info-circle"></i> モデルは初回実行時に自動ダウンロードされます。手動ダウンロードは不要ですが、事前にダウンロードしたい場合:
-                <pre class="bg-dark text-light p-2 rounded mt-2 mb-0"><code>python -c "from transformers import AutoModelForCausalLM; AutoModelForCausalLM.from_pretrained('Qwen/Qwen2.5-1.5B-Instruct')"</code></pre>
-            </div>
-
-            <h5 class="mt-4"><i class="bi bi-link-45deg"></i> 参考リンク</h5>
-            <ul>
-                <li><a href="https://github.com/Yulkjh/utamemo-app" target="_blank" rel="noopener">UTAMEMO GitHubリポジトリ <i class="bi bi-box-arrow-up-right"></i></a></li>
-                <li><a href="https://pytorch.org/get-started/locally/" target="_blank" rel="noopener">PyTorch インストールガイド <i class="bi bi-box-arrow-up-right"></i></a></li>
-                <li><a href="https://www.gradio.app/docs" target="_blank" rel="noopener">Gradio ドキュメント <i class="bi bi-box-arrow-up-right"></i></a></li>
-                <li><a href="https://huggingface.co/docs/transformers" target="_blank" rel="noopener">Hugging Face Transformers ドキュメント <i class="bi bi-box-arrow-up-right"></i></a></li>
-                <li><a href="https://huggingface.co/docs/peft" target="_blank" rel="noopener">PEFT (LoRA/QLoRA) ドキュメント <i class="bi bi-box-arrow-up-right"></i></a></li>
-                <li><a href="https://learn.microsoft.com/windows-server/administration/openssh/openssh_install_firstuse" target="_blank" rel="noopener">OpenSSH for Windows セットアップ <i class="bi bi-box-arrow-up-right"></i></a></li>
-            </ul>
-        </div>
-    </div>
-
-    <!-- STEP 1: Gradio UI -->
-    <div class="card mb-4">
-        <div class="card-header bg-white">
-            <h4 class="mb-0"><span class="badge" style="background: #ff7940;">STEP 1</span> Gradio UI を起動する (初心者歓迎)</h4>
-        </div>
-        <div class="card-body">
-            <p>知識がなくてもブラウザからすべて操作できるGradio WebUIです。</p>
-
-            <h5>起動方法</h5>
-            <pre class="bg-dark text-light p-3 rounded"><code># training/ ディレクトリに移動
-cd training
-
-# 初回のみ: 依存パッケージをインストール
-pip install gradio
-
-# UI起動
+            <pre class="bg-dark text-light p-3 rounded"><code>cd training
+pip install gradio    # 初回のみ
 python -m platform.app
+# → http://localhost:7860</code></pre>
 
-# → ブラウザで http://localhost:7860 を開く</code></pre>
-
-            <h5 class="mt-3">UIの機能</h5>
-            <div class="row">
-                <div class="col-md-3">
-                    <div class="card h-100 border-0 bg-light">
-                        <div class="card-body text-center">
-                            <h1>📝</h1>
-                            <h6>重要度スコアリング</h6>
-                            <small>テキスト貼り付け → 重要ワード抽出</small>
-                        </div>
-                    </div>
-                </div>
-                <div class="col-md-3">
-                    <div class="card h-100 border-0 bg-light">
-                        <div class="card-body text-center">
-                            <h1>🔌</h1>
-                            <h6>SSH接続</h6>
-                            <small>学校GPUへの接続設定</small>
-                        </div>
-                    </div>
-                </div>
-                <div class="col-md-3">
-                    <div class="card h-100 border-0 bg-light">
-                        <div class="card-body text-center">
-                            <h1>🎓</h1>
-                            <h6>学習管理</h6>
-                            <small>学習開始/停止/ログ確認</small>
-                        </div>
-                    </div>
-                </div>
-                <div class="col-md-3">
-                    <div class="card h-100 border-0 bg-light">
-                        <div class="card-body text-center">
-                            <h1>🎤</h1>
-                            <h6>歌詞生成テスト</h6>
-                            <small>学習済みモデルで歌詞生成</small>
-                        </div>
-                    </div>
-                </div>
-            </div>
+            <h5 class="mt-3">UIのタブ</h5>
+            <table class="table table-sm">
+                <tbody>
+                    <tr><td><strong>重要度スコアリング</strong></td><td>テキスト貼り付け → 重要ワード自動抽出</td></tr>
+                    <tr><td><strong>SSH接続</strong></td><td>学校GPUへの接続・テスト</td></tr>
+                    <tr><td><strong>学習管理</strong></td><td>学習の開始/停止・ログ確認</td></tr>
+                    <tr><td><strong>歌詞生成テスト</strong></td><td>学習済みモデルによる歌詞生成</td></tr>
+                </tbody>
+            </table>
         </div>
     </div>
 
-    <!-- STEP 2: 重要度スコアリング -->
+    <!-- 使い方: 重要度スコアリング -->
     <div class="card mb-4">
         <div class="card-header bg-white">
-            <h4 class="mb-0"><span class="badge" style="background: #0d6efd;">STEP 2</span> ノート重要度スコアリング</h4>
+            <h4 class="mb-0"><span class="badge" style="background: #0d6efd;">2</span> ノート重要度スコアリング</h4>
         </div>
         <div class="card-body">
-            <h5>概要</h5>
-            <p>コクヨノートをOCRしたテキストから、赤字・太字・下線などの視覚的特徴を使って重要ワードをスコアリングします。</p>
-
+            <p>OCRテキストに以下のマーカーを付けると精度が上がります。</p>
             <div class="row">
-                <div class="col-md-6">
-                    <h5>視覚マーカー形式</h5>
-                    <p>OCRテキストに以下のマーカーを付けて精度を上げます:</p>
+                <div class="col-md-5">
                     <table class="table table-sm">
-                        <thead><tr><th>マーカー</th><th>重み</th><th>例</th></tr></thead>
+                        <thead><tr><th>マーカー</th><th>重み</th><th>意味</th></tr></thead>
                         <tbody>
-                            <tr><td><code>[red]...[/red]</code></td><td>10.0</td><td>赤字 (最重要)</td></tr>
+                            <tr><td><code>[red]...[/red]</code></td><td>10.0</td><td>赤字</td></tr>
                             <tr><td><code>[box]...[/box]</code></td><td>9.0</td><td>枠囲み</td></tr>
                             <tr><td><code>[bold]...[/bold]</code></td><td>8.0</td><td>太字</td></tr>
-                            <tr><td><code>【...】</code></td><td>8.0</td><td>括弧強調</td></tr>
                             <tr><td><code>[highlight]...[/highlight]</code></td><td>7.0</td><td>蛍光ペン</td></tr>
                             <tr><td><code>[underline]...[/underline]</code></td><td>6.0</td><td>下線</td></tr>
-                            <tr><td><code>[star]...[/star]</code></td><td>5.0</td><td>★マーク</td></tr>
                         </tbody>
                     </table>
                 </div>
-                <div class="col-md-6">
-                    <h5>コマンドラインで実行</h5>
-                    <pre class="bg-dark text-light p-3 rounded"><code># ルールベースのみ (高速、LLM不要)
+                <div class="col-md-7">
+                    <pre class="bg-dark text-light p-3 rounded"><code># ルールベースのみ (GPU不要・高速)
 python -m note_importance.scorer \
   --input note.txt --mode rule
 
-# ハイブリッド (ルール + LLMリファイン)
+# ルール + LLMリファイン
 python -m note_importance.scorer \
   --input note.txt --mode hybrid \
-  --model Qwen/Qwen2.5-1.5B-Instruct
-
-# ディレクトリ一括処理
-python -m note_importance.scorer \
-  --input-dir ./ocr_output/ \
-  --output results.jsonl</code></pre>
+  --model Qwen/Qwen2.5-1.5B-Instruct</code></pre>
                 </div>
             </div>
-
-            <h5 class="mt-3">モード比較</h5>
-            <table class="table">
-                <thead><tr><th>モード</th><th>精度</th><th>速度</th><th>GPU必要</th><th>用途</th></tr></thead>
-                <tbody>
-                    <tr>
-                        <td><code>rule</code></td>
-                        <td>⭐⭐⭐</td>
-                        <td>⭐⭐⭐⭐⭐ (即時)</td>
-                        <td>不要</td>
-                        <td>初期チェック・大量処理</td>
-                    </tr>
-                    <tr>
-                        <td><code>hybrid</code></td>
-                        <td>⭐⭐⭐⭐⭐</td>
-                        <td>⭐⭐⭐ (数秒/件)</td>
-                        <td>4GB+ VRAM</td>
-                        <td>最終スコアリング</td>
-                    </tr>
-                </tbody>
-            </table>
         </div>
     </div>
 
-    <!-- STEP 3: 歌詞生成 -->
+    <!-- 使い方: 歌詞生成 -->
     <div class="card mb-4">
         <div class="card-header bg-white">
-            <h4 class="mb-0"><span class="badge bg-success">STEP 3</span> 歌詞生成LLM学習 (本能寺の変スタイル)</h4>
+            <h4 class="mb-0"><span class="badge bg-success">3</span> 歌詞生成LLM (本能寺の変スタイル)</h4>
         </div>
         <div class="card-body">
-            <h5>スタイル参考: エグスプロージョン「本能寺の変」</h5>
-            <ul>
-                <li>学習内容をリズミカルに歌詞化</li>
-                <li>韻を踏む (ラップ/ヒップホップ的要素OK)</li>
-                <li>ダジャレ・語呂合わせを積極使用</li>
-                <li>繰り返しサビ + 合いの手で覚えやすく</li>
-                <li>「覚えよう」等のメタ的表現は使わない</li>
-            </ul>
-
-            <h5 class="mt-3">歌詞データセット作成</h5>
-            <pre class="bg-dark text-light p-3 rounded"><code># テンプレートサンプル生成 (API不要)
+            <p>学習内容をリズミカルに歌詞化。韻・ダジャレ・繰り返しサビで覚えやすく。</p>
+            <pre class="bg-dark text-light p-3 rounded"><code># データセット作成 (テンプレートからサンプル生成)
 python build_lyrics_dataset.py --template --output data/lyrics_samples.json
 
-# 重要度スコアリング結果 → 歌詞データのシード作成
-python build_lyrics_dataset.py \
-  --input data/importance_results.jsonl \
-  --output data/lyrics_seeds.json
-
-# Gemini APIで大量生成
-python build_lyrics_dataset.py \
-  --input data/lyrics_seeds.json \
-  --use-gemini \
-  --output data/lyrics_training.json</code></pre>
-
-            <h5 class="mt-3">モデル学習</h5>
-            <pre class="bg-dark text-light p-3 rounded"><code># 自宅PC (4060 Ti 16GB) - シングルGPU
+# モデル学習 (自宅PC)
 python train.py \
   --data_path data/lyrics_training.json \
   --model_name Qwen/Qwen2.5-7B-Instruct \
   --epochs 5
 
-# 学校PC (4080 x2) - マルチGPU
+# 学校PC (マルチGPU)
 accelerate launch train.py \
   --data_path data/lyrics_training.json \
   --model_name Qwen/Qwen2.5-14B-Instruct \
@@ -380,96 +422,62 @@ accelerate launch train.py \
         </div>
     </div>
 
-    <!-- STEP 4: SSH接続 -->
+    <!-- SSH接続 -->
     <div class="card mb-4">
         <div class="card-header bg-white">
-            <h4 class="mb-0"><span class="badge bg-secondary">STEP 4</span> 学校GPUにSSH接続</h4>
+            <h4 class="mb-0"><span class="badge bg-secondary">4</span> 学校GPUにSSH接続</h4>
         </div>
         <div class="card-body">
-            <h5>初回セットアップ (学校PC側)</h5>
-            <pre class="bg-dark text-light p-3 rounded"><code># 1. SSH公開鍵を登録
+            <pre class="bg-dark text-light p-3 rounded"><code># 初回: SSH鍵を登録 & プロジェクト転送
 ssh-copy-id student@192.168.x.x
-
-# 2. 学校PCにプロジェクトを配置
 scp -r training/ student@192.168.x.x:~/utamemo-training/
 
-# 3. 学校PCでvenv作成 & 依存インストール
+# 学校PCでセットアップ
 ssh student@192.168.x.x
 cd ~/utamemo-training
-python3 -m venv venv
-source venv/bin/activate
-pip install -r requirements_training.txt</code></pre>
+python3 -m venv venv && source venv/bin/activate
+pip install -r requirements_training.txt
 
-            <h5 class="mt-3">自宅PCからSSHトンネル (推論サーバーアクセス)</h5>
-            <pre class="bg-dark text-light p-3 rounded"><code># 学校PCのserve.pyに自宅からアクセスする
-ssh -N -L 8000:localhost:8000 student@192.168.x.x
-
-# → localhost:8000 で学校PCの推論サーバーにアクセス可能</code></pre>
-
-            <h5 class="mt-3">Gradio UIでの操作</h5>
-            <ol>
-                <li><strong>SSH接続タブ</strong>でホスト・ユーザー・鍵パスを入力して保存</li>
-                <li><strong>接続テスト</strong>ボタンでGPU情報が表示されればOK</li>
-                <li><strong>コード同期</strong>でtraining/を学校PCに転送</li>
-                <li><strong>学習管理タブ</strong>で学習開始・ログ監視・モデルダウンロード</li>
-            </ol>
+# 自宅PCから推論サーバーにアクセス (SSHトンネル)
+ssh -N -L 8000:localhost:8000 student@192.168.x.x</code></pre>
+            <p class="mt-2 mb-0">Gradio UIの「SSH接続」タブからもGUI操作できます。</p>
         </div>
     </div>
 
-    <!-- 推奨モデル -->
+    <!-- 推奨モデル & リンク -->
     <div class="card mb-4">
         <div class="card-header bg-white">
-            <h4 class="mb-0"><i class="bi bi-cpu"></i> 推奨モデル一覧</h4>
+            <h4 class="mb-0"><i class="bi bi-cpu"></i> 推奨モデル</h4>
         </div>
         <div class="card-body">
-            <table class="table">
+            <table class="table table-sm">
                 <thead>
-                    <tr>
-                        <th>モデル</th>
-                        <th>VRAM目安</th>
-                        <th>4060Ti 16GB</th>
-                        <th>4080 x2</th>
-                        <th>用途</th>
-                    </tr>
+                    <tr><th>モデル</th><th>VRAM</th><th>4060Ti</th><th>4080x2</th><th>用途</th><th>リンク</th></tr>
                 </thead>
                 <tbody>
                     <tr>
-                        <td><code>Qwen/Qwen2.5-1.5B-Instruct</code></td>
-                        <td>~4GB</td>
-                        <td>✅ 余裕</td>
-                        <td>✅</td>
-                        <td>テスト・デバッグ</td>
+                        <td><code>Qwen2.5-1.5B-Instruct</code></td><td>~4GB</td><td>余裕</td><td>OK</td><td>テスト・デバッグ</td>
+                        <td><a href="https://huggingface.co/Qwen/Qwen2.5-1.5B-Instruct" target="_blank" rel="noopener"><i class="bi bi-box-arrow-up-right"></i></a></td>
                     </tr>
                     <tr>
-                        <td><code>Qwen/Qwen2.5-7B-Instruct</code></td>
-                        <td>~8GB</td>
-                        <td>✅ OK</td>
-                        <td>✅</td>
-                        <td>歌詞生成・重要度判定</td>
+                        <td><code>Qwen2.5-7B-Instruct</code></td><td>~8GB</td><td>OK</td><td>OK</td><td>歌詞生成・重要度</td>
+                        <td><a href="https://huggingface.co/Qwen/Qwen2.5-7B-Instruct" target="_blank" rel="noopener"><i class="bi bi-box-arrow-up-right"></i></a></td>
                     </tr>
                     <tr>
-                        <td><code>meta-llama/Meta-Llama-3-8B-Instruct</code></td>
-                        <td>~10GB</td>
-                        <td>✅ OK</td>
-                        <td>✅</td>
-                        <td>歌詞生成 (高品質)</td>
+                        <td><code>Llama-3-8B-Instruct</code></td><td>~10GB</td><td>OK</td><td>OK</td><td>歌詞生成 (高品質)</td>
+                        <td><a href="https://huggingface.co/meta-llama/Meta-Llama-3-8B-Instruct" target="_blank" rel="noopener"><i class="bi bi-box-arrow-up-right"></i></a></td>
                     </tr>
                     <tr>
-                        <td><code>Qwen/Qwen2.5-14B-Instruct</code></td>
-                        <td>~16GB</td>
-                        <td>⚠️ ギリギリ</td>
-                        <td>✅</td>
-                        <td>高品質生成</td>
+                        <td><code>Gemma-2-9B-IT</code></td><td>~12GB</td><td>OK</td><td>OK</td><td>バランス型</td>
+                        <td><a href="https://huggingface.co/google/gemma-2-9b-it" target="_blank" rel="noopener"><i class="bi bi-box-arrow-up-right"></i></a></td>
                     </tr>
                     <tr>
-                        <td><code>google/gemma-2-9b-it</code></td>
-                        <td>~12GB</td>
-                        <td>✅ OK</td>
-                        <td>✅</td>
-                        <td>バランス型</td>
+                        <td><code>Qwen2.5-14B-Instruct</code></td><td>~16GB</td><td>ギリギリ</td><td>OK</td><td>高品質生成</td>
+                        <td><a href="https://huggingface.co/Qwen/Qwen2.5-14B-Instruct" target="_blank" rel="noopener"><i class="bi bi-box-arrow-up-right"></i></a></td>
                     </tr>
                 </tbody>
             </table>
+            <p class="text-muted mb-0"><small>モデルは初回実行時に自動ダウンロードされます。手動不要。</small></p>
         </div>
     </div>
 
@@ -488,10 +496,10 @@ ssh -N -L 8000:localhost:8000 student@192.168.x.x
                     </h2>
                     <div id="trouble1" class="accordion-collapse collapse" data-bs-parent="#troubleAccordion">
                         <div class="accordion-body">
-                            <ul>
+                            <ul class="mb-0">
                                 <li><code>--batch_size 1</code> に下げる</li>
-                                <li><code>--gradient_accumulation 8</code> に上げる (同等の効果)</li>
-                                <li>より小さいモデルに変更: <code>Qwen2.5-7B → Qwen2.5-1.5B</code></li>
+                                <li><code>--gradient_accumulation 8</code> に上げる</li>
+                                <li>より小さいモデルに変更</li>
                                 <li><code>--lora_rank 16</code> に下げる</li>
                             </ul>
                         </div>
@@ -505,11 +513,10 @@ ssh -N -L 8000:localhost:8000 student@192.168.x.x
                     </h2>
                     <div id="trouble2" class="accordion-collapse collapse" data-bs-parent="#troubleAccordion">
                         <div class="accordion-body">
-                            <ul>
+                            <ul class="mb-0">
                                 <li>学校WiFiに接続しているか確認</li>
                                 <li>学校PCが起動しているか確認</li>
-                                <li>IPアドレスが変わっていないか確認: <code>ssh student@{IP}</code></li>
-                                <li>ファイアウォール設定の確認</li>
+                                <li>IPアドレスが変わっていないか確認</li>
                             </ul>
                         </div>
                     </div>
@@ -517,32 +524,12 @@ ssh -N -L 8000:localhost:8000 student@192.168.x.x
                 <div class="accordion-item">
                     <h2 class="accordion-header">
                         <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#trouble3">
-                            Gradio UIが起動しない
+                            bitsandbytes エラー (Windows)
                         </button>
                     </h2>
                     <div id="trouble3" class="accordion-collapse collapse" data-bs-parent="#troubleAccordion">
                         <div class="accordion-body">
-                            <pre class="bg-light p-2 rounded"><code># gradioをインストール
-pip install gradio
-
-# ポート変更 (7860が使用中の場合)
-python -m platform.app --port 7861</code></pre>
-                        </div>
-                    </div>
-                </div>
-                <div class="accordion-item">
-                    <h2 class="accordion-header">
-                        <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#trouble4">
-                            bitsandbytes エラー (Windows)
-                        </button>
-                    </h2>
-                    <div id="trouble4" class="accordion-collapse collapse" data-bs-parent="#troubleAccordion">
-                        <div class="accordion-body">
-                            <pre class="bg-light p-2 rounded"><code># Windows用bitsandbytesをインストール
-pip install bitsandbytes-windows
-
-# または --no_lora フラグでLoRA無しテスト
-python serve.py --no_lora --base_model Qwen/Qwen2.5-1.5B-Instruct</code></pre>
+                            <pre class="bg-light p-2 rounded mb-0"><code>pip install bitsandbytes-windows</code></pre>
                         </div>
                     </div>
                 </div>
@@ -550,32 +537,34 @@ python serve.py --no_lora --base_model Qwen/Qwen2.5-1.5B-Instruct</code></pre>
         </div>
     </div>
 
-    <!-- クイックスタート -->
-    <div class="card mb-4" style="border: 2px solid #ff7940;">
-        <div class="card-header" style="background: linear-gradient(135deg, #ff7940, #ff9966); color: white;">
-            <h4 class="mb-0">⚡ クイックスタート (5分で動かす)</h4>
+    <!-- 参考リンク -->
+    <div class="card mb-4">
+        <div class="card-header bg-white">
+            <h4 class="mb-0"><i class="bi bi-link-45deg"></i> 参考リンク</h4>
         </div>
         <div class="card-body">
-            <pre class="bg-dark text-light p-3 rounded"><code># 1. training/ に移動
-cd training
-
-# 2. 依存インストール
-pip install gradio torch transformers
-
-# 3. Gradio UI起動 → ブラウザで http://localhost:7860
-python -m platform.app
-
-# --- または コマンドラインで直接実行 ---
-
-# 4. テキストの重要度スコアリング (LLM不要)
-python -m note_importance.scorer --input ノート.txt --mode rule
-
-# 5. テンプレート歌詞サンプル生成
-python build_lyrics_dataset.py --template --output data/samples.json
-
-# 6. 小さいモデルで歌詞生成テスト
-UTAMEMO_API_KEY=test123 python serve.py \
-  --no_lora --base_model Qwen/Qwen2.5-1.5B-Instruct --port 8000</code></pre>
+            <div class="row">
+                <div class="col-md-6">
+                    <h6>ツール・ライブラリ</h6>
+                    <ul>
+                        <li><a href="https://github.com/Yulkjh/utamemo-app" target="_blank" rel="noopener">UTAMEMO GitHub リポジトリ</a></li>
+                        <li><a href="https://pytorch.org/get-started/locally/" target="_blank" rel="noopener">PyTorch インストールガイド</a></li>
+                        <li><a href="https://www.gradio.app/docs" target="_blank" rel="noopener">Gradio ドキュメント</a></li>
+                        <li><a href="https://huggingface.co/docs/transformers" target="_blank" rel="noopener">HF Transformers ドキュメント</a></li>
+                        <li><a href="https://huggingface.co/docs/peft" target="_blank" rel="noopener">PEFT (LoRA/QLoRA) ドキュメント</a></li>
+                    </ul>
+                </div>
+                <div class="col-md-6">
+                    <h6>他のLLM学習ツール</h6>
+                    <ul>
+                        <li><a href="https://github.com/unslothai/unsloth" target="_blank" rel="noopener">Unsloth</a> - 2倍速・70%省メモリの学習</li>
+                        <li><a href="https://github.com/hiyouga/LLaMA-Factory" target="_blank" rel="noopener">LLaMA Factory</a> - ゼロコードで100+モデル対応</li>
+                        <li><a href="https://github.com/axolotl-ai-cloud/axolotl" target="_blank" rel="noopener">Axolotl</a> - YAML設定ファイルで簡単学習</li>
+                        <li><a href="https://github.com/mlabonne/llm-course" target="_blank" rel="noopener">LLM Course</a> - LLM学習の体系的コース</li>
+                        <li><a href="https://learn.microsoft.com/windows-server/administration/openssh/openssh_install_firstuse" target="_blank" rel="noopener">OpenSSH for Windows</a></li>
+                    </ul>
+                </div>
+            </div>
         </div>
     </div>
 </div>
