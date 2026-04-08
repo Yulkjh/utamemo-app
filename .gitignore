@@ -13,3 +13,7 @@ node_modules/
 *.secret
 .vscode/
 myproject/media/uploaded_images/
+.webui_secret_key
+training/.openwebui-venv/
+training/monitor_targets.json
+training/output/
