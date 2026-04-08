@@ -70,3 +70,23 @@ myproject/
 ## Admin カスタマイズ
 - `songs/admin.py`: 全モデルにカスタムAdmin (list_per_page, date_hierarchy, raw_id_fields, admin actions)
 - `users/admin.py`: ユーザー管理 (プラン情報, BAN管理, 曲数表示, reset_to_free_plan アクション)
+
+## スタッフポータル
+- `/staff/llm-guide/` - ハブページ (全管理ツールのナビ + LLMガイド)
+- `/staff/api-status/` - API ステータス確認
+- `/staff/mureka-debug/` - Mureka API デバッグ
+- `/staff/quality-check/` - 楽曲品質チェック
+- `/staff/training/` - LLM学習ダッシュボード (リモート制御)
+- `/staff/training-data/` - 学習データ確認・検索
+- すべて `@staff_member_required` デコレータ付き
+
+## ローカルLLM学習システム (training/)
+- **2つのLLM開発中**:
+  - LLM-1: ノート重要度スコアリング (OCRテキスト → 重要ワードスコア付け)
+  - LLM-2: 歌詞生成 (教育内容 → エグスプロージョン「本能寺の変」スタイル暗記歌詞)
+- **ベースモデル**: Qwen2.5-7B-Instruct (QLoRA)
+- **学習データ**: `training/data/lyrics_training_data.json` (79件、9教科)
+- **データ生成**: `training/generate_history_data.py` で Gemini API から自動生成
+- **学習エージェント**: `training/training_agent.py` がWebダッシュボードと連携して学習を自動制御
+- **推論サーバー**: `training/serve.py` + Cloudflare Tunnel で本番接続
+- **ハードウェア**: 自宅 RTX 4060 Ti 16GB / 学校 RTX 4080 x2
