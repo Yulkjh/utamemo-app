@@ -46,7 +46,7 @@ def launch_app(port: int = 7860, share: bool = False):
         sys.exit(1)
 
     from note_importance.scorer import score_text, ScoredWord
-    from platform.ssh_manager import SSHJobManager, SSHConfig
+    from webui.ssh_manager import SSHJobManager, SSHConfig
     from ocr_processor import get_ocr, SUPPORTED_EXTENSIONS, DEFAULT_MODEL
     from build_importance_dataset import score_keywords
 
