@@ -85,8 +85,11 @@ myproject/
   - LLM-1: ノート重要度スコアリング (OCRテキスト → 重要ワードスコア付け)
   - LLM-2: 歌詞生成 (教育内容 → エグスプロージョン「本能寺の変」スタイル暗記歌詞)
 - **ベースモデル**: Qwen2.5-7B-Instruct (QLoRA)
-- **学習データ**: `training/data/lyrics_training_data.json` (79件、9教科)
+- **学習データ**: `training/data/lyrics_training_data.json` (82件、9教科)
 - **データ生成**: `training/generate_history_data.py` で Gemini API から自動生成
+  - `--random-count N`: ランダムテーマ自動生成モード
 - **学習エージェント**: `training/training_agent.py` がWebダッシュボードと連携して学習を自動制御
+  - フロー: idle → start受信 → Step1:Geminiデータ生成 → Step1.5:stop確認 → Step2:LoRA学習 → 自動ループ
+  - `poll=True` フラグでエージェントのみがpending_commandを消費
 - **推論サーバー**: `training/serve.py` + Cloudflare Tunnel で本番接続
 - **ハードウェア**: 自宅 RTX 4060 Ti 16GB / 学校 RTX 4080 x2
