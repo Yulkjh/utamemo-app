@@ -358,18 +358,6 @@
                                     <input type="range" id="vocal-volume" class="mixer-slider vocal-slider" min="0" max="100" value="0">
                                 </div>
                             </div>
-                            <div class="mixer-track">
-                                <div class="mixer-track-icon inst-icon">
-                                    <i class="bi bi-music-note-list"></i>
-                                </div>
-                                <div class="mixer-track-body">
-                                    <div class="mixer-track-header">
-                                        <span class="mixer-track-name">{% if is_english %}Music{% elif is_chinese %}伴奏{% elif is_spanish %}Música{% elif is_german %}Musik{% elif is_portuguese %}Música{% else %}伴奏{% endif %}</span>
-                                        <span class="mixer-track-value" id="inst-volume-value">100%</span>
-                                    </div>
-                                    <input type="range" id="inst-volume" class="mixer-slider inst-slider" min="0" max="100" value="100">
-                                </div>
-                            </div>
                         </div>
                     </div>
                     <div class="karaoke-lyrics" id="karaoke-lyrics"></div>
@@ -2868,11 +2856,6 @@ document.getElementById('tagModal').addEventListener('click', function(e) {
 }
 
 .mixer-track-icon.vocal-icon {
-    background: rgba(59, 130, 246, 0.2);
-    color: #60a5fa;
-}
-
-.mixer-track-icon.inst-icon {
     background: rgba(255, 121, 64, 0.2);
     color: #ff9a6c;
 }
@@ -2946,29 +2929,16 @@ document.getElementById('tagModal').addEventListener('click', function(e) {
     box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
 }
 
-/* ボーカルスライダー（青系） */
+/* ボーカルスライダー（オレンジ系・テーマカラー統一） */
 .vocal-slider {
-    background: linear-gradient(to right, #1e3a5f, #3b82f6);
-}
-
-.vocal-slider::-webkit-slider-thumb {
-    background: linear-gradient(135deg, #60a5fa, #3b82f6);
-}
-
-.vocal-slider::-moz-range-thumb {
-    background: linear-gradient(135deg, #60a5fa, #3b82f6);
-}
-
-/* 伴奏スライダー（オレンジ系） */
-.inst-slider {
     background: linear-gradient(to right, #4a2c1a, #ff7940);
 }
 
-.inst-slider::-webkit-slider-thumb {
+.vocal-slider::-webkit-slider-thumb {
     background: linear-gradient(135deg, #ff9a6c, #ff7940);
 }
 
-.inst-slider::-moz-range-thumb {
+.vocal-slider::-moz-range-thumb {
     background: linear-gradient(135deg, #ff9a6c, #ff7940);
 }
 
@@ -3059,22 +3029,13 @@ document.getElementById('tagModal').addEventListener('click', function(e) {
     // === ミキサー スライダーイベント ===
     function setupMixerControls() {
         const vocalSlider = document.getElementById('vocal-volume');
-        const instSlider = document.getElementById('inst-volume');
         const vocalDisplay = document.getElementById('vocal-volume-value');
-        const instDisplay = document.getElementById('inst-volume-value');
         
         if (vocalSlider) {
             vocalSlider.addEventListener('input', function() {
                 const val = parseInt(this.value);
                 if (vocalDisplay) vocalDisplay.textContent = val + '%';
                 if (vocalGain) vocalGain.gain.value = val / 100;
-            });
-        }
-        if (instSlider) {
-            instSlider.addEventListener('input', function() {
-                const val = parseInt(this.value);
-                if (instDisplay) instDisplay.textContent = val + '%';
-                if (instGain) instGain.gain.value = val / 100;
             });
         }
     }
@@ -3267,9 +3228,8 @@ document.getElementById('tagModal').addEventListener('click', function(e) {
         
         // スライダーの現在値を適用
         const vocalSlider = document.getElementById('vocal-volume');
-        const instSlider = document.getElementById('inst-volume');
         vocalGain.gain.value = vocalSlider ? parseInt(vocalSlider.value) / 100 : 0;
-        instGain.gain.value = instSlider ? parseInt(instSlider.value) / 100 : 1;
+        instGain.gain.value = 1;
         
         vocalGain.connect(audioContext.destination);
         instGain.connect(audioContext.destination);
