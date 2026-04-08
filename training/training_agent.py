@@ -90,6 +90,8 @@ def run_training(args):
     ]
 
     logger.info(f"トレーニング開始: {' '.join(cmd)}")
+    env = os.environ.copy()
+    env['PYTHONIOENCODING'] = 'utf-8'
     process = subprocess.Popen(
         cmd,
         cwd=script_dir,
@@ -97,6 +99,9 @@ def run_training(args):
         stderr=subprocess.STDOUT,
         text=True,
         bufsize=1,
+        env=env,
+        encoding='utf-8',
+        errors='replace',
     )
 
     for line in process.stdout:
