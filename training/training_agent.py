@@ -142,6 +142,7 @@ def main():
     logger.info(f"  ポーリング間隔: {POLL_INTERVAL}秒")
     logger.info(f"  モデル: {args.model_name}")
     logger.info("  ダッシュボードから「トレーニング開始」で実行されます")
+    logger.info("  開始後は自動で無限サイクルします (停止コマンドで中断)")
     logger.info("  Ctrl+C で終了")
     logger.info("=" * 50)
 
@@ -149,6 +150,7 @@ def main():
     send_status(args.report_url, args.api_key, status='idle')
 
     training_running = False
+    auto_loop = False  # 一度開始されたら自動ループ
 
     while True:
         try:
@@ -156,21 +158,29 @@ def main():
                 # サーバーにポーリング → コマンド取得
                 cmd = send_status(args.report_url, args.api_key, status='idle')
 
-                if cmd == 'start':
-                    logger.info(">>> 開始コマンド受信! トレーニングを開始します")
+                if cmd == 'start' or auto_loop:
+                    if auto_loop:
+                        logger.info(">>> 自動ループ: 次のサイクルを開始します")
+                    else:
+                        logger.info(">>> 開始コマンド受信! トレーニングを開始します")
+                        auto_loop = True
+
                     training_running = True
                     exit_code = run_training(args)
                     training_running = False
 
                     if exit_code == 0:
-                        logger.info("トレーニング完了!")
+                        logger.info("トレーニング完了! 次のサイクルに進みます...")
                     else:
                         logger.error(f"トレーニング失敗 (exit code: {exit_code})")
-
-                    logger.info("待機状態に戻ります...")
+                        logger.info("10秒後にリトライします...")
 
                 elif cmd == 'stop':
-                    logger.info("停止コマンド受信 (既にアイドル状態)")
+                    if auto_loop:
+                        logger.info("停止コマンド受信: 自動ループを停止します")
+                        auto_loop = False
+                    else:
+                        logger.info("停止コマンド受信 (既にアイドル状態)")
 
             time.sleep(POLL_INTERVAL)
 

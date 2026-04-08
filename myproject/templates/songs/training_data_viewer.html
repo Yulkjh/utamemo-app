@@ -1,0 +1,320 @@
+{% extends 'base.html' %}
+
+{% block title %}学習データ確認 - UTAMEMO{% endblock %}
+
+{% block content %}
+<div class="training-data-container">
+    <div class="training-data-header">
+        <h1>📚 学習データ確認</h1>
+        <div class="header-stats">
+            <span class="stat-badge">合計 {{ total_count }} 件</span>
+            <a href="{% url 'songs:llm_guide' %}" class="btn-back">← スタッフポータル</a>
+        </div>
+    </div>
+
+    <div class="filter-bar">
+        <input type="text" id="searchInput" placeholder="キーワードで検索..." class="search-input">
+        <select id="genreFilter" class="genre-select">
+            <option value="">すべてのジャンル</option>
+        </select>
+        <span id="resultCount" class="result-count"></span>
+    </div>
+
+    <div class="records-list" id="recordsList">
+        {% for record in records %}
+        <div class="record-card" data-index="{{ forloop.counter }}" data-genre="{{ record.instruction|truncatechars:200 }}">
+            <div class="record-header" onclick="toggleRecord({{ forloop.counter0 }})">
+                <div class="record-number">#{{ forloop.counter }}</div>
+                <div class="record-input-preview">{{ record.input|truncatechars:80 }}</div>
+                <div class="record-genre-badge">
+                    {% if 'pop' in record.instruction %}pop{% elif 'rock' in record.instruction %}rock{% elif 'hip' in record.instruction %}hip-hop{% elif 'EDM' in record.instruction %}EDM{% elif 'hiphop' in record.instruction %}hip-hop{% else %}other{% endif %}
+                </div>
+                <svg class="chevron" id="chevron-{{ forloop.counter0 }}" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <polyline points="6 9 12 15 18 9"></polyline>
+                </svg>
+            </div>
+            <div class="record-body" id="body-{{ forloop.counter0 }}" style="display: none;">
+                <div class="record-section">
+                    <h4>📝 入力テキスト</h4>
+                    <div class="input-text">{{ record.input }}</div>
+                </div>
+                <div class="record-section">
+                    <h4>🎵 出力歌詞</h4>
+                    <pre class="output-lyrics">{{ record.output }}</pre>
+                </div>
+            </div>
+        </div>
+        {% endfor %}
+    </div>
+</div>
+
+<style>
+.training-data-container {
+    max-width: 1200px;
+    margin: 0 auto;
+    padding: 2rem 1rem;
+    min-height: 100vh;
+    background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%);
+}
+
+.training-data-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 2rem;
+    flex-wrap: wrap;
+    gap: 1rem;
+}
+
+.training-data-header h1 {
+    color: #ff7940;
+    font-size: 1.8rem;
+    margin: 0;
+}
+
+.header-stats {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+}
+
+.stat-badge {
+    background: linear-gradient(135deg, #ff7940, #ff5722);
+    color: #fff;
+    padding: 0.5rem 1.25rem;
+    border-radius: 2rem;
+    font-weight: 700;
+    font-size: 0.95rem;
+}
+
+.btn-back {
+    color: #aaa;
+    text-decoration: none;
+    padding: 0.5rem 1rem;
+    border: 1px solid #444;
+    border-radius: 0.5rem;
+    transition: all 0.2s;
+}
+
+.btn-back:hover {
+    color: #fff;
+    border-color: #ff7940;
+}
+
+.filter-bar {
+    display: flex;
+    gap: 1rem;
+    margin-bottom: 1.5rem;
+    align-items: center;
+    flex-wrap: wrap;
+}
+
+.search-input {
+    flex: 1;
+    min-width: 200px;
+    padding: 0.75rem 1rem;
+    background: #1e2a3a;
+    border: 1px solid #334;
+    border-radius: 0.5rem;
+    color: #eee;
+    font-size: 0.95rem;
+}
+
+.search-input:focus {
+    border-color: #ff7940;
+    outline: none;
+}
+
+.genre-select {
+    padding: 0.75rem 1rem;
+    background: #1e2a3a;
+    border: 1px solid #334;
+    border-radius: 0.5rem;
+    color: #eee;
+    font-size: 0.95rem;
+}
+
+.result-count {
+    color: #888;
+    font-size: 0.9rem;
+}
+
+.record-card {
+    background: #1e2a3a;
+    border: 1px solid #2a3a4a;
+    border-radius: 0.75rem;
+    margin-bottom: 0.75rem;
+    overflow: hidden;
+    transition: border-color 0.2s;
+}
+
+.record-card:hover {
+    border-color: #ff7940;
+}
+
+.record-header {
+    display: flex;
+    align-items: center;
+    padding: 1rem 1.25rem;
+    cursor: pointer;
+    gap: 1rem;
+    user-select: none;
+}
+
+.record-number {
+    color: #ff7940;
+    font-weight: 700;
+    font-size: 0.9rem;
+    min-width: 40px;
+}
+
+.record-input-preview {
+    flex: 1;
+    color: #ccc;
+    font-size: 0.9rem;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.record-genre-badge {
+    background: #2a3a4a;
+    color: #ff7940;
+    padding: 0.25rem 0.75rem;
+    border-radius: 1rem;
+    font-size: 0.8rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    white-space: nowrap;
+}
+
+.chevron {
+    color: #666;
+    transition: transform 0.2s;
+    flex-shrink: 0;
+}
+
+.chevron.open {
+    transform: rotate(180deg);
+}
+
+.record-body {
+    border-top: 1px solid #2a3a4a;
+    padding: 1.5rem;
+}
+
+.record-section {
+    margin-bottom: 1.5rem;
+}
+
+.record-section:last-child {
+    margin-bottom: 0;
+}
+
+.record-section h4 {
+    color: #ff7940;
+    margin: 0 0 0.75rem;
+    font-size: 0.95rem;
+}
+
+.input-text {
+    background: #161f2e;
+    padding: 1rem;
+    border-radius: 0.5rem;
+    color: #ddd;
+    line-height: 1.6;
+    font-size: 0.9rem;
+}
+
+.output-lyrics {
+    background: #161f2e;
+    padding: 1rem;
+    border-radius: 0.5rem;
+    color: #7fdbca;
+    line-height: 1.7;
+    font-size: 0.9rem;
+    white-space: pre-wrap;
+    font-family: 'Inter', sans-serif;
+    margin: 0;
+    max-height: 500px;
+    overflow-y: auto;
+}
+
+@media (max-width: 768px) {
+    .training-data-header {
+        flex-direction: column;
+        align-items: flex-start;
+    }
+    .filter-bar {
+        flex-direction: column;
+    }
+    .search-input {
+        min-width: unset;
+        width: 100%;
+    }
+    .record-input-preview {
+        max-width: 200px;
+    }
+}
+</style>
+
+<script>
+function toggleRecord(index) {
+    const body = document.getElementById('body-' + index);
+    const chevron = document.getElementById('chevron-' + index);
+    if (body.style.display === 'none') {
+        body.style.display = 'block';
+        chevron.classList.add('open');
+    } else {
+        body.style.display = 'none';
+        chevron.classList.remove('open');
+    }
+}
+
+// 検索＆フィルタ
+document.addEventListener('DOMContentLoaded', function() {
+    const searchInput = document.getElementById('searchInput');
+    const genreFilter = document.getElementById('genreFilter');
+    const resultCount = document.getElementById('resultCount');
+    const cards = document.querySelectorAll('.record-card');
+
+    // ジャンル一覧を抽出
+    const genres = new Set();
+    cards.forEach(card => {
+        const badge = card.querySelector('.record-genre-badge');
+        if (badge) genres.add(badge.textContent.trim());
+    });
+    genres.forEach(g => {
+        const opt = document.createElement('option');
+        opt.value = g;
+        opt.textContent = g;
+        genreFilter.appendChild(opt);
+    });
+
+    function filterCards() {
+        const query = searchInput.value.toLowerCase();
+        const genre = genreFilter.value.toLowerCase();
+        let visible = 0;
+
+        cards.forEach(card => {
+            const text = card.textContent.toLowerCase();
+            const cardGenre = card.querySelector('.record-genre-badge').textContent.trim().toLowerCase();
+            const matchQuery = !query || text.includes(query);
+            const matchGenre = !genre || cardGenre === genre;
+
+            if (matchQuery && matchGenre) {
+                card.style.display = '';
+                visible++;
+            } else {
+                card.style.display = 'none';
+            }
+        });
+
+        resultCount.textContent = query || genre ? `${visible} / {{ total_count }} 件表示` : '';
+    }
+
+    searchInput.addEventListener('input', filterCards);
+    genreFilter.addEventListener('change', filterCards);
+});
+</script>
+{% endblock %}

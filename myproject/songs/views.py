@@ -2713,6 +2713,24 @@ def flashcard_deck_delete(request, pk):
 # =============================================================================
 
 @staff_member_required
+def training_data_viewer(request):
+    """学習データ確認ページ（管理者のみ）"""
+    import json
+    from pathlib import Path
+
+    data_path = Path(__file__).resolve().parent.parent.parent / 'training' / 'data' / 'lyrics_training_data.json'
+    records = []
+    if data_path.exists():
+        with open(data_path, 'r', encoding='utf-8') as f:
+            records = json.load(f)
+
+    return render(request, 'songs/training_data_viewer.html', {
+        'records': records,
+        'total_count': len(records),
+        'page_title': '学習データ確認',
+    })
+
+@staff_member_required
 def training_dashboard(request):
     """LLMトレーニング監視ダッシュボード（管理者のみ）"""
     from .models import TrainingSession
