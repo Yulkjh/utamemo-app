@@ -243,47 +243,51 @@ def launch_app(port: int = 7860, share: bool = False):
         return "✅ ダウンロード完了" if success else "❌ ダウンロード失敗"
 
     # =====================================================================
-    # Tab 4: 歌詞生成テスト
+    # Tab 4: 歌詞生成テスト (Track B: lyrics_generation モジュール使用)
     # =====================================================================
-    def generate_lyrics_local(text, genre, model_path):
-        """ローカルモデルで歌詞生成テスト"""
+    def generate_lyrics_local(text, genre, model_path, keywords_str):
+        """ローカルモデルで歌詞生成テスト (lyrics_generation モジュール統合)"""
         try:
             import torch
-            from transformers import AutoModelForCausalLM, AutoTokenizer
+            from transformers import AutoModelForCausalLM, AutoTokenizer, BitsAndBytesConfig
         except ImportError:
-            return "transformersがインストールされていません"
+            return "transformersがインストールされていません", ""
 
         if not text.strip():
-            return "テキストを入力してください"
+            return "テキストを入力してください", ""
 
         try:
+            from lyrics_generation.style_templates import SYSTEM_PROMPT, build_user_prompt
+            from lyrics_generation.evaluate import evaluate_lyrics
+
+            # キーワード処理
+            keywords = [k.strip() for k in keywords_str.split(",") if k.strip()] if keywords_str else []
+
+            bnb_config = BitsAndBytesConfig(
+                load_in_4bit=True,
+                bnb_4bit_quant_type="nf4",
+                bnb_4bit_compute_dtype=torch.bfloat16,
+            )
             tokenizer = AutoTokenizer.from_pretrained(model_path)
             if tokenizer.pad_token is None:
                 tokenizer.pad_token = tokenizer.eos_token
 
             model = AutoModelForCausalLM.from_pretrained(
                 model_path,
-                torch_dtype=torch.float16,
+                quantization_config=bnb_config,
                 device_map="auto",
+                torch_dtype=torch.bfloat16,
             )
             model.eval()
 
-            system_prompt = (
-                "あなたは暗記学習用の歌詞を作成する専門AIです。"
-                "エグスプロージョン「本能寺の変」のようなスタイルで、"
-                "学習内容をキャッチーでリズミカルな歌詞にしてください。"
-                "韻を踏み、繰り返しのフレーズを使い、覚えやすくしてください。"
-            )
-            user_prompt = f"以下の学習テキストを{genre}ジャンルの覚えやすい歌詞にしてください:\n\n{text}"
-
+            user_prompt = build_user_prompt(text, genre, keywords)
             messages = [
-                {"role": "system", "content": system_prompt},
+                {"role": "system", "content": SYSTEM_PROMPT},
                 {"role": "user", "content": user_prompt},
             ]
             input_text = tokenizer.apply_chat_template(messages, tokenize=False, add_generation_prompt=True)
             inputs = tokenizer(input_text, return_tensors="pt").to(model.device)
 
-            import torch
             with torch.no_grad():
                 outputs = model.generate(
                     **inputs,
@@ -294,10 +298,48 @@ def launch_app(port: int = 7860, share: bool = False):
                     repetition_penalty=1.2,
                 )
             result = tokenizer.decode(outputs[0][inputs["input_ids"].shape[1]:], skip_special_tokens=True)
-            return result
+
+            # 品質評価
+            score = evaluate_lyrics(result, keywords)
+            eval_text = (
+                f"## 品質スコア: {score['total']:.3f}\n\n"
+                f"| 項目 | スコア |\n|:---|:---|\n"
+                f"| キーワード含有率 | {score['keyword_coverage']:.3f} |\n"
+                f"| 構造品質 | {score['structure']:.3f} |\n"
+                f"| 韻スコア | {score['rhyme']:.3f} |\n"
+                f"| NGワード | {score['ng_words']:.3f} |"
+            )
+
+            return result, eval_text
 
         except Exception as e:
-            return f"生成エラー: {e}"
+            return f"生成エラー: {e}", ""
+
+    def evaluate_existing_lyrics(lyrics_text, keywords_str):
+        """既存の歌詞テキストを品質評価"""
+        if not lyrics_text.strip():
+            return "歌詞テキストを入力してください"
+        try:
+            from lyrics_generation.evaluate import evaluate_lyrics
+            keywords = [k.strip() for k in keywords_str.split(",") if k.strip()] if keywords_str else []
+            score = evaluate_lyrics(lyrics_text, keywords)
+            result = (
+                f"## 品質スコア: {score['total']:.3f}\n\n"
+                f"| 項目 | スコア | 説明 |\n|:---|:---|:---|\n"
+                f"| キーワード含有率 | {score['keyword_coverage']:.3f} | 重要キーワードが歌詞に含まれているか |\n"
+                f"| 構造品質 | {score['structure']:.3f} | [Verse][Chorus]等のセクション構造 |\n"
+                f"| 韻スコア | {score['rhyme']:.3f} | 行末の母音パターンの一致 |\n"
+                f"| NGワード | {score['ng_words']:.3f} | 禁止表現が含まれていないか |\n"
+            )
+            if score['total'] >= 0.6:
+                result += "\n✅ **良好** — 学習データとして利用可能"
+            elif score['total'] >= 0.4:
+                result += "\n⚠ **改善の余地あり** — 韻やセクション構造を強化"
+            else:
+                result += "\n❌ **品質不足** — 大幅な修正が必要"
+            return result
+        except Exception as e:
+            return f"評価エラー: {e}"
 
     # =====================================================================
     # UI構築
@@ -456,9 +498,9 @@ def launch_app(port: int = 7860, share: bool = False):
                 train_status_btn.click(check_training_status, inputs=[train_task], outputs=[train_status])
                 dl_btn.click(download_trained_model, inputs=[dl_path], outputs=[dl_msg])
 
-            # ----- Tab 4: 歌詞生成テスト -----
+            # ----- Tab 4: 歌詞生成テスト (Track B) -----
             with gr.TabItem("🎤 歌詞生成テスト"):
-                gr.Markdown("### 本能寺の変スタイル！学習内容をキャッチーな歌詞に")
+                gr.Markdown("### 本能寺の変スタイル！学習内容をキャッチーな歌詞に (Track B)")
                 gr.Markdown("エグスプロージョンのように、学習テキストを面白くリズミカルな歌詞に変換します。")
                 with gr.Row():
                     with gr.Column():
@@ -467,6 +509,11 @@ def launch_app(port: int = 7860, share: bool = False):
                             placeholder="1582年、本能寺の変。織田信長は家臣の明智光秀に討たれた...",
                             lines=8,
                         )
+                        lyrics_keywords = gr.Textbox(
+                            label="重要キーワード (カンマ区切り)",
+                            placeholder="1582年, 本能寺の変, 織田信長, 明智光秀",
+                            info="空欄の場合は自動抽出扱い",
+                        )
                         lyrics_genre = gr.Dropdown(
                             choices=["pop", "rock", "hip-hop", "EDM", "R&B", "演歌"],
                             value="pop",
@@ -474,17 +521,30 @@ def launch_app(port: int = 7860, share: bool = False):
                         )
                         lyrics_model = gr.Textbox(
                             label="モデルパス",
-                            value="Qwen/Qwen2.5-1.5B-Instruct",
+                            value="Qwen/Qwen2.5-7B-Instruct",
                             info="学習済みLoRAパス or ベースモデル名",
                         )
                         lyrics_btn = gr.Button("🎵 歌詞生成", variant="primary")
                     with gr.Column():
                         lyrics_output = gr.Textbox(label="生成された歌詞", lines=15, interactive=False)
+                        lyrics_eval = gr.Markdown(label="品質評価")
+
+                with gr.Accordion("既存歌詞の品質評価", open=False):
+                    gr.Markdown("生成済みの歌詞テキストを貼り付けて品質スコアを確認")
+                    eval_lyrics_input = gr.Textbox(label="歌詞テキスト", lines=10)
+                    eval_kw_input = gr.Textbox(label="キーワード (カンマ区切り)")
+                    eval_btn = gr.Button("📊 品質評価")
+                    eval_result = gr.Markdown()
 
                 lyrics_btn.click(
                     generate_lyrics_local,
-                    inputs=[lyrics_text, lyrics_genre, lyrics_model],
-                    outputs=[lyrics_output],
+                    inputs=[lyrics_text, lyrics_genre, lyrics_model, lyrics_keywords],
+                    outputs=[lyrics_output, lyrics_eval],
+                )
+                eval_btn.click(
+                    evaluate_existing_lyrics,
+                    inputs=[eval_lyrics_input, eval_kw_input],
+                    outputs=[eval_result],
                 )
 
             # ----- Tab 5: ヘルプ -----
