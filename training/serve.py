@@ -331,7 +331,7 @@ def health_check():
     if torch.cuda.is_available():
         gpu_info = torch.cuda.get_device_name(0)
         gpu_mem_used = torch.cuda.memory_allocated(0) / 1024**3
-        gpu_mem_total = torch.cuda.get_device_properties(0).total_mem / 1024**3
+        gpu_mem_total = torch.cuda.get_device_properties(0).total_memory / 1024**3
         gpu_info = f"{gpu_info} ({gpu_mem_used:.1f}/{gpu_mem_total:.1f} GB)"
 
     return jsonify({

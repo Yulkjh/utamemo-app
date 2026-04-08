@@ -2893,3 +2893,9 @@ def quality_check(request):
         'current_q': q,
     }
     return render(request, 'songs/quality_check.html', context)
+
+
+@staff_member_required
+def llm_guide(request):
+    """ローカルLLM学習プラットフォームの使い方ガイド（スタッフのみ）"""
+    return render(request, 'songs/llm_guide.html')

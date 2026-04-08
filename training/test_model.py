@@ -9,6 +9,15 @@
 
 import argparse
 import torch
+
+# Windows WDDM環境での Access Violation / OOM を回避（import前に適用）
+try:
+    import transformers.modeling_utils as _mu_early
+    if hasattr(_mu_early, 'caching_allocator_warmup'):
+        _mu_early.caching_allocator_warmup = lambda *a, **kw: None
+except Exception:
+    pass
+
 from peft import PeftModel
 from transformers import AutoModelForCausalLM, AutoTokenizer, BitsAndBytesConfig
 
@@ -123,8 +132,10 @@ def main():
         args.base_model,
         quantization_config=bnb_config,
         device_map="auto",
+        max_memory={0: "14GiB", "cpu": "1GiB"},
         token=args.hf_token,
         torch_dtype=torch.bfloat16,
+        low_cpu_mem_usage=True,
     )
 
     if args.no_lora:

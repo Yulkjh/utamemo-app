@@ -195,11 +195,16 @@ USE_MUREKA_API = os.getenv('USE_MUREKA_API', 'False').lower() == 'true'
 MUREKA_API_URL = os.getenv('MUREKA_API_URL', 'https://platform.mureka.ai')
 
 # ローカルLLM歌詞生成設定
-# 'gemini' = Geminiのみ, 'cloud' = クラウドLLM, 'local' = ローカルLLMのみ, 'auto' = cloud→local→Geminiフォールバック
+# 'gemini' = Geminiのみ, 'cloud' = クラウドLLM, 'local' = ローカルLLMのみ, 'ollama' = Ollama, 'auto' = cloud→ollama→local→Geminiフォールバック
 LYRICS_BACKEND = os.getenv('LYRICS_BACKEND', 'gemini')
 LOCAL_LLM_URL = os.getenv('LOCAL_LLM_URL', 'http://localhost:8000')
 LOCAL_LLM_API_KEY = os.getenv('LOCAL_LLM_API_KEY', '')
 LOCAL_LLM_TIMEOUT = int(os.getenv('LOCAL_LLM_TIMEOUT', '60'))
+
+# Ollama設定
+OLLAMA_URL = os.getenv('OLLAMA_URL', 'http://localhost:11434')
+OLLAMA_MODEL = os.getenv('OLLAMA_MODEL', 'llama3')
+OLLAMA_TIMEOUT = int(os.getenv('OLLAMA_TIMEOUT', '120'))
 
 # クラウドLLM歌詞生成設定 (OpenAI互換API: Together AI / Fireworks AI / Groq / OpenRouter / vLLM)
 CLOUD_LLM_PROVIDER = os.getenv('CLOUD_LLM_PROVIDER', '')          # together / fireworks / groq / openrouter

@@ -8,6 +8,7 @@ from PIL import Image
 import re
 import logging
 import hashlib
+from collections import Counter
 
 # ロガー設定
 logger = logging.getLogger(__name__)
@@ -86,6 +87,97 @@ def extract_bracketed_terms(text):
             unique_terms.append(term)
     
     return unique_terms
+
+
+def _normalize_keyword_term(term):
+    """重要語候補の正規化（前後の記号除去・長さチェック）"""
+    if not term:
+        return ""
+    normalized = term.strip()
+    normalized = re.sub(r'^[\s\-・,、。:：;；\(\)\[\]「」『』【】]+', '', normalized)
+    normalized = re.sub(r'[\s\-・,、。:：;；\(\)\[\]「」『』【】]+$', '', normalized)
+    if len(normalized) < 2:
+        return ""
+    return normalized
+
+
+def extract_importance_keywords(text, max_keywords=12):
+    """OCRテキストから重要語をスコア付きで抽出する（ルールベース）
+
+    重要度の根拠:
+    - 【語句】マーク（赤字/太字/下線/色付き由来）を最優先
+    - 出現回数
+    - 見出し/年号/英数字専門語
+    """
+    if not text:
+        return []
+
+    scores = Counter()
+
+    # 1) OCRで強調判定された語句（最重要）
+    for term in extract_bracketed_terms(text):
+        normalized = _normalize_keyword_term(term)
+        if normalized:
+            scores[normalized] += 8
+
+    plain_text = re.sub(r'[【】]', '', text)
+    lines = [line.strip() for line in plain_text.splitlines() if line.strip()]
+
+    # 2) 見出しらしい行は重みを上げる
+    heading_patterns = (
+        r'^第[0-9一二三四五六七八九十]+',
+        r'^[0-9]+[\.|\)]',
+        r'^(ポイント|重要|要点|まとめ|公式|定義|用語)',
+    )
+
+    token_pattern = re.compile(
+        r'[A-Za-z][A-Za-z0-9_\-\+\.]{1,}'
+        r'|[0-9]{2,4}年'
+        r'|[0-9]+(?:\.[0-9]+)?(?:%|℃|cm|mm|kg|g|m|km|L|ml|Hz|V|A)'
+        r'|[ァ-ヴー]{2,}'
+        r'|[一-龥]{2,}'
+    )
+
+    for line in lines:
+        is_heading = any(re.search(pattern, line) for pattern in heading_patterns)
+        for match in token_pattern.findall(line):
+            token = _normalize_keyword_term(match)
+            if not token:
+                continue
+            # ひらがな2文字のみ等のノイズを除外
+            if re.fullmatch(r'[ぁ-ん]{2,3}', token):
+                continue
+            scores[token] += 2 if is_heading else 1
+
+    ranked = sorted(scores.items(), key=lambda x: (-x[1], x[0]))
+    return ranked[:max_keywords]
+
+
+def _build_importance_instruction_block(extracted_text, max_keywords=12):
+    """重要語スコアをプロンプトへ埋め込むための説明ブロックを作成"""
+    ranked = extract_importance_keywords(extracted_text, max_keywords=max_keywords)
+    if not ranked:
+        return ""
+
+    lines = [f"・{term}（重要度:{score}）" for term, score in ranked]
+    return (
+        "\n■ 重要語句候補（OCR強調と出現頻度から算出）\n"
+        + "\n".join(lines)
+        + "\n・重要度が高い語句はChorusで優先的に反復してください\n"
+    )
+
+
+def _is_explosive_lyrics_mode(custom_request):
+    """カスタム要求からエグスプロージョン風スタイル指定を検出"""
+    if not custom_request:
+        return False
+
+    lowered = custom_request.lower()
+    trigger_words = [
+        'エグスプロージョン', 'explosion', '奇抜', '斬新', '覚えやすい',
+        'インパクト', 'ネタ風', '振付', '掛け声', 'コール&レスポンス',
+    ]
+    return any(word in lowered for word in trigger_words)
 
 # fugashiはオプショナル（ひらがな変換に使用）
 try:
@@ -1567,7 +1659,8 @@ def get_lyrics_generator():
       - "gemini": Geminiのみ (デフォルト)
       - "cloud":  クラウドLLM (Together AI / Groq 等) のみ
       - "local":  ローカルLLM (自前GPU) のみ
-      - "auto":   cloud → local → gemini の順にフォールバック
+      - "ollama": Ollama (ローカル推論) のみ
+      - "auto":   cloud → ollama → local → gemini の順にフォールバック
     """
     backend = getattr(settings, 'LYRICS_BACKEND', 'gemini')
 
@@ -1575,19 +1668,26 @@ def get_lyrics_generator():
         return CloudLLMLyricsGenerator()
     elif backend == 'local':
         return LocalLLMLyricsGenerator()
+    elif backend == 'ollama':
+        return OllamaLyricsGenerator()
     elif backend == 'auto':
         # 1. クラウドLLM
         cloud = CloudLLMLyricsGenerator()
         if cloud.is_available:
             logger.info("歌詞生成: クラウドLLMを使用")
             return cloud
-        # 2. ローカルLLM
+        # 2. Ollama
+        ollama = OllamaLyricsGenerator()
+        if ollama.is_available:
+            logger.info("歌詞生成: Ollamaを使用")
+            return ollama
+        # 3. ローカルLLM
         local = LocalLLMLyricsGenerator()
         if local.is_available:
             logger.info("歌詞生成: ローカルLLMを使用")
             return local
-        # 3. Gemini
-        logger.info("歌詞生成: cloud/local 不可、Geminiにフォールバック")
+        # 4. Gemini
+        logger.info("歌詞生成: cloud/ollama/local 不可、Geminiにフォールバック")
         return GeminiLyricsGenerator()
     else:
         return GeminiLyricsGenerator()
@@ -2145,12 +2245,25 @@ Create {genre} style lyrics in PURE ENGLISH from the following text.
 ■ ユーザーからの追加リクエスト（重要！必ず反映してください）
 {custom_request}
 """
+        importance_block = _build_importance_instruction_block(extracted_text)
+        explosive_block = ""
+        if _is_explosive_lyrics_mode(custom_request):
+            explosive_block = """
+【エグスプロージョン風スタイル（追加要件）】
+・各Verseに1箇所以上、短い掛け声（例:「ハイ！」「ドン！」）を入れる
+・コール&レスポンス（問い→即答）を2セット以上含める
+・最重要語句は語感を揃えて反復し、体で覚えられるリズムを優先する
+・奇抜さは維持しつつ、事実関係・用語の正確性は絶対に崩さない
+"""
         return f"""あなたはエグスプロージョン（「本能寺の変」で有名）のように、教科書の内容をノリノリのリズムに乗せて歌にするプロの作詞家です。
 聴いた人が思わず口ずさんでしまい、気づいたら内容を覚えているような、キャッチーで中毒性のある{genre}ジャンルの歌詞を作成してください。
 
 ■ テキスト内容
 {extracted_text}
 {custom_section}
+{importance_block}
+{explosive_block}
+
 ■ 歌詞の書き方ルール
 
 【表記ルール】
@@ -2348,6 +2461,153 @@ Create {genre} style lyrics in PURE ENGLISH from the following text.
         cleaned = cleaned.strip()
         
         return cleaned
+
+
+class OllamaLyricsGenerator(GeminiLyricsGenerator):
+    """Ollama を使用した歌詞生成クラス
+
+    ローカルで動作する Ollama サーバー (localhost:11434) に
+    /api/chat エンドポイントでリクエストを送る。
+
+    GeminiLyricsGenerator を継承し、リッチなプロンプト構築メソッド
+    (_get_japanese_prompt, _get_english_prompt 等) をそのまま再利用する。
+    generate_lyrics のみ Ollama API に差し替え。
+
+    settings.py:
+      OLLAMA_URL   = 'http://localhost:11434'   (デフォルト)
+      OLLAMA_MODEL = 'llama3'                    (デフォルト)
+      OLLAMA_TIMEOUT = 120                       (デフォルト)
+    """
+
+    def __init__(self):
+        # GeminiLyricsGenerator.__init__ を呼ばず独自に初期化
+        self.ollama_url = getattr(settings, 'OLLAMA_URL', 'http://localhost:11434')
+        self.ollama_model = getattr(settings, 'OLLAMA_MODEL', 'llama3')
+        self.timeout = getattr(settings, 'OLLAMA_TIMEOUT', 120)
+
+    # --- Gemini 依存のプロパティをオーバーライド ---------------------------
+
+    @property
+    def model(self):
+        """ダッシュボード互換 — Ollama が利用可能なら True 相当"""
+        return self.is_available
+
+    @property
+    def is_available(self):
+        """Ollama サーバーの稼働チェック"""
+        try:
+            resp = requests.get(
+                f"{self.ollama_url}/api/tags",
+                timeout=5,
+            )
+            if resp.status_code != 200:
+                return False
+            models = [m.get("name", "") for m in resp.json().get("models", [])]
+            # モデル名の完全一致 or "model:tag" 形式で先頭一致
+            return any(
+                m == self.ollama_model or m.startswith(f"{self.ollama_model}:")
+                for m in models
+            )
+        except Exception:
+            return False
+
+    # --- 歌詞生成 --------------------------------------------------------
+
+    def generate_lyrics(self, extracted_text, title="", genre="pop",
+                        language_mode="japanese", custom_request=""):
+        """Ollama /api/chat で歌詞を生成"""
+
+        # キャッシュ
+        cache_input = f"ollama|{self.ollama_model}|{extracted_text}|{genre}|{language_mode}|{custom_request}"
+        cache_key = _get_cache_key(cache_input, 'lyrics')
+        cached = _get_cached_response(cache_key)
+        if cached:
+            logger.info("Ollama: Returning cached lyrics")
+            return cached
+
+        # プロンプト構築 — 親クラス (GeminiLyricsGenerator) のメソッドを再利用
+        if language_mode == "english_vocab":
+            prompt = self._get_english_vocab_prompt(extracted_text, genre, custom_request)
+        elif language_mode == "english":
+            prompt = self._get_english_prompt(extracted_text, genre, custom_request)
+        elif language_mode == "chinese":
+            prompt = self._get_chinese_prompt(extracted_text, genre, custom_request)
+        elif language_mode == "chinese_vocab":
+            prompt = self._get_chinese_vocab_prompt(extracted_text, genre, custom_request)
+        else:
+            prompt = self._get_japanese_prompt(extracted_text, genre, custom_request)
+
+        system_prompt = (
+            "あなたは暗記学習用の歌詞を作成する専門AIです。"
+            "与えられた指示に従い、セクションラベル付きの歌詞のみを出力してください。"
+            "説明文やコメントは一切不要です。必ず日本語で出力してください。"
+        )
+
+        payload = {
+            "model": self.ollama_model,
+            "messages": [
+                {"role": "system", "content": system_prompt},
+                {"role": "user", "content": prompt},
+            ],
+            "stream": False,
+            "options": {
+                "temperature": 0.7,
+                "top_p": 0.9,
+                "num_predict": 2048,
+            },
+        }
+
+        try:
+            import time as _time
+            start = _time.time()
+
+            response = requests.post(
+                f"{self.ollama_url}/api/chat",
+                json=payload,
+                timeout=self.timeout,
+            )
+            response.raise_for_status()
+
+            data = response.json()
+            raw_lyrics = data.get("message", {}).get("content", "").strip()
+            if not raw_lyrics:
+                raise Exception("Ollama: Empty response")
+
+            lyrics = self._extract_clean_lyrics(raw_lyrics)
+            elapsed = _time.time() - start
+
+            _set_cached_response(cache_key, lyrics, ttl=3600)
+            logger.info(
+                f"Ollama: 歌詞生成成功 ({len(lyrics)} 文字, {elapsed:.1f}秒, "
+                f"model={self.ollama_model})"
+            )
+            return lyrics
+
+        except requests.exceptions.Timeout:
+            logger.warning(f"Ollama: タイムアウト ({self.timeout}秒)")
+            raise Exception("Ollama サーバーがタイムアウトしました")
+        except requests.exceptions.ConnectionError:
+            logger.warning(f"Ollama: 接続エラー — {self.ollama_url}")
+            raise Exception("Ollama サーバーに接続できません")
+        except Exception as e:
+            logger.error(f"Ollama: {e}")
+            raise
+
+    def generate_lyrics_from_images(self, images, title="", genre="pop",
+                                    language_mode="japanese", custom_request="",
+                                    extracted_text=""):
+        """画像からの歌詞生成 — Ollama はテキスト専用のため Gemini にデリゲート"""
+        logger.info("Ollama: 画像ベース生成はGeminiにデリゲート")
+        gemini = GeminiLyricsGenerator()
+        return gemini.generate_lyrics_from_images(
+            images, title=title, genre=genre,
+            language_mode=language_mode, custom_request=custom_request,
+            extracted_text=extracted_text,
+        )
+
+    def convert_to_hiragana(self, lyrics):
+        """ひらがな変換 — Gemini にデリゲート"""
+        return convert_lyrics_to_hiragana_with_context(lyrics)
 
 
 def number_to_japanese_reading(num_str):

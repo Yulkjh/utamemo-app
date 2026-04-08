@@ -32,6 +32,9 @@ trl>=0.8.0
 # 推論サーバー
 flask>=3.0.0
 
+# Gradio UI (ローカルLLM学習プラットフォーム)
+gradio>=4.20.0
+
 # ユーティリティ
 sentencepiece>=0.2.0
 protobuf>=4.25.0
@@ -47,3 +50,6 @@ scipy>=1.12.0
 
 # DeepSpeed (マルチGPU学習の高速化)
 # pip install deepspeed
+
+# Gemini API (歌詞データ大量生成)
+# pip install google-generativeai

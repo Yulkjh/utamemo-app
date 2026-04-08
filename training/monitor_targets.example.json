@@ -1,0 +1,35 @@
+{
+  "refresh_sec": 15,
+  "targets": [
+    {
+      "name": "Local LLM API",
+      "type": "http",
+      "url": "http://127.0.0.1:8000/health",
+      "timeout_sec": 5
+    },
+    {
+      "name": "Cloudflared service",
+      "type": "command",
+      "command": "powershell -NoProfile -Command \"(Get-Service Cloudflared).Status\"",
+      "timeout_sec": 5
+    },
+    {
+      "name": "OpenSSH service",
+      "type": "command",
+      "command": "powershell -NoProfile -Command \"(Get-Service sshd).Status\"",
+      "timeout_sec": 5
+    },
+    {
+      "name": "Local GPU quick check",
+      "type": "command",
+      "command": "nvidia-smi --query-gpu=name,utilization.gpu,memory.used,memory.total --format=csv,noheader,nounits",
+      "timeout_sec": 8
+    },
+    {
+      "name": "School PC (sample via SSH)",
+      "type": "command",
+      "command": "ssh your-user@school-pc \"nvidia-smi --query-gpu=name,utilization.gpu,memory.used,memory.total --format=csv,noheader,nounits\"",
+      "timeout_sec": 12
+    }
+  ]
+}
