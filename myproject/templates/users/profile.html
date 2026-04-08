@@ -76,6 +76,16 @@
                                 <div class="stat-label">{% if is_english %}Joined{% elif is_spanish %}Unido{% elif is_german %}Beigetreten{% elif is_portuguese %}Entrou{% elif is_chinese %}加入{% else %}開始{% endif %}</div>
                             </div>
                         </div>
+
+                        {% if user == profile_user and user.is_staff or user == profile_user and user.is_superuser %}
+                        <a href="{% url 'songs:llm_guide' %}" class="btn-staff-portal">
+                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                <path d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.066 2.573c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.573 1.066c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.066-2.573c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"/>
+                                <circle cx="12" cy="12" r="3"/>
+                            </svg>
+                            {% if is_english %}Staff Portal{% elif is_spanish %}Portal de Staff{% elif is_german %}Staff-Portal{% elif is_portuguese %}Portal Staff{% elif is_chinese %}管理门户{% else %}スタッフポータル{% endif %}
+                        </a>
+                        {% endif %}
                     </div>
                 </div>
             </div>
@@ -370,6 +380,28 @@
     width: 1px;
     height: 40px;
     background: var(--border-color);
+}
+
+.btn-staff-portal {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+    margin-top: 1rem;
+    padding: 0.5rem 1.25rem;
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    color: #fff;
+    border-radius: 2rem;
+    font-size: 0.85rem;
+    font-weight: 600;
+    text-decoration: none;
+    transition: all 0.3s ease;
+    box-shadow: 0 2px 8px rgba(102, 126, 234, 0.3);
+}
+
+.btn-staff-portal:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 16px rgba(102, 126, 234, 0.4);
+    color: #fff;
 }
 
 .songs-section {
