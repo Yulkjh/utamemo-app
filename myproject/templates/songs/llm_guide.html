@@ -1,21 +1,119 @@
 {% extends 'base.html' %}
 
-{% block title %}ローカルLLM ガイド - UTAMEMO{% endblock %}
+{% block title %}スタッフポータル - UTAMEMO{% endblock %}
 
 {% block content %}
 <div class="container py-4">
+    <!-- ヘッダー -->
     <div class="d-flex justify-content-between align-items-center mb-4">
         <h2 style="color: #ff7940;">
-            <i class="bi bi-robot"></i> ローカルLLM ガイド
+            <i class="bi bi-shield-lock"></i> UTAMEMO スタッフポータル
         </h2>
-        <div>
-            <a href="{% url 'songs:training_dashboard' %}" class="btn btn-outline-secondary btn-sm">
-                <i class="bi bi-gpu-card"></i> トレーニング監視
-            </a>
-            <a href="{% url 'songs:api_status' %}" class="btn btn-outline-secondary btn-sm ms-2">
-                <i class="bi bi-activity"></i> API Status
+        <a href="{% url 'songs:home' %}" class="btn btn-outline-secondary btn-sm">
+            <i class="bi bi-house"></i> サイトに戻る
+        </a>
+    </div>
+
+    <!-- ========== スタッフナビゲーション ========== -->
+    <div class="row g-3 mb-5">
+        <!-- 1. API Status -->
+        <div class="col-md-4 col-sm-6">
+            <a href="{% url 'songs:api_status' %}" class="text-decoration-none">
+                <div class="card h-100 border-0 shadow-sm" style="transition: transform .15s;" onmouseover="this.style.transform='translateY(-4px)'" onmouseout="this.style.transform=''">
+                    <div class="card-body text-center py-4">
+                        <div class="rounded-circle d-inline-flex align-items-center justify-content-center mb-3" style="width:56px;height:56px;background:linear-gradient(135deg,#28a745,#5cb85c);">
+                            <i class="bi bi-activity text-white fs-4"></i>
+                        </div>
+                        <h5 class="card-title text-dark">API ステータス</h5>
+                        <p class="card-text text-muted small">Gemini・Mureka・Stripe 等の外部APIの稼働状況を確認</p>
+                    </div>
+                </div>
             </a>
         </div>
+
+        <!-- 2. Mureka Debug -->
+        <div class="col-md-4 col-sm-6">
+            <a href="{% url 'songs:mureka_debug' %}" class="text-decoration-none">
+                <div class="card h-100 border-0 shadow-sm" style="transition: transform .15s;" onmouseover="this.style.transform='translateY(-4px)'" onmouseout="this.style.transform=''">
+                    <div class="card-body text-center py-4">
+                        <div class="rounded-circle d-inline-flex align-items-center justify-content-center mb-3" style="width:56px;height:56px;background:linear-gradient(135deg,#6f42c1,#9b59b6);">
+                            <i class="bi bi-bug text-white fs-4"></i>
+                        </div>
+                        <h5 class="card-title text-dark">Mureka デバッグ</h5>
+                        <p class="card-text text-muted small">Mureka APIのリクエスト/レスポンスをテスト・デバッグ</p>
+                    </div>
+                </div>
+            </a>
+        </div>
+
+        <!-- 3. Quality Check -->
+        <div class="col-md-4 col-sm-6">
+            <a href="{% url 'songs:quality_check' %}" class="text-decoration-none">
+                <div class="card h-100 border-0 shadow-sm" style="transition: transform .15s;" onmouseover="this.style.transform='translateY(-4px)'" onmouseout="this.style.transform=''">
+                    <div class="card-body text-center py-4">
+                        <div class="rounded-circle d-inline-flex align-items-center justify-content-center mb-3" style="width:56px;height:56px;background:linear-gradient(135deg,#fd7e14,#ff9966);">
+                            <i class="bi bi-check2-circle text-white fs-4"></i>
+                        </div>
+                        <h5 class="card-title text-dark">クオリティチェック</h5>
+                        <p class="card-text text-muted small">生成された曲のジャンル・音声・歌詞の品質を一括確認</p>
+                    </div>
+                </div>
+            </a>
+        </div>
+
+        <!-- 4. Training Dashboard -->
+        <div class="col-md-4 col-sm-6">
+            <a href="{% url 'songs:training_dashboard' %}" class="text-decoration-none">
+                <div class="card h-100 border-0 shadow-sm" style="transition: transform .15s;" onmouseover="this.style.transform='translateY(-4px)'" onmouseout="this.style.transform=''">
+                    <div class="card-body text-center py-4">
+                        <div class="rounded-circle d-inline-flex align-items-center justify-content-center mb-3" style="width:56px;height:56px;background:linear-gradient(135deg,#0d6efd,#6ea8fe);">
+                            <i class="bi bi-gpu-card text-white fs-4"></i>
+                        </div>
+                        <h5 class="card-title text-dark">トレーニング監視</h5>
+                        <p class="card-text text-muted small">GPU学習ジョブの進捗・ログ・リソース使用状況をリアルタイム監視</p>
+                    </div>
+                </div>
+            </a>
+        </div>
+
+        <!-- 5. Django Admin -->
+        <div class="col-md-4 col-sm-6">
+            <a href="/admin/" class="text-decoration-none">
+                <div class="card h-100 border-0 shadow-sm" style="transition: transform .15s;" onmouseover="this.style.transform='translateY(-4px)'" onmouseout="this.style.transform=''">
+                    <div class="card-body text-center py-4">
+                        <div class="rounded-circle d-inline-flex align-items-center justify-content-center mb-3" style="width:56px;height:56px;background:linear-gradient(135deg,#333,#666);">
+                            <i class="bi bi-gear text-white fs-4"></i>
+                        </div>
+                        <h5 class="card-title text-dark">Django Admin</h5>
+                        <p class="card-text text-muted small">ユーザー管理・曲データ・プラン・BAN管理等のDB操作</p>
+                    </div>
+                </div>
+            </a>
+        </div>
+
+        <!-- 6. GitHub Repo -->
+        <div class="col-md-4 col-sm-6">
+            <a href="https://github.com/Yulkjh/utamemo-app" target="_blank" rel="noopener" class="text-decoration-none">
+                <div class="card h-100 border-0 shadow-sm" style="transition: transform .15s;" onmouseover="this.style.transform='translateY(-4px)'" onmouseout="this.style.transform=''">
+                    <div class="card-body text-center py-4">
+                        <div class="rounded-circle d-inline-flex align-items-center justify-content-center mb-3" style="width:56px;height:56px;background:linear-gradient(135deg,#171515,#444);">
+                            <i class="bi bi-github text-white fs-4"></i>
+                        </div>
+                        <h5 class="card-title text-dark">GitHub <i class="bi bi-box-arrow-up-right small"></i></h5>
+                        <p class="card-text text-muted small">ソースコード・Issue・PR管理</p>
+                    </div>
+                </div>
+            </a>
+        </div>
+    </div>
+
+    <hr class="mb-4">
+
+    <!-- ========== LLMガイドセクション (以下既存) ========== -->
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h3 style="color: #ff7940;">
+            <i class="bi bi-robot"></i> ローカルLLM 開発ガイド
+        </h3>
     </div>
 
     <!-- クイックスタート (最上部) -->
@@ -145,7 +243,7 @@ huggingface-cli login</code></pre>
                     <div class="border rounded p-2 bg-light h-100">
                         <div class="fw-bold" style="color: #ff7940;">STEP B</div>
                         <i class="bi bi-eye fs-3"></i>
-                        <div class="small">Gemini OCR</div>
+                        <div class="small">OCR テキスト化</div>
                     </div>
                 </div>
                 <div class="col-auto d-flex align-items-center"><i class="bi bi-chevron-right"></i></div>
@@ -202,12 +300,15 @@ huggingface-cli login</code></pre>
                 <div class="accordion-item">
                     <h2 class="accordion-header">
                         <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#stepB">
-                            STEP B: Gemini API で画像をOCR (テキスト化 + マーカー付与)
+                            STEP B: OCR でテキスト化 (Gemini API or ローカル Qwen2.5-VL)
                         </button>
                     </h2>
                     <div id="stepB" class="accordion-collapse collapse" data-bs-parent="#pipelineAccordion">
                         <div class="accordion-body">
-                            <p>Google Gemini (Vision) が画像を読み取り、テキストに変換します。このとき<strong>色・太さ・装飾も認識</strong>してマーカーを付けます。</p>
+                            <p>Google Gemini (Vision) またはローカルの Qwen2.5-VL が画像を読み取り、テキストに変換します。このとき<strong>色・太さ・装飾も認識</strong>してマーカーを付けます。</p>
+                            <div class="alert alert-info py-2 mb-3">
+                                <small><i class="bi bi-info-circle"></i> <strong>アプリ側:</strong> Gemini API使用 / <strong>開発側 (Gradio UI):</strong> Qwen2.5-VL ローカル実行 (APIキー不要)</small>
+                            </div>
                             <div class="row">
                                 <div class="col-md-6">
                                     <h6>入力 (ノート写真)</h6>
@@ -328,12 +429,18 @@ python train.py \
 ├── platform/
 │   ├── app.py                  Gradio UI (全機能統合)
 │   └── ssh_manager.py          SSH経由で学校GPUを操作
-├── note_importance/
+├── note_importance/            [Track A] ノート重要度スコアリング
 │   ├── scorer.py               ルールベース + LLMハイブリッド
 │   └── train_scorer.py         スコアリングモデル学習
-├── train.py                    歌詞生成モデル学習
+├── lyrics_generation/          [Track B] 歌詞生成LLM
+│   ├── style_templates.py      本能寺の変スタイル例 + プロンプト
+│   ├── dataset_builder.py      学習データ構築 (Gemini or ローカル)
+│   ├── evaluate.py             歌詞品質評価 (韻・構造・キーワード)
+│   └── train_lyrics.py         歌詞生成専用LoRA学習
+├── ocr_processor.py            ノート画像OCR (Qwen2.5-VL, ローカル)
+├── train.py                    汎用LoRA学習スクリプト
 ├── serve.py                    推論サーバー
-├── build_lyrics_dataset.py     歌詞データ生成
+├── build_lyrics_dataset.py     歌詞データ生成 (旧版)
 ├── build_importance_dataset.py 重要度データセット生成
 ├── run_home.bat                自宅PC起動スクリプト
 ├── run_school.bat              学校PC起動スクリプト
@@ -355,10 +462,11 @@ python -m platform.app
             <h5 class="mt-3">UIのタブ</h5>
             <table class="table table-sm">
                 <tbody>
+                    <tr><td><strong>ノート画像 → データ化</strong></td><td>画像をアップロード → OCR → スコアリング → データセット自動追加</td></tr>
                     <tr><td><strong>重要度スコアリング</strong></td><td>テキスト貼り付け → 重要ワード自動抽出</td></tr>
                     <tr><td><strong>SSH接続</strong></td><td>学校GPUへの接続・テスト</td></tr>
                     <tr><td><strong>学習管理</strong></td><td>学習の開始/停止・ログ確認</td></tr>
-                    <tr><td><strong>歌詞生成テスト</strong></td><td>学習済みモデルによる歌詞生成</td></tr>
+                    <tr><td><strong>歌詞生成テスト</strong></td><td>学習済みモデルによる歌詞生成 + 品質評価</td></tr>
                 </tbody>
             </table>
         </div>
@@ -405,19 +513,29 @@ python -m note_importance.scorer \
         </div>
         <div class="card-body">
             <p>学習内容をリズミカルに歌詞化。韻・ダジャレ・繰り返しサビで覚えやすく。</p>
-            <pre class="bg-dark text-light p-3 rounded"><code># データセット作成 (テンプレートからサンプル生成)
-python build_lyrics_dataset.py --template --output data/lyrics_samples.json
+            <pre class="bg-dark text-light p-3 rounded"><code># --- Track B: lyrics_generation パッケージ --- #
+
+# テンプレートから学習データ生成 (GPU不要)
+python -m lyrics_generation.dataset_builder template --output data/lyrics_dataset.json
+
+# 重要度結果からシード生成 → Gemini APIで歌詞生成
+python -m lyrics_generation.dataset_builder seeds --input data/importance_dataset.jsonl --output data/lyrics_seeds.json
+python -m lyrics_generation.dataset_builder generate --input data/lyrics_seeds.json --output data/lyrics_dataset.json --use-gemini
 
 # モデル学習 (自宅PC)
-python train.py \
-  --data_path data/lyrics_training.json \
-  --model_name Qwen/Qwen2.5-7B-Instruct \
+python -m lyrics_generation.train_lyrics train \
+  --data data/lyrics_dataset.json \
+  --model Qwen/Qwen2.5-7B-Instruct \
   --epochs 5
 
+# 学習後の品質評価
+python -m lyrics_generation.train_lyrics evaluate \
+  --model-path output/lyrics-lora/
+
 # 学校PC (マルチGPU)
-accelerate launch train.py \
-  --data_path data/lyrics_training.json \
-  --model_name Qwen/Qwen2.5-14B-Instruct \
+accelerate launch -m lyrics_generation.train_lyrics train \
+  --data data/lyrics_dataset.json \
+  --model Qwen/Qwen2.5-14B-Instruct \
   --epochs 5</code></pre>
         </div>
     </div>
