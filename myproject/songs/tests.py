@@ -146,10 +146,11 @@ class SongViewTest(TestCase):
         response = self.client.get(reverse('songs:home'))
         self.assertEqual(response.status_code, 200)
     
-    def test_song_list_loads(self):
-        """曲一覧ページが読み込めること"""
+    def test_song_list_redirects_to_home(self):
+        """曲一覧ページがホームにリダイレクトすること（公開一覧無効化）"""
         response = self.client.get(reverse('songs:song_list'))
-        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.status_code, 302)
+        self.assertEqual(response.url, reverse('songs:home'))
     
     def test_song_detail_loads(self):
         """曲詳細ページが読み込めること"""

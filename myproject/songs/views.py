@@ -44,108 +44,21 @@ class HomeView(TemplateView):
     
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
-        try:
-            # 生成完了した公開楽曲のみ表示
-            base_query = Song.objects.filter(
-                is_public=True,
-                generation_status='completed'
-            ).select_related('created_by')
-            
-            context['recent_songs'] = base_query.order_by('-created_at')[:6]
-            context['popular_songs'] = base_query.order_by('-likes_count', '-created_at')[:6]
-        except Exception as e:
-            logger.error(f"HomeView query error: {e}")
-            context['recent_songs'] = []
-            context['popular_songs'] = []
+        # 公開楽曲一覧は著作権保護のため無効化
+        context['recent_songs'] = []
+        context['popular_songs'] = []
         return context
 
 
 class SongListView(ListView):
-    """楽曲一覧ビュー"""
+    """楽曲一覧ビュー（著作権保護のため公開一覧を無効化 — ホームにリダイレクト）"""
     model = Song
     template_name = 'songs/song_list.html'
     context_object_name = 'songs'
     paginate_by = 12
-    
-    # ソートオプション
-    SORT_OPTIONS = {
-        'popular': '-likes_count',      # 人気順（デフォルト）
-        'newest': '-created_at',        # 新着順
-        'most_played': '-total_plays',  # 再生回数順
-    }
-    
-    def get_queryset(self):
-        # 生成完了した公開楽曲のみ表示
-        queryset = Song.objects.filter(
-            is_public=True,
-            generation_status='completed'
-        ).select_related('created_by').prefetch_related('tags')
-        
-        search_query = self.request.GET.get('q', '').strip()
-        if search_query:
-            # ひらがな・カタカナの両方で検索
-            hiragana_query = katakana_to_hiragana(search_query)
-            katakana_query = hiragana_to_katakana(search_query)
-            
-            queryset = queryset.filter(
-                Q(title__icontains=search_query) |
-                Q(title__icontains=hiragana_query) |
-                Q(title__icontains=katakana_query) |
-                Q(artist__icontains=search_query) |
-                Q(artist__icontains=hiragana_query) |
-                Q(artist__icontains=katakana_query) |
-                Q(genre__icontains=search_query) |
-                Q(tags__name__icontains=search_query) |
-                Q(tags__name__icontains=hiragana_query) |
-                Q(tags__name__icontains=katakana_query)
-            ).distinct()
-        
-        # ソート処理
-        sort = self.request.GET.get('sort', 'popular')
-        
-        if sort == 'favorites' and self.request.user.is_authenticated:
-            # お気に入り順：ユーザーがお気に入りした曲を先に
-            from django.db.models import Case, When, Value, IntegerField
-            fav_song_ids = list(
-                self.request.user.favorites.values_list('song_id', flat=True)
-            )
-            if fav_song_ids:
-                queryset = queryset.annotate(
-                    is_fav=Case(
-                        When(pk__in=fav_song_ids, then=Value(1)),
-                        default=Value(0),
-                        output_field=IntegerField()
-                    )
-                ).order_by('-is_fav', '-likes_count', '-created_at')
-            else:
-                queryset = queryset.order_by('-likes_count', '-created_at')
-        else:
-            order_field = self.SORT_OPTIONS.get(sort, '-likes_count')
-            queryset = queryset.order_by(order_field, '-created_at')
-        
-        return queryset
-    
-    def get_context_data(self, **kwargs):
-        context = super().get_context_data(**kwargs)
-        user = self.request.user
-        
-        if user.is_authenticated:
-            # ユーザーがいいねした曲のIDリスト
-            context['user_liked_songs'] = list(
-                user.likes.values_list('song_id', flat=True)
-            )
-            # ユーザーがお気に入りした曲のIDリスト
-            context['user_favorite_songs'] = list(
-                user.favorites.values_list('song_id', flat=True)
-            )
-        else:
-            context['user_liked_songs'] = []
-            context['user_favorite_songs'] = []
-        
-        # 現在のソート
-        context['current_sort'] = self.request.GET.get('sort', 'popular')
-        
-        return context
+
+    def get(self, request, *args, **kwargs):
+        return redirect('songs:home')
 
 
 def song_share_redirect(request, share_id):
@@ -280,7 +193,7 @@ class CreateSongView(LoginRequiredMixin, CreateView):
     model = Song
     form_class = SongCreateForm
     template_name = 'songs/create_song.html'
-    success_url = reverse_lazy('songs:song_list')
+    success_url = reverse_lazy('songs:my_songs')
     
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)

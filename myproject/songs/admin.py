@@ -44,8 +44,7 @@ class SongAdmin(admin.ModelAdmin):
         }),
         ('音声・メディア', {
             'fields': ('audio_file', 'audio_url', 'cover_image', 'duration',
-                       'karaoke_audio_url', 'karaoke_status',
-                       'lrc_data')
+                       'karaoke_audio_url', 'karaoke_status')
         }),
         ('生成ステータス', {
             'fields': ('generation_status', 'queue_position', 'retry_count',
