@@ -65,31 +65,19 @@ def send_status(report_url, api_key, **kwargs):
         return 'none'
 
 
-def run_training(args):
-    """トレーニングを実行 (subprocess)"""
+def get_python_exe():
+    """Python実行ファイルを決定"""
     script_dir = os.path.dirname(os.path.abspath(__file__))
-    train_script = os.path.join(script_dir, 'train.py')
-
-    # Python実行ファイルを決定
     venv_python = os.path.join(script_dir, 'venv', 'Scripts', 'python.exe')
     if os.path.exists(venv_python):
-        python_exe = venv_python
-    else:
-        python_exe = sys.executable
+        return venv_python
+    return sys.executable
 
-    cmd = [
-        python_exe, '-u', train_script,
-        '--data_path', args.data_path,
-        '--model_name', args.model_name,
-        '--epochs', str(args.epochs),
-        '--batch_size', str(args.batch_size),
-        '--gradient_accumulation', str(args.gradient_accumulation),
-        '--output_dir', args.output_dir,
-        '--report_url', args.report_url,
-        '--api_key', args.api_key,
-    ]
 
-    logger.info(f"トレーニング開始: {' '.join(cmd)}")
+def run_subprocess(cmd, label="process"):
+    """サブプロセスを実行し出力をログに流す"""
+    script_dir = os.path.dirname(os.path.abspath(__file__))
+    logger.info(f"{label} 開始: {' '.join(cmd)}")
     env = os.environ.copy()
     env['PYTHONIOENCODING'] = 'utf-8'
     process = subprocess.Popen(
@@ -107,10 +95,51 @@ def run_training(args):
     for line in process.stdout:
         line = line.rstrip()
         if line:
-            logger.info(f"  [train] {line}")
+            logger.info(f"  [{label}] {line}")
 
     process.wait()
     return process.returncode
+
+
+def run_data_generation(args):
+    """Geminiで学習データを自動生成"""
+    if not args.gemini_key:
+        logger.warning("Gemini APIキー未設定、データ生成をスキップ")
+        return -1
+
+    script_dir = os.path.dirname(os.path.abspath(__file__))
+    gen_script = os.path.join(script_dir, 'generate_history_data.py')
+    python_exe = get_python_exe()
+
+    cmd = [
+        python_exe, '-u', gen_script,
+        '--gemini-key', args.gemini_key,
+        '--random-count', str(args.gen_count),
+    ]
+
+    return run_subprocess(cmd, label="datagen")
+
+
+def run_training(args):
+    """トレーニングを実行 (subprocess)"""
+    script_dir = os.path.dirname(os.path.abspath(__file__))
+    train_script = os.path.join(script_dir, 'train.py')
+    python_exe = get_python_exe()
+
+    cmd = [
+        python_exe, '-u', train_script,
+        '--data_path', args.data_path,
+        '--model_name', args.model_name,
+        '--epochs', str(args.epochs),
+        '--batch_size', str(args.batch_size),
+        '--gradient_accumulation', str(args.gradient_accumulation),
+        '--output_dir', args.output_dir,
+        '--report_url', args.report_url,
+        '--api_key', args.api_key,
+    ]
+
+    logger.info(f"トレーニング開始: {' '.join(cmd)}")
+    return run_subprocess(cmd, label="train")
 
 
 def main():
@@ -130,6 +159,11 @@ def main():
     parser.add_argument('--batch_size', type=int, default=1)
     parser.add_argument('--gradient_accumulation', type=int, default=8)
     parser.add_argument('--output_dir', type=str, default='C:\\temp\\utamemo-lora')
+    parser.add_argument('--gemini_key', type=str,
+                        default=os.getenv('GEMINI_API_KEY', ''),
+                        help='Gemini APIキー (データ自動生成用)')
+    parser.add_argument('--gen_count', type=int, default=5,
+                        help='各サイクルで生成する新規テーマ数 (デフォルト: 5)')
     args = parser.parse_args()
 
     if not args.api_key:
@@ -141,6 +175,10 @@ def main():
     logger.info(f"  サーバー: {args.report_url}")
     logger.info(f"  ポーリング間隔: {POLL_INTERVAL}秒")
     logger.info(f"  モデル: {args.model_name}")
+    if args.gemini_key:
+        logger.info(f"  データ自動生成: 有効 ({args.gen_count}件/サイクル)")
+    else:
+        logger.info("  データ自動生成: 無効 (--gemini_key 未設定)")
     logger.info("  ダッシュボードから「トレーニング開始」で実行されます")
     logger.info("  開始後は自動で無限サイクルします (停止コマンドで中断)")
     logger.info("  Ctrl+C で終了")
@@ -166,6 +204,18 @@ def main():
                         auto_loop = True
 
                     training_running = True
+
+                    # Step 1: Geminiで学習データを自動生成
+                    if args.gemini_key:
+                        logger.info("--- Step 1/2: 学習データ生成 ---")
+                        gen_code = run_data_generation(args)
+                        if gen_code != 0:
+                            logger.warning(f"データ生成に問題 (exit code: {gen_code}), 学習は既存データで続行")
+                    else:
+                        logger.info("データ生成スキップ (Gemini APIキー未設定)")
+
+                    # Step 2: LoRA学習
+                    logger.info("--- Step 2/2: LoRA学習 ---")
                     exit_code = run_training(args)
                     training_running = False
 

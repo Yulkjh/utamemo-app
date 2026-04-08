@@ -282,7 +282,7 @@ INSTRUCTION_TEMPLATE = (
 
 
 def generate_with_gemini(topics, api_key):
-    """Gemini APIで歌詞を生成"""
+    """Gemini APIで歌詞を生成（固定テーマリストから）"""
     try:
         import google.generativeai as genai
     except ImportError:
@@ -328,10 +328,104 @@ def generate_with_gemini(topics, api_key):
     return results
 
 
+def generate_random_records(count, api_key, existing_data):
+    """Gemini APIでランダムな新テーマの学習データを生成"""
+    try:
+        import google.generativeai as genai
+    except ImportError:
+        logger.error("pip install google-generativeai が必要です")
+        return []
+
+    genai.configure(api_key=api_key)
+    model = genai.GenerativeModel("gemini-3-flash-preview")
+    request_options = {"timeout": 90}
+
+    # 既存テーマのリストを作成（重複回避用）
+    existing_summaries = []
+    for r in existing_data:
+        inp = r.get("input", "")
+        # 最初の20文字程度をテーマ名として抽出
+        theme = inp.split(" ")[0] if inp else ""
+        if theme:
+            existing_summaries.append(theme)
+    existing_list = "、".join(existing_summaries[-80:])  # 直近80件
+
+    results = []
+    subjects = [
+        "日本史", "世界史", "生物", "化学", "物理",
+        "地理", "数学", "英語文法", "公民", "地学",
+    ]
+
+    for i in range(count):
+        genre = GENRES[i % len(GENRES)]
+
+        prompt = (
+            f"あなたは中学・高校の教育コンテンツと暗記用歌詞の生成AIです。\n"
+            f"以下の教科からランダムに1つのテーマを選んでください:\n"
+            f"教科: {', '.join(subjects)}\n\n"
+            f"以下のテーマは既に生成済みなので、これら以外の新しいテーマを選んでください:\n"
+            f"{existing_list}\n\n"
+            f"以下のJSON形式で出力してください（JSON以外は出力しないでください）:\n"
+            f'{{\n'
+            f'  "subject": "教科名",\n'
+            f'  "theme": "テーマ名（簡潔に）",\n'
+            f'  "input": "テーマの学習テキスト（200文字程度、重要な事実・年号・人物名・公式を含む詳細な説明）",\n'
+            f'  "keywords": ["重要キーワード1", "重要キーワード2", ...],\n'
+            f'  "output": "{genre}ジャンルの暗記用歌詞。エグスプロージョンの本能寺の変のようにユーモアたっぷりでキャッチー。'
+            f'韻を踏み合いの手や掛け声も入れる。重要用語は必ず含める。[Verse 1], [Chorus], [Verse 2]等のセクションラベル付き。"\n'
+            f'}}'
+        )
+
+        try:
+            response = model.generate_content(prompt, request_options=request_options)
+            text = response.text.strip()
+
+            # JSON部分を抽出
+            if "```json" in text:
+                text = text.split("```json")[1].split("```")[0].strip()
+            elif "```" in text:
+                text = text.split("```")[1].split("```")[0].strip()
+
+            data = json.loads(text)
+
+            # 必須フィールドチェック
+            if not all(k in data for k in ("input", "output")):
+                logger.warning(f"[{i+1}/{count}] 必須フィールドなし、スキップ")
+                continue
+
+            if "[Verse" not in data["output"] and "[Chorus" not in data["output"]:
+                logger.warning(f"[{i+1}/{count}] セクションラベルなし、スキップ")
+                continue
+
+            instruction = INSTRUCTION_TEMPLATE.format(genre=genre)
+            record = {
+                "instruction": instruction,
+                "input": data["input"],
+                "output": data["output"],
+            }
+            results.append(record)
+
+            theme = data.get("theme", data["input"][:30])
+            subject = data.get("subject", "?")
+            existing_summaries.append(theme)
+            logger.info(f"[{i+1}/{count}] OK: [{subject}] {theme} ({genre})")
+
+        except json.JSONDecodeError as e:
+            logger.warning(f"[{i+1}/{count}] JSON解析失敗: {e}")
+        except Exception as e:
+            logger.warning(f"[{i+1}/{count}] 生成失敗: {e}")
+
+        time.sleep(2)
+
+    return results
+
+
 def main():
     parser = argparse.ArgumentParser(description="日本史トレーニングデータ生成")
     parser.add_argument("--gemini-key", type=str, default=os.getenv("GEMINI_API_KEY"),
                         help="Gemini APIキー (デフォルト: 環境変数 GEMINI_API_KEY)")
+    parser.add_argument("--random-count", type=int, default=0,
+                        help="ランダムに新テーマを生成する件数 (0=固定リストから生成)")
     script_dir = Path(__file__).resolve().parent
     default_output = script_dir / "data" / "lyrics_training_data.json"
     parser.add_argument("--output", type=str, default=str(default_output),
@@ -351,15 +445,21 @@ def main():
 
     # 既存データのinputと重複するテーマを除外
     existing_inputs = {r.get("input", "")[:50] for r in existing}
-    new_topics = [t for t in HISTORY_TOPICS if t["input"][:50] not in existing_inputs]
-    logger.info(f"新規テーマ: {len(new_topics)}件 (重複除外済み)")
 
-    if not new_topics:
-        logger.info("追加するテーマがありません")
-        return
+    if args.random_count > 0:
+        # ランダムモード: Geminiに新しいテーマを自動生成させる
+        logger.info(f"ランダム生成モード: {args.random_count}件の新テーマを生成")
+        new_records = generate_random_records(args.random_count, args.gemini_key, existing)
+    else:
+        # 固定リストモード: HISTORY_TOPICSから未生成のテーマを生成
+        new_topics = [t for t in HISTORY_TOPICS if t["input"][:50] not in existing_inputs]
+        logger.info(f"新規テーマ: {len(new_topics)}件 (重複除外済み)")
 
-    # Gemini APIで生成
-    new_records = generate_with_gemini(new_topics, args.gemini_key)
+        if not new_topics:
+            logger.info("追加するテーマがありません")
+            return
+
+        new_records = generate_with_gemini(new_topics, args.gemini_key)
     logger.info(f"生成成功: {len(new_records)}件")
 
     # マージして保存
