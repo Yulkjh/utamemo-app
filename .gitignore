@@ -17,3 +17,6 @@ myproject/media/uploaded_images/
 training/.openwebui-venv/
 training/monitor_targets.json
 training/output/
+training/data/ocr_texts/
+training/data/importance_dataset.jsonl
+training/ssh_config.json

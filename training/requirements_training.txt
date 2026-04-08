@@ -35,6 +35,10 @@ flask>=3.0.0
 # Gradio UI (ローカルLLM学習プラットフォーム)
 gradio>=4.20.0
 
+# VLM OCR (ノート画像テキスト化 - Qwen2.5-VL)
+qwen-vl-utils>=0.0.8
+Pillow>=10.0.0
+
 # ユーティリティ
 sentencepiece>=0.2.0
 protobuf>=4.25.0

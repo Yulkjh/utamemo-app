@@ -47,9 +47,12 @@ def launch_app(port: int = 7860, share: bool = False):
 
     from note_importance.scorer import score_text, ScoredWord
     from platform.ssh_manager import SSHJobManager, SSHConfig
+    from ocr_processor import get_ocr, SUPPORTED_EXTENSIONS, DEFAULT_MODEL
+    from build_importance_dataset import score_keywords
 
     # 状態管理
     ssh_manager = SSHJobManager()
+    notebook_ocr = None  # 遅延初期化 (OCRタブ利用時にロード)
     config_path = TRAINING_DIR / "ssh_config.json"
     if config_path.exists():
         try:
@@ -57,6 +60,102 @@ def launch_app(port: int = 7860, share: bool = False):
             logger.info("SSH設定を読み込みました")
         except Exception as e:
             logger.warning(f"SSH設定の読み込み失敗: {e}")
+
+    # =====================================================================
+    # Tab 0: ノート画像アップロード → OCR → スコアリング → データセット
+    # =====================================================================
+    def process_notebook_images(files, ocr_model_name, progress=gr.Progress()):
+        """画像ファイルを一括 OCR → スコアリング → JSONL に追加"""
+        nonlocal notebook_ocr
+        if not files:
+            return "画像を選択してください", "", ""
+
+        try:
+            progress(0, desc=f"モデルをロード中: {ocr_model_name}")
+            notebook_ocr = get_ocr(ocr_model_name)
+        except Exception as e:
+            return f"❌ モデルのロードに失敗: {e}", "", ""
+
+        # 出力先
+        ocr_dir = TRAINING_DIR / "data" / "ocr_texts"
+        ocr_dir.mkdir(parents=True, exist_ok=True)
+        dataset_path = TRAINING_DIR / "data" / "importance_dataset.jsonl"
+
+        results = []
+        all_records = []
+        total = len(files)
+
+        for idx, file_path in enumerate(files):
+            fname = Path(file_path).name
+            progress((idx) / total, desc=f"OCR処理中: {fname}")
+
+            # 拡張子チェック
+            ext = Path(file_path).suffix.lower()
+            if ext not in SUPPORTED_EXTENSIONS:
+                results.append(f"⚠ {fname}: 非対応形式 ({ext})")
+                continue
+
+            # OCR
+            text = notebook_ocr.extract_text(str(file_path))
+            if not text:
+                results.append(f"❌ {fname}: OCR失敗")
+                continue
+
+            # テキスト保存
+            txt_path = ocr_dir / f"{Path(file_path).stem}.txt"
+            txt_path.write_text(text, encoding="utf-8")
+
+            # スコアリング
+            keywords = score_keywords(text, max_keywords=20)
+            record = {
+                "source_file": fname,
+                "char_count": len(text),
+                "ranked_keywords": [{"term": t, "score": s} for t, s in keywords],
+                "text": text,
+            }
+            all_records.append(record)
+            top3 = ", ".join(f"{t}({s})" for t, s in keywords[:3]) if keywords else "なし"
+            results.append(f"✅ {fname}: {len(text)}文字, 上位キーワード: {top3}")
+
+        # JSONL に追記
+        if all_records:
+            with dataset_path.open("a", encoding="utf-8") as f:
+                for rec in all_records:
+                    f.write(json.dumps(rec, ensure_ascii=False) + "\n")
+
+        progress(1.0, desc="完了")
+
+        # サマリー
+        ok = sum(1 for r in results if r.startswith("✅"))
+        summary = f"## 処理結果: {ok}/{total} 成功\n\n"
+        summary += f"- OCRテキスト保存先: `data/ocr_texts/`\n"
+        summary += f"- データセット追記先: `data/importance_dataset.jsonl`\n"
+        summary += f"- データセット累計: {_count_jsonl_records(dataset_path)} レコード\n"
+
+        log = "\n".join(results)
+
+        # 最後に処理した画像のOCR結果をプレビュー
+        preview = all_records[-1]["text"][:2000] if all_records else ""
+
+        return summary, log, preview
+
+    def _count_jsonl_records(path: Path) -> int:
+        if not path.exists():
+            return 0
+        return sum(1 for _ in path.open(encoding="utf-8"))
+
+    def get_dataset_status():
+        """現在のデータセット状況を返す"""
+        dataset_path = TRAINING_DIR / "data" / "importance_dataset.jsonl"
+        ocr_dir = TRAINING_DIR / "data" / "ocr_texts"
+
+        count = _count_jsonl_records(dataset_path)
+        txt_count = len(list(ocr_dir.glob("*.txt"))) if ocr_dir.exists() else 0
+
+        status = f"データセット: {count} レコード\n"
+        status += f"OCRテキスト: {txt_count} ファイル\n"
+        status += f"保存先: data/importance_dataset.jsonl"
+        return status
 
     # =====================================================================
     # Tab 1: 重要度スコアリング
@@ -211,6 +310,43 @@ def launch_app(port: int = 7860, share: bool = False):
         gr.Markdown("ノート重要度スコアリング & 歌詞生成LLMの学習・推論を管理")
 
         with gr.Tabs():
+            # ----- Tab 0: ノート画像アップロード -----
+            with gr.TabItem("📸 ノート画像 → データ化"):
+                gr.Markdown("### ノート写真をアップロード → OCR → スコアリング → データセット自動追加")
+                gr.Markdown("完全ローカル実行 (Qwen2.5-VL)。対応形式: JPG, PNG, WEBP, HEIC, GIF, BMP, TIFF")
+                with gr.Row():
+                    with gr.Column(scale=2):
+                        upload_files = gr.File(
+                            label="ノート画像 (複数可)",
+                            file_count="multiple",
+                            file_types=["image"],
+                        )
+                        ocr_model = gr.Dropdown(
+                            choices=[
+                                "Qwen/Qwen2.5-VL-7B-Instruct",
+                                "Qwen/Qwen2.5-VL-3B-Instruct",
+                            ],
+                            value=DEFAULT_MODEL,
+                            label="OCRモデル",
+                            info="7B=高精度(4080推奨), 3B=軽量(4060Ti OK)",
+                        )
+                        upload_btn = gr.Button("🚀 一括処理開始", variant="primary", size="lg")
+                        dataset_status = gr.Textbox(label="データセット状況", interactive=False, lines=3)
+                        refresh_btn = gr.Button("🔄 状況更新")
+                    with gr.Column(scale=2):
+                        upload_summary = gr.Markdown(label="サマリー")
+                        upload_log = gr.Textbox(label="処理ログ", lines=10, interactive=False)
+                with gr.Accordion("OCRプレビュー (最後の画像)", open=False):
+                    ocr_preview = gr.Textbox(label="抽出テキスト", lines=15, interactive=False)
+
+                upload_btn.click(
+                    process_notebook_images,
+                    inputs=[upload_files, ocr_model],
+                    outputs=[upload_summary, upload_log, ocr_preview],
+                )
+                refresh_btn.click(get_dataset_status, outputs=[dataset_status])
+                app.load(get_dataset_status, outputs=[dataset_status])
+
             # ----- Tab 1: 重要度スコアリング -----
             with gr.TabItem("📝 重要度スコアリング"):
                 gr.Markdown("### ノートOCRテキストから重要ワードを抽出・スコアリング")
@@ -355,6 +491,15 @@ def launch_app(port: int = 7860, share: bool = False):
             with gr.TabItem("❓ ヘルプ"):
                 gr.Markdown("""
 ### 使い方ガイド
+
+#### 0. ノート画像アップロード (一番簡単)
+1. **ノート画像 → データ化**タブを開く
+2. OCRモデルを選択 (4080→7B推奨, 4060Ti→3B)
+3. ノートの写真をドラッグ&ドロップ (複数可)
+4. **一括処理開始** → 自動で OCR → スコアリング → データセット追加
+5. `data/ocr_texts/` にテキスト、`data/importance_dataset.jsonl` にスコア付きデータが保存される
+
+> 初回はモデルのダウンロードに数分かかります (自動)
 
 #### 1. 初回セットアップ
 1. **SSH接続**タブで学校PCの接続情報を入力して保存
