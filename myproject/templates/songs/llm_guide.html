@@ -96,6 +96,116 @@
         </div>
     </div>
 
+    <!-- STEP 0: 環境セットアップ & ダウンロード -->
+    <div class="card mb-4">
+        <div class="card-header bg-white">
+            <h4 class="mb-0"><span class="badge bg-secondary">STEP 0</span> 必要なソフトウェア & ダウンロード</h4>
+        </div>
+        <div class="card-body">
+            <p>LLM学習・推論を始める前に、以下のソフトウェアをインストールしてください。</p>
+
+            <h5><i class="bi bi-download"></i> 必須ソフトウェア</h5>
+            <table class="table table-bordered">
+                <thead class="table-light">
+                    <tr><th>ソフトウェア</th><th>用途</th><th>ダウンロード</th></tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td><strong>Python 3.12+</strong></td>
+                        <td>すべてのスクリプト実行</td>
+                        <td><a href="https://www.python.org/downloads/" target="_blank" rel="noopener">python.org/downloads <i class="bi bi-box-arrow-up-right"></i></a></td>
+                    </tr>
+                    <tr>
+                        <td><strong>Git</strong></td>
+                        <td>ソースコード管理</td>
+                        <td><a href="https://git-scm.com/downloads" target="_blank" rel="noopener">git-scm.com/downloads <i class="bi bi-box-arrow-up-right"></i></a></td>
+                    </tr>
+                    <tr>
+                        <td><strong>CUDA Toolkit 12.x</strong></td>
+                        <td>GPU計算 (NVIDIA必須)</td>
+                        <td><a href="https://developer.nvidia.com/cuda-downloads" target="_blank" rel="noopener">developer.nvidia.com/cuda-downloads <i class="bi bi-box-arrow-up-right"></i></a></td>
+                    </tr>
+                    <tr>
+                        <td><strong>VS Code</strong></td>
+                        <td>コードエディタ (推奨)</td>
+                        <td><a href="https://code.visualstudio.com/download" target="_blank" rel="noopener">code.visualstudio.com/download <i class="bi bi-box-arrow-up-right"></i></a></td>
+                    </tr>
+                </tbody>
+            </table>
+
+            <h5 class="mt-4"><i class="bi bi-box-seam"></i> Pythonパッケージ (pip install)</h5>
+            <pre class="bg-dark text-light p-3 rounded"><code># PyTorch (CUDA 12.x対応版) — 公式セレクタで確認:
+# <a href="https://pytorch.org/get-started/locally/" class="text-info" target="_blank" rel="noopener">https://pytorch.org/get-started/locally/</a>
+pip install torch torchvision torchaudio --index-url https://download.pytorch.org/whl/cu124
+
+# LLM学習・推論に必要なパッケージ (一括インストール)
+pip install -r training/requirements_training.txt
+
+# 個別にインストールする場合:
+pip install transformers accelerate peft trl bitsandbytes
+pip install gradio datasets sentencepiece protobuf</code></pre>
+
+            <h5 class="mt-4"><i class="bi bi-robot"></i> Hugging Face セットアップ</h5>
+            <p>モデルのダウンロードに Hugging Face アカウントとトークンが必要です。</p>
+            <ol>
+                <li><a href="https://huggingface.co/join" target="_blank" rel="noopener">Hugging Face でアカウント作成 <i class="bi bi-box-arrow-up-right"></i></a></li>
+                <li><a href="https://huggingface.co/settings/tokens" target="_blank" rel="noopener">アクセストークンを発行 <i class="bi bi-box-arrow-up-right"></i></a> (Read権限でOK)</li>
+                <li>CLIでログイン:
+                    <pre class="bg-dark text-light p-3 rounded mt-2"><code>pip install huggingface_hub
+huggingface-cli login</code></pre>
+                </li>
+            </ol>
+
+            <h5 class="mt-4"><i class="bi bi-gpu-card"></i> 推奨モデル ダウンロードリンク</h5>
+            <table class="table table-bordered">
+                <thead class="table-light">
+                    <tr><th>モデル</th><th>VRAM目安</th><th>Hugging Face ページ</th></tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td>Qwen2.5-1.5B-Instruct</td>
+                        <td>~4GB</td>
+                        <td><a href="https://huggingface.co/Qwen/Qwen2.5-1.5B-Instruct" target="_blank" rel="noopener">Qwen/Qwen2.5-1.5B-Instruct <i class="bi bi-box-arrow-up-right"></i></a></td>
+                    </tr>
+                    <tr>
+                        <td>Qwen2.5-7B-Instruct</td>
+                        <td>~8GB</td>
+                        <td><a href="https://huggingface.co/Qwen/Qwen2.5-7B-Instruct" target="_blank" rel="noopener">Qwen/Qwen2.5-7B-Instruct <i class="bi bi-box-arrow-up-right"></i></a></td>
+                    </tr>
+                    <tr>
+                        <td>Llama 3 8B Instruct</td>
+                        <td>~10GB</td>
+                        <td><a href="https://huggingface.co/meta-llama/Meta-Llama-3-8B-Instruct" target="_blank" rel="noopener">meta-llama/Meta-Llama-3-8B-Instruct <i class="bi bi-box-arrow-up-right"></i></a></td>
+                    </tr>
+                    <tr>
+                        <td>Qwen2.5-14B-Instruct</td>
+                        <td>~16GB</td>
+                        <td><a href="https://huggingface.co/Qwen/Qwen2.5-14B-Instruct" target="_blank" rel="noopener">Qwen/Qwen2.5-14B-Instruct <i class="bi bi-box-arrow-up-right"></i></a></td>
+                    </tr>
+                    <tr>
+                        <td>Gemma 2 9B IT</td>
+                        <td>~12GB</td>
+                        <td><a href="https://huggingface.co/google/gemma-2-9b-it" target="_blank" rel="noopener">google/gemma-2-9b-it <i class="bi bi-box-arrow-up-right"></i></a></td>
+                    </tr>
+                </tbody>
+            </table>
+            <div class="alert alert-info mb-0">
+                <i class="bi bi-info-circle"></i> モデルは初回実行時に自動ダウンロードされます。手動ダウンロードは不要ですが、事前にダウンロードしたい場合:
+                <pre class="bg-dark text-light p-2 rounded mt-2 mb-0"><code>python -c "from transformers import AutoModelForCausalLM; AutoModelForCausalLM.from_pretrained('Qwen/Qwen2.5-1.5B-Instruct')"</code></pre>
+            </div>
+
+            <h5 class="mt-4"><i class="bi bi-link-45deg"></i> 参考リンク</h5>
+            <ul>
+                <li><a href="https://github.com/Yulkjh/utamemo-app" target="_blank" rel="noopener">UTAMEMO GitHubリポジトリ <i class="bi bi-box-arrow-up-right"></i></a></li>
+                <li><a href="https://pytorch.org/get-started/locally/" target="_blank" rel="noopener">PyTorch インストールガイド <i class="bi bi-box-arrow-up-right"></i></a></li>
+                <li><a href="https://www.gradio.app/docs" target="_blank" rel="noopener">Gradio ドキュメント <i class="bi bi-box-arrow-up-right"></i></a></li>
+                <li><a href="https://huggingface.co/docs/transformers" target="_blank" rel="noopener">Hugging Face Transformers ドキュメント <i class="bi bi-box-arrow-up-right"></i></a></li>
+                <li><a href="https://huggingface.co/docs/peft" target="_blank" rel="noopener">PEFT (LoRA/QLoRA) ドキュメント <i class="bi bi-box-arrow-up-right"></i></a></li>
+                <li><a href="https://learn.microsoft.com/windows-server/administration/openssh/openssh_install_firstuse" target="_blank" rel="noopener">OpenSSH for Windows セットアップ <i class="bi bi-box-arrow-up-right"></i></a></li>
+            </ul>
+        </div>
+    </div>
+
     <!-- STEP 1: Gradio UI -->
     <div class="card mb-4">
         <div class="card-header bg-white">
