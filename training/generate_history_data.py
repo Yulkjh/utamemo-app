@@ -462,11 +462,18 @@ def main():
         new_records = generate_with_gemini(new_topics, args.gemini_key)
     logger.info(f"生成成功: {len(new_records)}件")
 
-    # マージして保存
+    # マージして保存 (安全な書き込み: 一時ファイル→リネーム)
     all_records = existing + new_records
     Path(args.output).parent.mkdir(parents=True, exist_ok=True)
-    with open(args.output, "w", encoding="utf-8") as f:
+    tmp_path = args.output + ".tmp"
+    with open(tmp_path, "w", encoding="utf-8") as f:
         json.dump(all_records, f, ensure_ascii=False, indent=2)
+    # バックアップを作成してからリネーム
+    backup_path = args.output + ".bak"
+    if Path(args.output).exists():
+        import shutil
+        shutil.copy2(args.output, backup_path)
+    os.replace(tmp_path, args.output)
 
     logger.info(f"合計 {len(all_records)}件を保存: {args.output}")
 

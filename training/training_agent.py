@@ -70,9 +70,14 @@ def send_status(report_url, api_key, **kwargs):
 def get_python_exe():
     """Python実行ファイルを決定"""
     script_dir = os.path.dirname(os.path.abspath(__file__))
-    venv_python = os.path.join(script_dir, 'venv', 'Scripts', 'python.exe')
-    if os.path.exists(venv_python):
-        return venv_python
+    project_root = os.path.dirname(script_dir)
+    # .venv (プロジェクトルート) → training/venv → sys.executable
+    for venv_dir in [
+        os.path.join(project_root, '.venv', 'Scripts', 'python.exe'),
+        os.path.join(script_dir, 'venv', 'Scripts', 'python.exe'),
+    ]:
+        if os.path.exists(venv_dir):
+            return venv_dir
     return sys.executable
 
 
@@ -160,7 +165,8 @@ def main():
     parser.add_argument('--epochs', type=int, default=5)
     parser.add_argument('--batch_size', type=int, default=1)
     parser.add_argument('--gradient_accumulation', type=int, default=8)
-    parser.add_argument('--output_dir', type=str, default='C:\\temp\\utamemo-lora')
+    parser.add_argument('--output_dir', type=str,
+                        default=os.getenv('UTAMEMO_OUTPUT_DIR', 'C:\\temp\\utamemo-lora'))
     parser.add_argument('--gemini_key', type=str,
                         default=os.getenv('GEMINI_API_KEY', ''),
                         help='Gemini APIキー (データ自動生成用)')
@@ -245,7 +251,9 @@ def main():
 
                     except Exception as e:
                         logger.error(f"サイクル中にエラー: {e}")
-                        logger.info("10秒後にリトライします...")
+                        send_status(args.report_url, args.api_key,
+                                    status='error', error_message=str(e)[:500])
+                        logger.info("次のポーリングでリトライします...")
                     finally:
                         training_running = False
 

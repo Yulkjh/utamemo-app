@@ -11,10 +11,23 @@ REM ============================================================
 REM === 設定 ===================================================
 set PROJECT_DIR=C:\Users\YU\OneDrive\デスクトップ\UTAMEMO
 set REPORT_URL=https://utamemo.com/api/training/update/
-set API_KEY=fc07b6d36ebebc9141bf37a5ceb0e8fe5656f55cfa8a3f0b5b95f329eca6e12f
-set GEMINI_KEY=AIzaSyAagi0pgFhVh4E_quS1iGKb6RotBKpWhHw
 set GEN_COUNT=5
 set LOG_FILE=%PROJECT_DIR%\training\agent.log
+
+REM --- APIキーは .env ファイルから読み込む ---
+set ENV_FILE=%PROJECT_DIR%\training\.env
+if exist "%ENV_FILE%" (
+    for /f "usebackq tokens=1,* delims==" %%A in ("%ENV_FILE%") do (
+        if "%%A"=="UTAMEMO_API_KEY" set API_KEY=%%B
+        if "%%A"=="GEMINI_API_KEY" set GEMINI_KEY=%%B
+    )
+)
+if "%API_KEY%"=="" (
+    echo エラー: training\.env にUTAMEMO_API_KEYが未設定です
+    echo   training\.env.example を参考に .env を作成してください
+    pause
+    exit /b 1
+)
 REM ===========================================================
 
 cd /d "%PROJECT_DIR%"
