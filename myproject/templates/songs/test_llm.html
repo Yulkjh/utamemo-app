@@ -142,6 +142,13 @@ async function checkHealth() {
             document.getElementById('srvEngine').textContent = 'Engine: ' + (data.engine || '-');
             document.getElementById('srvModel').textContent = 'Model: ' + (data.base_model || '-');
             document.getElementById('srvGpu').textContent = 'GPU: ' + (data.gpu || '-');
+        } else if (data.training) {
+            const statusLabel = data.training_status === 'generating' ? 'データ生成中' : '学習中';
+            statusEl.innerHTML = '<span class="badge bg-warning text-dark"><i class="bi bi-gpu-card"></i> ' + statusLabel + '</span>';
+            detailsEl.classList.remove('d-none');
+            document.getElementById('srvEngine').textContent = '';
+            document.getElementById('srvModel').textContent = 'GPU学習中のため推論不可';
+            document.getElementById('srvGpu').textContent = 'Geminiバックエンドは利用可能';
         } else {
             statusEl.innerHTML = '<span class="badge bg-danger"><i class="bi bi-x-circle"></i> オフライン</span>';
         }

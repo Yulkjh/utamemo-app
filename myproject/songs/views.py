@@ -3026,9 +3026,16 @@ def _get_llm_base_url():
 @staff_member_required
 def test_llm_page(request):
     """LLMテストページ（スタッフのみ）"""
+    from .models import TrainingSession
     inference_url = _get_llm_base_url()
+    # トレーニング中かどうか確認
+    active_training = TrainingSession.objects.filter(
+        status__in=['training', 'generating']
+    ).first()
     return render(request, 'songs/test_llm.html', {
         'inference_url': inference_url,
+        'is_training': bool(active_training),
+        'training_status': active_training.status if active_training else None,
     })
 
 
@@ -3036,8 +3043,21 @@ def test_llm_page(request):
 def test_llm_health(request):
     """推論サーバーのヘルスチェック（プロキシ）"""
     import requests as http_requests
+    from .models import TrainingSession
+
+    # トレーニング中かどうかチェック
+    active_training = TrainingSession.objects.filter(
+        status__in=['training', 'generating']
+    ).first()
+
     base_url = _get_llm_base_url()
     if not base_url:
+        if active_training:
+            return JsonResponse({
+                'online': False, 'training': True,
+                'training_status': active_training.status,
+                'error': 'GPU学習中のため推論サーバーは停止中',
+            })
         return JsonResponse({'online': False, 'error': '推論サーバーURL が未設定'})
     try:
         resp = http_requests.get(f"{base_url}/health", timeout=5)
@@ -3045,8 +3065,20 @@ def test_llm_health(request):
             data = resp.json()
             data['online'] = True
             return JsonResponse(data)
+        if active_training:
+            return JsonResponse({
+                'online': False, 'training': True,
+                'training_status': active_training.status,
+                'error': 'GPU学習中のため推論サーバーは停止中',
+            })
         return JsonResponse({'online': False, 'error': f'Status {resp.status_code}'})
     except Exception as e:
+        if active_training:
+            return JsonResponse({
+                'online': False, 'training': True,
+                'training_status': active_training.status,
+                'error': 'GPU学習中のため推論サーバーは停止中',
+            })
         return JsonResponse({'online': False, 'error': str(e)})
 
 
