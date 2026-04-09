@@ -2841,7 +2841,7 @@ def training_api_update(request):
         'current_epoch', 'total_epochs', 'train_loss', 'eval_loss',
         'accuracy', 'gpu_name', 'gpu_memory_used', 'gpu_memory_total',
         'training_config', 'log_tail', 'error_message', 'training_type',
-        'current_step', 'total_steps',
+        'current_step', 'total_steps', 'tunnel_url',
     }
 
     for field, value in data.items():
@@ -3008,10 +3008,19 @@ def llm_guide(request):
     return render(request, 'songs/llm_guide.html')
 
 
+def _get_llm_base_url():
+    """推論サーバーのベースURLをDBまたはsettingsから取得"""
+    from .models import TrainingSession
+    session = TrainingSession.objects.filter(tunnel_url__gt='').order_by('-updated_at').first()
+    if session and session.tunnel_url:
+        return session.tunnel_url.rstrip('/')
+    return (getattr(settings, 'LOCAL_LLM_URL', '') or '').rstrip('/')
+
+
 @staff_member_required
 def test_llm_page(request):
     """LLMテストページ（スタッフのみ）"""
-    inference_url = getattr(settings, 'LOCAL_LLM_URL', '') or ''
+    inference_url = _get_llm_base_url()
     return render(request, 'songs/test_llm.html', {
         'inference_url': inference_url,
     })
@@ -3021,9 +3030,9 @@ def test_llm_page(request):
 def test_llm_health(request):
     """推論サーバーのヘルスチェック（プロキシ）"""
     import requests as http_requests
-    base_url = getattr(settings, 'LOCAL_LLM_URL', '')
+    base_url = _get_llm_base_url()
     if not base_url:
-        return JsonResponse({'online': False, 'error': 'LOCAL_LLM_URL が未設定'})
+        return JsonResponse({'online': False, 'error': '推論サーバーURL が未設定'})
     try:
         resp = http_requests.get(f"{base_url}/health", timeout=5)
         if resp.status_code == 200:
@@ -3079,12 +3088,12 @@ def test_llm_generate(request):
             return JsonResponse({'success': False, 'error': str(e)})
     else:
         # ローカルLLM
-        base_url = getattr(settings, 'LOCAL_LLM_URL', '')
+        base_url = _get_llm_base_url()
         api_key = getattr(settings, 'LOCAL_LLM_API_KEY', '')
         timeout = getattr(settings, 'LOCAL_LLM_TIMEOUT', 120)
 
         if not base_url:
-            return JsonResponse({'success': False, 'error': 'LOCAL_LLM_URL が未設定です'})
+            return JsonResponse({'success': False, 'error': '推論サーバーURL が未設定です'})
 
         headers = {'Content-Type': 'application/json'}
         if api_key:

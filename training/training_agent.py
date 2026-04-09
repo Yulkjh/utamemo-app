@@ -13,9 +13,11 @@ import argparse
 import json
 import logging
 import os
+import re
 import subprocess
 import sys
 import time
+import threading
 import urllib.request
 import urllib.error
 
@@ -230,6 +232,134 @@ def run_importance_training(args, stop_checker=None):
     return run_subprocess(cmd, label="importance-train", stop_checker=stop_checker)
 
 
+# ── 推論サーバー + Cloudflare Tunnel 自動起動 ──
+
+CLOUDFLARED_PATH = r'C:\Program Files (x86)\cloudflared\cloudflared.exe'
+SERVE_PORT = 8000
+
+
+def start_inference_server():
+    """serve.py をバックグラウンドで起動し、プロセスを返す"""
+    script_dir = os.path.dirname(os.path.abspath(__file__))
+    python_exe = get_python_exe()
+    serve_script = os.path.join(script_dir, 'serve.py')
+
+    env = os.environ.copy()
+    env['PYTHONIOENCODING'] = 'utf-8'
+    # HF_HOME が未設定なら B: ドライブのキャッシュを使う
+    if 'HF_HOME' not in env and os.path.exists('B:\\huggingface_cache'):
+        env['HF_HOME'] = 'B:\\huggingface_cache'
+
+    cmd = [
+        python_exe, '-u', serve_script,
+        '--base_model', 'Qwen/Qwen2.5-7B-Instruct',
+        '--port', str(SERVE_PORT),
+        '--host', '127.0.0.1',
+        '--no_lora',
+    ]
+    logger.info(f"推論サーバー起動: {' '.join(cmd)}")
+    proc = subprocess.Popen(
+        cmd,
+        cwd=script_dir,
+        stdout=subprocess.PIPE,
+        stderr=subprocess.STDOUT,
+        text=True,
+        bufsize=1,
+        env=env,
+        encoding='utf-8',
+        errors='replace',
+    )
+
+    # 出力を読んでログに流すスレッド
+    def _log_output():
+        try:
+            for line in proc.stdout:
+                line = line.rstrip()
+                if line:
+                    logger.info(f"  [serve] {line}")
+        except Exception:
+            pass
+
+    t = threading.Thread(target=_log_output, daemon=True)
+    t.start()
+    return proc
+
+
+def start_cloudflare_tunnel(port=SERVE_PORT):
+    """cloudflared quick tunnel を起動し、(プロセス, トンネルURL) を返す"""
+    if not os.path.exists(CLOUDFLARED_PATH):
+        logger.warning(f"cloudflared が見つかりません: {CLOUDFLARED_PATH}")
+        return None, ''
+
+    cmd = [CLOUDFLARED_PATH, 'tunnel', '--url', f'http://127.0.0.1:{port}']
+    logger.info(f"Cloudflare Tunnel 起動: {' '.join(cmd)}")
+
+    proc = subprocess.Popen(
+        cmd,
+        stdout=subprocess.PIPE,
+        stderr=subprocess.STDOUT,
+        text=True,
+        bufsize=1,
+        encoding='utf-8',
+        errors='replace',
+    )
+
+    tunnel_url = ''
+    url_pattern = re.compile(r'(https://[a-z0-9-]+\.trycloudflare\.com)')
+
+    # 最大60秒待ってURLを取得
+    deadline = time.time() + 60
+
+    def _read_and_find_url():
+        nonlocal tunnel_url
+        try:
+            for line in proc.stdout:
+                line = line.rstrip()
+                if line:
+                    logger.info(f"  [tunnel] {line}")
+                m = url_pattern.search(line)
+                if m and not tunnel_url:
+                    tunnel_url = m.group(1)
+        except Exception:
+            pass
+
+    t = threading.Thread(target=_read_and_find_url, daemon=True)
+    t.start()
+
+    # URL 検出まで待機
+    while time.time() < deadline:
+        if tunnel_url:
+            break
+        if proc.poll() is not None:
+            break
+        time.sleep(1)
+
+    if tunnel_url:
+        logger.info(f"トンネルURL取得: {tunnel_url}")
+    else:
+        logger.warning("トンネルURLを取得できませんでした")
+
+    return proc, tunnel_url
+
+
+def wait_for_server_ready(port=SERVE_PORT, timeout=300):
+    """推論サーバーの /health が応答するまで待機"""
+    deadline = time.time() + timeout
+    url = f'http://127.0.0.1:{port}/health'
+    while time.time() < deadline:
+        try:
+            req = urllib.request.Request(url, method='GET')
+            with urllib.request.urlopen(req, timeout=5) as resp:
+                if resp.status == 200:
+                    logger.info("推論サーバー準備完了")
+                    return True
+        except Exception:
+            pass
+        time.sleep(5)
+    logger.warning(f"推論サーバーが {timeout}秒以内に応答しませんでした")
+    return False
+
+
 def main():
     parser = argparse.ArgumentParser(description="UTAMEMO トレーニングエージェント")
     parser.add_argument('--report_url', type=str, required=True,
@@ -253,6 +383,8 @@ def main():
                         help='Gemini APIキー (データ自動生成用)')
     parser.add_argument('--gen_count', type=int, default=5,
                         help='各サイクルで生成する新規テーマ数 (デフォルト: 5)')
+    parser.add_argument('--no_serve', action='store_true',
+                        help='推論サーバー+トンネルの自動起動を無効化')
     args = parser.parse_args()
 
     if not args.api_key:
@@ -273,8 +405,29 @@ def main():
     logger.info("  Ctrl+C で終了")
     logger.info("=" * 50)
 
+    # ── 推論サーバー + Cloudflare Tunnel 自動起動 ──
+    serve_proc = None
+    tunnel_proc = None
+    tunnel_url = ''
+
+    if not args.no_serve:
+        logger.info("推論サーバーを自動起動します...")
+        serve_proc = start_inference_server()
+        if serve_proc and serve_proc.poll() is None:
+            logger.info("推論サーバーのモデル読込を待機中 (最大5分)...")
+            if wait_for_server_ready(SERVE_PORT, timeout=300):
+                # サーバー準備完了 → トンネル起動
+                tunnel_proc, tunnel_url = start_cloudflare_tunnel(SERVE_PORT)
+            else:
+                logger.warning("推論サーバー起動失敗、トンネルなしで続行します")
+        else:
+            logger.warning("推論サーバープロセスが即終了しました")
+
     # 初回: idle状態を送信 (古いエラーメッセージもクリア)
-    send_status(args.report_url, args.api_key, status='idle', error_message='')
+    status_kwargs = {'status': 'idle', 'error_message': ''}
+    if tunnel_url:
+        status_kwargs['tunnel_url'] = tunnel_url
+    send_status(args.report_url, args.api_key, **status_kwargs)
 
     training_running = False
     auto_loop = False  # 一度開始されたら自動ループ
@@ -397,7 +550,17 @@ def main():
 
         except KeyboardInterrupt:
             logger.info("エージェント停止")
-            send_status(args.report_url, args.api_key, status='idle', error_message='')
+            # 推論サーバー + トンネルのクリーンアップ
+            for name, proc in [('tunnel', tunnel_proc), ('serve', serve_proc)]:
+                if proc and proc.poll() is None:
+                    logger.info(f"{name} プロセスを終了します...")
+                    proc.terminate()
+                    try:
+                        proc.wait(timeout=10)
+                    except subprocess.TimeoutExpired:
+                        proc.kill()
+            send_status(args.report_url, args.api_key, status='idle',
+                        error_message='', tunnel_url='')
             break
 
 
