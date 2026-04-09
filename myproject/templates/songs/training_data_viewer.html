@@ -8,10 +8,15 @@
         <h1>📚 学習データ管理</h1>
         <div class="td-header-right">
             <span class="td-badge" id="totalBadge">合計 {{ total_count }} 件</span>
+            <button class="td-btn td-btn-generate" onclick="generateData()" id="generateBtn">✨ 5件生成</button>
+            <button class="td-btn td-btn-prompt" onclick="openPromptEditor()">📝 プロンプト編集</button>
             <button class="td-btn td-btn-refresh" onclick="reloadData()">🔄 最新に更新</button>
             <a href="{% url 'songs:llm_guide' %}" class="td-btn td-btn-back">← スタッフポータル</a>
         </div>
     </div>
+
+    <!-- 生成結果メッセージ -->
+    <div id="generateStatus" class="td-generate-status" style="display: none;"></div>
 
     <div class="td-stats" id="genreStats"></div>
 
@@ -68,6 +73,29 @@
     </div>
 </div>
 
+<!-- プロンプト編集モーダル -->
+<div class="td-modal-overlay" id="promptModal" style="display: none;" onclick="closePromptModal(event)">
+    <div class="td-modal" onclick="event.stopPropagation()">
+        <div class="td-modal-header">
+            <h2>📝 歌詞生成プロンプト編集</h2>
+            <button class="td-modal-close" onclick="closePromptModal()">&times;</button>
+        </div>
+        <div class="td-modal-body">
+            <p style="color: #aaa; font-size: 0.85rem; margin-bottom: 1rem;">
+                Geminiに送信するInstruction部分です。<code style="color: #ff7940;">{genre}</code> は自動でpop/rock/hip-hop/EDMに置き換わります。
+            </p>
+            <div class="td-form-group">
+                <label>Instruction Template</label>
+                <textarea id="promptInput" class="td-textarea" rows="18" style="font-size: 0.85rem; line-height: 1.7;"></textarea>
+            </div>
+        </div>
+        <div class="td-modal-footer">
+            <button class="td-btn td-btn-cancel" onclick="closePromptModal()">キャンセル</button>
+            <button class="td-btn td-btn-save" onclick="savePrompt()">💾 保存</button>
+        </div>
+    </div>
+</div>
+
 <div class="td-toast" id="toast"></div>
 
 <style>
@@ -102,6 +130,21 @@
 .td-btn-refresh { border-color: #4ecdc4; color: #4ecdc4; }
 .td-btn-refresh:hover { background: #4ecdc422; }
 .td-btn-back { color: #aaa; }
+.td-btn-generate {
+    background: linear-gradient(135deg, #ff7940, #ff5722);
+    border: none; color: #fff; font-weight: 700;
+}
+.td-btn-generate:hover { opacity: 0.9; color: #fff; }
+.td-btn-generate:disabled { opacity: 0.5; cursor: not-allowed; }
+.td-btn-prompt { border-color: #a78bfa; color: #a78bfa; }
+.td-btn-prompt:hover { background: #a78bfa22; }
+
+.td-generate-status {
+    background: #1e2a3a; border: 1px solid #2a3a4a; border-radius: 0.75rem;
+    padding: 1rem 1.25rem; margin-bottom: 1.5rem; color: #ccc; font-size: 0.9rem;
+}
+.td-generate-status .gen-item { color: #4ecdc4; }
+.td-generate-status .gen-error { color: #ff6b6b; }
 
 .td-stats {
     display: flex; gap: 0.75rem; margin-bottom: 1.5rem; flex-wrap: wrap;
@@ -257,6 +300,8 @@
 <script>
 const CSRF_TOKEN = '{{ csrf_token }}';
 const API_URL = '{% url "songs:training_data_api" %}';
+const GENERATE_URL = '{% url "songs:training_data_generate" %}';
+const PROMPT_URL = '{% url "songs:training_prompt_api" %}';
 
 let allRecords = {{ records_json|safe }};
 let editingIndex = -1;
@@ -450,10 +495,99 @@ async function reloadData() {
     }
 }
 
+// ── データ生成 ──
+async function generateData() {
+    const btn = document.getElementById('generateBtn');
+    const statusEl = document.getElementById('generateStatus');
+    btn.disabled = true;
+    btn.textContent = '⏳ 生成中...';
+    statusEl.style.display = 'block';
+    statusEl.innerHTML = '🔄 Gemini APIで5件生成中... (30〜60秒かかります)';
+
+    try {
+        const res = await fetch(GENERATE_URL, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json', 'X-CSRFToken': CSRF_TOKEN },
+        });
+        const data = await res.json();
+        if (data.ok) {
+            let html = `✅ ${data.generated_count}件生成完了 (合計 ${data.total}件)<br>`;
+            data.generated.forEach(g => {
+                html += `<span class="gen-item">・[${escapeHtml(g.subject)}] ${escapeHtml(g.theme)} (${escapeHtml(g.genre)})</span><br>`;
+            });
+            if (data.errors.length > 0) {
+                html += '<br>';
+                data.errors.forEach(e => {
+                    html += `<span class="gen-error">⚠ ${escapeHtml(e)}</span><br>`;
+                });
+            }
+            statusEl.innerHTML = html;
+            allRecords = data.records;
+            renderRecords();
+            showToast(`${data.generated_count}件の学習データを生成しました`, 'success');
+        } else {
+            statusEl.innerHTML = `<span class="gen-error">❌ ${escapeHtml(data.error || 'エラー')}</span>`;
+            showToast(data.error || 'エラー', 'error');
+        }
+    } catch (err) {
+        statusEl.innerHTML = `<span class="gen-error">❌ 通信エラー: ${escapeHtml(err.message)}</span>`;
+        showToast('通信エラー: ' + err.message, 'error');
+    } finally {
+        btn.disabled = false;
+        btn.textContent = '✨ 5件生成';
+    }
+}
+
+// ── プロンプト編集 ──
+async function openPromptEditor() {
+    try {
+        const res = await fetch(PROMPT_URL, { headers: { 'X-CSRFToken': CSRF_TOKEN } });
+        const data = await res.json();
+        if (data.ok) {
+            document.getElementById('promptInput').value = data.instruction_template;
+            document.getElementById('promptModal').style.display = 'flex';
+        } else {
+            showToast(data.error || 'エラー', 'error');
+        }
+    } catch (err) {
+        showToast('通信エラー: ' + err.message, 'error');
+    }
+}
+
+function closePromptModal(e) {
+    if (e && e.target !== e.currentTarget) return;
+    document.getElementById('promptModal').style.display = 'none';
+}
+
+async function savePrompt() {
+    const template = document.getElementById('promptInput').value;
+    if (!template.includes('{genre}')) {
+        showToast('プロンプトに {genre} が必要です', 'error');
+        return;
+    }
+    try {
+        const res = await fetch(PROMPT_URL, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json', 'X-CSRFToken': CSRF_TOKEN },
+            body: JSON.stringify({ instruction_template: template })
+        });
+        const data = await res.json();
+        if (data.ok) {
+            closePromptModal();
+            showToast(data.message, 'success');
+        } else {
+            showToast(data.error || 'エラー', 'error');
+        }
+    } catch (err) {
+        showToast('通信エラー: ' + err.message, 'error');
+    }
+}
+
 document.addEventListener('keydown', function(e) {
     if (e.key === 'Escape') {
         closeEditModal();
         closeDeleteModal();
+        closePromptModal();
     }
 });
 

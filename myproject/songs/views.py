@@ -13,6 +13,7 @@ from django.db.models import Q, Count, F
 from django.conf import settings
 import json
 import logging
+from pathlib import Path
 
 from .models import Song, Like, Favorite, Comment, UploadedImage, Lyrics, PlayHistory, Tag
 from .forms import SongCreateForm, ImageUploadForm, CommentForm, SongPrivacyForm
@@ -2798,6 +2799,212 @@ def training_data_api(request):
 
     else:
         return JsonResponse({'error': f'Unknown action: {action}'}, status=400)
+
+
+# ── プロンプト設定ファイルのパス ──
+_PROMPT_CONFIG_PATH = Path(__file__).resolve().parent.parent.parent / 'training' / 'data' / 'prompt_config.json'
+
+_DEFAULT_INSTRUCTION_TEMPLATE = (
+    "あなたは暗記学習用の歌詞作成の専門家です。以下の学習テキストから{genre}ジャンルの歌詞を作成してください。\n"
+    "\n"
+    "スタイルの参考: エグスプロージョンの「本能寺の変」のようなノリ。\n"
+    "ただし「本能寺の変」よりは学習内容の情報量を多めにしてください。\n"
+    "重要な用語・人物名・年号を歌詞に織り込みつつ、気楽に聞ける曲にしてください。\n"
+    "\n"
+    "【重要なルール】\n"
+    "- 「ぱっと気楽に聞ける」ことが最優先。聴いていて疲れる歌詞はNG。\n"
+    "- 1行は10〜20文字程度。自然に口ずさめるリズム感を大事に。\n"
+    "- 「○○は○○ ○○は○○ ○○は○○」のような事実の羅列は絶対にしない。ストーリーや流れを作る。\n"
+    "- 「暗記しよう」「覚えよう」「チェケラ」「Peace out」等のメタ的フレーズは入れない。\n"
+    "- (Hey!) (Ho!) (Yo!) (What's up?) 等の意味のない合いの手は使わない。\n"
+    "- 韻を踏んでキャッチーに。ユーモアもOK。\n"
+    "出力は [Verse 1], [Chorus], [Verse 2] 等のセクションラベル付きの歌詞のみにしてください。"
+)
+
+_GENRES = ["pop", "rock", "hip-hop", "EDM"]
+
+
+def _get_prompt_config():
+    """プロンプト設定を読み込み"""
+    if _PROMPT_CONFIG_PATH.exists():
+        with open(_PROMPT_CONFIG_PATH, 'r', encoding='utf-8') as f:
+            return json.load(f)
+    return {'instruction_template': _DEFAULT_INSTRUCTION_TEMPLATE}
+
+
+def _save_prompt_config(config):
+    """プロンプト設定を保存"""
+    _PROMPT_CONFIG_PATH.parent.mkdir(parents=True, exist_ok=True)
+    with open(_PROMPT_CONFIG_PATH, 'w', encoding='utf-8') as f:
+        json.dump(config, f, ensure_ascii=False, indent=2)
+
+
+@staff_member_required
+@require_POST
+def training_data_generate(request):
+    """Gemini APIで学習データを5件生成"""
+    from pathlib import Path
+    try:
+        import google.generativeai as genai
+    except ImportError:
+        return JsonResponse({'error': 'google-generativeai がインストールされていません'}, status=500)
+
+    gemini_key = settings.GEMINI_API_KEY
+    if not gemini_key:
+        return JsonResponse({'error': 'GEMINI_API_KEY が未設定です'}, status=500)
+
+    data_path = Path(__file__).resolve().parent.parent.parent / 'training' / 'data' / 'lyrics_training_data.json'
+    records = []
+    if data_path.exists():
+        with open(data_path, 'r', encoding='utf-8') as f:
+            records = json.load(f)
+
+    # プロンプト設定を読み込み
+    config = _get_prompt_config()
+    instruction_template = config.get('instruction_template', _DEFAULT_INSTRUCTION_TEMPLATE)
+
+    genai.configure(api_key=gemini_key)
+    model = genai.GenerativeModel("gemini-2.0-flash")
+
+    # 既存テーマリスト（重複回避）
+    existing_summaries = []
+    for r in records:
+        inp = r.get("input", "")
+        theme = inp.split(" ")[0] if inp else ""
+        if theme:
+            existing_summaries.append(theme)
+    existing_list = "、".join(existing_summaries[-80:])
+
+    subjects = [
+        "日本史", "世界史", "生物", "化学", "物理",
+        "地理", "数学", "英語文法", "公民", "地学",
+    ]
+
+    generated = []
+    errors = []
+    count = 5
+
+    for i in range(count):
+        genre = _GENRES[i % len(_GENRES)]
+        prompt = (
+            f"あなたは中学・高校の教育コンテンツと暗記用歌詞の生成AIです。\n"
+            f"以下の教科からランダムに1つのテーマを選んでください:\n"
+            f"教科: {', '.join(subjects)}\n\n"
+            f"以下のテーマは既に生成済みなので、これら以外の新しいテーマを選んでください:\n"
+            f"{existing_list}\n\n"
+            f"以下のJSON形式で出力してください（JSON以外は出力しないでください）:\n"
+            f'{{\n'
+            f'  "subject": "教科名",\n'
+            f'  "theme": "テーマ名（簡潔に）",\n'
+            f'  "input": "テーマの学習テキスト（200文字程度、重要な事実・年号・人物名・公式を含む詳細な説明）",\n'
+            f'  "keywords": ["重要キーワード1", "重要キーワード2", ...],\n'
+            f'  "output": "{genre}ジャンルの暗記用歌詞。エグスプロージョンの本能寺の変よりは情報量多めだが、ぱっと気楽に聞けることが最優先。'
+            f'1行10〜20文字。事実の羅列は絶対にしない。ストーリーや流れを作る。'
+            f'「暗記しよう」等のメタ的フレーズや(Hey!)(Yo!)等の無意味な合いの手は入れない。'
+            f'韻を踏んでキャッチーに。[Verse 1], [Chorus], [Verse 2]等のセクションラベル付き。"\n'
+            f'}}'
+        )
+        try:
+            response = model.generate_content(prompt, request_options={"timeout": 90})
+            text = response.text.strip()
+
+            if "```json" in text:
+                text = text.split("```json")[1].split("```")[0].strip()
+            elif "```" in text:
+                text = text.split("```")[1].split("```")[0].strip()
+
+            data = json.loads(text)
+            if not all(k in data for k in ("input", "output")):
+                errors.append(f"[{i+1}] 必須フィールドなし")
+                continue
+            if "[Verse" not in data["output"] and "[Chorus" not in data["output"]:
+                errors.append(f"[{i+1}] セクションラベルなし")
+                continue
+
+            instruction = instruction_template.format(genre=genre)
+            record = {
+                "instruction": instruction,
+                "input": data["input"],
+                "output": data["output"],
+            }
+            records.append(record)
+            generated.append({
+                'subject': data.get('subject', '?'),
+                'theme': data.get('theme', data['input'][:30]),
+                'genre': genre,
+            })
+            # 既存リストに追加（次の生成時の重複回避）
+            existing_summaries.append(data["input"].split(" ")[0])
+            existing_list = "、".join(existing_summaries[-80:])
+
+        except Exception as e:
+            errors.append(f"[{i+1}] {str(e)[:100]}")
+
+    # 保存
+    if generated:
+        with open(data_path, 'w', encoding='utf-8') as f:
+            json.dump(records, f, ensure_ascii=False, indent=2)
+
+    return JsonResponse({
+        'ok': True,
+        'generated': generated,
+        'generated_count': len(generated),
+        'total': len(records),
+        'errors': errors,
+        'records': records,
+    })
+
+
+@staff_member_required
+def training_prompt_api(request):
+    """プロンプト設定の取得・更新"""
+    if request.method == 'GET':
+        config = _get_prompt_config()
+        return JsonResponse({'ok': True, 'instruction_template': config.get('instruction_template', _DEFAULT_INSTRUCTION_TEMPLATE)})
+
+    elif request.method == 'POST':
+        try:
+            body = json.loads(request.body)
+        except json.JSONDecodeError:
+            return JsonResponse({'error': 'Invalid JSON'}, status=400)
+
+        instruction_template = body.get('instruction_template', '').strip()
+        if not instruction_template:
+            return JsonResponse({'error': 'プロンプトが空です'}, status=400)
+        if '{genre}' not in instruction_template:
+            return JsonResponse({'error': 'プロンプトに {genre} プレースホルダーが必要です'}, status=400)
+
+        config = _get_prompt_config()
+        config['instruction_template'] = instruction_template
+        _save_prompt_config(config)
+
+        # generate_history_data.py のINSTRUCTION_TEMPLATEも同期
+        _sync_prompt_to_script(instruction_template)
+
+        return JsonResponse({'ok': True, 'message': 'プロンプトを保存しました'})
+
+    return JsonResponse({'error': 'Method not allowed'}, status=405)
+
+
+def _sync_prompt_to_script(instruction_template):
+    """generate_history_data.pyのINSTRUCTION_TEMPLATEを同期更新"""
+    import re
+    script_path = Path(__file__).resolve().parent.parent.parent / 'training' / 'generate_history_data.py'
+    if not script_path.exists():
+        return
+    try:
+        content = script_path.read_text(encoding='utf-8')
+        # INSTRUCTION_TEMPLATE = ( ... ) のブロックを置換
+        pattern = r'INSTRUCTION_TEMPLATE\s*=\s*\(.*?\)\s*\n'
+        # エスケープしてPython文字列に
+        escaped = instruction_template.replace('\\', '\\\\').replace('"', '\\"').replace('\n', '\\n')
+        replacement = f'INSTRUCTION_TEMPLATE = (\n    "{escaped}"\n)\n'
+        new_content = re.sub(pattern, replacement, content, flags=re.DOTALL)
+        if new_content != content:
+            script_path.write_text(new_content, encoding='utf-8')
+    except Exception as e:
+        logger.warning(f"INSTRUCTION_TEMPLATE同期失敗: {e}")
+
 
 @staff_member_required
 def training_dashboard(request):
