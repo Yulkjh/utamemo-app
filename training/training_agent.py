@@ -184,7 +184,7 @@ def main():
                         default='data/lyrics_training_data.json',
                         help='学習データパス')
     parser.add_argument('--model_name', type=str,
-                        default='Qwen/Qwen2.5-7B-Instruct',
+                        default='Qwen/Qwen2.5-14B-Instruct',
                         help='モデル名')
     parser.add_argument('--epochs', type=int, default=5)
     parser.add_argument('--batch_size', type=int, default=1)
