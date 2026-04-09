@@ -2929,3 +2929,124 @@ def quality_check(request):
 def llm_guide(request):
     """ローカルLLM学習プラットフォームの使い方ガイド（スタッフのみ）"""
     return render(request, 'songs/llm_guide.html')
+
+
+@staff_member_required
+def test_llm_page(request):
+    """LLMテストページ（スタッフのみ）"""
+    inference_url = getattr(settings, 'LOCAL_LLM_URL', '') or ''
+    return render(request, 'songs/test_llm.html', {
+        'inference_url': inference_url,
+    })
+
+
+@staff_member_required
+def test_llm_health(request):
+    """推論サーバーのヘルスチェック（プロキシ）"""
+    import requests as http_requests
+    base_url = getattr(settings, 'LOCAL_LLM_URL', '')
+    if not base_url:
+        return JsonResponse({'online': False, 'error': 'LOCAL_LLM_URL が未設定'})
+    try:
+        resp = http_requests.get(f"{base_url}/health", timeout=5)
+        if resp.status_code == 200:
+            data = resp.json()
+            data['online'] = True
+            return JsonResponse(data)
+        return JsonResponse({'online': False, 'error': f'Status {resp.status_code}'})
+    except Exception as e:
+        return JsonResponse({'online': False, 'error': str(e)})
+
+
+@staff_member_required
+@require_POST
+def test_llm_generate(request):
+    """推論テスト: ローカルLLM or Gemini で歌詞生成"""
+    import requests as http_requests
+    import time
+
+    try:
+        data = json.loads(request.body)
+    except (json.JSONDecodeError, ValueError):
+        return JsonResponse({'success': False, 'error': 'Invalid JSON'}, status=400)
+
+    text = data.get('text', '').strip()
+    if not text:
+        return JsonResponse({'success': False, 'error': 'テキストが空です'}, status=400)
+
+    genre = data.get('genre', 'pop')
+    language_mode = data.get('language_mode', 'japanese')
+    custom_request = data.get('custom_request', '')
+    backend = data.get('backend', 'local')
+
+    start_time = time.time()
+
+    if backend == 'gemini':
+        # Gemini で比較生成
+        try:
+            generator = GeminiLyricsGenerator()
+            lyrics = generator.generate_lyrics(
+                text, title='', genre=genre,
+                language_mode=language_mode,
+                custom_request=custom_request,
+            )
+            elapsed = round(time.time() - start_time, 1)
+            return JsonResponse({
+                'success': True,
+                'lyrics': lyrics,
+                'generation_time': elapsed,
+                'backend': 'Gemini',
+            })
+        except Exception as e:
+            logger.error(f"Test LLM (Gemini) error: {e}")
+            return JsonResponse({'success': False, 'error': str(e)})
+    else:
+        # ローカルLLM
+        base_url = getattr(settings, 'LOCAL_LLM_URL', '')
+        api_key = getattr(settings, 'LOCAL_LLM_API_KEY', '')
+        timeout = getattr(settings, 'LOCAL_LLM_TIMEOUT', 120)
+
+        if not base_url:
+            return JsonResponse({'success': False, 'error': 'LOCAL_LLM_URL が未設定です'})
+
+        headers = {'Content-Type': 'application/json'}
+        if api_key:
+            headers['Authorization'] = f'Bearer {api_key}'
+
+        payload = {
+            'text': text,
+            'genre': genre,
+            'language_mode': language_mode,
+            'custom_request': custom_request,
+        }
+
+        try:
+            resp = http_requests.post(
+                f"{base_url}/generate",
+                json=payload,
+                headers=headers,
+                timeout=timeout,
+            )
+            resp.raise_for_status()
+            result = resp.json()
+            elapsed = round(time.time() - start_time, 1)
+
+            if result.get('status') == 'success':
+                return JsonResponse({
+                    'success': True,
+                    'lyrics': result.get('lyrics', ''),
+                    'generation_time': elapsed,
+                    'backend': 'Local LLM',
+                })
+            else:
+                return JsonResponse({
+                    'success': False,
+                    'error': result.get('error', 'Unknown error'),
+                })
+        except http_requests.exceptions.Timeout:
+            return JsonResponse({'success': False, 'error': f'タイムアウト ({timeout}秒)'})
+        except http_requests.exceptions.ConnectionError:
+            return JsonResponse({'success': False, 'error': '推論サーバーに接続できません'})
+        except Exception as e:
+            logger.error(f"Test LLM (Local) error: {e}")
+            return JsonResponse({'success': False, 'error': str(e)})
