@@ -2821,7 +2821,7 @@ _DEFAULT_INSTRUCTION_TEMPLATE = (
     "出力は [Verse 1], [Chorus], [Verse 2] 等のセクションラベル付きの歌詞のみにしてください。"
 )
 
-_GENRES = ["pop", "rock", "hip-hop", "EDM", "jazz", "R&B", "folk"]
+_GENRES = ["pop", "rock", "hip-hop", "EDM", "jazz", "R&B", "folk", "J-pop", "K-pop"]
 
 
 def _get_prompt_config():
@@ -2864,7 +2864,7 @@ def training_data_generate(request):
     instruction_template = config.get('instruction_template', _DEFAULT_INSTRUCTION_TEMPLATE)
 
     genai.configure(api_key=gemini_key)
-    model = genai.GenerativeModel("gemini-2.5-pro-preview-05-06")
+    model = genai.GenerativeModel("gemini-2.5-pro")
 
     # 既存テーマリスト（重複回避）
     existing_summaries = []

@@ -270,7 +270,7 @@ HISTORY_TOPICS = [
 ]
 
 # ジャンルをランダムに割り振る
-GENRES = ["pop", "rock", "hip-hop", "EDM", "jazz", "R&B", "folk"]
+GENRES = ["pop", "rock", "hip-hop", "EDM", "jazz", "R&B", "folk", "J-pop", "K-pop"]
 
 INSTRUCTION_TEMPLATE = (
     "あなたは暗記学習用の歌詞作成の専門家です。以下の学習テキストから{genre}ジャンルの歌詞を作成してください。\n"
@@ -299,7 +299,7 @@ def generate_with_gemini(topics, api_key):
         sys.exit(1)
 
     genai.configure(api_key=api_key)
-    model = genai.GenerativeModel("gemini-3-flash-preview")
+    model = genai.GenerativeModel("gemini-2.5-flash")
     request_options = {"timeout": 60}
 
     results = []
@@ -346,7 +346,7 @@ def generate_random_records(count, api_key, existing_data):
         return []
 
     genai.configure(api_key=api_key)
-    model = genai.GenerativeModel("gemini-3-flash-preview")
+    model = genai.GenerativeModel("gemini-2.5-flash")
     request_options = {"timeout": 90}
 
     # 既存テーマのリストを作成（重複回避用）
