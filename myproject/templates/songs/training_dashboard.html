@@ -59,7 +59,14 @@
         <div class="card-body">
             <!-- コマンドボタン -->
             <div class="mb-3 d-flex gap-2 align-items-center command-buttons">
-                {% if session.status == 'idle' or session.status == 'completed' or session.status == 'failed' %}
+                {% if session.is_active %}
+                <button class="btn btn-danger btn-sm cmd-stop" data-session="{{ session.id }}">
+                    <i class="bi bi-stop-fill"></i> 停止
+                </button>
+                {% else %}
+                {% if session.status == 'training' or session.status == 'loading' or session.status == 'saving' %}
+                <span class="badge bg-warning text-dark me-2"><i class="bi bi-exclamation-triangle"></i> 応答なし (5分超)</span>
+                {% endif %}
                 <div class="btn-group" role="group">
                     <input type="radio" class="btn-check" name="ttype-{{ session.id }}" id="ttype-lyrics-{{ session.id }}" value="lyrics" checked>
                     <label class="btn btn-outline-warning btn-sm" for="ttype-lyrics-{{ session.id }}">
@@ -73,10 +80,6 @@
                 <button class="btn btn-success btn-sm cmd-start" data-session="{{ session.id }}"
                     {% if session.pending_command == 'start' %}disabled{% endif %}>
                     <i class="bi bi-play-fill"></i> トレーニング開始
-                </button>
-                {% elif session.is_active %}
-                <button class="btn btn-danger btn-sm cmd-stop" data-session="{{ session.id }}">
-                    <i class="bi bi-stop-fill"></i> 停止
                 </button>
                 {% endif %}
             </div>
@@ -246,15 +249,16 @@ document.querySelectorAll('.cmd-stop').forEach(btn => {
                     // Update command buttons based on status
                     const cmdDiv = card.querySelector('.command-buttons');
                     if (cmdDiv) {
-                        const isIdle = ['idle', 'completed', 'failed'].includes(s.status);
                         if (s.is_active) {
                             cmdDiv.innerHTML = `<button class="btn btn-danger btn-sm cmd-stop" data-session="${s.id}"><i class="bi bi-stop-fill"></i> 停止</button>`;
                             cmdDiv.querySelector('.cmd-stop').addEventListener('click', function() {
                                 if (confirm('トレーニングを停止しますか？')) sendCommand(this.dataset.session, 'stop');
                             });
-                        } else if (isIdle) {
+                        } else {
+                            const staleWarning = ['training', 'loading', 'saving'].includes(s.status)
+                                ? `<span class="badge bg-warning text-dark me-2"><i class="bi bi-exclamation-triangle"></i> 応答なし (5分超)</span>` : '';
                             const disabled = s.pending_command === 'start' ? 'disabled' : '';
-                            cmdDiv.innerHTML = `
+                            cmdDiv.innerHTML = `${staleWarning}
                                 <div class="btn-group" role="group">
                                     <input type="radio" class="btn-check" name="ttype-${s.id}" id="ttype-lyrics-${s.id}" value="lyrics" ${s.training_type !== 'importance' ? 'checked' : ''}>
                                     <label class="btn btn-outline-warning btn-sm" for="ttype-lyrics-${s.id}"><i class="bi bi-music-note-beamed"></i> 歌詞LLM</label>

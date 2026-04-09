@@ -71,10 +71,10 @@ def get_python_exe():
     """Python実行ファイルを決定"""
     script_dir = os.path.dirname(os.path.abspath(__file__))
     project_root = os.path.dirname(script_dir)
-    # .venv (プロジェクトルート) → training/venv → sys.executable
+    # training/venv (torch入り) → .venv (プロジェクトルート) → sys.executable
     for venv_dir in [
-        os.path.join(project_root, '.venv', 'Scripts', 'python.exe'),
         os.path.join(script_dir, 'venv', 'Scripts', 'python.exe'),
+        os.path.join(project_root, '.venv', 'Scripts', 'python.exe'),
     ]:
         if os.path.exists(venv_dir):
             return venv_dir
@@ -85,7 +85,11 @@ def run_subprocess(cmd, label="process", stop_checker=None):
     """サブプロセスを実行し出力をログに流す
     
     stop_checker: 呼ぶと停止すべきかを返す callable (True=停止)
+    Windows対応: スレッドで stdout を読み取り、メインスレッドで停止チェック
     """
+    import threading
+    import queue
+
     script_dir = os.path.dirname(os.path.abspath(__file__))
     logger.info(f"{label} 開始: {' '.join(cmd)}")
     env = os.environ.copy()
@@ -102,46 +106,62 @@ def run_subprocess(cmd, label="process", stop_checker=None):
         errors='replace',
     )
 
-    import selectors
-    sel = selectors.DefaultSelector()
-    sel.register(process.stdout, selectors.EVENT_READ)
+    # スレッドで stdout を読み取り、キューに入れる
+    output_queue = queue.Queue()
+
+    def reader_thread():
+        try:
+            for line in process.stdout:
+                output_queue.put(line)
+        except Exception:
+            pass
+        finally:
+            output_queue.put(None)  # 終了シグナル
+
+    t = threading.Thread(target=reader_thread, daemon=True)
+    t.start()
+
     last_stop_check = time.time()
 
-    try:
-        while process.poll() is None:
-            # 出力を読む (最大1秒待機)
-            events = sel.select(timeout=1.0)
-            for key, _ in events:
-                line = key.fileobj.readline()
-                if line:
-                    line = line.rstrip()
-                    if line:
-                        logger.info(f"  [{label}] {line}")
-
-            # 5秒ごとに停止チェック
-            now = time.time()
-            if stop_checker and now - last_stop_check >= 5:
-                last_stop_check = now
-                if stop_checker():
-                    logger.info(f"停止コマンド検出: {label} プロセスを終了します")
-                    process.terminate()
-                    try:
-                        process.wait(timeout=10)
-                    except subprocess.TimeoutExpired:
-                        logger.warning(f"{label} プロセスが応答しません。強制終了します")
-                        process.kill()
-                        process.wait()
-                    return -99  # 停止による終了
-
-        # 残りの出力を読む
-        for line in process.stdout:
+    while True:
+        # キューから出力を読む (最大1秒待機)
+        try:
+            line = output_queue.get(timeout=1.0)
+            if line is None:
+                break  # reader_thread 終了
             line = line.rstrip()
             if line:
                 logger.info(f"  [{label}] {line}")
-    finally:
-        sel.unregister(process.stdout)
-        sel.close()
+        except queue.Empty:
+            pass
 
+        # プロセスが終了していたらキューを空にして抜ける
+        if process.poll() is not None:
+            while not output_queue.empty():
+                line = output_queue.get_nowait()
+                if line is None:
+                    break
+                line = line.rstrip()
+                if line:
+                    logger.info(f"  [{label}] {line}")
+            break
+
+        # 5秒ごとに停止チェック
+        now = time.time()
+        if stop_checker and now - last_stop_check >= 5:
+            last_stop_check = now
+            if stop_checker():
+                logger.info(f"停止コマンド検出: {label} プロセスを終了します")
+                process.terminate()
+                try:
+                    process.wait(timeout=10)
+                except subprocess.TimeoutExpired:
+                    logger.warning(f"{label} プロセスが応答しません。強制終了します")
+                    process.kill()
+                    process.wait()
+                return -99  # 停止による終了
+
+    process.wait()
     return process.returncode
 
 
@@ -259,6 +279,8 @@ def main():
     training_running = False
     auto_loop = False  # 一度開始されたら自動ループ
     current_training_type = 'lyrics'  # 現在の学習タイプ
+    consecutive_errors = 0  # 連続エラー回数
+    MAX_CONSECUTIVE_ERRORS = 3  # この回数連続失敗したら自動ループを停止
 
     def check_stop():
         """サブプロセス実行中に停止コマンドをチェック (5秒ごとに呼ばれる)"""
@@ -329,7 +351,9 @@ def main():
                             # 停止コマンドでプロセスが終了された
                             logger.info("停止コマンドで学習を中断しました")
                             auto_loop = False
+                            consecutive_errors = 0
                         elif exit_code == 0:
+                            consecutive_errors = 0
                             # 学習完了後、停止コマンドが来ていたかチェック
                             check_cmd, _ = send_status(args.report_url, args.api_key, status='idle')
                             if check_cmd == 'stop':
@@ -338,14 +362,34 @@ def main():
                             else:
                                 logger.info("トレーニング完了! 次のサイクルに進みます...")
                         else:
-                            logger.error(f"トレーニング失敗 (exit code: {exit_code})")
-                            logger.info("10秒後にリトライします...")
+                            consecutive_errors += 1
+                            logger.error(f"トレーニング失敗 (exit code: {exit_code}) [{consecutive_errors}/{MAX_CONSECUTIVE_ERRORS}]")
+                            if consecutive_errors >= MAX_CONSECUTIVE_ERRORS:
+                                logger.error(f"{MAX_CONSECUTIVE_ERRORS}回連続失敗 → 自動ループを停止してアイドルに戻ります")
+                                auto_loop = False
+                                consecutive_errors = 0
+                                send_status(args.report_url, args.api_key,
+                                            status='failed', error_message=f'{MAX_CONSECUTIVE_ERRORS}回連続失敗で自動停止')
+                            else:
+                                wait_time = 10 * (2 ** (consecutive_errors - 1))  # 10s, 20s, 40s...
+                                logger.info(f"{wait_time}秒後にリトライします...")
+                                time.sleep(wait_time)
 
                     except Exception as e:
-                        logger.error(f"サイクル中にエラー: {e}")
+                        consecutive_errors += 1
+                        logger.error(f"サイクル中にエラー: {e} [{consecutive_errors}/{MAX_CONSECUTIVE_ERRORS}]")
                         send_status(args.report_url, args.api_key,
                                     status='error', error_message=str(e)[:500])
-                        logger.info("次のポーリングでリトライします...")
+                        if consecutive_errors >= MAX_CONSECUTIVE_ERRORS:
+                            logger.error(f"{MAX_CONSECUTIVE_ERRORS}回連続エラー → 自動ループを停止してアイドルに戻ります")
+                            auto_loop = False
+                            consecutive_errors = 0
+                            send_status(args.report_url, args.api_key,
+                                        status='failed', error_message=f'{MAX_CONSECUTIVE_ERRORS}回連続エラーで自動停止: {str(e)[:300]}')
+                        else:
+                            wait_time = 10 * (2 ** (consecutive_errors - 1))
+                            logger.info(f"{wait_time}秒後にリトライします...")
+                            time.sleep(wait_time)
                     finally:
                         training_running = False
 

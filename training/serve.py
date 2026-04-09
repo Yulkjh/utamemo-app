@@ -95,8 +95,10 @@ def load_model(base_model_name, lora_path, hf_token=None, no_lora=False):
         base_model_name,
         quantization_config=bnb_config,
         device_map="auto",
+        max_memory={0: "14GiB", "cpu": "1GiB"},
         token=hf_token,
         torch_dtype=torch.bfloat16,
+        low_cpu_mem_usage=True,
     )
 
     if no_lora:
