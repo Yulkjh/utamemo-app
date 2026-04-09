@@ -751,6 +751,7 @@ class TrainingSession(models.Model):
     training_config = models.JSONField(default=dict, blank=True, verbose_name='設定')
     log_tail = models.TextField(blank=True, verbose_name='最新ログ')
     error_message = models.TextField(blank=True, verbose_name='エラー')
+    eta_seconds = models.IntegerField(null=True, blank=True, verbose_name='残り時間(秒)')
     tunnel_url = models.URLField(max_length=300, blank=True, verbose_name='トンネルURL')
     pending_command = models.CharField(max_length=20, choices=COMMAND_CHOICES, default='none', verbose_name='コマンド')
     started_at = models.DateTimeField(null=True, blank=True, verbose_name='開始日時')

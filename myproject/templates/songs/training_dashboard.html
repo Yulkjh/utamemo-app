@@ -91,7 +91,12 @@
                     <div class="mb-3 epoch-progress" {% if session.total_epochs == 0 and session.total_steps == 0 %}style="display:none"{% endif %}>
                         <div class="d-flex justify-content-between mb-1">
                             <small>Epoch <span class="current-epoch">{{ session.current_epoch }}</span> / <span class="total-epochs">{{ session.total_epochs }}</span></small>
-                            <small class="progress-pct">{{ session.progress_percent }}%</small>
+                            <small>
+                                <span class="eta-display" {% if not session.eta_seconds %}style="display:none"{% endif %}>
+                                    ⏱ 残り <span class="eta-text">{% if session.eta_seconds %}{{ session.eta_seconds|floatformat:0 }}秒{% endif %}</span>
+                                </span>
+                                <span class="progress-pct ms-2">{{ session.progress_percent }}%</span>
+                            </small>
                         </div>
                         <div class="progress" style="height: 24px;">
                             <div class="progress-bar progress-bar-striped {% if session.is_active %}progress-bar-animated{% endif %} bg-warning"
@@ -250,6 +255,30 @@ document.querySelectorAll('.cmd-stop').forEach(btn => {
                     if (te) te.textContent = s.total_epochs;
                     const pct = card.querySelector('.progress-pct');
                     if (pct) pct.textContent = s.progress_percent + '%';
+                    
+                    // Update ETA
+                    const etaDisplay = card.querySelector('.eta-display');
+                    const etaText = card.querySelector('.eta-text');
+                    if (etaDisplay && etaText) {
+                        if (s.eta_seconds && s.status === 'training') {
+                            etaDisplay.style.display = '';
+                            const secs = s.eta_seconds;
+                            if (secs >= 3600) {
+                                const h = Math.floor(secs / 3600);
+                                const m = Math.floor((secs % 3600) / 60);
+                                etaText.textContent = `${h}時間${m}分`;
+                            } else if (secs >= 60) {
+                                const m = Math.floor(secs / 60);
+                                const sec = secs % 60;
+                                etaText.textContent = `${m}分${sec}秒`;
+                            } else {
+                                etaText.textContent = `${secs}秒`;
+                            }
+                        } else {
+                            etaDisplay.style.display = 'none';
+                        }
+                    }
+                    
                     const bar = card.querySelector('.progress-bar.bg-warning');
                     if (bar) {
                         bar.style.width = s.progress_percent + '%';

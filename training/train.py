@@ -590,19 +590,48 @@ def train(args):
     class ProgressCallback(TrainerCallback):
         """エポック完了時にログファイル・リモートダッシュボードへ書き出すコールバック"""
         _last_stop_check_step = 0
+        _training_start_time = None
+        _first_step_time = None
+
+        def _calc_eta_seconds(self, state):
+            """残り時間を秒で計算"""
+            import time as _time
+            now = _time.time()
+            if self._training_start_time is None:
+                self._training_start_time = now
+                return None
+            if state.global_step <= 0 or state.max_steps <= 0:
+                return None
+            # 最初のステップ完了時刻を記録
+            if self._first_step_time is None and state.global_step >= 1:
+                self._first_step_time = now
+            # 最初のステップ完了後から計算（最初のステップは異常に遅いため除外）
+            if self._first_step_time and state.global_step >= 2:
+                elapsed = now - self._first_step_time
+                steps_done = state.global_step - 1  # 最初のステップを除外
+                remaining_steps = state.max_steps - state.global_step
+                if steps_done > 0:
+                    return int(elapsed / steps_done * remaining_steps)
+            # フォールバック: 全体の経過時間から計算
+            elapsed = now - self._training_start_time
+            return int(elapsed / state.global_step * (state.max_steps - state.global_step))
 
         def on_step_end(self, args, state, control, **kwargs):
             # 10ステップごとに停止コマンドをチェック (サーバー負荷軽減)
             if state.global_step - self._last_stop_check_step >= 10:
                 self._last_stop_check_step = state.global_step
                 epoch_int = int(state.epoch) if state.epoch else 0
-                cmd = reporter.send(
+                eta = self._calc_eta_seconds(state)
+                send_kwargs = dict(
                     status='training',
                     current_epoch=epoch_int,
                     total_epochs=int(state.num_train_epochs),
                     current_step=state.global_step,
                     total_steps=state.max_steps,
                 )
+                if eta is not None:
+                    send_kwargs['eta_seconds'] = eta
+                cmd = reporter.send(**send_kwargs)
                 if cmd == 'stop':
                     logger.info("停止コマンド受信 (on_step_end): 学習を中断します...")
                     reporter.add_log("停止コマンドで学習中断")
@@ -622,7 +651,8 @@ def train(args):
 
                 # ログ送信時に停止コマンドをチェック
                 epoch_int = int(state.epoch) if state.epoch else 0
-                cmd = reporter.send(
+                eta = self._calc_eta_seconds(state)
+                send_kwargs = dict(
                     status='training',
                     train_loss=logs.get('loss'),
                     current_epoch=epoch_int,
@@ -630,6 +660,9 @@ def train(args):
                     current_step=state.global_step,
                     total_steps=state.max_steps,
                 )
+                if eta is not None:
+                    send_kwargs['eta_seconds'] = eta
+                cmd = reporter.send(**send_kwargs)
                 if cmd == 'stop':
                     logger.info("停止コマンド受信: 学習を中断します...")
                     reporter.add_log("停止コマンドで学習中断")

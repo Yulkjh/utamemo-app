@@ -2841,7 +2841,7 @@ def training_api_update(request):
         'current_epoch', 'total_epochs', 'train_loss', 'eval_loss',
         'accuracy', 'gpu_name', 'gpu_memory_used', 'gpu_memory_total',
         'training_config', 'log_tail', 'error_message', 'training_type',
-        'current_step', 'total_steps', 'tunnel_url',
+        'current_step', 'total_steps', 'tunnel_url', 'eta_seconds',
     }
 
     for field, value in data.items():
@@ -2852,6 +2852,10 @@ def training_api_update(request):
     if data.get('status') in ('idle', 'training', 'generating', 'completed'):
         if 'error_message' not in data:
             session.error_message = ''
+
+    # idle/completed/failedではETAをクリア
+    if data.get('status') in ('idle', 'completed', 'failed'):
+        session.eta_seconds = None
 
     if data.get('status') == 'training' and not session.started_at:
         session.started_at = timezone.now()
@@ -2927,6 +2931,7 @@ def training_api_status_json(request):
             'gpu_memory_total': s.gpu_memory_total,
             'log_tail': s.log_tail,
             'error_message': s.error_message,
+            'eta_seconds': s.eta_seconds,
             'is_active': s.is_active,
             'pending_command': s.pending_command,
             'training_type': s.training_type,
