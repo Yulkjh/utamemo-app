@@ -599,6 +599,7 @@ def train(args):
                 cmd = reporter.send(
                     status='training',
                     current_epoch=epoch_int,
+                    total_epochs=int(state.num_train_epochs),
                     current_step=state.global_step,
                     total_steps=state.max_steps,
                 )
@@ -625,6 +626,7 @@ def train(args):
                     status='training',
                     train_loss=logs.get('loss'),
                     current_epoch=epoch_int,
+                    total_epochs=int(state.num_train_epochs),
                     current_step=state.global_step,
                     total_steps=state.max_steps,
                 )
@@ -648,6 +650,7 @@ def train(args):
                 cmd = reporter.send(
                     status='training',
                     current_epoch=epoch_int,
+                    total_epochs=int(state.num_train_epochs),
                     eval_loss=eval_loss,
                     accuracy=round(accuracy * 100, 1),
                 )
@@ -683,7 +686,7 @@ def train(args):
         logger.info(f"  検証: {len(eval_dataset)} 件 (毎エポック)")
 
     reporter.add_log(f"学習開始: {args.epochs}エポック, batch={args.batch_size}")
-    reporter.send(status='training', current_epoch=0)
+    reporter.send(status='training', current_epoch=0, total_epochs=args.epochs)
 
     try:
         trainer.train(resume_from_checkpoint=args.resume_from_checkpoint)
