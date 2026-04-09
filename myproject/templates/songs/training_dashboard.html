@@ -45,6 +45,9 @@
             </div>
             <div>
                 <span class="badge bg-light text-dark status-badge">{{ session.get_status_display }}</span>
+                <span class="badge training-type-badge {% if session.training_type == 'importance' %}bg-info{% else %}bg-warning text-dark{% endif %} ms-1">
+                    {% if session.training_type == 'importance' %}<i class="bi bi-journal-text"></i> ノート重要度{% else %}<i class="bi bi-music-note-beamed"></i> 歌詞{% endif %}
+                </span>
                 {% if session.gpu_name %}
                 <span class="badge bg-dark ms-1">{{ session.gpu_name }}</span>
                 {% endif %}
@@ -55,8 +58,18 @@
         </div>
         <div class="card-body">
             <!-- コマンドボタン -->
-            <div class="mb-3 d-flex gap-2 command-buttons">
+            <div class="mb-3 d-flex gap-2 align-items-center command-buttons">
                 {% if session.status == 'idle' or session.status == 'completed' or session.status == 'failed' %}
+                <div class="btn-group" role="group">
+                    <input type="radio" class="btn-check" name="ttype-{{ session.id }}" id="ttype-lyrics-{{ session.id }}" value="lyrics" checked>
+                    <label class="btn btn-outline-warning btn-sm" for="ttype-lyrics-{{ session.id }}">
+                        <i class="bi bi-music-note-beamed"></i> 歌詞LLM
+                    </label>
+                    <input type="radio" class="btn-check" name="ttype-{{ session.id }}" id="ttype-importance-{{ session.id }}" value="importance">
+                    <label class="btn btn-outline-info btn-sm" for="ttype-importance-{{ session.id }}">
+                        <i class="bi bi-journal-text"></i> ノート重要度LLM
+                    </label>
+                </div>
                 <button class="btn btn-success btn-sm cmd-start" data-session="{{ session.id }}"
                     {% if session.pending_command == 'start' %}disabled{% endif %}>
                     <i class="bi bi-play-fill"></i> トレーニング開始
@@ -160,10 +173,11 @@
 
 <script>
 // コマンド送信
-function sendCommand(sessionId, command) {
+function sendCommand(sessionId, command, trainingType) {
     const form = new FormData();
     form.append('session_id', sessionId);
     form.append('command', command);
+    if (trainingType) form.append('training_type', trainingType);
     fetch("{% url 'songs:training_send_command' %}", {
         method: 'POST',
         headers: {'X-CSRFToken': '{{ csrf_token }}'},
@@ -177,7 +191,12 @@ function sendCommand(sessionId, command) {
     }).catch(err => alert('送信失敗: ' + err));
 }
 document.querySelectorAll('.cmd-start').forEach(btn => {
-    btn.addEventListener('click', () => sendCommand(btn.dataset.session, 'start'));
+    btn.addEventListener('click', () => {
+        const sid = btn.dataset.session;
+        const checked = document.querySelector(`input[name="ttype-${sid}"]:checked`);
+        const ttype = checked ? checked.value : 'lyrics';
+        sendCommand(sid, 'start', ttype);
+    });
 });
 document.querySelectorAll('.cmd-stop').forEach(btn => {
     btn.addEventListener('click', () => {
@@ -223,6 +242,18 @@ document.querySelectorAll('.cmd-stop').forEach(btn => {
                     // Update status badge
                     const badge = card.querySelector('.status-badge');
                     if (badge) badge.textContent = s.status;
+                    
+                    // Update training type badge
+                    const ttBadge = card.querySelector('.training-type-badge');
+                    if (ttBadge) {
+                        if (s.training_type === 'importance') {
+                            ttBadge.className = 'badge training-type-badge bg-info ms-1';
+                            ttBadge.innerHTML = '<i class="bi bi-journal-text"></i> ノート重要度';
+                        } else {
+                            ttBadge.className = 'badge training-type-badge bg-warning text-dark ms-1';
+                            ttBadge.innerHTML = '<i class="bi bi-music-note-beamed"></i> 歌詞';
+                        }
+                    }
                     
                     // Update log
                     const log = card.querySelector('.log-tail');

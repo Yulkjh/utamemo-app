@@ -61,10 +61,10 @@ def send_status(report_url, api_key, **kwargs):
         )
         with urllib.request.urlopen(req, timeout=15) as resp:
             result = json.loads(resp.read().decode('utf-8'))
-            return result.get('command', 'none')
+            return result.get('command', 'none'), result.get('training_type', 'lyrics')
     except Exception as e:
         logger.warning(f"通信失敗: {e}")
-        return 'none'
+        return 'none', 'lyrics'
 
 
 def get_python_exe():
@@ -128,7 +128,7 @@ def run_data_generation(args):
 
 
 def run_training(args):
-    """トレーニングを実行 (subprocess)"""
+    """歌詞LLMトレーニングを実行 (subprocess)"""
     script_dir = os.path.dirname(os.path.abspath(__file__))
     train_script = os.path.join(script_dir, 'train.py')
     python_exe = get_python_exe()
@@ -147,6 +147,30 @@ def run_training(args):
 
     logger.info(f"トレーニング開始: {' '.join(cmd)}")
     return run_subprocess(cmd, label="train")
+
+
+def run_importance_training(args):
+    """ノート重要度LLMトレーニングを実行 (subprocess)"""
+    script_dir = os.path.dirname(os.path.abspath(__file__))
+    train_script = os.path.join(script_dir, 'note_importance', 'train_scorer.py')
+    python_exe = get_python_exe()
+
+    data_path = os.path.join(script_dir, 'data', 'importance_dataset.jsonl')
+    output_dir = os.path.join(
+        os.path.dirname(args.output_dir) if args.output_dir else 'output',
+        'utamemo-importance-lora'
+    )
+
+    cmd = [
+        python_exe, '-u', '-m', 'note_importance.train_scorer',
+        '--data_path', data_path,
+        '--model_name', args.model_name,
+        '--epochs', str(args.epochs),
+        '--batch_size', str(args.batch_size),
+    ]
+
+    logger.info(f"ノート重要度トレーニング開始: {' '.join(cmd)}")
+    return run_subprocess(cmd, label="importance-train")
 
 
 def main():
@@ -197,12 +221,13 @@ def main():
 
     training_running = False
     auto_loop = False  # 一度開始されたら自動ループ
+    current_training_type = 'lyrics'  # 現在の学習タイプ
 
     while True:
         try:
             if not training_running:
                 # サーバーにポーリング → コマンド取得
-                cmd = send_status(args.report_url, args.api_key, status='idle')
+                cmd, ttype = send_status(args.report_url, args.api_key, status='idle')
 
                 if cmd == 'stop':
                     # 停止コマンドは常に最優先
@@ -213,35 +238,42 @@ def main():
                         logger.info("停止コマンド受信 (既にアイドル状態)")
 
                 elif cmd == 'start' or auto_loop:
-                    if auto_loop:
-                        logger.info(">>> 自動ループ: 次のサイクルを開始します")
-                    else:
-                        logger.info(">>> 開始コマンド受信! トレーニングを開始します")
+                    if not auto_loop:
+                        current_training_type = ttype
+                        logger.info(f">>> 開始コマンド受信! 学習タイプ: {current_training_type}")
                         auto_loop = True
+                    else:
+                        logger.info(f">>> 自動ループ: 次のサイクルを開始します (タイプ: {current_training_type})")
 
                     training_running = True
 
                     try:
-                        # Step 1: Geminiで学習データを自動生成
-                        if args.gemini_key:
-                            logger.info("--- Step 1/2: 学習データ生成 ---")
-                            gen_code = run_data_generation(args)
-                            if gen_code != 0:
-                                logger.warning(f"データ生成に問題 (exit code: {gen_code}), 学習は既存データで続行")
+                        if current_training_type == 'importance':
+                            # ノート重要度LLM: データ生成なしで直接学習
+                            logger.info("--- ノート重要度LLM 学習 ---")
+                            exit_code = run_importance_training(args)
                         else:
-                            logger.info("データ生成スキップ (Gemini APIキー未設定)")
+                            # 歌詞LLM: データ生成 → 学習
+                            # Step 1: Geminiで学習データを自動生成
+                            if args.gemini_key:
+                                logger.info("--- Step 1/2: 学習データ生成 ---")
+                                gen_code = run_data_generation(args)
+                                if gen_code != 0:
+                                    logger.warning(f"データ生成に問題 (exit code: {gen_code}), 学習は既存データで続行")
+                            else:
+                                logger.info("データ生成スキップ (Gemini APIキー未設定)")
 
-                        # Step 1.5: 停止コマンドが来ていないかチェック
-                        check_cmd = send_status(args.report_url, args.api_key, status='training')
-                        if check_cmd == 'stop':
-                            logger.info("停止コマンド受信: 学習をスキップしてアイドルに戻ります")
-                            auto_loop = False
-                            training_running = False
-                            continue
+                            # Step 1.5: 停止コマンドが来ていないかチェック
+                            check_cmd, _ = send_status(args.report_url, args.api_key, status='training')
+                            if check_cmd == 'stop':
+                                logger.info("停止コマンド受信: 学習をスキップしてアイドルに戻ります")
+                                auto_loop = False
+                                training_running = False
+                                continue
 
-                        # Step 2: LoRA学習
-                        logger.info("--- Step 2/2: LoRA学習 ---")
-                        exit_code = run_training(args)
+                            # Step 2: LoRA学習
+                            logger.info("--- Step 2/2: LoRA学習 ---")
+                            exit_code = run_training(args)
 
                         if exit_code == 0:
                             logger.info("トレーニング完了! 次のサイクルに進みます...")

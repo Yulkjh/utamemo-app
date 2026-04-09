@@ -728,9 +728,15 @@ class TrainingSession(models.Model):
         ('stop', 'Stop Training'),
     ]
 
+    TRAINING_TYPE_CHOICES = [
+        ('lyrics', '歌詞生成LLM'),
+        ('importance', 'ノート重要度LLM'),
+    ]
+
     machine_name = models.CharField(max_length=100, verbose_name='マシン名')
     machine_ip = models.GenericIPAddressField(blank=True, null=True, verbose_name='IP')
     status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='idle', verbose_name='ステータス')
+    training_type = models.CharField(max_length=20, choices=TRAINING_TYPE_CHOICES, default='lyrics', verbose_name='学習タイプ')
     model_name = models.CharField(max_length=200, blank=True, verbose_name='モデル名')
     current_epoch = models.IntegerField(default=0, verbose_name='現在のエポック')
     total_epochs = models.IntegerField(default=0, verbose_name='総エポック数')
