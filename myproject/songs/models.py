@@ -726,6 +726,7 @@ class TrainingSession(models.Model):
         ('none', 'None'),
         ('start', 'Start Training'),
         ('stop', 'Stop Training'),
+        ('start_serve', 'Start Inference Server'),
     ]
 
     TRAINING_TYPE_CHOICES = [

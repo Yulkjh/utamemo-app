@@ -3,6 +3,10 @@
 {% block title %}LLMテスト - UTAMEMO Staff{% endblock %}
 
 {% block content %}
+<style>
+.spin-icon { animation: spin 1s linear infinite; display: inline-block; }
+@keyframes spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
+</style>
 <div class="container py-4" style="max-width: 900px;">
     <!-- ヘッダー -->
     <div class="d-flex justify-content-between align-items-center mb-4">
@@ -128,9 +132,13 @@ let timerInterval = null;
 // ページ読み込み時にヘルスチェック
 document.addEventListener('DOMContentLoaded', checkHealth);
 
+let healthTimer = null;
+
 async function checkHealth() {
     const statusEl = document.getElementById('serverStatus');
     const detailsEl = document.getElementById('serverDetails');
+    // 前回のポーリングタイマーをクリア
+    if (healthTimer) { clearTimeout(healthTimer); healthTimer = null; }
     try {
         const resp = await fetch('{% url "songs:test_llm_health" %}', {
             headers: {'X-CSRFToken': csrfToken}
@@ -149,8 +157,20 @@ async function checkHealth() {
             document.getElementById('srvEngine').textContent = '';
             document.getElementById('srvModel').textContent = 'GPU学習中のため推論不可';
             document.getElementById('srvGpu').textContent = 'Geminiバックエンドは利用可能';
+        } else if (data.starting) {
+            statusEl.innerHTML = '<span class="badge bg-info text-dark"><i class="bi bi-arrow-repeat spin-icon"></i> 起動中...</span>';
+            detailsEl.classList.remove('d-none');
+            document.getElementById('srvEngine').textContent = '';
+            document.getElementById('srvModel').textContent = '推論サーバーを起動しています...';
+            document.getElementById('srvGpu').textContent = 'モデル読込に数分かかる場合があります';
+            // 起動中は15秒ごとに再チェック
+            healthTimer = setTimeout(checkHealth, 15000);
         } else {
             statusEl.innerHTML = '<span class="badge bg-danger"><i class="bi bi-x-circle"></i> オフライン</span>';
+            detailsEl.classList.remove('d-none');
+            document.getElementById('srvEngine').textContent = '';
+            document.getElementById('srvModel').textContent = 'エージェントが起動していません';
+            document.getElementById('srvGpu').textContent = 'Geminiバックエンドは利用可能';
         }
     } catch(e) {
         statusEl.innerHTML = '<span class="badge bg-danger"><i class="bi bi-x-circle"></i> 接続エラー</span>';

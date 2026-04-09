@@ -2884,7 +2884,7 @@ def training_send_command(request):
 
     session_id = request.POST.get('session_id')
     command = request.POST.get('command', '')
-    if command not in ('start', 'stop'):
+    if command not in ('start', 'stop', 'start_serve'):
         return JsonResponse({'error': 'Invalid command'}, status=400)
 
     try:
@@ -3050,6 +3050,25 @@ def test_llm_health(request):
         status__in=['training', 'generating']
     ).first()
 
+    # start_serve コマンドが既に送信済みかチェック
+    serve_starting = TrainingSession.objects.filter(
+        pending_command='start_serve'
+    ).exists()
+
+    def _auto_request_serve():
+        """オフライン＆学習中でない場合、自動で start_serve コマンドを送信"""
+        if active_training or serve_starting:
+            return False
+        session = TrainingSession.objects.filter(
+            pending_command='none',
+            status__in=['idle', 'completed', 'failed'],
+        ).first()
+        if session:
+            session.pending_command = 'start_serve'
+            session.save(update_fields=['pending_command'])
+            return True
+        return False
+
     base_url = _get_llm_base_url()
     if not base_url:
         if active_training:
@@ -3058,7 +3077,12 @@ def test_llm_health(request):
                 'training_status': active_training.status,
                 'error': 'GPU学習中のため推論サーバーは停止中',
             })
-        return JsonResponse({'online': False, 'error': '推論サーバーURL が未設定'})
+        requested = _auto_request_serve() or serve_starting
+        return JsonResponse({
+            'online': False,
+            'starting': requested,
+            'error': '推論サーバー起動リクエスト送信済み' if requested else '推論サーバーURL が未設定',
+        })
     try:
         resp = http_requests.get(f"{base_url}/health", timeout=5)
         if resp.status_code == 200:
@@ -3071,7 +3095,12 @@ def test_llm_health(request):
                 'training_status': active_training.status,
                 'error': 'GPU学習中のため推論サーバーは停止中',
             })
-        return JsonResponse({'online': False, 'error': f'Status {resp.status_code}'})
+        requested = _auto_request_serve() or serve_starting
+        return JsonResponse({
+            'online': False,
+            'starting': requested,
+            'error': f'Status {resp.status_code}',
+        })
     except Exception as e:
         if active_training:
             return JsonResponse({
@@ -3079,7 +3108,12 @@ def test_llm_health(request):
                 'training_status': active_training.status,
                 'error': 'GPU学習中のため推論サーバーは停止中',
             })
-        return JsonResponse({'online': False, 'error': str(e)})
+        requested = _auto_request_serve() or serve_starting
+        return JsonResponse({
+            'online': False,
+            'starting': requested,
+            'error': str(e),
+        })
 
 
 @staff_member_required

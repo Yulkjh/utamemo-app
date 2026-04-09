@@ -457,6 +457,28 @@ def main():
                     else:
                         logger.info("停止コマンド受信 (既にアイドル状態)")
 
+                elif cmd == 'start_serve':
+                    # 推論サーバー起動コマンド
+                    if serve_proc and serve_proc.poll() is None:
+                        logger.info("推論サーバーは既に起動中です")
+                    else:
+                        logger.info(">>> start_serve コマンド受信: 推論サーバーを起動します")
+                        serve_proc = start_inference_server()
+                        if serve_proc and serve_proc.poll() is None:
+                            logger.info("推論サーバーのモデル読込を待機中 (最大5分)...")
+                            if wait_for_server_ready(SERVE_PORT, timeout=300):
+                                tunnel_proc, tunnel_url = start_cloudflare_tunnel(SERVE_PORT)
+                                if tunnel_url:
+                                    send_status(args.report_url, args.api_key,
+                                                status='idle', tunnel_url=tunnel_url)
+                                    logger.info(f"推論サーバー起動完了: {tunnel_url}")
+                                else:
+                                    logger.warning("トンネル起動失敗")
+                            else:
+                                logger.warning("推論サーバー起動タイムアウト")
+                        else:
+                            logger.warning("推論サーバープロセスが即終了しました")
+
                 elif cmd == 'start' or auto_loop:
                     if not auto_loop:
                         current_training_type = ttype
