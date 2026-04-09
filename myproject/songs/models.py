@@ -740,6 +740,8 @@ class TrainingSession(models.Model):
     model_name = models.CharField(max_length=200, blank=True, verbose_name='モデル名')
     current_epoch = models.IntegerField(default=0, verbose_name='現在のエポック')
     total_epochs = models.IntegerField(default=0, verbose_name='総エポック数')
+    current_step = models.IntegerField(default=0, verbose_name='現在のステップ')
+    total_steps = models.IntegerField(default=0, verbose_name='総ステップ数')
     train_loss = models.FloatField(null=True, blank=True, verbose_name='Train Loss')
     eval_loss = models.FloatField(null=True, blank=True, verbose_name='Eval Loss')
     accuracy = models.FloatField(null=True, blank=True, verbose_name='Accuracy')
@@ -771,6 +773,8 @@ class TrainingSession(models.Model):
 
     @property
     def progress_percent(self):
+        if self.total_steps > 0:
+            return min(int(self.current_step / self.total_steps * 100), 100)
         if self.total_epochs > 0:
             return int(self.current_epoch / self.total_epochs * 100)
         return 0

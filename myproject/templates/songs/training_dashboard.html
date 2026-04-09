@@ -88,8 +88,7 @@
                 <div class="col-md-6">
                     <h6>モデル: <span class="text-muted model-name">{{ session.model_name|default:"N/A" }}</span></h6>
 
-                    {% if session.total_epochs > 0 %}
-                    <div class="mb-3">
+                    <div class="mb-3 epoch-progress" {% if session.total_epochs == 0 and session.total_steps == 0 %}style="display:none"{% endif %}>
                         <div class="d-flex justify-content-between mb-1">
                             <small>Epoch <span class="current-epoch">{{ session.current_epoch }}</span> / <span class="total-epochs">{{ session.total_epochs }}</span></small>
                             <small class="progress-pct">{{ session.progress_percent }}%</small>
@@ -98,11 +97,10 @@
                             <div class="progress-bar progress-bar-striped {% if session.is_active %}progress-bar-animated{% endif %} bg-warning"
                                  role="progressbar"
                                  style="width: {{ session.progress_percent }}%">
-                                {{ session.progress_percent }}%
+                                {% if session.total_steps > 0 %}{{ session.current_step }}/{{ session.total_steps }} ({{ session.progress_percent }}%){% else %}{{ session.progress_percent }}%{% endif %}
                             </div>
                         </div>
                     </div>
-                    {% endif %}
 
                     <!-- Metrics -->
                     <div class="row text-center">
@@ -232,14 +230,29 @@ document.querySelectorAll('.cmd-stop').forEach(btn => {
                     // Update progress
                     const ce = card.querySelector('.current-epoch');
                     if (ce) ce.textContent = s.current_epoch;
+                    const te = card.querySelector('.total-epochs');
+                    if (te) te.textContent = s.total_epochs;
                     const pct = card.querySelector('.progress-pct');
                     if (pct) pct.textContent = s.progress_percent + '%';
                     const bar = card.querySelector('.progress-bar.bg-warning');
                     if (bar) {
                         bar.style.width = s.progress_percent + '%';
-                        bar.textContent = s.progress_percent + '%';
+                        bar.textContent = s.total_steps > 0
+                            ? `${s.current_step}/${s.total_steps} (${s.progress_percent}%)`
+                            : s.progress_percent + '%';
                         if (s.is_active) bar.classList.add('progress-bar-animated');
                         else bar.classList.remove('progress-bar-animated');
+                    }
+                    // プログレスバーが無い場合(total_epochs=0で初期レンダリングされた場合)に追加
+                    if (!bar && s.total_steps > 0) {
+                        const epochSection = card.querySelector('.epoch-progress');
+                        if (epochSection) {
+                            epochSection.style.display = '';
+                            const newCe = epochSection.querySelector('.current-epoch');
+                            if (newCe) newCe.textContent = s.current_epoch;
+                            const newTe = epochSection.querySelector('.total-epochs');
+                            if (newTe) newTe.textContent = s.total_epochs;
+                        }
                     }
                     
                     // Update status badge

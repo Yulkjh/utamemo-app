@@ -594,7 +594,13 @@ def train(args):
             # 10ステップごとに停止コマンドをチェック (サーバー負荷軽減)
             if state.global_step - self._last_stop_check_step >= 10:
                 self._last_stop_check_step = state.global_step
-                cmd = reporter.send(status='training', current_step=state.global_step)
+                epoch_int = int(state.epoch) if state.epoch else 0
+                cmd = reporter.send(
+                    status='training',
+                    current_epoch=epoch_int,
+                    current_step=state.global_step,
+                    total_steps=state.max_steps,
+                )
                 if cmd == 'stop':
                     logger.info("停止コマンド受信 (on_step_end): 学習を中断します...")
                     reporter.add_log("停止コマンドで学習中断")
@@ -613,9 +619,13 @@ def train(args):
                 reporter.add_log(msg)
 
                 # ログ送信時に停止コマンドをチェック
+                epoch_int = int(state.epoch) if state.epoch else 0
                 cmd = reporter.send(
                     status='training',
                     train_loss=logs.get('loss'),
+                    current_epoch=epoch_int,
+                    current_step=state.global_step,
+                    total_steps=state.max_steps,
                 )
                 if cmd == 'stop':
                     logger.info("停止コマンド受信: 学習を中断します...")

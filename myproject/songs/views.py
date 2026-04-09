@@ -2841,6 +2841,7 @@ def training_api_update(request):
         'current_epoch', 'total_epochs', 'train_loss', 'eval_loss',
         'accuracy', 'gpu_name', 'gpu_memory_used', 'gpu_memory_total',
         'training_config', 'log_tail', 'error_message', 'training_type',
+        'current_step', 'total_steps',
     }
 
     for field, value in data.items():
@@ -2915,6 +2916,8 @@ def training_api_status_json(request):
             'model_name': s.model_name,
             'current_epoch': s.current_epoch,
             'total_epochs': s.total_epochs,
+            'current_step': s.current_step,
+            'total_steps': s.total_steps,
             'progress_percent': s.progress_percent,
             'train_loss': s.train_loss,
             'eval_loss': s.eval_loss,
