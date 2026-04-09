@@ -276,7 +276,13 @@ def main():
                             exit_code = run_training(args)
 
                         if exit_code == 0:
-                            logger.info("トレーニング完了! 次のサイクルに進みます...")
+                            # 学習完了後、停止コマンドが来ていたかチェック
+                            check_cmd, _ = send_status(args.report_url, args.api_key, status='idle')
+                            if check_cmd == 'stop':
+                                logger.info("停止コマンド受信: 自動ループを停止します")
+                                auto_loop = False
+                            else:
+                                logger.info("トレーニング完了! 次のサイクルに進みます...")
                         else:
                             logger.error(f"トレーニング失敗 (exit code: {exit_code})")
                             logger.info("10秒後にリトライします...")

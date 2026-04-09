@@ -265,8 +265,9 @@ class TrainingReporter:
             self._log_lines = self._log_lines[-self._max_log_lines:]
 
     def send(self, **kwargs):
+        """サーバーに進捗を送信し、コマンドを返す (poll=True)"""
         if not self.enabled:
-            return
+            return 'none'
         import urllib.request
         import urllib.error
 
@@ -276,6 +277,7 @@ class TrainingReporter:
         payload = {
             'machine_name': hostname,
             'machine_ip': ip,
+            'poll': True,
             'log_tail': '\n'.join(self._log_lines[-30:]),
             **gpu_info,
             **kwargs,
@@ -293,9 +295,14 @@ class TrainingReporter:
                 method='POST',
             )
             with urllib.request.urlopen(req, timeout=10) as resp:
-                pass
+                result = json.loads(resp.read().decode('utf-8'))
+                cmd = result.get('command', 'none')
+                if cmd == 'stop':
+                    logger.info("停止コマンドを受信しました")
+                return cmd
         except Exception as e:
             logger.debug(f"レポート送信失敗: {e}")
+            return 'none'
 
 
 # =============================================================================
@@ -593,6 +600,16 @@ def train(args):
                 logger.info(msg)
                 reporter.add_log(msg)
 
+                # ログ送信時に停止コマンドをチェック
+                cmd = reporter.send(
+                    status='training',
+                    train_loss=logs.get('loss'),
+                )
+                if cmd == 'stop':
+                    logger.info("停止コマンド受信: 学習を中断します...")
+                    reporter.add_log("停止コマンドで学習中断")
+                    control.should_training_stop = True
+
         def on_evaluate(self, args, state, control, metrics=None, **kwargs):
             if metrics:
                 epoch = metrics.get("epoch", "?")
@@ -605,12 +622,16 @@ def train(args):
                     epoch_int = int(float(epoch))
                 except (ValueError, TypeError):
                     epoch_int = 0
-                reporter.send(
+                cmd = reporter.send(
                     status='training',
                     current_epoch=epoch_int,
                     eval_loss=eval_loss,
                     accuracy=round(accuracy * 100, 1),
                 )
+                if cmd == 'stop':
+                    logger.info("停止コマンド受信: 学習を中断します...")
+                    reporter.add_log("停止コマンドで学習中断")
+                    control.should_training_stop = True
 
         def on_train_end(self, args, state, control, **kwargs):
             logger.info("学習ループ完了。モデル保存に進みます...")
