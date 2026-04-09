@@ -270,7 +270,7 @@ HISTORY_TOPICS = [
 ]
 
 # ジャンルをランダムに割り振る
-GENRES = ["pop", "rock", "hip-hop", "EDM"]
+GENRES = ["pop", "rock", "hip-hop", "EDM", "R&B", "funk", "reggae", "jazz", "latin", "anime"]
 
 INSTRUCTION_TEMPLATE = (
     "あなたは暗記学習用の歌詞作成の専門家です。以下の学習テキストから{genre}ジャンルの歌詞を作成してください。\n"
