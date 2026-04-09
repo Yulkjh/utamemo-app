@@ -2821,7 +2821,7 @@ _DEFAULT_INSTRUCTION_TEMPLATE = (
     "出力は [Verse 1], [Chorus], [Verse 2] 等のセクションラベル付きの歌詞のみにしてください。"
 )
 
-_GENRES = ["pop", "rock", "hip-hop", "EDM", "R&B", "funk", "reggae", "jazz", "latin", "anime"]
+_GENRES = ["pop", "rock", "hip-hop", "EDM", "jazz", "R&B", "folk"]
 
 
 def _get_prompt_config():
