@@ -527,11 +527,11 @@ python -m platform.app
         </div>
         <div class="card-body">
             <p>OCRテキストに以下のマーカーを付けると精度が上がります。<br>
-            <small class="text-muted">重み = 周囲とのコントラスト（視覚的な際立ち度）で決定。枠や蛍光ペンなど「面積で目立つ」装飾ほど高スコア。</small></p>
+            <small class="text-muted">重みはデータから自動学習可能。選択性（厳選度）・共起性・文書横断一貫性を統合して算出。</small></p>
             <div class="row">
                 <div class="col-md-5">
                     <table class="table table-sm">
-                        <thead><tr><th>マーカー</th><th>重み</th><th>意味</th></tr></thead>
+                        <thead><tr><th>マーカー</th><th>初期重み</th><th>意味</th></tr></thead>
                         <tbody>
                             <tr><td><code>[box]...[/box]</code></td><td>10.0</td><td>枠囲み</td></tr>
                             <tr><td><code>[highlight]...[/highlight]</code></td><td>9.0</td><td>蛍光ペン</td></tr>
@@ -540,6 +540,10 @@ python -m platform.app
                             <tr><td><code>[underline]...[/underline]</code></td><td>6.0</td><td>下線</td></tr>
                         </tbody>
                     </table>
+                    <div class="alert alert-info py-2 small mb-0">
+                        <i class="bi bi-graph-up"></i> <strong>データ学習モード:</strong>
+                        OCRデータが溜まったら自動で重みを最適化できます。
+                    </div>
                 </div>
                 <div class="col-md-7">
                     <pre class="bg-dark text-light p-3 rounded"><code># ルールベースのみ (GPU不要・高速)
@@ -549,7 +553,15 @@ python -m note_importance.scorer \
 # ルール + LLMリファイン
 python -m note_importance.scorer \
   --input note.txt --mode hybrid \
-  --model Qwen/Qwen2.5-1.5B-Instruct</code></pre>
+  --model Qwen/Qwen2.5-1.5B-Instruct
+
+# データから重みを自動学習 (50ページ以上推奨)
+python learn_marker_weights.py \
+  --input-dir data/ocr_texts/
+
+# 学習した重みを scorer.py に反映
+python learn_marker_weights.py \
+  --input-dir data/ocr_texts/ --apply</code></pre>
                 </div>
             </div>
         </div>
