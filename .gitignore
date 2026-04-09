@@ -18,6 +18,8 @@ myproject/media/uploaded_images/
 training/.openwebui-venv/
 training/monitor_targets.json
 training/output/
+training/agent.log
+training/data/quality_report.json
 training/data/ocr_texts/
 training/data/importance_dataset.jsonl
 training/data/lyrics_seeds.json
