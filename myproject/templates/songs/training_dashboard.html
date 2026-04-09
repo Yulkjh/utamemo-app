@@ -242,6 +242,45 @@ document.querySelectorAll('.cmd-stop').forEach(btn => {
                     // Update status badge
                     const badge = card.querySelector('.status-badge');
                     if (badge) badge.textContent = s.status;
+
+                    // Update command buttons based on status
+                    const cmdDiv = card.querySelector('.command-buttons');
+                    if (cmdDiv) {
+                        const isIdle = ['idle', 'completed', 'failed'].includes(s.status);
+                        if (s.is_active) {
+                            cmdDiv.innerHTML = `<button class="btn btn-danger btn-sm cmd-stop" data-session="${s.id}"><i class="bi bi-stop-fill"></i> 停止</button>`;
+                            cmdDiv.querySelector('.cmd-stop').addEventListener('click', function() {
+                                if (confirm('トレーニングを停止しますか？')) sendCommand(this.dataset.session, 'stop');
+                            });
+                        } else if (isIdle) {
+                            const disabled = s.pending_command === 'start' ? 'disabled' : '';
+                            cmdDiv.innerHTML = `
+                                <div class="btn-group" role="group">
+                                    <input type="radio" class="btn-check" name="ttype-${s.id}" id="ttype-lyrics-${s.id}" value="lyrics" ${s.training_type !== 'importance' ? 'checked' : ''}>
+                                    <label class="btn btn-outline-warning btn-sm" for="ttype-lyrics-${s.id}"><i class="bi bi-music-note-beamed"></i> 歌詞LLM</label>
+                                    <input type="radio" class="btn-check" name="ttype-${s.id}" id="ttype-importance-${s.id}" value="importance" ${s.training_type === 'importance' ? 'checked' : ''}>
+                                    <label class="btn btn-outline-info btn-sm" for="ttype-importance-${s.id}"><i class="bi bi-journal-text"></i> ノート重要度LLM</label>
+                                </div>
+                                <button class="btn btn-success btn-sm cmd-start" data-session="${s.id}" ${disabled}><i class="bi bi-play-fill"></i> トレーニング開始</button>`;
+                            const startBtn = cmdDiv.querySelector('.cmd-start');
+                            if (startBtn) startBtn.addEventListener('click', function() {
+                                const sid = this.dataset.session;
+                                const checked = document.querySelector(`input[name="ttype-${sid}"]:checked`);
+                                sendCommand(sid, 'start', checked ? checked.value : 'lyrics');
+                            });
+                        }
+                    }
+
+                    // Update pending badge
+                    const pendingBadge = card.querySelector('.pending-badge');
+                    if (s.pending_command === 'start') {
+                        if (!pendingBadge) {
+                            const header = card.querySelector('.card-header > div:last-child');
+                            if (header) header.insertAdjacentHTML('beforeend', '<span class="badge bg-warning text-dark ms-1 pending-badge">開始待ち...</span>');
+                        }
+                    } else {
+                        if (pendingBadge) pendingBadge.remove();
+                    }
                     
                     // Update training type badge
                     const ttBadge = card.querySelector('.training-type-badge');
