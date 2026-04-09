@@ -123,16 +123,64 @@
         </div>
         <div class="card-body">
             <p>以下をコピペすればすぐに動きます。</p>
-            <pre class="bg-dark text-light p-3 rounded"><code># 1. リポジトリをクローン
+
+            <!-- タブ切替 -->
+            <ul class="nav nav-tabs mb-3" role="tablist">
+                <li class="nav-item" role="presentation">
+                    <button class="nav-link active" data-bs-toggle="tab" data-bs-target="#qs-local" type="button" role="tab">
+                        <i class="bi bi-pc-display"></i> ローカル (Windows)
+                    </button>
+                </li>
+                <li class="nav-item" role="presentation">
+                    <button class="nav-link" data-bs-toggle="tab" data-bs-target="#qs-ssh" type="button" role="tab">
+                        <i class="bi bi-terminal"></i> SSH (リモートLinux)
+                    </button>
+                </li>
+            </ul>
+
+            <div class="tab-content">
+                <!-- ローカル (Windows) -->
+                <div class="tab-pane fade show active" id="qs-local" role="tabpanel">
+                    <pre class="bg-dark text-light p-3 rounded"><code># 1. リポジトリをクローン
 git clone https://github.com/Yulkjh/utamemo-app.git
 cd utamemo-app/training
 
 # 2. 依存インストール (初回のみ)
 pip install -r requirements_training.txt
 
-# 3. Gradio UI 起動 → http://localhost:7860 で操作
-python -m platform.app</code></pre>
-            <p class="mb-0 text-muted"><small>Gradio UIからスコアリング・SSH接続・学習管理・歌詞生成テストがすべてブラウザで操作できます。</small></p>
+# 3. トレーニングエージェント起動
+#    ダッシュボードから「開始」で自動ループ (データ生成→学習→繰り返し)
+python training_agent.py \
+  --api_key YOUR_API_KEY \
+  --report_url https://utamemo.com/api/training/update/ \
+  --gemini_key YOUR_GEMINI_KEY \
+  --gen_count 5</code></pre>
+                    <p class="text-muted mb-0"><small><i class="bi bi-info-circle"></i> 起動後、上の「<a href="{% url 'training_dashboard' %}">LLM Training Monitor</a>」から「トレーニング開始」を押すと自動でデータ生成→学習が無限ループします。「停止」で中断。</small></p>
+                </div>
+
+                <!-- SSH (リモートLinux) -->
+                <div class="tab-pane fade" id="qs-ssh" role="tabpanel">
+                    <pre class="bg-dark text-light p-3 rounded"><code># 1. SSHで接続
+ssh user@your-gpu-server
+
+# 2. リポジトリをクローン & セットアップ
+git clone https://github.com/Yulkjh/utamemo-app.git
+cd utamemo-app/training
+pip install -r requirements_training.txt
+
+# 3. tmux/screenでバックグラウンド実行 (SSH切断しても継続)
+tmux new -s training
+python training_agent.py \
+  --api_key YOUR_API_KEY \
+  --report_url https://utamemo.com/api/training/update/ \
+  --gemini_key YOUR_GEMINI_KEY \
+  --gen_count 5
+
+# tmux デタッチ: Ctrl+B → D
+# tmux 再接続: tmux attach -t training</code></pre>
+                    <p class="text-muted mb-0"><small><i class="bi bi-info-circle"></i> tmux内で起動すればSSH切断後も学習が継続します。ダッシュボードからリモート監視・停止が可能。</small></p>
+                </div>
+            </div>
         </div>
     </div>
 
