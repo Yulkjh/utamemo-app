@@ -2864,7 +2864,7 @@ def training_data_generate(request):
     instruction_template = config.get('instruction_template', _DEFAULT_INSTRUCTION_TEMPLATE)
 
     genai.configure(api_key=gemini_key)
-    model = genai.GenerativeModel("gemini-2.0-flash")
+    model = genai.GenerativeModel("gemini-2.5-flash-preview-04-17")
 
     # 既存テーマリスト（重複回避）
     existing_summaries = []
