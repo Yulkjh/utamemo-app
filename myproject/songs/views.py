@@ -2714,8 +2714,9 @@ def flashcard_deck_delete(request, pk):
 
 @staff_member_required
 def training_data_viewer(request):
-    """学習データ確認ページ（管理者のみ）"""
+    """学習データ確認・編集ページ（管理者のみ）"""
     import json
+    import re
     from pathlib import Path
 
     data_path = Path(__file__).resolve().parent.parent.parent / 'training' / 'data' / 'lyrics_training_data.json'
@@ -2724,11 +2725,79 @@ def training_data_viewer(request):
         with open(data_path, 'r', encoding='utf-8') as f:
             records = json.load(f)
 
+    # ジャンル抽出
+    genre_counts = {}
+    for r in records:
+        m = re.search(r'から(\w+)ジャンルの歌詞', r.get('instruction', ''))
+        g = m.group(1) if m else 'other'
+        genre_counts[g] = genre_counts.get(g, 0) + 1
+
     return render(request, 'songs/training_data_viewer.html', {
-        'records': records,
+        'records_json': json.dumps(records, ensure_ascii=False),
         'total_count': len(records),
-        'page_title': '学習データ確認',
+        'genre_counts': json.dumps(genre_counts, ensure_ascii=False),
+        'page_title': '学習データ管理',
     })
+
+
+@staff_member_required
+@require_POST
+def training_data_api(request):
+    """学習データの編集・削除・追加API（管理者のみ）"""
+    import json
+    from pathlib import Path
+
+    data_path = Path(__file__).resolve().parent.parent.parent / 'training' / 'data' / 'lyrics_training_data.json'
+    if not data_path.exists():
+        return JsonResponse({'error': 'データファイルが見つかりません'}, status=404)
+
+    try:
+        body = json.loads(request.body)
+    except json.JSONDecodeError:
+        return JsonResponse({'error': 'Invalid JSON'}, status=400)
+
+    action = body.get('action')
+
+    with open(data_path, 'r', encoding='utf-8') as f:
+        records = json.load(f)
+
+    if action == 'update':
+        index = body.get('index')
+        if not isinstance(index, int) or index < 0 or index >= len(records):
+            return JsonResponse({'error': 'Invalid index'}, status=400)
+
+        new_input = body.get('input')
+        new_output = body.get('output')
+        new_instruction = body.get('instruction')
+
+        if new_input is not None:
+            records[index]['input'] = new_input
+        if new_output is not None:
+            records[index]['output'] = new_output
+        if new_instruction is not None:
+            records[index]['instruction'] = new_instruction
+
+        with open(data_path, 'w', encoding='utf-8') as f:
+            json.dump(records, f, ensure_ascii=False, indent=2)
+
+        return JsonResponse({'ok': True, 'message': f'#{index + 1} を更新しました'})
+
+    elif action == 'delete':
+        index = body.get('index')
+        if not isinstance(index, int) or index < 0 or index >= len(records):
+            return JsonResponse({'error': 'Invalid index'}, status=400)
+
+        deleted = records.pop(index)
+        with open(data_path, 'w', encoding='utf-8') as f:
+            json.dump(records, f, ensure_ascii=False, indent=2)
+
+        return JsonResponse({'ok': True, 'message': f'#{index + 1} を削除しました', 'total': len(records)})
+
+    elif action == 'reload':
+        return JsonResponse({'ok': True, 'records': records, 'total': len(records)})
+
+    else:
+        return JsonResponse({'error': f'Unknown action: {action}'}, status=400)
 
 @staff_member_required
 def training_dashboard(request):

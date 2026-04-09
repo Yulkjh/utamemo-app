@@ -64,6 +64,7 @@ urlpatterns = [
     # トレーニング監視
     path('staff/training/', views.training_dashboard, name='training_dashboard'),
     path('staff/training-data/', views.training_data_viewer, name='training_data_viewer'),
+    path('api/training/data/', views.training_data_api, name='training_data_api'),
     path('staff/llm-guide/', views.llm_guide, name='llm_guide'),
     path('staff/test-llm/', views.test_llm_page, name='test_llm'),
     path('api/llm/health/', views.test_llm_health, name='test_llm_health'),

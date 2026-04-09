@@ -273,8 +273,8 @@ def main():
     logger.info("  Ctrl+C で終了")
     logger.info("=" * 50)
 
-    # 初回: idle状態を送信
-    send_status(args.report_url, args.api_key, status='idle')
+    # 初回: idle状態を送信 (古いエラーメッセージもクリア)
+    send_status(args.report_url, args.api_key, status='idle', error_message='')
 
     training_running = False
     auto_loop = False  # 一度開始されたら自動ループ
@@ -294,7 +294,7 @@ def main():
         try:
             if not training_running:
                 # サーバーにポーリング → コマンド取得
-                cmd, ttype = send_status(args.report_url, args.api_key, status='idle')
+                cmd, ttype = send_status(args.report_url, args.api_key, status='idle', error_message='')
 
                 if cmd == 'stop':
                     # 停止コマンドは常に最優先
@@ -355,7 +355,7 @@ def main():
                         elif exit_code == 0:
                             consecutive_errors = 0
                             # 学習完了後、停止コマンドが来ていたかチェック
-                            check_cmd, _ = send_status(args.report_url, args.api_key, status='idle')
+                            check_cmd, _ = send_status(args.report_url, args.api_key, status='idle', error_message='')
                             if check_cmd == 'stop':
                                 logger.info("停止コマンド受信: 自動ループを停止します")
                                 auto_loop = False
@@ -397,7 +397,7 @@ def main():
 
         except KeyboardInterrupt:
             logger.info("エージェント停止")
-            send_status(args.report_url, args.api_key, status='idle')
+            send_status(args.report_url, args.api_key, status='idle', error_message='')
             break
 
 

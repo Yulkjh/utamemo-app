@@ -1,320 +1,465 @@
 {% extends 'base.html' %}
 
-{% block title %}学習データ確認 - UTAMEMO{% endblock %}
+{% block title %}学習データ管理 - UTAMEMO{% endblock %}
 
 {% block content %}
-<div class="training-data-container">
-    <div class="training-data-header">
-        <h1>📚 学習データ確認</h1>
-        <div class="header-stats">
-            <span class="stat-badge">合計 {{ total_count }} 件</span>
-            <a href="{% url 'songs:llm_guide' %}" class="btn-back">← スタッフポータル</a>
+<div class="td-container">
+    <div class="td-header">
+        <h1>📚 学習データ管理</h1>
+        <div class="td-header-right">
+            <span class="td-badge" id="totalBadge">合計 {{ total_count }} 件</span>
+            <button class="td-btn td-btn-refresh" onclick="reloadData()">🔄 最新に更新</button>
+            <a href="{% url 'songs:llm_guide' %}" class="td-btn td-btn-back">← スタッフポータル</a>
         </div>
     </div>
 
-    <div class="filter-bar">
-        <input type="text" id="searchInput" placeholder="キーワードで検索..." class="search-input">
-        <select id="genreFilter" class="genre-select">
+    <div class="td-stats" id="genreStats"></div>
+
+    <div class="td-filter">
+        <input type="text" id="searchInput" placeholder="キーワードで検索..." class="td-input">
+        <select id="genreFilter" class="td-select">
             <option value="">すべてのジャンル</option>
         </select>
-        <span id="resultCount" class="result-count"></span>
+        <span id="resultCount" class="td-result-count"></span>
     </div>
 
-    <div class="records-list" id="recordsList">
-        {% for record in records %}
-        <div class="record-card" data-index="{{ forloop.counter }}" data-genre="{{ record.instruction|truncatechars:200 }}">
-            <div class="record-header" onclick="toggleRecord({{ forloop.counter0 }})">
-                <div class="record-number">#{{ forloop.counter }}</div>
-                <div class="record-input-preview">{{ record.input|truncatechars:80 }}</div>
-                <div class="record-genre-badge">
-                    {% if 'pop' in record.instruction %}pop{% elif 'rock' in record.instruction %}rock{% elif 'hip' in record.instruction %}hip-hop{% elif 'EDM' in record.instruction %}EDM{% elif 'hiphop' in record.instruction %}hip-hop{% else %}other{% endif %}
-                </div>
-                <svg class="chevron" id="chevron-{{ forloop.counter0 }}" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                    <polyline points="6 9 12 15 18 9"></polyline>
-                </svg>
+    <div id="recordsList"></div>
+</div>
+
+<!-- 編集モーダル -->
+<div class="td-modal-overlay" id="editModal" style="display: none;" onclick="closeEditModal(event)">
+    <div class="td-modal" onclick="event.stopPropagation()">
+        <div class="td-modal-header">
+            <h2 id="editModalTitle">編集</h2>
+            <button class="td-modal-close" onclick="closeEditModal()">&times;</button>
+        </div>
+        <div class="td-modal-body">
+            <div class="td-form-group">
+                <label>📝 学習テーマ (input)</label>
+                <textarea id="editInput" class="td-textarea" rows="8"></textarea>
             </div>
-            <div class="record-body" id="body-{{ forloop.counter0 }}" style="display: none;">
-                <div class="record-section">
-                    <h4>📝 入力テキスト</h4>
-                    <div class="input-text">{{ record.input }}</div>
-                </div>
-                <div class="record-section">
-                    <h4>🎵 出力歌詞</h4>
-                    <pre class="output-lyrics">{{ record.output }}</pre>
-                </div>
+            <div class="td-form-group">
+                <label>🎵 歌詞 (output)</label>
+                <textarea id="editOutput" class="td-textarea td-textarea-lyrics" rows="16"></textarea>
             </div>
         </div>
-        {% endfor %}
+        <div class="td-modal-footer">
+            <button class="td-btn td-btn-cancel" onclick="closeEditModal()">キャンセル</button>
+            <button class="td-btn td-btn-save" onclick="saveEdit()">💾 保存</button>
+        </div>
     </div>
 </div>
 
+<!-- 削除確認モーダル -->
+<div class="td-modal-overlay" id="deleteModal" style="display: none;" onclick="closeDeleteModal(event)">
+    <div class="td-modal td-modal-sm" onclick="event.stopPropagation()">
+        <div class="td-modal-header">
+            <h2>⚠️ 削除確認</h2>
+            <button class="td-modal-close" onclick="closeDeleteModal()">&times;</button>
+        </div>
+        <div class="td-modal-body">
+            <p id="deleteMessage" style="color: #ff6b6b; font-size: 1rem;"></p>
+            <div id="deletePreview" class="td-delete-preview"></div>
+        </div>
+        <div class="td-modal-footer">
+            <button class="td-btn td-btn-cancel" onclick="closeDeleteModal()">キャンセル</button>
+            <button class="td-btn td-btn-delete" onclick="confirmDelete()">🗑️ 削除する</button>
+        </div>
+    </div>
+</div>
+
+<div class="td-toast" id="toast"></div>
+
 <style>
-.training-data-container {
-    max-width: 1200px;
+.td-container {
+    max-width: 1400px;
     margin: 0 auto;
     padding: 2rem 1rem;
     min-height: 100vh;
     background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%);
 }
-
-.training-data-header {
+.td-header {
     display: flex;
     justify-content: space-between;
     align-items: center;
-    margin-bottom: 2rem;
+    margin-bottom: 1.5rem;
     flex-wrap: wrap;
     gap: 1rem;
 }
-
-.training-data-header h1 {
-    color: #ff7940;
-    font-size: 1.8rem;
-    margin: 0;
-}
-
-.header-stats {
-    display: flex;
-    align-items: center;
-    gap: 1rem;
-}
-
-.stat-badge {
+.td-header h1 { color: #ff7940; font-size: 1.8rem; margin: 0; }
+.td-header-right { display: flex; align-items: center; gap: 0.75rem; flex-wrap: wrap; }
+.td-badge {
     background: linear-gradient(135deg, #ff7940, #ff5722);
-    color: #fff;
-    padding: 0.5rem 1.25rem;
-    border-radius: 2rem;
-    font-weight: 700;
-    font-size: 0.95rem;
+    color: #fff; padding: 0.5rem 1.25rem; border-radius: 2rem;
+    font-weight: 700; font-size: 0.95rem;
+}
+.td-btn {
+    padding: 0.5rem 1rem; border: 1px solid #444; border-radius: 0.5rem;
+    background: transparent; color: #ccc; cursor: pointer; font-size: 0.9rem;
+    transition: all 0.2s; text-decoration: none; display: inline-flex; align-items: center; gap: 0.3rem;
+}
+.td-btn:hover { color: #fff; border-color: #ff7940; }
+.td-btn-refresh { border-color: #4ecdc4; color: #4ecdc4; }
+.td-btn-refresh:hover { background: #4ecdc422; }
+.td-btn-back { color: #aaa; }
+
+.td-stats {
+    display: flex; gap: 0.75rem; margin-bottom: 1.5rem; flex-wrap: wrap;
+}
+.td-stat-chip {
+    background: #1e2a3a; border: 1px solid #2a3a4a; border-radius: 1rem;
+    padding: 0.4rem 1rem; color: #ccc; font-size: 0.85rem;
+}
+.td-stat-chip .count { color: #ff7940; font-weight: 700; margin-left: 0.3rem; }
+
+.td-filter {
+    display: flex; gap: 1rem; margin-bottom: 1.5rem; align-items: center; flex-wrap: wrap;
+}
+.td-input, .td-select {
+    padding: 0.75rem 1rem; background: #1e2a3a; border: 1px solid #334;
+    border-radius: 0.5rem; color: #eee; font-size: 0.95rem;
+}
+.td-input { flex: 1; min-width: 200px; }
+.td-input:focus, .td-select:focus { border-color: #ff7940; outline: none; }
+.td-result-count { color: #888; font-size: 0.9rem; }
+
+.td-card {
+    background: #1e2a3a; border: 1px solid #2a3a4a; border-radius: 0.75rem;
+    margin-bottom: 0.5rem; overflow: hidden; transition: border-color 0.2s;
+}
+.td-card:hover { border-color: #405060; }
+.td-card-header {
+    display: flex; align-items: center; padding: 0.75rem 1rem;
+    cursor: pointer; gap: 0.75rem; user-select: none;
+}
+.td-card-num { color: #ff7940; font-weight: 700; font-size: 0.85rem; min-width: 45px; }
+.td-card-preview {
+    flex: 1; color: #ccc; font-size: 0.88rem;
+    white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+}
+.td-card-genre {
+    background: #2a3a4a; color: #ff7940; padding: 0.2rem 0.6rem;
+    border-radius: 1rem; font-size: 0.75rem; font-weight: 600;
+    text-transform: uppercase; white-space: nowrap;
+}
+.td-card-actions { display: flex; gap: 0.3rem; }
+.td-card-actions button {
+    background: transparent; border: 1px solid #334; border-radius: 0.4rem;
+    color: #aaa; cursor: pointer; padding: 0.3rem 0.55rem; font-size: 0.8rem;
+    transition: all 0.15s;
+}
+.td-card-actions .td-act-edit:hover { color: #4ecdc4; border-color: #4ecdc4; }
+.td-card-actions .td-act-delete:hover { color: #ff6b6b; border-color: #ff6b6b; }
+.td-chevron {
+    color: #555; transition: transform 0.2s; flex-shrink: 0; font-size: 1.1rem;
+}
+.td-chevron.open { transform: rotate(180deg); }
+
+.td-card-body {
+    border-top: 1px solid #2a3a4a; padding: 1.25rem; display: none;
+}
+.td-card-body.show { display: block; }
+.td-section { margin-bottom: 1.25rem; }
+.td-section:last-child { margin-bottom: 0; }
+.td-section h4 { color: #ff7940; margin: 0 0 0.5rem; font-size: 0.9rem; }
+.td-input-text {
+    background: #161f2e; padding: 1rem; border-radius: 0.5rem;
+    color: #ddd; line-height: 1.6; font-size: 0.88rem;
+}
+.td-output-lyrics {
+    background: #161f2e; padding: 1rem; border-radius: 0.5rem;
+    color: #7fdbca; line-height: 1.7; font-size: 0.88rem;
+    white-space: pre-wrap; font-family: 'Inter', sans-serif;
+    margin: 0; max-height: 500px; overflow-y: auto;
 }
 
-.btn-back {
-    color: #aaa;
-    text-decoration: none;
-    padding: 0.5rem 1rem;
-    border: 1px solid #444;
-    border-radius: 0.5rem;
-    transition: all 0.2s;
-}
-
-.btn-back:hover {
-    color: #fff;
-    border-color: #ff7940;
-}
-
-.filter-bar {
-    display: flex;
-    gap: 1rem;
-    margin-bottom: 1.5rem;
-    align-items: center;
-    flex-wrap: wrap;
-}
-
-.search-input {
-    flex: 1;
-    min-width: 200px;
-    padding: 0.75rem 1rem;
-    background: #1e2a3a;
-    border: 1px solid #334;
-    border-radius: 0.5rem;
-    color: #eee;
-    font-size: 0.95rem;
-}
-
-.search-input:focus {
-    border-color: #ff7940;
-    outline: none;
-}
-
-.genre-select {
-    padding: 0.75rem 1rem;
-    background: #1e2a3a;
-    border: 1px solid #334;
-    border-radius: 0.5rem;
-    color: #eee;
-    font-size: 0.95rem;
-}
-
-.result-count {
-    color: #888;
-    font-size: 0.9rem;
-}
-
-.record-card {
-    background: #1e2a3a;
-    border: 1px solid #2a3a4a;
-    border-radius: 0.75rem;
-    margin-bottom: 0.75rem;
-    overflow: hidden;
-    transition: border-color 0.2s;
-}
-
-.record-card:hover {
-    border-color: #ff7940;
-}
-
-.record-header {
-    display: flex;
-    align-items: center;
-    padding: 1rem 1.25rem;
-    cursor: pointer;
-    gap: 1rem;
-    user-select: none;
-}
-
-.record-number {
-    color: #ff7940;
-    font-weight: 700;
-    font-size: 0.9rem;
-    min-width: 40px;
-}
-
-.record-input-preview {
-    flex: 1;
-    color: #ccc;
-    font-size: 0.9rem;
-    white-space: nowrap;
-    overflow: hidden;
-    text-overflow: ellipsis;
-}
-
-.record-genre-badge {
-    background: #2a3a4a;
-    color: #ff7940;
-    padding: 0.25rem 0.75rem;
-    border-radius: 1rem;
-    font-size: 0.8rem;
-    font-weight: 600;
-    text-transform: uppercase;
-    white-space: nowrap;
-}
-
-.chevron {
-    color: #666;
-    transition: transform 0.2s;
-    flex-shrink: 0;
-}
-
-.chevron.open {
-    transform: rotate(180deg);
-}
-
-.record-body {
-    border-top: 1px solid #2a3a4a;
-    padding: 1.5rem;
-}
-
-.record-section {
-    margin-bottom: 1.5rem;
-}
-
-.record-section:last-child {
-    margin-bottom: 0;
-}
-
-.record-section h4 {
-    color: #ff7940;
-    margin: 0 0 0.75rem;
-    font-size: 0.95rem;
-}
-
-.input-text {
-    background: #161f2e;
+.td-modal-overlay {
+    position: fixed; top: 0; left: 0; right: 0; bottom: 0;
+    background: rgba(0, 0, 0, 0.7); z-index: 9999;
+    display: flex; align-items: center; justify-content: center;
     padding: 1rem;
-    border-radius: 0.5rem;
-    color: #ddd;
-    line-height: 1.6;
-    font-size: 0.9rem;
+}
+.td-modal {
+    background: #1e2a3a; border: 1px solid #3a4a5a; border-radius: 1rem;
+    width: 100%; max-width: 900px; max-height: 90vh; display: flex;
+    flex-direction: column;
+}
+.td-modal-sm { max-width: 500px; }
+.td-modal-header {
+    display: flex; justify-content: space-between; align-items: center;
+    padding: 1.25rem 1.5rem; border-bottom: 1px solid #2a3a4a;
+}
+.td-modal-header h2 { color: #ff7940; margin: 0; font-size: 1.2rem; }
+.td-modal-close {
+    background: none; border: none; color: #888; font-size: 1.5rem;
+    cursor: pointer; padding: 0.25rem;
+}
+.td-modal-close:hover { color: #fff; }
+.td-modal-body {
+    padding: 1.5rem; overflow-y: auto; flex: 1;
+}
+.td-modal-footer {
+    padding: 1rem 1.5rem; border-top: 1px solid #2a3a4a;
+    display: flex; justify-content: flex-end; gap: 0.75rem;
+}
+.td-form-group { margin-bottom: 1.25rem; }
+.td-form-group:last-child { margin-bottom: 0; }
+.td-form-group label {
+    display: block; color: #ff7940; font-weight: 600;
+    margin-bottom: 0.5rem; font-size: 0.9rem;
+}
+.td-textarea {
+    width: 100%; padding: 0.75rem; background: #161f2e;
+    border: 1px solid #334; border-radius: 0.5rem; color: #ddd;
+    font-size: 0.9rem; line-height: 1.6; resize: vertical;
+    font-family: 'Inter', sans-serif; box-sizing: border-box;
+}
+.td-textarea:focus { border-color: #ff7940; outline: none; }
+.td-textarea-lyrics { color: #7fdbca; }
+
+.td-btn-save {
+    background: linear-gradient(135deg, #ff7940, #ff5722);
+    border: none; color: #fff; font-weight: 700; padding: 0.6rem 1.5rem;
+}
+.td-btn-save:hover { opacity: 0.9; color: #fff; }
+.td-btn-cancel { border-color: #555; }
+.td-btn-delete {
+    background: #ff4444; border: none; color: #fff;
+    font-weight: 700; padding: 0.6rem 1.5rem;
+}
+.td-btn-delete:hover { background: #cc3333; color: #fff; }
+
+.td-delete-preview {
+    background: #161f2e; padding: 0.75rem; border-radius: 0.5rem;
+    color: #aaa; font-size: 0.85rem; max-height: 150px; overflow-y: auto;
+    margin-top: 0.75rem;
 }
 
-.output-lyrics {
-    background: #161f2e;
-    padding: 1rem;
-    border-radius: 0.5rem;
-    color: #7fdbca;
-    line-height: 1.7;
-    font-size: 0.9rem;
-    white-space: pre-wrap;
-    font-family: 'Inter', sans-serif;
-    margin: 0;
-    max-height: 500px;
-    overflow-y: auto;
+.td-toast {
+    position: fixed; bottom: 2rem; right: 2rem; z-index: 10001;
+    padding: 0.75rem 1.5rem; border-radius: 0.75rem; color: #fff;
+    font-weight: 600; font-size: 0.95rem; opacity: 0;
+    transition: opacity 0.3s; pointer-events: none;
 }
+.td-toast.show { opacity: 1; }
+.td-toast.success { background: #2ecc71; }
+.td-toast.error { background: #e74c3c; }
 
 @media (max-width: 768px) {
-    .training-data-header {
-        flex-direction: column;
-        align-items: flex-start;
-    }
-    .filter-bar {
-        flex-direction: column;
-    }
-    .search-input {
-        min-width: unset;
-        width: 100%;
-    }
-    .record-input-preview {
-        max-width: 200px;
-    }
+    .td-header { flex-direction: column; align-items: flex-start; }
+    .td-filter { flex-direction: column; }
+    .td-input { min-width: unset; width: 100%; }
+    .td-card-preview { max-width: 200px; }
+    .td-modal { max-height: 95vh; }
 }
 </style>
 
 <script>
-function toggleRecord(index) {
-    const body = document.getElementById('body-' + index);
-    const chevron = document.getElementById('chevron-' + index);
-    if (body.style.display === 'none') {
-        body.style.display = 'block';
-        chevron.classList.add('open');
-    } else {
-        body.style.display = 'none';
-        chevron.classList.remove('open');
+const CSRF_TOKEN = '{{ csrf_token }}';
+const API_URL = '{% url "songs:training_data_api" %}';
+
+let allRecords = {{ records_json|safe }};
+let editingIndex = -1;
+let deletingIndex = -1;
+
+function extractGenre(instruction) {
+    const m = (instruction || '').match(/から(\w+)ジャンルの歌詞/);
+    return m ? m[1] : 'other';
+}
+
+function showToast(msg, type) {
+    const t = document.getElementById('toast');
+    t.textContent = msg;
+    t.className = 'td-toast show ' + type;
+    setTimeout(() => t.classList.remove('show'), 3000);
+}
+
+function escapeHtml(s) {
+    const d = document.createElement('div');
+    d.textContent = s;
+    return d.innerHTML;
+}
+
+function renderStats() {
+    const counts = {};
+    allRecords.forEach(r => {
+        const g = extractGenre(r.instruction);
+        counts[g] = (counts[g] || 0) + 1;
+    });
+    document.getElementById('genreStats').innerHTML = Object.entries(counts)
+        .sort((a, b) => b[1] - a[1])
+        .map(([g, c]) => `<div class="td-stat-chip">${escapeHtml(g)}<span class="count">${c}</span></div>`)
+        .join('');
+
+    const sel = document.getElementById('genreFilter');
+    const cur = sel.value;
+    sel.innerHTML = '<option value="">すべてのジャンル</option>';
+    Object.keys(counts).sort().forEach(g => {
+        sel.innerHTML += `<option value="${escapeHtml(g)}">${escapeHtml(g)} (${counts[g]})</option>`;
+    });
+    sel.value = cur;
+}
+
+function renderRecords() {
+    const query = document.getElementById('searchInput').value.toLowerCase();
+    const genre = document.getElementById('genreFilter').value;
+    const container = document.getElementById('recordsList');
+    let html = '';
+    let visible = 0;
+
+    allRecords.forEach((r, i) => {
+        const g = extractGenre(r.instruction);
+        const text = ((r.input || '') + ' ' + (r.output || '')).toLowerCase();
+        if (query && !text.includes(query)) return;
+        if (genre && g !== genre) return;
+        visible++;
+
+        const preview = (r.input || '').substring(0, 100);
+        html += `
+        <div class="td-card" id="card-${i}">
+            <div class="td-card-header" onclick="toggleCard(${i})">
+                <span class="td-card-num">#${i + 1}</span>
+                <span class="td-card-preview">${escapeHtml(preview)}</span>
+                <span class="td-card-genre">${escapeHtml(g)}</span>
+                <div class="td-card-actions" onclick="event.stopPropagation()">
+                    <button class="td-act-edit" onclick="openEdit(${i})" title="編集">✏️</button>
+                    <button class="td-act-delete" onclick="openDelete(${i})" title="削除">🗑️</button>
+                </div>
+                <span class="td-chevron" id="chev-${i}">▼</span>
+            </div>
+            <div class="td-card-body" id="body-${i}">
+                <div class="td-section">
+                    <h4>📝 学習テーマ (input)</h4>
+                    <div class="td-input-text">${escapeHtml(r.input || '')}</div>
+                </div>
+                <div class="td-section">
+                    <h4>🎵 歌詞 (output)</h4>
+                    <pre class="td-output-lyrics">${escapeHtml(r.output || '')}</pre>
+                </div>
+            </div>
+        </div>`;
+    });
+
+    container.innerHTML = html;
+    document.getElementById('resultCount').textContent =
+        query || genre ? `${visible} / ${allRecords.length} 件表示` : '';
+    document.getElementById('totalBadge').textContent = `合計 ${allRecords.length} 件`;
+    renderStats();
+}
+
+function toggleCard(i) {
+    const body = document.getElementById('body-' + i);
+    const chev = document.getElementById('chev-' + i);
+    body.classList.toggle('show');
+    chev.classList.toggle('open');
+}
+
+function openEdit(i) {
+    editingIndex = i;
+    const r = allRecords[i];
+    document.getElementById('editModalTitle').textContent = `#${i + 1} を編集`;
+    document.getElementById('editInput').value = r.input || '';
+    document.getElementById('editOutput').value = r.output || '';
+    document.getElementById('editModal').style.display = 'flex';
+}
+
+function closeEditModal(e) {
+    if (e && e.target !== e.currentTarget) return;
+    document.getElementById('editModal').style.display = 'none';
+    editingIndex = -1;
+}
+
+async function saveEdit() {
+    if (editingIndex < 0) return;
+    const input = document.getElementById('editInput').value;
+    const output = document.getElementById('editOutput').value;
+    try {
+        const res = await fetch(API_URL, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json', 'X-CSRFToken': CSRF_TOKEN },
+            body: JSON.stringify({ action: 'update', index: editingIndex, input, output })
+        });
+        const data = await res.json();
+        if (data.ok) {
+            allRecords[editingIndex].input = input;
+            allRecords[editingIndex].output = output;
+            renderRecords();
+            closeEditModal();
+            showToast(data.message, 'success');
+        } else {
+            showToast(data.error || 'エラー', 'error');
+        }
+    } catch (err) {
+        showToast('通信エラー: ' + err.message, 'error');
     }
 }
 
-// 検索＆フィルタ
-document.addEventListener('DOMContentLoaded', function() {
-    const searchInput = document.getElementById('searchInput');
-    const genreFilter = document.getElementById('genreFilter');
-    const resultCount = document.getElementById('resultCount');
-    const cards = document.querySelectorAll('.record-card');
+function openDelete(i) {
+    deletingIndex = i;
+    const r = allRecords[i];
+    document.getElementById('deleteMessage').textContent = `#${i + 1} を本当に削除しますか？この操作は取り消せません。`;
+    document.getElementById('deletePreview').textContent = (r.input || '').substring(0, 200);
+    document.getElementById('deleteModal').style.display = 'flex';
+}
 
-    // ジャンル一覧を抽出
-    const genres = new Set();
-    cards.forEach(card => {
-        const badge = card.querySelector('.record-genre-badge');
-        if (badge) genres.add(badge.textContent.trim());
-    });
-    genres.forEach(g => {
-        const opt = document.createElement('option');
-        opt.value = g;
-        opt.textContent = g;
-        genreFilter.appendChild(opt);
-    });
+function closeDeleteModal(e) {
+    if (e && e.target !== e.currentTarget) return;
+    document.getElementById('deleteModal').style.display = 'none';
+    deletingIndex = -1;
+}
 
-    function filterCards() {
-        const query = searchInput.value.toLowerCase();
-        const genre = genreFilter.value.toLowerCase();
-        let visible = 0;
-
-        cards.forEach(card => {
-            const text = card.textContent.toLowerCase();
-            const cardGenre = card.querySelector('.record-genre-badge').textContent.trim().toLowerCase();
-            const matchQuery = !query || text.includes(query);
-            const matchGenre = !genre || cardGenre === genre;
-
-            if (matchQuery && matchGenre) {
-                card.style.display = '';
-                visible++;
-            } else {
-                card.style.display = 'none';
-            }
+async function confirmDelete() {
+    if (deletingIndex < 0) return;
+    try {
+        const res = await fetch(API_URL, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json', 'X-CSRFToken': CSRF_TOKEN },
+            body: JSON.stringify({ action: 'delete', index: deletingIndex })
         });
-
-        resultCount.textContent = query || genre ? `${visible} / {{ total_count }} 件表示` : '';
+        const data = await res.json();
+        if (data.ok) {
+            allRecords.splice(deletingIndex, 1);
+            renderRecords();
+            closeDeleteModal();
+            showToast(data.message, 'success');
+        } else {
+            showToast(data.error || 'エラー', 'error');
+        }
+    } catch (err) {
+        showToast('通信エラー: ' + err.message, 'error');
     }
+}
 
-    searchInput.addEventListener('input', filterCards);
-    genreFilter.addEventListener('change', filterCards);
+async function reloadData() {
+    try {
+        const res = await fetch(API_URL, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json', 'X-CSRFToken': CSRF_TOKEN },
+            body: JSON.stringify({ action: 'reload' })
+        });
+        const data = await res.json();
+        if (data.ok) {
+            allRecords = data.records;
+            renderRecords();
+            showToast(`最新データを読み込みました (${data.total}件)`, 'success');
+        } else {
+            showToast(data.error || 'エラー', 'error');
+        }
+    } catch (err) {
+        showToast('通信エラー: ' + err.message, 'error');
+    }
+}
+
+document.addEventListener('keydown', function(e) {
+    if (e.key === 'Escape') {
+        closeEditModal();
+        closeDeleteModal();
+    }
 });
+
+document.getElementById('searchInput').addEventListener('input', renderRecords);
+document.getElementById('genreFilter').addEventListener('change', renderRecords);
+
+renderRecords();
 </script>
 {% endblock %}
