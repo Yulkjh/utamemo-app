@@ -2931,6 +2931,7 @@ def training_api_status_json(request):
             'pending_command': s.pending_command,
             'training_type': s.training_type,
             'started_at': s.started_at.isoformat() if s.started_at else None,
+            'completed_at': s.completed_at.isoformat() if s.completed_at else None,
             'updated_at': s.updated_at.isoformat(),
         })
     return JsonResponse({'sessions': result})

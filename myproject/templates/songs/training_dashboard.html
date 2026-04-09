@@ -131,7 +131,7 @@
                     </div>
 
                     {% if session.gpu_memory_used and session.gpu_memory_total %}
-                    <div class="mt-2">
+                    <div class="mt-2 vram-section">
                         <small class="text-muted">VRAM:</small>
                         <div class="progress" style="height: 16px;">
                             <div class="progress-bar bg-info" style="width: {% widthratio session.gpu_memory_used session.gpu_memory_total 100 %}%">
@@ -210,6 +210,14 @@ document.querySelectorAll('.cmd-stop').forEach(btn => {
 // Auto-refresh: 10秒ごとにJSON APIからデータ取得
 (function() {
     const REFRESH_INTERVAL = 10000;
+    const STATUS_DISPLAY = {
+        'idle': 'Idle', 'loading': 'Loading Model', 'training': 'Training',
+        'saving': 'Saving', 'completed': 'Completed', 'failed': 'Failed'
+    };
+    const STATUS_HEADER_CLASS = {
+        'training': 'bg-success', 'loading': 'bg-success', 'saving': 'bg-success',
+        'completed': 'bg-primary', 'failed': 'bg-danger'
+    };
     
     function refreshData() {
         fetch("{% url 'songs:training_api_status' %}")
@@ -227,7 +235,15 @@ document.querySelectorAll('.cmd-stop').forEach(btn => {
                     const ac = card.querySelector('.accuracy');
                     if (ac) ac.textContent = s.accuracy ? s.accuracy.toFixed(1) + '%' : '-';
                     
+                    // Update model name
+                    const mn = card.querySelector('.model-name');
+                    if (mn) mn.textContent = s.model_name || 'N/A';
+                    
                     // Update progress
+                    const epochSection = card.querySelector('.epoch-progress');
+                    if (s.total_epochs > 0 || s.total_steps > 0) {
+                        if (epochSection) epochSection.style.display = '';
+                    }
                     const ce = card.querySelector('.current-epoch');
                     if (ce) ce.textContent = s.current_epoch;
                     const te = card.querySelector('.total-epochs');
@@ -243,21 +259,70 @@ document.querySelectorAll('.cmd-stop').forEach(btn => {
                         if (s.is_active) bar.classList.add('progress-bar-animated');
                         else bar.classList.remove('progress-bar-animated');
                     }
-                    // プログレスバーが無い場合(total_epochs=0で初期レンダリングされた場合)に追加
-                    if (!bar && s.total_steps > 0) {
-                        const epochSection = card.querySelector('.epoch-progress');
-                        if (epochSection) {
-                            epochSection.style.display = '';
-                            const newCe = epochSection.querySelector('.current-epoch');
-                            if (newCe) newCe.textContent = s.current_epoch;
-                            const newTe = epochSection.querySelector('.total-epochs');
-                            if (newTe) newTe.textContent = s.total_epochs;
+                    
+                    // Update card header color
+                    const header = card.querySelector('.card-header');
+                    if (header) {
+                        header.classList.remove('bg-success', 'bg-primary', 'bg-danger', 'bg-secondary');
+                        header.classList.add(s.is_active ? 'bg-success' : (STATUS_HEADER_CLASS[s.status] || 'bg-secondary'));
+                    }
+                    
+                    // Update status badge (display label)
+                    const badge = card.querySelector('.status-badge');
+                    if (badge) badge.textContent = STATUS_DISPLAY[s.status] || s.status;
+
+                    // Update GPU name badge
+                    const gpuBadges = card.querySelectorAll('.card-header .badge.bg-dark');
+                    if (s.gpu_name) {
+                        if (gpuBadges.length > 0) {
+                            gpuBadges[0].textContent = s.gpu_name;
+                        } else {
+                            const headerRight = card.querySelector('.card-header > div:last-child');
+                            if (headerRight) headerRight.insertAdjacentHTML('beforeend',
+                                `<span class="badge bg-dark ms-1">${s.gpu_name}</span>`);
+                        }
+                    }
+
+                    // Update VRAM
+                    const vramContainer = card.querySelector('.vram-section');
+                    if (s.gpu_memory_used && s.gpu_memory_total) {
+                        const pctVram = Math.round(s.gpu_memory_used / s.gpu_memory_total * 100);
+                        const vramHtml = `<small class="text-muted">VRAM:</small>
+                            <div class="progress" style="height: 16px;">
+                                <div class="progress-bar bg-info" style="width: ${pctVram}%">
+                                    ${s.gpu_memory_used.toFixed(1)} / ${s.gpu_memory_total.toFixed(1)} GB
+                                </div>
+                            </div>`;
+                        if (vramContainer) {
+                            vramContainer.innerHTML = vramHtml;
+                        } else {
+                            // 初期表示にVRAMが無かった場合、メトリクスの後に追加
+                            const metricsRow = card.querySelector('.row.text-center');
+                            if (metricsRow) {
+                                const div = document.createElement('div');
+                                div.className = 'mt-2 vram-section';
+                                div.innerHTML = vramHtml;
+                                metricsRow.parentNode.insertBefore(div, metricsRow.nextSibling);
+                            }
                         }
                     }
                     
-                    // Update status badge
-                    const badge = card.querySelector('.status-badge');
-                    if (badge) badge.textContent = s.status;
+                    // Update error message
+                    let errorAlert = card.querySelector('.alert-danger');
+                    if (s.error_message) {
+                        const truncated = s.error_message.length > 300 ? s.error_message.substring(0, 300) + '...' : s.error_message;
+                        if (errorAlert) {
+                            errorAlert.innerHTML = `<i class="bi bi-exclamation-triangle"></i> ${truncated}`;
+                        } else {
+                            const logTail = card.querySelector('.log-tail');
+                            if (logTail) {
+                                logTail.insertAdjacentHTML('afterend',
+                                    `<div class="alert alert-danger py-1 px-2 mt-1 mb-0" style="font-size: 0.8rem;"><i class="bi bi-exclamation-triangle"></i> ${truncated}</div>`);
+                            }
+                        }
+                    } else {
+                        if (errorAlert) errorAlert.remove();
+                    }
 
                     // Update command buttons based on status
                     const cmdDiv = card.querySelector('.command-buttons');
@@ -292,8 +357,8 @@ document.querySelectorAll('.cmd-stop').forEach(btn => {
                     const pendingBadge = card.querySelector('.pending-badge');
                     if (s.pending_command === 'start') {
                         if (!pendingBadge) {
-                            const header = card.querySelector('.card-header > div:last-child');
-                            if (header) header.insertAdjacentHTML('beforeend', '<span class="badge bg-warning text-dark ms-1 pending-badge">開始待ち...</span>');
+                            const headerRight = card.querySelector('.card-header > div:last-child');
+                            if (headerRight) headerRight.insertAdjacentHTML('beforeend', '<span class="badge bg-warning text-dark ms-1 pending-badge">開始待ち...</span>');
                         }
                     } else {
                         if (pendingBadge) pendingBadge.remove();
@@ -318,11 +383,23 @@ document.querySelectorAll('.cmd-stop').forEach(btn => {
                         log.scrollTop = log.scrollHeight;
                     }
                     
-                    // Update time
-                    const ua = card.querySelector('.updated-at');
-                    if (ua && s.updated_at) {
-                        const d = new Date(s.updated_at);
-                        ua.innerHTML = `<i class="bi bi-clock"></i> 最終更新: ${d.toLocaleTimeString('ja-JP')}`;
+                    // Update footer times
+                    const footerRow = card.querySelector('.row.mt-2 .col');
+                    if (footerRow) {
+                        let html = '';
+                        if (s.started_at) {
+                            const sd = new Date(s.started_at);
+                            html += `<span><i class="bi bi-play-circle"></i> 開始: ${sd.toLocaleDateString('ja-JP')} ${sd.toLocaleTimeString('ja-JP', {hour:'2-digit',minute:'2-digit'})}</span>`;
+                        }
+                        if (s.completed_at) {
+                            const cd = new Date(s.completed_at);
+                            html += `<span class="ms-3"><i class="bi bi-check-circle"></i> 完了: ${cd.toLocaleDateString('ja-JP')} ${cd.toLocaleTimeString('ja-JP', {hour:'2-digit',minute:'2-digit'})}</span>`;
+                        }
+                        if (s.updated_at) {
+                            const ud = new Date(s.updated_at);
+                            html += `<span class="ms-3 updated-at"><i class="bi bi-clock"></i> 最終更新: ${ud.toLocaleTimeString('ja-JP')}</span>`;
+                        }
+                        footerRow.innerHTML = html;
                     }
                 });
             })
