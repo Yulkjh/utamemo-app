@@ -588,6 +588,18 @@ def train(args):
 
     class ProgressCallback(TrainerCallback):
         """エポック完了時にログファイル・リモートダッシュボードへ書き出すコールバック"""
+        _last_stop_check_step = 0
+
+        def on_step_end(self, args, state, control, **kwargs):
+            # 10ステップごとに停止コマンドをチェック (サーバー負荷軽減)
+            if state.global_step - self._last_stop_check_step >= 10:
+                self._last_stop_check_step = state.global_step
+                cmd = reporter.send(status='training', current_step=state.global_step)
+                if cmd == 'stop':
+                    logger.info("停止コマンド受信 (on_step_end): 学習を中断します...")
+                    reporter.add_log("停止コマンドで学習中断")
+                    control.should_training_stop = True
+
         def on_log(self, args, state, control, logs=None, **kwargs):
             if logs:
                 parts = []

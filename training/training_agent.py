@@ -81,8 +81,11 @@ def get_python_exe():
     return sys.executable
 
 
-def run_subprocess(cmd, label="process"):
-    """サブプロセスを実行し出力をログに流す"""
+def run_subprocess(cmd, label="process", stop_checker=None):
+    """サブプロセスを実行し出力をログに流す
+    
+    stop_checker: 呼ぶと停止すべきかを返す callable (True=停止)
+    """
     script_dir = os.path.dirname(os.path.abspath(__file__))
     logger.info(f"{label} 開始: {' '.join(cmd)}")
     env = os.environ.copy()
@@ -99,16 +102,50 @@ def run_subprocess(cmd, label="process"):
         errors='replace',
     )
 
-    for line in process.stdout:
-        line = line.rstrip()
-        if line:
-            logger.info(f"  [{label}] {line}")
+    import selectors
+    sel = selectors.DefaultSelector()
+    sel.register(process.stdout, selectors.EVENT_READ)
+    last_stop_check = time.time()
 
-    process.wait()
+    try:
+        while process.poll() is None:
+            # 出力を読む (最大1秒待機)
+            events = sel.select(timeout=1.0)
+            for key, _ in events:
+                line = key.fileobj.readline()
+                if line:
+                    line = line.rstrip()
+                    if line:
+                        logger.info(f"  [{label}] {line}")
+
+            # 5秒ごとに停止チェック
+            now = time.time()
+            if stop_checker and now - last_stop_check >= 5:
+                last_stop_check = now
+                if stop_checker():
+                    logger.info(f"停止コマンド検出: {label} プロセスを終了します")
+                    process.terminate()
+                    try:
+                        process.wait(timeout=10)
+                    except subprocess.TimeoutExpired:
+                        logger.warning(f"{label} プロセスが応答しません。強制終了します")
+                        process.kill()
+                        process.wait()
+                    return -99  # 停止による終了
+
+        # 残りの出力を読む
+        for line in process.stdout:
+            line = line.rstrip()
+            if line:
+                logger.info(f"  [{label}] {line}")
+    finally:
+        sel.unregister(process.stdout)
+        sel.close()
+
     return process.returncode
 
 
-def run_data_generation(args):
+def run_data_generation(args, stop_checker=None):
     """Geminiで学習データを自動生成"""
     if not args.gemini_key:
         logger.warning("Gemini APIキー未設定、データ生成をスキップ")
@@ -124,10 +161,10 @@ def run_data_generation(args):
         '--random-count', str(args.gen_count),
     ]
 
-    return run_subprocess(cmd, label="datagen")
+    return run_subprocess(cmd, label="datagen", stop_checker=stop_checker)
 
 
-def run_training(args):
+def run_training(args, stop_checker=None):
     """歌詞LLMトレーニングを実行 (subprocess)"""
     script_dir = os.path.dirname(os.path.abspath(__file__))
     train_script = os.path.join(script_dir, 'train.py')
@@ -146,10 +183,10 @@ def run_training(args):
     ]
 
     logger.info(f"トレーニング開始: {' '.join(cmd)}")
-    return run_subprocess(cmd, label="train")
+    return run_subprocess(cmd, label="train", stop_checker=stop_checker)
 
 
-def run_importance_training(args):
+def run_importance_training(args, stop_checker=None):
     """ノート重要度LLMトレーニングを実行 (subprocess)"""
     script_dir = os.path.dirname(os.path.abspath(__file__))
     train_script = os.path.join(script_dir, 'note_importance', 'train_scorer.py')
@@ -170,7 +207,7 @@ def run_importance_training(args):
     ]
 
     logger.info(f"ノート重要度トレーニング開始: {' '.join(cmd)}")
-    return run_subprocess(cmd, label="importance-train")
+    return run_subprocess(cmd, label="importance-train", stop_checker=stop_checker)
 
 
 def main():
@@ -223,6 +260,14 @@ def main():
     auto_loop = False  # 一度開始されたら自動ループ
     current_training_type = 'lyrics'  # 現在の学習タイプ
 
+    def check_stop():
+        """サブプロセス実行中に停止コマンドをチェック (5秒ごとに呼ばれる)"""
+        try:
+            check_cmd, _ = send_status(args.report_url, args.api_key, status='training')
+            return check_cmd == 'stop'
+        except Exception:
+            return False
+
     while True:
         try:
             if not training_running:
@@ -251,13 +296,18 @@ def main():
                         if current_training_type == 'importance':
                             # ノート重要度LLM: データ生成なしで直接学習
                             logger.info("--- ノート重要度LLM 学習 ---")
-                            exit_code = run_importance_training(args)
+                            exit_code = run_importance_training(args, stop_checker=check_stop)
                         else:
                             # 歌詞LLM: データ生成 → 学習
                             # Step 1: Geminiで学習データを自動生成
                             if args.gemini_key:
                                 logger.info("--- Step 1/2: 学習データ生成 ---")
-                                gen_code = run_data_generation(args)
+                                gen_code = run_data_generation(args, stop_checker=check_stop)
+                                if gen_code == -99:
+                                    logger.info("停止コマンドでデータ生成を中断しました")
+                                    auto_loop = False
+                                    training_running = False
+                                    continue
                                 if gen_code != 0:
                                     logger.warning(f"データ生成に問題 (exit code: {gen_code}), 学習は既存データで続行")
                             else:
@@ -273,9 +323,13 @@ def main():
 
                             # Step 2: LoRA学習
                             logger.info("--- Step 2/2: LoRA学習 ---")
-                            exit_code = run_training(args)
+                            exit_code = run_training(args, stop_checker=check_stop)
 
-                        if exit_code == 0:
+                        if exit_code == -99:
+                            # 停止コマンドでプロセスが終了された
+                            logger.info("停止コマンドで学習を中断しました")
+                            auto_loop = False
+                        elif exit_code == 0:
                             # 学習完了後、停止コマンドが来ていたかチェック
                             check_cmd, _ = send_status(args.report_url, args.api_key, status='idle')
                             if check_cmd == 'stop':
