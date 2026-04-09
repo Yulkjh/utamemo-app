@@ -391,9 +391,9 @@ huggingface-cli login</code></pre>
                             <table class="table table-sm">
                                 <thead><tr><th>ワード</th><th>検出マーカー</th><th>スコア</th></tr></thead>
                                 <tbody>
-                                    <tr><td>織田信長</td><td><code>[red]</code> 赤字</td><td class="fw-bold text-danger">10.0</td></tr>
-                                    <tr><td>天下布武</td><td><code>[box]</code> 枠囲み</td><td class="fw-bold text-danger">9.0</td></tr>
-                                    <tr><td>桶狭間の戦い</td><td><code>[highlight]</code> 蛍光ペン</td><td class="fw-bold text-warning">7.0</td></tr>
+                                    <tr><td>天下布武</td><td><code>[box]</code> 枠囲み</td><td class="fw-bold text-danger">10.0</td></tr>
+                                    <tr><td>桶狭間の戦い</td><td><code>[highlight]</code> 蛍光ペン</td><td class="fw-bold text-danger">9.0</td></tr>
+                                    <tr><td>織田信長</td><td><code>[red]</code> 赤字</td><td class="fw-bold text-warning">8.0</td></tr>
                                     <tr><td>1534年</td><td><code>[underline]</code> 下線</td><td>6.0</td></tr>
                                     <tr><td>今川義元</td><td>なし (出現頻度で検出)</td><td>2.0</td></tr>
                                 </tbody>
@@ -526,16 +526,17 @@ python -m platform.app
             <h4 class="mb-0"><span class="badge" style="background: #0d6efd;">2</span> ノート重要度スコアリング</h4>
         </div>
         <div class="card-body">
-            <p>OCRテキストに以下のマーカーを付けると精度が上がります。</p>
+            <p>OCRテキストに以下のマーカーを付けると精度が上がります。<br>
+            <small class="text-muted">重み = 周囲とのコントラスト（視覚的な際立ち度）で決定。枠や蛍光ペンなど「面積で目立つ」装飾ほど高スコア。</small></p>
             <div class="row">
                 <div class="col-md-5">
                     <table class="table table-sm">
                         <thead><tr><th>マーカー</th><th>重み</th><th>意味</th></tr></thead>
                         <tbody>
-                            <tr><td><code>[red]...[/red]</code></td><td>10.0</td><td>赤字</td></tr>
-                            <tr><td><code>[box]...[/box]</code></td><td>9.0</td><td>枠囲み</td></tr>
-                            <tr><td><code>[bold]...[/bold]</code></td><td>8.0</td><td>太字</td></tr>
-                            <tr><td><code>[highlight]...[/highlight]</code></td><td>7.0</td><td>蛍光ペン</td></tr>
+                            <tr><td><code>[box]...[/box]</code></td><td>10.0</td><td>枠囲み</td></tr>
+                            <tr><td><code>[highlight]...[/highlight]</code></td><td>9.0</td><td>蛍光ペン</td></tr>
+                            <tr><td><code>[red]...[/red]</code></td><td>8.0</td><td>赤字</td></tr>
+                            <tr><td><code>[bold]...[/bold]</code></td><td>7.0</td><td>太字</td></tr>
                             <tr><td><code>[underline]...[/underline]</code></td><td>6.0</td><td>下線</td></tr>
                         </tbody>
                     </table>

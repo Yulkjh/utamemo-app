@@ -42,14 +42,15 @@ logger = logging.getLogger(__name__)
 #   [star]★マーク付き[/star]
 #   【】はそのまま (既存のbuild_importance_dataset.pyと互換)
 
+# 重み = 視覚コントラスト (周囲との際立ち度) が高いほど大きい
 VISUAL_MARKERS = {
-    "red":       {"pattern": r"\[red\](.*?)\[/red\]",             "weight": 10.0},
-    "bold":      {"pattern": r"\[bold\](.*?)\[/bold\]",           "weight": 8.0},
+    "box":       {"pattern": r"\[box\](.*?)\[/box\]",             "weight": 10.0},
+    "highlight": {"pattern": r"\[highlight\](.*?)\[/highlight\]", "weight": 9.0},
+    "red":       {"pattern": r"\[red\](.*?)\[/red\]",             "weight": 8.0},
+    "bold":      {"pattern": r"\[bold\](.*?)\[/bold\]",           "weight": 7.0},
     "underline": {"pattern": r"\[underline\](.*?)\[/underline\]", "weight": 6.0},
-    "highlight": {"pattern": r"\[highlight\](.*?)\[/highlight\]", "weight": 7.0},
-    "box":       {"pattern": r"\[box\](.*?)\[/box\]",             "weight": 9.0},
     "star":      {"pattern": r"\[star\](.*?)\[/star\]",           "weight": 5.0},
-    "bracket":   {"pattern": r"【(.*?)】",                        "weight": 8.0},
+    "bracket":   {"pattern": r"【(.*?)】",                        "weight": 7.0},
 }
 
 # 見出しパターン
