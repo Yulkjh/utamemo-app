@@ -2847,6 +2847,11 @@ def training_api_update(request):
         if field in allowed_fields:
             setattr(session, field, value)
 
+    # エラーでないステータスに変わったらerror_messageを自動クリア
+    if data.get('status') in ('idle', 'training', 'generating', 'completed'):
+        if 'error_message' not in data:
+            session.error_message = ''
+
     if data.get('status') == 'training' and not session.started_at:
         session.started_at = timezone.now()
     if data.get('status') in ('completed', 'failed') and not session.completed_at:
