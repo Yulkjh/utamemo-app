@@ -84,7 +84,7 @@
 
     <!-- 結果 -->
     <div id="resultArea" class="tm-result" style="display:none;">
-        <h2>🎵 Generated Song</h2>
+        <h2><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="vertical-align: -2px; margin-right: 4px;"><path d="M9 18V5l12-2v13"/><circle cx="6" cy="18" r="3"/><circle cx="18" cy="16" r="3"/></svg>Generated Song</h2>
         <div class="tm-player-wrap">
             <audio id="audioPlayer" controls class="tm-audio"></audio>
         </div>
@@ -437,7 +437,7 @@ async function pollStatus(taskId) {
         if (data.status === 'completed') {
             clearInterval(pollingTimer);
             document.getElementById('progressFill').style.width = '100%';
-            document.getElementById('statusText').textContent = '✅ 生成完了！';
+            document.getElementById('statusText').textContent = 'Complete — 生成完了';
 
             // 結果表示
             const player = document.getElementById('audioPlayer');

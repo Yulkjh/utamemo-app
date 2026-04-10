@@ -6,7 +6,7 @@
 <div class="td-container">
     {% if is_review_locked %}
     <div class="td-review-banner td-review-banner-locked">
-        <div class="td-review-banner-icon">🔒</div>
+        <div class="td-review-banner-icon"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0110 0v4"/></svg></div>
         <div class="td-review-banner-content">
             <strong>アカウントがロックされています</strong>
             <span>罰金3000円又は脱退でぇーす♡</span>
@@ -15,7 +15,7 @@
     </div>
     {% elif pending_reviews > 0 %}
     <div class="td-review-banner td-review-banner-warning">
-        <div class="td-review-banner-icon">⚠️</div>
+        <div class="td-review-banner-icon"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg></div>
         <div class="td-review-banner-content">
             <strong>レビュー義務があります</strong>
             <span>学習データの編集・削除があと <strong id="pendingCount">{{ pending_reviews }}</strong> 件 必要です。15件以上溜まるとアカウントがロックされます。</span>
@@ -157,10 +157,13 @@
     border: 1px solid rgba(245, 158, 11, 0.25);
 }
 .td-review-banner-icon {
-    font-size: 1.3rem;
     flex-shrink: 0;
-    margin-top: 0.1rem;
+    margin-top: 0.15rem;
+    display: flex;
+    align-items: center;
 }
+.td-review-banner-locked .td-review-banner-icon svg { stroke: #f87171; }
+.td-review-banner-warning .td-review-banner-icon svg { stroke: #fbbf24; }
 .td-review-banner-content {
     display: flex;
     flex-direction: column;
