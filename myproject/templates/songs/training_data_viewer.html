@@ -4,6 +4,24 @@
 
 {% block content %}
 <div class="td-container">
+    {% if is_review_locked %}
+    <div class="td-review-banner td-review-banner-locked">
+        <div class="td-review-banner-icon">🔒</div>
+        <div class="td-review-banner-content">
+            <strong>アカウントがロックされています</strong>
+            <span>レビュー未達成により他のページへのアクセスが制限されています。学習データの編集・削除を行い、残り <strong id="pendingCount">{{ pending_reviews }}</strong> 件を解消してください。</span>
+        </div>
+    </div>
+    {% elif pending_reviews > 0 %}
+    <div class="td-review-banner td-review-banner-warning">
+        <div class="td-review-banner-icon">⚠️</div>
+        <div class="td-review-banner-content">
+            <strong>レビュー義務があります</strong>
+            <span>学習データの編集・削除があと <strong id="pendingCount">{{ pending_reviews }}</strong> 件 必要です。15件以上溜まるとアカウントがロックされます。</span>
+        </div>
+    </div>
+    {% endif %}
+
     <div class="td-header">
         <div class="td-header-left">
             <h1>Training Data</h1>
@@ -115,6 +133,52 @@
 <div class="td-toast" id="toast"></div>
 
 <style>
+/* ── Review Banner ── */
+.td-review-banner {
+    display: flex;
+    align-items: flex-start;
+    gap: 0.8rem;
+    padding: 1rem 1.2rem;
+    border-radius: 0.6rem;
+    margin-bottom: 1.5rem;
+    animation: bannerSlideIn 0.3s ease;
+}
+@keyframes bannerSlideIn {
+    from { opacity: 0; transform: translateY(-8px); }
+    to { opacity: 1; transform: translateY(0); }
+}
+.td-review-banner-locked {
+    background: rgba(220, 38, 38, 0.12);
+    border: 1px solid rgba(220, 38, 38, 0.3);
+}
+.td-review-banner-warning {
+    background: rgba(245, 158, 11, 0.1);
+    border: 1px solid rgba(245, 158, 11, 0.25);
+}
+.td-review-banner-icon {
+    font-size: 1.3rem;
+    flex-shrink: 0;
+    margin-top: 0.1rem;
+}
+.td-review-banner-content {
+    display: flex;
+    flex-direction: column;
+    gap: 0.25rem;
+    font-size: 0.85rem;
+    line-height: 1.5;
+}
+.td-review-banner-locked .td-review-banner-content strong:first-child {
+    color: #f87171;
+}
+.td-review-banner-locked .td-review-banner-content span {
+    color: #fca5a5;
+}
+.td-review-banner-warning .td-review-banner-content strong:first-child {
+    color: #fbbf24;
+}
+.td-review-banner-warning .td-review-banner-content span {
+    color: #d4a44a;
+}
 /* ── Hide base chrome ── */
 .navbar-modern, .footer-modern { display: none !important; }
 main { padding-top: 0 !important; }
@@ -712,6 +776,7 @@ async function saveEdit() {
             renderRecords();
             closeEditModal();
             showToast(data.message, 'success');
+            updatePendingBanner(data.pending_reviews);
         } else {
             showToast(data.error || 'エラー', 'error');
         }
@@ -748,6 +813,7 @@ async function confirmDelete() {
             renderRecords();
             closeDeleteModal();
             showToast(data.message, 'success');
+            updatePendingBanner(data.pending_reviews);
         } else {
             showToast(data.error || 'エラー', 'error');
         }
@@ -871,6 +937,24 @@ document.addEventListener('keydown', function(e) {
         closePromptModal();
     }
 });
+
+// ── レビュー義務バナー更新 ──
+function updatePendingBanner(pendingReviews) {
+    if (pendingReviews === undefined || pendingReviews === null) return;
+    const el = document.getElementById('pendingCount');
+    if (el) {
+        el.textContent = pendingReviews;
+    }
+    // 0になったらバナーをフェードアウト
+    if (pendingReviews <= 0) {
+        const banner = document.querySelector('.td-review-banner');
+        if (banner) {
+            banner.style.transition = 'opacity 0.5s ease';
+            banner.style.opacity = '0';
+            setTimeout(() => banner.remove(), 500);
+        }
+    }
+}
 
 document.getElementById('searchInput').addEventListener('input', renderRecords);
 document.getElementById('genreFilter').addEventListener('change', renderRecords);

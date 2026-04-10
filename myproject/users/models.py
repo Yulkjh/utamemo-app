@@ -269,3 +269,51 @@ class User(AbstractUser):
 
     def __str__(self):
         return self.username
+
+
+class StaffReviewObligation(models.Model):
+    """スタッフの学習データレビュー義務を管理するモデル
+
+    - training-data ページに初回アクセスしたスタッフに自動作成
+    - 毎日 pending_reviews が +3 累積
+    - pending_reviews が 15 以上になると is_review_locked = True
+    - ロック中は training-data 以外のスタッフ機能にアクセス不可
+    - 編集 or 削除を行うと pending_reviews が -1
+    """
+    user = models.OneToOneField(
+        User,
+        on_delete=models.CASCADE,
+        related_name='review_obligation',
+        verbose_name='スタッフユーザー',
+    )
+    first_access_date = models.DateField(
+        verbose_name='初回アクセス日',
+        help_text='training-data ページに初めてアクセスした日',
+    )
+    pending_reviews = models.IntegerField(
+        default=0,
+        verbose_name='未処理レビュー数',
+        help_text='毎日 +3 累積。編集/削除で -1。',
+    )
+    is_review_locked = models.BooleanField(
+        default=False,
+        verbose_name='レビューロック',
+        help_text='True の場合、training-data 以外のスタッフ機能を制限',
+    )
+    last_checked_date = models.DateField(
+        verbose_name='最終累積チェック日',
+        help_text='日次タスクが最後に pending_reviews を加算した日',
+    )
+    last_reminder_sent = models.DateTimeField(
+        blank=True,
+        null=True,
+        verbose_name='最終リマインドメール送信日時',
+    )
+
+    class Meta:
+        verbose_name = 'スタッフレビュー義務'
+        verbose_name_plural = 'スタッフレビュー義務'
+
+    def __str__(self):
+        status = '🔒ロック' if self.is_review_locked else '✅通常'
+        return f'{self.user.username} - 未処理:{self.pending_reviews} {status}'

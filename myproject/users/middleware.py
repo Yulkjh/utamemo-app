@@ -1,7 +1,8 @@
 """
-ユーザーBAN（アカウント停止）ミドルウェア
+ユーザー制御ミドルウェア
 
-BANされたユーザーがアクセスした場合、強制ログアウトしてBAN通知ページへリダイレクトする。
+- BanCheckMiddleware: BANされたユーザーを強制ログアウト
+- StaffReviewLockMiddleware: レビュー未達成スタッフのアクセスを制限
 """
 
 from django.shortcuts import redirect
@@ -11,6 +12,56 @@ from django.urls import reverse
 import logging
 
 logger = logging.getLogger(__name__)
+
+
+class StaffReviewLockMiddleware:
+    """
+    レビュー義務ロック状態のスタッフを学習データページに制限するミドルウェア。
+    
+    StaffReviewObligation.is_review_locked == True のスタッフは
+    training-data 関連のページとログアウト以外アクセスできない。
+    """
+    
+    ALLOWED_PATHS = [
+        '/staff/training-data/',
+        '/api/training/data/',
+        '/static/',
+        '/media/',
+        '/accounts/logout/',
+        '/users/logout/',
+        '/admin/',
+    ]
+    
+    def __init__(self, get_response):
+        self.get_response = get_response
+    
+    def __call__(self, request):
+        if request.user.is_authenticated and getattr(request.user, 'is_staff', False):
+            path = request.path
+            if not any(path.startswith(allowed) for allowed in self.ALLOWED_PATHS):
+                try:
+                    from users.models import StaffReviewObligation
+                    obligation = StaffReviewObligation.objects.filter(
+                        user=request.user
+                    ).first()
+                    if obligation and obligation.is_review_locked:
+                        logger.warning(
+                            'レビューロック中スタッフがアクセス: user=%s, path=%s',
+                            request.user.username, path
+                        )
+                        messages.warning(
+                            request,
+                            '学習データのレビュー義務が未達成のためアクセスが制限されています。'
+                            '学習データページで編集・削除を行ってください。'
+                            ' / Your access is restricted due to pending training '
+                            'data reviews. Please complete your reviews.'
+                        )
+                        return redirect('/staff/training-data/')
+                except Exception:
+                    logger.exception('StaffReviewLockMiddleware でエラー')
+        
+        response = self.get_response(request)
+        return response
 
 
 class BanCheckMiddleware:

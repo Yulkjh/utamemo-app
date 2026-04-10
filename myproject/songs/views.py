@@ -2719,6 +2719,19 @@ def training_data_viewer(request):
     import json
     import re
     from pathlib import Path
+    from django.utils import timezone as _tz
+    from users.models import StaffReviewObligation
+
+    # --- スタッフレビュー義務: 初回アクセス記録 ---
+    today = _tz.localdate()
+    obligation, created = StaffReviewObligation.objects.get_or_create(
+        user=request.user,
+        defaults={
+            'first_access_date': today,
+            'pending_reviews': 0,
+            'last_checked_date': today,
+        },
+    )
 
     data_path = Path(__file__).resolve().parent.parent.parent / 'training' / 'data' / 'lyrics_training_data.json'
     records = []
@@ -2738,6 +2751,8 @@ def training_data_viewer(request):
         'total_count': len(records),
         'genre_counts': json.dumps(genre_counts, ensure_ascii=False),
         'page_title': '学習データ管理',
+        'pending_reviews': obligation.pending_reviews,
+        'is_review_locked': obligation.is_review_locked,
     })
 
 
@@ -2747,6 +2762,19 @@ def training_data_api(request):
     """学習データの編集・削除・追加API（管理者のみ）"""
     import json
     from pathlib import Path
+    from django.db.models import F as _F
+    from users.models import StaffReviewObligation
+
+    def _decrement_pending(user):
+        """編集/削除1回ごとに pending_reviews を -1（下限0）"""
+        updated = StaffReviewObligation.objects.filter(
+            user=user, pending_reviews__gt=0
+        ).update(pending_reviews=_F('pending_reviews') - 1)
+        if updated:
+            # ロック解除判定（15未満になったら解除）
+            StaffReviewObligation.objects.filter(
+                user=user, pending_reviews__lt=15, is_review_locked=True
+            ).update(is_review_locked=False)
 
     data_path = Path(__file__).resolve().parent.parent.parent / 'training' / 'data' / 'lyrics_training_data.json'
     if not data_path.exists():
@@ -2781,7 +2809,10 @@ def training_data_api(request):
         with open(data_path, 'w', encoding='utf-8') as f:
             json.dump(records, f, ensure_ascii=False, indent=2)
 
-        return JsonResponse({'ok': True, 'message': f'#{index + 1} を更新しました'})
+        _decrement_pending(request.user)
+        obligation = StaffReviewObligation.objects.filter(user=request.user).first()
+        pending = obligation.pending_reviews if obligation else 0
+        return JsonResponse({'ok': True, 'message': f'#{index + 1} を更新しました', 'pending_reviews': pending})
 
     elif action == 'delete':
         index = body.get('index')
@@ -2792,7 +2823,10 @@ def training_data_api(request):
         with open(data_path, 'w', encoding='utf-8') as f:
             json.dump(records, f, ensure_ascii=False, indent=2)
 
-        return JsonResponse({'ok': True, 'message': f'#{index + 1} を削除しました', 'total': len(records)})
+        _decrement_pending(request.user)
+        obligation = StaffReviewObligation.objects.filter(user=request.user).first()
+        pending = obligation.pending_reviews if obligation else 0
+        return JsonResponse({'ok': True, 'message': f'#{index + 1} を削除しました', 'total': len(records), 'pending_reviews': pending})
 
     elif action == 'reload':
         return JsonResponse({'ok': True, 'records': records, 'total': len(records)})
