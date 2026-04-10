@@ -1,0 +1,488 @@
+{% extends 'base.html' %}
+
+{% block title %}Mureka 楽曲生成テスト - UTAMEMO{% endblock %}
+
+{% block content %}
+<div class="tm-container">
+    <div class="tm-header">
+        <div class="tm-header-left">
+            <h1>Mureka Test</h1>
+            <span class="tm-status-dot {% if api_configured %}tm-dot-ok{% else %}tm-dot-off{% endif %}"></span>
+            <span class="tm-status-label">{{ api_configured|yesno:"API Connected,API未設定" }}</span>
+        </div>
+        <a href="{% url 'songs:llm_guide' %}" class="tm-btn tm-btn-back">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M19 12H5M12 19l-7-7 7-7"/></svg>
+            Portal
+        </a>
+    </div>
+
+    <!-- 入力フォーム -->
+    <div class="tm-grid">
+        <div class="tm-panel">
+            <h2>歌詞</h2>
+            <textarea id="lyricsInput" class="tm-textarea" rows="16" placeholder="[Verse 1]&#10;ここに歌詞を入力...&#10;&#10;[Chorus]&#10;サビの歌詞...">[Verse 1]
+本能寺の変 1582年
+明智光秀が 信長を襲う
+天下統一 目前だったのに
+炎の中で 歴史が変わる
+
+[Chorus]
+是非に及ばず 信長の最期
+光秀の野望 三日天下
+歴史の転換点 本能寺</textarea>
+        </div>
+
+        <div class="tm-panel tm-panel-settings">
+            <h2>設定</h2>
+
+            <label>タイトル</label>
+            <input type="text" id="titleInput" class="tm-input" value="Test Song" placeholder="楽曲タイトル">
+
+            <label>ジャンル</label>
+            <select id="genreSelect" class="tm-select">
+                <option value="pop">Pop</option>
+                <option value="rock">Rock</option>
+                <option value="hip-hop">Hip-Hop</option>
+                <option value="EDM">EDM</option>
+                <option value="jazz">Jazz</option>
+                <option value="R&B">R&B</option>
+                <option value="ballad">Ballad</option>
+                <option value="folk">Folk</option>
+                <option value="auto" selected>Auto (おまかせ)</option>
+            </select>
+
+            <label>ボーカル</label>
+            <select id="vocalSelect" class="tm-select">
+                <option value="female">Female</option>
+                <option value="male">Male</option>
+                <option value="female_cute">Female (Cute)</option>
+                <option value="female_cool">Female (Cool)</option>
+                <option value="male_high">Male (High)</option>
+                <option value="male_low">Male (Low)</option>
+                <option value="duet">Duet</option>
+                <option value="choir">Choir</option>
+                <option value="vocaloid_female">Vocaloid Female</option>
+                <option value="vocaloid_male">Vocaloid Male</option>
+            </select>
+
+            <label>Music Prompt <span class="tm-hint">(任意)</span></label>
+            <input type="text" id="promptInput" class="tm-input" placeholder="例: アップテンポ、ピアノ、爽やか">
+
+            <button id="generateBtn" class="tm-btn tm-btn-generate" onclick="startGeneration()" {% if not api_configured %}disabled{% endif %}>
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="5 3 19 12 5 21 5 3"/></svg>
+                Generate Song
+            </button>
+        </div>
+    </div>
+
+    <!-- ステータス -->
+    <div id="statusArea" class="tm-status-area" style="display:none;">
+        <div class="tm-progress-bar"><div class="tm-progress-fill" id="progressFill"></div></div>
+        <div class="tm-status-text" id="statusText">準備中...</div>
+        <div class="tm-prompt-used" id="promptUsed" style="display:none;"></div>
+    </div>
+
+    <!-- 結果 -->
+    <div id="resultArea" class="tm-result" style="display:none;">
+        <h2>🎵 Generated Song</h2>
+        <div class="tm-player-wrap">
+            <audio id="audioPlayer" controls class="tm-audio"></audio>
+        </div>
+        <div class="tm-result-info">
+            <div id="resultDuration" class="tm-info-item"></div>
+            <div id="resultPrompt" class="tm-info-item"></div>
+        </div>
+        <button class="tm-btn tm-btn-new" onclick="resetForm()">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 5v14M5 12h14"/></svg>
+            New Test
+        </button>
+    </div>
+
+    <!-- エラー -->
+    <div id="errorArea" class="tm-error" style="display:none;">
+        <span class="tm-error-icon">✕</span>
+        <span id="errorText"></span>
+    </div>
+</div>
+
+<style>
+.navbar-modern, .footer-modern { display: none !important; }
+main { padding-top: 0 !important; }
+body { background: #0d0d0d !important; }
+
+.tm-container {
+    max-width: 1100px;
+    margin: 0 auto;
+    padding: 2.5rem 1.5rem;
+    min-height: 100vh;
+}
+.tm-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 2rem;
+    padding-bottom: 1.5rem;
+    border-bottom: 1px solid #1a1a1a;
+}
+.tm-header-left {
+    display: flex;
+    align-items: center;
+    gap: 0.8rem;
+}
+.tm-header h1 {
+    font-size: 1.6rem;
+    font-weight: 700;
+    margin: 0;
+    background: linear-gradient(135deg, #ff7940, #ff5722);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+}
+.tm-status-dot {
+    width: 8px; height: 8px;
+    border-radius: 50%;
+    flex-shrink: 0;
+}
+.tm-dot-ok { background: #22c55e; box-shadow: 0 0 6px #22c55e80; }
+.tm-dot-off { background: #666; }
+.tm-status-label { color: #666; font-size: 0.8rem; }
+
+/* Grid */
+.tm-grid {
+    display: grid;
+    grid-template-columns: 1fr 320px;
+    gap: 1.5rem;
+    margin-bottom: 1.5rem;
+}
+@media (max-width: 768px) {
+    .tm-grid { grid-template-columns: 1fr; }
+}
+
+/* Panel */
+.tm-panel {
+    background: #111;
+    border: 1px solid #1a1a1a;
+    border-radius: 0.6rem;
+    padding: 1.2rem;
+}
+.tm-panel h2 {
+    font-size: 0.85rem;
+    font-weight: 600;
+    color: #888;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    margin: 0 0 0.8rem;
+}
+.tm-panel-settings label {
+    display: block;
+    font-size: 0.78rem;
+    font-weight: 600;
+    color: #777;
+    margin: 0.8rem 0 0.3rem;
+    text-transform: uppercase;
+    letter-spacing: 0.03em;
+}
+.tm-hint { color: #555; font-weight: 400; text-transform: none; }
+
+/* Inputs */
+.tm-textarea {
+    width: 100%;
+    background: #0d0d0d;
+    border: 1px solid #222;
+    border-radius: 0.5rem;
+    color: #ddd;
+    padding: 0.8rem;
+    font-family: 'SF Mono', 'Consolas', monospace;
+    font-size: 0.82rem;
+    line-height: 1.7;
+    resize: vertical;
+    outline: none;
+    box-sizing: border-box;
+}
+.tm-textarea:focus { border-color: #ff794050; }
+.tm-input, .tm-select {
+    width: 100%;
+    background: #0d0d0d;
+    border: 1px solid #222;
+    border-radius: 0.4rem;
+    color: #ddd;
+    padding: 0.5rem 0.7rem;
+    font-size: 0.82rem;
+    outline: none;
+    box-sizing: border-box;
+}
+.tm-input:focus, .tm-select:focus { border-color: #ff794050; }
+.tm-select { cursor: pointer; }
+
+/* Buttons */
+.tm-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.4rem;
+    padding: 0.5rem 0.9rem;
+    border: 1px solid #2a2a2a;
+    border-radius: 0.5rem;
+    background: #141414;
+    color: #999;
+    cursor: pointer;
+    font-size: 0.82rem;
+    font-weight: 500;
+    text-decoration: none;
+    transition: all 0.15s;
+}
+.tm-btn:hover { color: #fff; border-color: #444; background: #1a1a1a; }
+.tm-btn-back { color: #888; }
+
+.tm-btn-generate {
+    width: 100%;
+    margin-top: 1.2rem;
+    padding: 0.7rem;
+    justify-content: center;
+    font-size: 0.9rem;
+    font-weight: 600;
+    background: linear-gradient(135deg, #ff7940, #e8522a);
+    border: none;
+    color: #fff;
+}
+.tm-btn-generate:hover { filter: brightness(1.1); color: #fff; }
+.tm-btn-generate:disabled { opacity: 0.4; cursor: not-allowed; filter: none; }
+
+.tm-btn-new {
+    margin-top: 1rem;
+    background: #1a1a1a;
+    border-color: #333;
+    color: #ccc;
+}
+
+/* Status */
+.tm-status-area {
+    background: #111;
+    border: 1px solid #1a1a1a;
+    border-radius: 0.6rem;
+    padding: 1.2rem;
+    margin-bottom: 1.5rem;
+}
+.tm-progress-bar {
+    width: 100%;
+    height: 4px;
+    background: #1a1a1a;
+    border-radius: 2px;
+    overflow: hidden;
+    margin-bottom: 0.8rem;
+}
+.tm-progress-fill {
+    height: 100%;
+    width: 0%;
+    background: linear-gradient(90deg, #ff7940, #ff5722);
+    border-radius: 2px;
+    transition: width 0.5s ease;
+}
+.tm-status-text {
+    color: #aaa;
+    font-size: 0.85rem;
+}
+.tm-prompt-used {
+    margin-top: 0.5rem;
+    font-size: 0.75rem;
+    color: #555;
+    font-family: 'SF Mono', monospace;
+    word-break: break-all;
+}
+
+/* Result */
+.tm-result {
+    background: #111;
+    border: 1px solid #22c55e30;
+    border-radius: 0.6rem;
+    padding: 1.5rem;
+    margin-bottom: 1.5rem;
+}
+.tm-result h2 {
+    font-size: 1rem;
+    color: #eee;
+    margin: 0 0 1rem;
+}
+.tm-player-wrap { margin-bottom: 1rem; }
+.tm-audio {
+    width: 100%;
+    border-radius: 0.5rem;
+    outline: none;
+}
+.tm-result-info {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.8rem;
+}
+.tm-info-item {
+    font-size: 0.78rem;
+    color: #666;
+    background: #0d0d0d;
+    padding: 0.3rem 0.7rem;
+    border-radius: 0.3rem;
+    border: 1px solid #1a1a1a;
+}
+
+/* Error */
+.tm-error {
+    background: rgba(220, 38, 38, 0.1);
+    border: 1px solid rgba(220, 38, 38, 0.3);
+    border-radius: 0.6rem;
+    padding: 1rem 1.2rem;
+    color: #f87171;
+    font-size: 0.85rem;
+    display: flex;
+    align-items: center;
+    gap: 0.6rem;
+}
+.tm-error-icon { font-weight: 700; font-size: 1rem; }
+
+/* Generating animation */
+.tm-btn-generating {
+    pointer-events: none;
+    position: relative;
+    overflow: hidden;
+}
+.tm-btn-generating::after {
+    content: '';
+    position: absolute;
+    top: 0; left: -100%;
+    width: 200%; height: 100%;
+    background: linear-gradient(90deg, transparent, rgba(255,255,255,0.1), transparent);
+    animation: shimmer 1.5s infinite;
+}
+@keyframes shimmer {
+    100% { left: 100%; }
+}
+</style>
+
+<script>
+const CSRF_TOKEN = '{{ csrf_token }}';
+const SUBMIT_URL = '{% url "songs:test_mureka_submit" %}';
+const POLL_URL = '{% url "songs:test_mureka_poll" %}';
+let pollingTimer = null;
+let pollCount = 0;
+
+async function startGeneration() {
+    const lyrics = document.getElementById('lyricsInput').value.trim();
+    if (!lyrics || lyrics.length < 30) {
+        showError('歌詞を30文字以上入力してください');
+        return;
+    }
+
+    const btn = document.getElementById('generateBtn');
+    btn.disabled = true;
+    btn.innerHTML = '<span>Generating...</span>';
+    btn.classList.add('tm-btn-generating');
+
+    // Reset UI
+    document.getElementById('statusArea').style.display = 'block';
+    document.getElementById('resultArea').style.display = 'none';
+    document.getElementById('errorArea').style.display = 'none';
+    document.getElementById('progressFill').style.width = '5%';
+    document.getElementById('statusText').textContent = 'Mureka API に送信中...';
+
+    try {
+        const res = await fetch(SUBMIT_URL, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json', 'X-CSRFToken': CSRF_TOKEN },
+            body: JSON.stringify({
+                lyrics: lyrics,
+                title: document.getElementById('titleInput').value.trim() || 'Test Song',
+                genre: document.getElementById('genreSelect').value,
+                vocal_style: document.getElementById('vocalSelect').value,
+                music_prompt: document.getElementById('promptInput').value.trim(),
+            })
+        });
+        const data = await res.json();
+        if (data.success && data.task_id) {
+            document.getElementById('progressFill').style.width = '15%';
+            document.getElementById('statusText').textContent = `タスク送信完了 (ID: ${data.task_id.substring(0, 8)}...) — 楽曲生成中...`;
+            if (data.prompt_used) {
+                const el = document.getElementById('promptUsed');
+                el.textContent = 'Prompt: ' + data.prompt_used;
+                el.style.display = 'block';
+            }
+            // ポーリング開始
+            pollCount = 0;
+            pollingTimer = setInterval(() => pollStatus(data.task_id), 4000);
+        } else {
+            showError(data.error || '送信に失敗しました');
+            resetBtn();
+        }
+    } catch (e) {
+        showError('通信エラー: ' + e.message);
+        resetBtn();
+    }
+}
+
+async function pollStatus(taskId) {
+    pollCount++;
+    const maxPolls = 90; // ~6分
+
+    if (pollCount > maxPolls) {
+        clearInterval(pollingTimer);
+        showError('タイムアウト: 楽曲生成に時間がかかりすぎています');
+        resetBtn();
+        return;
+    }
+
+    // Progress bar animation
+    const progress = Math.min(15 + (pollCount / maxPolls) * 80, 95);
+    document.getElementById('progressFill').style.width = progress + '%';
+    document.getElementById('statusText').textContent = `楽曲生成中... (${pollCount * 4}秒経過)`;
+
+    try {
+        const res = await fetch(`${POLL_URL}?task_id=${taskId}`);
+        const data = await res.json();
+
+        if (data.status === 'completed') {
+            clearInterval(pollingTimer);
+            document.getElementById('progressFill').style.width = '100%';
+            document.getElementById('statusText').textContent = '✅ 生成完了！';
+
+            // 結果表示
+            const player = document.getElementById('audioPlayer');
+            player.src = data.audio_url;
+
+            document.getElementById('resultDuration').textContent =
+                data.duration ? `Duration: ${Math.round(data.duration)}s` : '';
+            document.getElementById('resultPrompt').textContent =
+                document.getElementById('promptUsed').textContent || '';
+
+            document.getElementById('resultArea').style.display = 'block';
+            resetBtn();
+
+        } else if (data.status === 'failed') {
+            clearInterval(pollingTimer);
+            showError(data.error || '楽曲生成に失敗しました');
+            resetBtn();
+
+        }
+        // else: still processing, continue polling
+    } catch (e) {
+        // Network error — don't stop polling yet
+        console.warn('Poll error:', e);
+    }
+}
+
+function showError(msg) {
+    document.getElementById('errorArea').style.display = 'flex';
+    document.getElementById('errorText').textContent = msg;
+}
+
+function resetBtn() {
+    const btn = document.getElementById('generateBtn');
+    btn.disabled = false;
+    btn.innerHTML = `<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="5 3 19 12 5 21 5 3"/></svg> Generate Song`;
+    btn.classList.remove('tm-btn-generating');
+}
+
+function resetForm() {
+    document.getElementById('statusArea').style.display = 'none';
+    document.getElementById('resultArea').style.display = 'none';
+    document.getElementById('errorArea').style.display = 'none';
+    document.getElementById('promptUsed').style.display = 'none';
+    document.getElementById('audioPlayer').src = '';
+    if (pollingTimer) clearInterval(pollingTimer);
+}
+</script>
+{% endblock %}

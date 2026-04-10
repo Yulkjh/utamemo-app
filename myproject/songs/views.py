@@ -3495,3 +3495,162 @@ def test_llm_generate(request):
         except Exception as e:
             logger.error(f"Test LLM (Local) error: {e}")
             return JsonResponse({'success': False, 'error': str(e)})
+
+
+# ═══════════════════════════════════════════════════════════════════
+# Mureka 楽曲生成テストページ（スタッフのみ）
+# ═══════════════════════════════════════════════════════════════════
+
+@staff_member_required
+def test_mureka_page(request):
+    """Mureka API 楽曲生成テストページ"""
+    from .ai_services import MurekaAIGenerator
+    generator = MurekaAIGenerator()
+    return render(request, 'songs/test_mureka.html', {
+        'api_configured': bool(generator.use_real_api and generator.api_key),
+    })
+
+
+@staff_member_required
+@require_POST
+def test_mureka_submit(request):
+    """Mureka API へ楽曲生成リクエストを送信（タスクID返却）"""
+    import requests as http_requests
+
+    try:
+        data = json.loads(request.body)
+    except (json.JSONDecodeError, ValueError):
+        return JsonResponse({'success': False, 'error': 'Invalid JSON'}, status=400)
+
+    lyrics = data.get('lyrics', '').strip()
+    if not lyrics or len(lyrics) < 30:
+        return JsonResponse({'success': False, 'error': '歌詞が短すぎます（30文字以上）'}, status=400)
+
+    genre = data.get('genre', 'pop')
+    vocal_style = data.get('vocal_style', 'female')
+    music_prompt = data.get('music_prompt', '')
+    title = data.get('title', 'Test Song')
+
+    api_key = getattr(settings, 'MUREKA_API_KEY', None)
+    base_url = getattr(settings, 'MUREKA_API_URL', 'https://api.mureka.ai')
+    use_api = getattr(settings, 'USE_MUREKA_API', False)
+
+    if not use_api or not api_key:
+        return JsonResponse({'success': False, 'error': 'Mureka API が未設定です'})
+
+    from .ai_services import MurekaAIGenerator
+    generator = MurekaAIGenerator()
+
+    # プロンプト構築（_generate_with_mureka_api と同じロジックの一部）
+    import random
+    is_auto_genre = not genre or genre.strip().lower() in ('', 'auto', 'おまかせ')
+    genre_en = genre if not is_auto_genre else ''
+
+    prompt_parts = []
+    if genre_en:
+        prompt_parts.append(genre_en)
+    if vocal_style:
+        prompt_parts.append(f'{vocal_style} vocal')
+    if music_prompt:
+        translated = generator._translate_prompt_to_english(music_prompt)
+        prompt_parts.append(translated)
+
+    full_prompt = ', '.join(prompt_parts)
+    full_prompt += ', short intro under 10 seconds, short outro under 10 seconds, start singing quickly'
+
+    # Mureka API に送信
+    headers = {
+        'Authorization': f'Bearer {api_key}',
+        'Content-Type': 'application/json',
+    }
+    payload = {
+        'lyrics': lyrics[:2500],
+        'model': 'auto',
+        'prompt': full_prompt,
+    }
+
+    try:
+        resp = http_requests.post(
+            f'{base_url}/v1/song/generate',
+            headers=headers,
+            json=payload,
+            timeout=60,
+        )
+        logger.info(f'[TEST-MUREKA] Submit status={resp.status_code} body={resp.text[:300]}')
+
+        if resp.status_code == 200:
+            result = resp.json()
+            task_id = result.get('id')
+            if task_id:
+                return JsonResponse({
+                    'success': True,
+                    'task_id': task_id,
+                    'prompt_used': full_prompt,
+                })
+            return JsonResponse({'success': False, 'error': 'タスクIDが返りませんでした'})
+        elif resp.status_code == 429:
+            return JsonResponse({'success': False, 'error': 'レート制限中です。しばらく待ってください。'})
+        else:
+            return JsonResponse({'success': False, 'error': f'API Error {resp.status_code}: {resp.text[:200]}'})
+
+    except http_requests.exceptions.Timeout:
+        return JsonResponse({'success': False, 'error': 'Mureka API タイムアウト（60秒）'})
+    except Exception as e:
+        logger.error(f'[TEST-MUREKA] Submit error: {e}')
+        return JsonResponse({'success': False, 'error': str(e)})
+
+
+@staff_member_required
+def test_mureka_poll(request):
+    """Mureka タスクステータスをポーリング"""
+    import requests as http_requests
+
+    task_id = request.GET.get('task_id')
+    if not task_id:
+        return JsonResponse({'error': 'task_id required'}, status=400)
+
+    api_key = getattr(settings, 'MUREKA_API_KEY', None)
+    base_url = getattr(settings, 'MUREKA_API_URL', 'https://api.mureka.ai')
+
+    headers = {
+        'Authorization': f'Bearer {api_key}',
+        'Content-Type': 'application/json',
+    }
+
+    try:
+        resp = http_requests.get(
+            f'{base_url}/v1/song/query/{task_id}',
+            headers=headers,
+            timeout=15,
+        )
+        if resp.status_code == 200:
+            result = resp.json()
+            status = result.get('status', 'unknown')
+
+            if status in ('completed', 'succeeded'):
+                choices = result.get('choices', [])
+                if choices:
+                    choice = choices[0]
+                    return JsonResponse({
+                        'status': 'completed',
+                        'audio_url': choice.get('url'),
+                        'duration': choice.get('duration'),
+                        'image_url': choice.get('image_url'),
+                    })
+                return JsonResponse({'status': 'failed', 'error': '楽曲データがありません'})
+
+            elif status in ('failed', 'error', 'cancelled'):
+                return JsonResponse({
+                    'status': 'failed',
+                    'error': result.get('error', result.get('message', status)),
+                })
+            else:
+                return JsonResponse({'status': status})
+        elif resp.status_code == 404:
+            return JsonResponse({'status': 'failed', 'error': 'タスクが見つかりません'})
+        else:
+            return JsonResponse({'status': 'error', 'error': f'HTTP {resp.status_code}'})
+
+    except Exception as e:
+        logger.error(f'[TEST-MUREKA] Poll error: {e}')
+        return JsonResponse({'status': 'error', 'error': str(e)})
