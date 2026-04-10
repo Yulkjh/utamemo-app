@@ -449,6 +449,7 @@ def main():
     if tunnel_url:
         status_kwargs['tunnel_url'] = tunnel_url
     send_status(args.report_url, args.api_key, **status_kwargs)
+    logger.info("初回ステータス送信完了 → ダッシュボードからの開始コマンドを待機します")
 
     training_running = False
     auto_loop = False  # 一度開始されたら自動ループ
@@ -468,11 +469,18 @@ def main():
         except Exception:
             return False
 
+    idle_poll_count = 0
+
     while True:
         try:
             if not training_running:
                 # サーバーにポーリング → コマンド取得
                 cmd, ttype = send_status(args.report_url, args.api_key, status='idle', error_message='')
+
+                idle_poll_count += 1
+                # 30回ごと(約5分)にアイドル中ログを出力
+                if idle_poll_count % 30 == 1:
+                    logger.info(f"ポーリング中... (コマンド待機中, 応答: {cmd})")
 
                 if cmd == 'stop':
                     # 停止コマンドは常に最優先
@@ -513,6 +521,7 @@ def main():
                         logger.info(f">>> 自動ループ: 次のサイクルを開始します (タイプ: {current_training_type})")
 
                     training_running = True
+                    idle_poll_count = 0
 
                     # 学習前に推論サーバーを停止してGPUメモリを解放
                     if serve_proc and serve_proc.poll() is None:
