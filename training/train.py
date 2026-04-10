@@ -36,6 +36,9 @@ try:
 except Exception:
     pass
 
+import warnings
+warnings.filterwarnings("ignore", message=".*triton.*")
+
 import torch
 
 # 注意: peft, trl, datasets, transformers のモデル系クラスは
