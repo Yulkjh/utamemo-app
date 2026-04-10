@@ -32,12 +32,11 @@ import logging
 import sys
 import time
 
-import torch
-
-# PyTorchがimport時に警告ハンドラを上書きするため、torch importの後に設定
+# PyTorch triton警告を抑制 (Windowsではtritonは利用不可、import torch中に発生するため前に配置)
 import warnings
 warnings.filterwarnings("ignore", message=".*triton.*")
 
+import torch
 from flask import Flask, request, jsonify
 from peft import PeftModel
 from transformers import AutoModelForCausalLM, AutoTokenizer, BitsAndBytesConfig

@@ -434,6 +434,9 @@ def main():
     current_training_type = 'lyrics'  # 現在の学習タイプ
     consecutive_errors = 0  # 連続エラー回数
     MAX_CONSECUTIVE_ERRORS = 3  # この回数連続失敗したら自動ループを停止
+    last_tunnel_check = time.time()
+    TUNNEL_CHECK_INTERVAL = 120  # 120秒ごとにトンネル健全性チェック
+    tunnel_fail_count = 0  # 連続トンネルチェック失敗回数
 
     def check_stop():
         """サブプロセス実行中に停止コマンドをチェック (5秒ごとに呼ばれる)"""
@@ -567,6 +570,56 @@ def main():
                             time.sleep(wait_time)
                     finally:
                         training_running = False
+
+            # トンネル健全性チェック (120秒ごと)
+            now = time.time()
+            if not args.no_serve and tunnel_url and now - last_tunnel_check >= TUNNEL_CHECK_INTERVAL:
+                last_tunnel_check = now
+                # 推論サーバーが死んでいたら再起動
+                if serve_proc and serve_proc.poll() is not None:
+                    logger.warning("推論サーバーが停止しています。再起動します...")
+                    serve_proc = start_inference_server()
+                    if serve_proc and serve_proc.poll() is None:
+                        if wait_for_server_ready(SERVE_PORT, timeout=300):
+                            if tunnel_proc and tunnel_proc.poll() is None:
+                                tunnel_proc.terminate()
+                            tunnel_proc, tunnel_url = start_cloudflare_tunnel(SERVE_PORT)
+                            if tunnel_url:
+                                send_status(args.report_url, args.api_key,
+                                            status='idle', tunnel_url=tunnel_url)
+                                tunnel_fail_count = 0
+                # トンネルの到達性チェック (プロセス生死 + HTTP到達性)
+                elif tunnel_proc:
+                    tunnel_dead = tunnel_proc.poll() is not None
+                    tunnel_unreachable = False
+                    if not tunnel_dead and tunnel_url:
+                        try:
+                            req = urllib.request.Request(f'{tunnel_url}/health', method='GET')
+                            with urllib.request.urlopen(req, timeout=10) as resp:
+                                if resp.status == 200:
+                                    tunnel_fail_count = 0  # 正常
+                        except Exception:
+                            tunnel_unreachable = True
+                    if tunnel_dead or tunnel_unreachable:
+                        tunnel_fail_count += 1
+                        reason = "プロセス停止" if tunnel_dead else "到達不能"
+                        logger.warning(f"トンネル{reason} (連続{tunnel_fail_count}回)")
+                        if tunnel_fail_count >= 2:
+                            logger.info("トンネルを再起動します...")
+                            if tunnel_proc.poll() is None:
+                                tunnel_proc.terminate()
+                                try:
+                                    tunnel_proc.wait(timeout=5)
+                                except subprocess.TimeoutExpired:
+                                    tunnel_proc.kill()
+                            tunnel_proc, tunnel_url = start_cloudflare_tunnel(SERVE_PORT)
+                            if tunnel_url:
+                                send_status(args.report_url, args.api_key,
+                                            status='idle', tunnel_url=tunnel_url)
+                                tunnel_fail_count = 0
+                                logger.info(f"トンネル再起動完了: {tunnel_url}")
+                            else:
+                                logger.warning("トンネル再起動失敗")
 
             time.sleep(POLL_INTERVAL)
 
