@@ -51,10 +51,8 @@ class StaffReviewLockMiddleware:
                         )
                         messages.warning(
                             request,
-                            '学習データのレビュー義務が未達成のためアクセスが制限されています。'
-                            '学習データページで編集・削除を行ってください。'
-                            ' / Your access is restricted due to pending training '
-                            'data reviews. Please complete your reviews.'
+                            '罰金3000円又は脱退でぇーす♡ '
+                            '学習データページでレビューを完了してください。'
                         )
                         return redirect('/staff/training-data/')
                 except Exception:
