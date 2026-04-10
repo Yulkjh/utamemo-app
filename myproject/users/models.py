@@ -317,3 +317,33 @@ class StaffReviewObligation(models.Model):
     def __str__(self):
         status = '🔒ロック' if self.is_review_locked else '✅通常'
         return f'{self.user.username} - 未処理:{self.pending_reviews} {status}'
+
+
+class TrainingDataReview(models.Model):
+    """学習データの個別レコードに対するレビュー済みマーク
+
+    スタッフが学習データを確認したことを記録する。
+    data_index は JSON 配列のインデックス (0-based)。
+    """
+    data_index = models.IntegerField(
+        verbose_name='データインデックス',
+        help_text='lyrics_training_data.json 内のインデックス (0-based)',
+    )
+    reviewer = models.ForeignKey(
+        User,
+        on_delete=models.CASCADE,
+        related_name='training_reviews',
+        verbose_name='レビュー者',
+    )
+    reviewed_at = models.DateTimeField(
+        auto_now_add=True,
+        verbose_name='レビュー日時',
+    )
+
+    class Meta:
+        verbose_name = '学習データレビュー'
+        verbose_name_plural = '学習データレビュー'
+        unique_together = ('data_index', 'reviewer')
+
+    def __str__(self):
+        return f'#{self.data_index + 1} reviewed by {self.reviewer.username}'

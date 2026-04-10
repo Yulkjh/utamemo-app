@@ -413,6 +413,34 @@ body { background: #0d0d0d !important; }
 }
 .td-card-actions .td-act-edit:hover { color: #4ecdc4; background: #4ecdc408; }
 .td-card-actions .td-act-delete:hover { color: #e74c3c; background: #e74c3c08; }
+.td-card-actions .td-act-review { color: #555; }
+.td-card-actions .td-act-review:hover { color: #22c55e; background: #22c55e10; }
+.td-card-actions .td-act-reviewed { color: #22c55e; background: #22c55e12; border-color: #22c55e30; }
+
+/* ── 確認済みバッジ ── */
+.td-reviewed-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.3rem;
+    font-size: 0.68rem;
+    font-weight: 600;
+    padding: 0.2rem 0.6rem;
+    border-radius: 1rem;
+    background: rgba(34, 197, 94, 0.1);
+    color: #4ade80;
+    border: 1px solid rgba(34, 197, 94, 0.2);
+    white-space: nowrap;
+    letter-spacing: 0.02em;
+    flex-shrink: 0;
+}
+.td-reviewed-badge.td-reviewed-mine {
+    background: rgba(34, 197, 94, 0.18);
+    color: #22c55e;
+    border-color: rgba(34, 197, 94, 0.35);
+}
+.td-card-reviewed {
+    border-color: rgba(34, 197, 94, 0.2);
+}
 .td-chevron {
     color: #333;
     transition: transform 0.2s;
@@ -647,6 +675,8 @@ const PROMPT_URL = '{% url "songs:training_prompt_api" %}';
 let allRecords = {{ records_json|safe }};
 let editingIndex = -1;
 let deletingIndex = -1;
+let reviewedMap = {{ reviewed_map_json|safe }};
+const CURRENT_USERNAME = '{{ current_username|escapejs }}';
 
 function extractGenre(instruction) {
     const m = (instruction || '').match(/から(\w+)ジャンルの歌詞/);
@@ -701,13 +731,23 @@ function renderRecords() {
         visible++;
 
         const preview = (r.input || '').substring(0, 100);
+        const reviewers = reviewedMap[String(i)] || [];
+        const isReviewedByMe = reviewers.includes(CURRENT_USERNAME);
+        const reviewBadge = reviewers.length > 0
+            ? `<span class="td-reviewed-badge ${isReviewedByMe ? 'td-reviewed-mine' : ''}">✓ ${reviewers.map(u => escapeHtml(u)).join(', ')}</span>`
+            : '';
+
         html += `
-        <div class="td-card" id="card-${i}">
+        <div class="td-card ${isReviewedByMe ? 'td-card-reviewed' : ''}" id="card-${i}">
             <div class="td-card-header" onclick="toggleCard(${i})">
                 <span class="td-card-num">#${i + 1}</span>
                 <span class="td-card-preview">${escapeHtml(preview)}</span>
+                ${reviewBadge}
                 <span class="td-card-genre">${escapeHtml(g)}</span>
                 <div class="td-card-actions" onclick="event.stopPropagation()">
+                    <button class="td-act-review ${isReviewedByMe ? 'td-act-reviewed' : ''}" onclick="toggleReview(${i})" title="${isReviewedByMe ? '確認取消' : '確認済みマーク'}">
+                        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M20 6L9 17l-5-5"/></svg>
+                    </button>
                     <button class="td-act-edit" onclick="openEdit(${i})" title="Edit">
                         <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M11 4H4a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 013 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
                     </button>
@@ -953,6 +993,33 @@ function updatePendingBanner(pendingReviews) {
             banner.style.opacity = '0';
             setTimeout(() => banner.remove(), 500);
         }
+    }
+}
+
+// ── 確認済みマーク切り替え ──
+async function toggleReview(index) {
+    const reviewers = reviewedMap[String(index)] || [];
+    const isReviewed = reviewers.includes(CURRENT_USERNAME);
+    const action = isReviewed ? 'unmark_reviewed' : 'mark_reviewed';
+    try {
+        const res = await fetch(API_URL, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json', 'X-CSRFToken': CSRF_TOKEN },
+            body: JSON.stringify({ action, index })
+        });
+        const data = await res.json();
+        if (data.ok) {
+            reviewedMap[String(index)] = data.reviewers || [];
+            renderRecords();
+            showToast(data.message, 'success');
+            if (data.pending_reviews !== undefined) {
+                updatePendingBanner(data.pending_reviews);
+            }
+        } else {
+            showToast(data.error || 'エラー', 'error');
+        }
+    } catch (err) {
+        showToast('通信エラー: ' + err.message, 'error');
     }
 }
 

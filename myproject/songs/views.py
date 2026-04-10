@@ -2746,6 +2746,13 @@ def training_data_viewer(request):
         g = m.group(1) if m else 'other'
         genre_counts[g] = genre_counts.get(g, 0) + 1
 
+    # レビュー済みマップ生成: { index: [username, ...] }
+    from users.models import TrainingDataReview
+    reviews_qs = TrainingDataReview.objects.select_related('reviewer').all()
+    reviewed_map = {}
+    for rv in reviews_qs:
+        reviewed_map.setdefault(rv.data_index, []).append(rv.reviewer.username)
+
     return render(request, 'songs/training_data_viewer.html', {
         'records_json': json.dumps(records, ensure_ascii=False),
         'total_count': len(records),
@@ -2753,6 +2760,8 @@ def training_data_viewer(request):
         'page_title': '学習データ管理',
         'pending_reviews': obligation.pending_reviews,
         'is_review_locked': obligation.is_review_locked,
+        'reviewed_map_json': json.dumps(reviewed_map, ensure_ascii=False),
+        'current_username': request.user.username,
     })
 
 
@@ -2830,6 +2839,43 @@ def training_data_api(request):
 
     elif action == 'reload':
         return JsonResponse({'ok': True, 'records': records, 'total': len(records)})
+
+    elif action == 'mark_reviewed':
+        index = body.get('index')
+        if not isinstance(index, int) or index < 0 or index >= len(records):
+            return JsonResponse({'error': 'Invalid index'}, status=400)
+        from users.models import TrainingDataReview
+        _, created = TrainingDataReview.objects.get_or_create(
+            data_index=index,
+            reviewer=request.user,
+        )
+        _decrement_pending(request.user)
+        obligation = StaffReviewObligation.objects.filter(user=request.user).first()
+        pending = obligation.pending_reviews if obligation else 0
+        # このレコードの全レビュー情報を返す
+        reviews = list(TrainingDataReview.objects.filter(data_index=index).select_related('reviewer').values_list('reviewer__username', flat=True))
+        return JsonResponse({
+            'ok': True,
+            'message': f'#{index + 1} を確認済みにしました' if created else f'#{index + 1} は既に確認済みです',
+            'pending_reviews': pending,
+            'reviewers': reviews,
+        })
+
+    elif action == 'unmark_reviewed':
+        index = body.get('index')
+        if not isinstance(index, int) or index < 0 or index >= len(records):
+            return JsonResponse({'error': 'Invalid index'}, status=400)
+        from users.models import TrainingDataReview
+        deleted, _ = TrainingDataReview.objects.filter(
+            data_index=index,
+            reviewer=request.user,
+        ).delete()
+        reviews = list(TrainingDataReview.objects.filter(data_index=index).select_related('reviewer').values_list('reviewer__username', flat=True))
+        return JsonResponse({
+            'ok': True,
+            'message': f'#{index + 1} の確認を取り消しました',
+            'reviewers': reviews,
+        })
 
     else:
         return JsonResponse({'error': f'Unknown action: {action}'}, status=400)
