@@ -69,6 +69,27 @@ def send_status(report_url, api_key, **kwargs):
         return 'none', 'lyrics'
 
 
+def fetch_reviewed_indices(report_url, api_key):
+    """サーバーからレビュー済みデータインデックスを取得"""
+    if not report_url or not api_key:
+        return None
+    try:
+        base_url = report_url.rsplit('/api/training/update', 1)[0]
+        url = f"{base_url}/api/training/reviewed/"
+        req = urllib.request.Request(
+            url,
+            headers={'X-Training-Api-Key': api_key},
+            method='GET',
+        )
+        with urllib.request.urlopen(req, timeout=15) as resp:
+            data = json.loads(resp.read().decode('utf-8'))
+            indices = frozenset(data.get('reviewed_indices', []))
+            return indices
+    except Exception as e:
+        logger.warning(f"レビュー済みインデックス取得失敗: {e}")
+        return None
+
+
 def get_python_exe():
     """Python実行ファイルを決定"""
     script_dir = os.path.dirname(os.path.abspath(__file__))
@@ -437,6 +458,7 @@ def main():
     last_tunnel_check = time.time()
     TUNNEL_CHECK_INTERVAL = 120  # 120秒ごとにトンネル健全性チェック
     tunnel_fail_count = 0  # 連続トンネルチェック失敗回数
+    last_trained_indices = None  # 前回学習に使ったレビュー済みインデックス
 
     def check_stop():
         """サブプロセス実行中に停止コマンドをチェック (5秒ごとに呼ばれる)"""
@@ -513,27 +535,24 @@ def main():
                         logger.info("推論サーバー停止完了")
 
                     try:
+                        # レビュー済みデータの変化チェック (自動ループ時)
+                        if auto_loop and current_training_type == 'lyrics':
+                            current_indices = fetch_reviewed_indices(args.report_url, args.api_key)
+                            if current_indices is not None and current_indices == last_trained_indices:
+                                logger.info("レビュー済みデータに変化なし → 自動ループを停止します")
+                                auto_loop = False
+                                training_running = False
+                                send_status(args.report_url, args.api_key,
+                                            status='idle', error_message='レビュー済みデータ消費完了 (新しいレビューを追加してください)')
+                                continue
+
                         if current_training_type == 'importance':
-                            # ノート重要度LLM: データ生成なしで直接学習
+                            # ノート重要度LLM: 直接学習
                             logger.info("--- ノート重要度LLM 学習 ---")
                             exit_code = run_importance_training(args, stop_checker=check_stop)
                         else:
-                            # 歌詞LLM: データ生成 → 学習
-                            # Step 1: Geminiで学習データを自動生成
-                            if args.gemini_key:
-                                logger.info("--- Step 1/2: 学習データ生成 ---")
-                                gen_code = run_data_generation(args, stop_checker=check_stop)
-                                if gen_code == -99:
-                                    logger.info("停止コマンドでデータ生成を中断しました")
-                                    auto_loop = False
-                                    training_running = False
-                                    continue
-                                if gen_code != 0:
-                                    logger.warning(f"データ生成に問題 (exit code: {gen_code}), 学習は既存データで続行")
-                            else:
-                                logger.info("データ生成スキップ (Gemini APIキー未設定)")
-
-                            # Step 1.5: 停止コマンドが来ていないかチェック
+                            # 歌詞LLM: レビュー済みデータのみで学習
+                            # 停止コマンドチェック
                             check_cmd, _ = send_status(args.report_url, args.api_key, status='training')
                             if check_cmd == 'stop':
                                 logger.info("停止コマンド受信: 学習をスキップしてアイドルに戻ります")
@@ -541,9 +560,14 @@ def main():
                                 training_running = False
                                 continue
 
-                            # Step 2: LoRA学習
-                            logger.info("--- Step 2/2: LoRA学習 ---")
+                            logger.info("--- LoRA学習 (レビュー済みデータのみ) ---")
                             exit_code = run_training(args, stop_checker=check_stop)
+
+                            # 学習に使ったインデックスを記録
+                            if exit_code == 0:
+                                trained = fetch_reviewed_indices(args.report_url, args.api_key)
+                                if trained is not None:
+                                    last_trained_indices = trained
 
                         if exit_code == -99:
                             # 停止コマンドでプロセスが終了された
