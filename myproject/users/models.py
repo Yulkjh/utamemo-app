@@ -324,6 +324,7 @@ class TrainingDataReview(models.Model):
 
     スタッフが学習データを確認したことを記録する。
     data_index は JSON 配列のインデックス (0-based)。
+    trained_at が設定されると「学習済み」として二重学習を防止。
     """
     data_index = models.IntegerField(
         verbose_name='データインデックス',
@@ -338,6 +339,12 @@ class TrainingDataReview(models.Model):
     reviewed_at = models.DateTimeField(
         auto_now_add=True,
         verbose_name='レビュー日時',
+    )
+    trained_at = models.DateTimeField(
+        null=True,
+        blank=True,
+        verbose_name='学習完了日時',
+        help_text='このデータが学習に使用された日時（null=未学習）',
     )
 
     class Meta:

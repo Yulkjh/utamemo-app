@@ -2748,8 +2748,11 @@ def training_data_viewer(request):
     from users.models import TrainingDataReview
     reviews_qs = TrainingDataReview.objects.select_related('reviewer').all()
     reviewed_map = {}
+    trained_indices = set()
     for rv in reviews_qs:
         reviewed_map.setdefault(rv.data_index, []).append(rv.reviewer.username)
+        if rv.trained_at is not None:
+            trained_indices.add(rv.data_index)
 
     return render(request, 'songs/training_data_viewer.html', {
         'records_json': json.dumps(records, ensure_ascii=False),
@@ -2759,6 +2762,7 @@ def training_data_viewer(request):
         'pending_reviews': obligation.pending_reviews,
         'is_review_locked': obligation.is_review_locked,
         'reviewed_map_json': json.dumps(reviewed_map, ensure_ascii=False),
+        'trained_indices_json': json.dumps(sorted(trained_indices)),
         'current_username': request.user.username,
     })
 
@@ -3163,7 +3167,11 @@ def training_api_update(request):
 
 @csrf_exempt
 def training_reviewed_indices(request):
-    """レビュー済みデータインデックスを返すAPIエンドポイント（APIキー認証）"""
+    """レビュー済み（未学習）データインデックスを返すAPIエンドポイント（APIキー認証）
+
+    trained_at が null のもののみ返す → 二重学習防止。
+    POST で indices を送ると学習済みマークを付ける (mark_trained)。
+    """
     from .models import TrainingSession
     from users.models import TrainingDataReview
 
@@ -3176,9 +3184,32 @@ def training_reviewed_indices(request):
     except TrainingSession.DoesNotExist:
         return JsonResponse({'error': 'Invalid API key'}, status=403)
 
-    # レビュー済みインデックス（1人以上がレビューしたもの）
+    # POST: 学習完了後に trained_at をセット
+    if request.method == 'POST':
+        import json as _json
+        try:
+            body = _json.loads(request.body)
+        except (ValueError, TypeError):
+            return JsonResponse({'error': 'Invalid JSON'}, status=400)
+
+        indices = body.get('trained_indices', [])
+        if not isinstance(indices, list):
+            return JsonResponse({'error': 'trained_indices must be a list'}, status=400)
+
+        now = timezone.now()
+        updated = TrainingDataReview.objects.filter(
+            data_index__in=indices,
+            trained_at__isnull=True,
+        ).update(trained_at=now)
+
+        logger.info('学習済みマーク: %d 件 (indices=%s)', updated, indices)
+        return JsonResponse({'ok': True, 'marked': updated})
+
+    # GET: レビュー済み かつ 未学習 のインデックスのみ返す
     reviewed = list(
-        TrainingDataReview.objects.values_list('data_index', flat=True).distinct()
+        TrainingDataReview.objects.filter(
+            trained_at__isnull=True,
+        ).values_list('data_index', flat=True).distinct()
     )
     return JsonResponse({'ok': True, 'reviewed_indices': sorted(set(reviewed))})
 

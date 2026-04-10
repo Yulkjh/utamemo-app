@@ -75,7 +75,7 @@ def send_status(report_url, api_key, **kwargs):
 
 
 def fetch_reviewed_indices(report_url, api_key):
-    """サーバーからレビュー済みデータインデックスを取得"""
+    """サーバーからレビュー済み（未学習）データインデックスを取得"""
     if not report_url or not api_key:
         return None
     try:
@@ -93,6 +93,33 @@ def fetch_reviewed_indices(report_url, api_key):
     except Exception as e:
         logger.warning(f"レビュー済みインデックス取得失敗: {e}")
         return None
+
+
+def mark_trained(report_url, api_key, indices):
+    """学習完了後、使用したインデックスを学習済みとしてサーバーに通知"""
+    if not report_url or not api_key or not indices:
+        return False
+    try:
+        base_url = report_url.rsplit('/api/training/update', 1)[0]
+        url = f"{base_url}/api/training/reviewed/"
+        payload = json.dumps({'trained_indices': sorted(indices)}).encode('utf-8')
+        req = urllib.request.Request(
+            url,
+            data=payload,
+            headers={
+                'X-Training-Api-Key': api_key,
+                'Content-Type': 'application/json',
+            },
+            method='POST',
+        )
+        with urllib.request.urlopen(req, timeout=15) as resp:
+            data = json.loads(resp.read().decode('utf-8'))
+            marked = data.get('marked', 0)
+            logger.info(f"学習済みマーク完了: {marked} 件")
+            return True
+    except Exception as e:
+        logger.warning(f"学習済みマーク失敗: {e}")
+        return False
 
 
 def get_python_exe():
@@ -575,13 +602,16 @@ def main():
                                 continue
 
                             logger.info("--- LoRA学習 (レビュー済みデータのみ) ---")
+                            # 学習前にレビュー済みインデックスを取得（学習後のマーク用）
+                            pre_train_indices = fetch_reviewed_indices(args.report_url, args.api_key)
                             exit_code = run_training(args, stop_checker=check_stop)
 
-                            # 学習に使ったインデックスを記録
+                            # 学習に使ったインデックスを記録 + 学習済みマーク
                             if exit_code == 0:
-                                trained = fetch_reviewed_indices(args.report_url, args.api_key)
-                                if trained is not None:
-                                    last_trained_indices = trained
+                                if pre_train_indices is not None:
+                                    last_trained_indices = pre_train_indices
+                                    # サーバーに学習済みマークを送信
+                                    mark_trained(args.report_url, args.api_key, pre_train_indices)
 
                         if exit_code == -99:
                             # 停止コマンドでプロセスが終了された
