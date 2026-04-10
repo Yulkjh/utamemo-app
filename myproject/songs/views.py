@@ -3191,13 +3191,18 @@ def training_send_command(request):
 
     session_id = request.POST.get('session_id')
     command = request.POST.get('command', '')
-    if command not in ('start', 'stop', 'start_serve'):
+    if command not in ('start', 'stop', 'start_serve', 'wol'):
         return JsonResponse({'error': 'Invalid command'}, status=400)
 
     try:
         session = TrainingSession.objects.get(id=session_id)
     except TrainingSession.DoesNotExist:
         return JsonResponse({'error': 'Session not found'}, status=404)
+
+    # WoLコマンド: マジックパケット送信してPCを起こす
+    if command == 'wol':
+        result = _send_wol_packet(session)
+        return JsonResponse(result)
 
     session.pending_command = command
     if command == 'start':
@@ -3210,6 +3215,50 @@ def training_send_command(request):
     else:
         session.save(update_fields=['pending_command'])
     return JsonResponse({'ok': True, 'command': command})
+
+
+def _send_wol_packet(session):
+    """Wake-on-LANマジックパケットを送信"""
+    import re as re_mod
+    import socket
+    import struct
+
+    mac = session.wol_mac_address.strip()
+    target = session.wol_target_host.strip()
+
+    if not mac:
+        return {'ok': False, 'error': 'MACアドレスが未設定です (Adminで設定してください)'}
+
+    # MACアドレスの検証・正規化
+    mac_clean = re_mod.sub(r'[:\-]', '', mac)
+    if not re_mod.match(r'^[0-9A-Fa-f]{12}$', mac_clean):
+        return {'ok': False, 'error': f'無効なMACアドレス: {mac}'}
+
+    # マジックパケット構築: FF x 6 + MAC x 16
+    mac_bytes = bytes.fromhex(mac_clean)
+    magic_packet = b'\xff' * 6 + mac_bytes * 16
+
+    try:
+        # ブロードキャスト送信 (ローカルネットワーク or ルーター経由)
+        sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+        sock.setsockopt(socket.SOL_SOCKET, socket.SO_BROADCAST, 1)
+        sock.settimeout(5)
+
+        if target:
+            # DDNSホスト名/グローバルIP → ルーターのWoLポートフォワード先へ送信
+            dest = (target, 9)
+        else:
+            # ローカルブロードキャスト
+            dest = ('255.255.255.255', 9)
+
+        sock.sendto(magic_packet, dest)
+        sock.close()
+
+        logger.info(f"WoL packet sent to {mac} via {dest[0]}:{dest[1]}")
+        return {'ok': True, 'message': f'WoLパケットを {mac} に送信しました'}
+    except Exception as e:
+        logger.error(f"WoL send failed: {e}")
+        return {'ok': False, 'error': f'送信失敗: {str(e)}'}
 
 
 @staff_member_required
@@ -3242,6 +3291,7 @@ def training_api_status_json(request):
             'is_active': s.is_active,
             'pending_command': s.pending_command,
             'training_type': s.training_type,
+            'wol_mac_address': s.wol_mac_address,
             'started_at': s.started_at.isoformat() if s.started_at else None,
             'completed_at': s.completed_at.isoformat() if s.completed_at else None,
             'updated_at': s.updated_at.isoformat(),

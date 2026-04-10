@@ -33,6 +33,11 @@ import sys
 import time
 
 import torch
+
+# PyTorchがimport時に警告ハンドラを上書きするため、torch importの後に設定
+import warnings
+warnings.filterwarnings("ignore", message=".*triton.*")
+
 from flask import Flask, request, jsonify
 from peft import PeftModel
 from transformers import AutoModelForCausalLM, AutoTokenizer, BitsAndBytesConfig

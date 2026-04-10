@@ -100,6 +100,12 @@
                     <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><polygon points="5,3 19,12 5,21"/></svg>
                     トレーニング開始
                 </button>
+                {% if session.wol_mac_address %}
+                <button class="tm-btn tm-btn-wol cmd-wol" data-session="{{ session.id }}">
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18.36 6.64a9 9 0 11-12.73 0"/><line x1="12" y1="2" x2="12" y2="12"/></svg>
+                    PC起動
+                </button>
+                {% endif %}
                 {% endif %}
             </div>
 
@@ -306,6 +312,14 @@ body { background: #0d0d0d !important; }
     font-weight: 600;
 }
 .tm-btn-stop:hover { opacity: 0.88; color: #fff; }
+.tm-btn-wol {
+    background: linear-gradient(135deg, #f59e0b, #d97706);
+    border: none;
+    color: #fff;
+    font-weight: 600;
+}
+.tm-btn-wol:hover { opacity: 0.88; color: #fff; }
+.tm-btn-wol:disabled { opacity: 0.4; cursor: not-allowed; }
 
 /* ── Empty State ── */
 .tm-empty {
@@ -699,7 +713,10 @@ function sendCommand(sessionId, command, trainingType) {
         headers: {'X-CSRFToken': '{{ csrf_token }}'},
         body: form
     }).then(r => r.json()).then(data => {
-        if (data.ok) {
+        if (command === 'wol') {
+            alert(data.ok ? (data.message || 'WoLパケット送信完了') : ('エラー: ' + (data.error || 'unknown')));
+            location.reload();
+        } else if (data.ok) {
             location.reload();
         } else {
             alert('Error: ' + (data.error || 'unknown'));
@@ -719,6 +736,13 @@ document.querySelectorAll('.cmd-stop').forEach(btn => {
         if (confirm('トレーニングを停止しますか？')) {
             sendCommand(btn.dataset.session, 'stop');
         }
+    });
+});
+document.querySelectorAll('.cmd-wol').forEach(btn => {
+    btn.addEventListener('click', () => {
+        btn.disabled = true;
+        btn.textContent = '送信中...';
+        sendCommand(btn.dataset.session, 'wol');
     });
 });
 
@@ -875,12 +899,19 @@ document.querySelectorAll('.cmd-stop').forEach(btn => {
                                         <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M2 3h6a4 4 0 014 4v14a3 3 0 00-3-3H2z"/><path d="M22 3h-6a4 4 0 00-4 4v14a3 3 0 013-3h7z"/></svg> ノート重要度LLM</label>
                                 </div>
                                 <button class="tm-btn tm-btn-start cmd-start" data-session="${s.id}" ${disabled}>
-                                    <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><polygon points="5,3 19,12 5,21"/></svg> トレーニング開始</button>`;
+                                    <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><polygon points="5,3 19,12 5,21"/></svg> トレーニング開始</button>
+                                ${s.wol_mac_address ? `<button class="tm-btn tm-btn-wol cmd-wol" data-session="${s.id}"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18.36 6.64a9 9 0 11-12.73 0"/><line x1="12" y1="2" x2="12" y2="12"/></svg> PC起動</button>` : ''}`;
                             const startBtn = cmdDiv.querySelector('.cmd-start');
                             if (startBtn) startBtn.addEventListener('click', function() {
                                 const sid = this.dataset.session;
                                 const checked = document.querySelector(`input[name="ttype-${sid}"]:checked`);
                                 sendCommand(sid, 'start', checked ? checked.value : 'lyrics');
+                            });
+                            const wolBtn = cmdDiv.querySelector('.cmd-wol');
+                            if (wolBtn) wolBtn.addEventListener('click', function() {
+                                this.disabled = true;
+                                this.textContent = '送信中...';
+                                sendCommand(this.dataset.session, 'wol');
                             });
                         }
                     }

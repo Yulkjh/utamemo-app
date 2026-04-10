@@ -760,6 +760,10 @@ class TrainingSession(models.Model):
     updated_at = models.DateTimeField(auto_now=True, verbose_name='最終更新')
     created_at = models.DateTimeField(auto_now_add=True, verbose_name='作成日時')
     api_key = models.CharField(max_length=64, unique=True, verbose_name='APIキー')
+    wol_mac_address = models.CharField(max_length=17, blank=True, verbose_name='WoL MACアドレス',
+                                       help_text='例: 04:7C:16:4D:E2:69')
+    wol_target_host = models.CharField(max_length=255, blank=True, verbose_name='WoL送信先ホスト',
+                                       help_text='DDNSホスト名またはグローバルIP')
 
     class Meta:
         verbose_name = 'トレーニングセッション'

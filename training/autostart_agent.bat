@@ -28,6 +28,10 @@ if "%API_KEY%"=="" (
     pause
     exit /b 1
 )
+
+REM --- serve.py 用に環境変数をセット ---
+set UTAMEMO_API_KEY=%API_KEY%
+set GEMINI_API_KEY=%GEMINI_KEY%
 REM ===========================================================
 
 cd /d "%PROJECT_DIR%"
