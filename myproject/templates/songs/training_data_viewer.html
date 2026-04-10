@@ -60,7 +60,13 @@
         <select id="genreFilter" class="td-select">
             <option value="">All Genres</option>
         </select>
+        <select id="reviewFilter" class="td-select">
+            <option value="">All Status</option>
+            <option value="reviewed">✅ Reviewed Only</option>
+            <option value="unreviewed">⬜ Unreviewed Only</option>
+        </select>
         <span id="resultCount" class="td-result-count"></span>
+        <span id="approveStats" class="td-approve-stats"></span>
     </div>
 
     <div id="recordsList"></div>
@@ -654,6 +660,14 @@ body { background: #0d0d0d !important; }
 .td-toast.success { background: #1a1a1a; border: 1px solid #2ecc71; color: #2ecc71; }
 .td-toast.error { background: #1a1a1a; border: 1px solid #e74c3c; color: #e74c3c; }
 
+/* ── Review Stats ── */
+.td-approve-stats {
+    font-size: 0.82rem;
+    color: #888;
+    margin-left: 8px;
+}
+.td-approve-stats .approved-count { color: #2ecc71; font-weight: 600; }
+
 /* ── Responsive ── */
 @media (max-width: 768px) {
     .td-container { padding: 1.5rem 1rem; }
@@ -725,19 +739,25 @@ function renderStats() {
 function renderRecords() {
     const query = document.getElementById('searchInput').value.toLowerCase();
     const genre = document.getElementById('genreFilter').value;
+    const approveFilter = document.getElementById('reviewFilter').value;
     const container = document.getElementById('recordsList');
     let html = '';
     let visible = 0;
+
+    let reviewedCount = allRecords.filter((r, i) => (reviewedMap[String(i)] || []).length > 0).length;
 
     allRecords.forEach((r, i) => {
         const g = extractGenre(r.instruction);
         const text = ((r.input || '') + ' ' + (r.output || '')).toLowerCase();
         if (query && !text.includes(query)) return;
         if (genre && g !== genre) return;
+        const reviewers = reviewedMap[String(i)] || [];
+        const isReviewed = reviewers.length > 0;
+        if (approveFilter === 'reviewed' && !isReviewed) return;
+        if (approveFilter === 'unreviewed' && isReviewed) return;
         visible++;
 
         const preview = (r.input || '').substring(0, 100);
-        const reviewers = reviewedMap[String(i)] || [];
         const isReviewedByMe = reviewers.includes(CURRENT_USERNAME);
         const reviewBadge = reviewers.length > 0
             ? `<span class="td-reviewed-badge ${isReviewedByMe ? 'td-reviewed-mine' : ''}">✓ ${reviewers.map(u => escapeHtml(u)).join(', ')}</span>`
@@ -781,8 +801,10 @@ function renderRecords() {
 
     container.innerHTML = html;
     document.getElementById('resultCount').textContent =
-        query || genre ? `${visible} / ${allRecords.length} 件表示` : '';
+        query || genre || approveFilter ? `${visible} / ${allRecords.length} 件表示` : '';
     document.getElementById('totalBadge').textContent = `合計 ${allRecords.length} 件`;
+    document.getElementById('approveStats').innerHTML =
+        `<span class="approved-count">${reviewedCount}</span> / ${allRecords.length} reviewed`;
     renderStats();
 }
 
@@ -1042,6 +1064,7 @@ async function toggleReview(index) {
 
 document.getElementById('searchInput').addEventListener('input', renderRecords);
 document.getElementById('genreFilter').addEventListener('change', renderRecords);
+document.getElementById('reviewFilter').addEventListener('change', renderRecords);
 
 renderRecords();
 </script>

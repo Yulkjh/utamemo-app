@@ -353,7 +353,29 @@ def format_training_example(example, tokenizer):
     return formatted
 
 
-def load_training_data(data_path, tokenizer, eval_split=0.1):
+def fetch_reviewed_indices(report_url, api_key):
+    """ダッシュボードからレビュー済みデータインデックスを取得"""
+    if not report_url or not api_key:
+        return None
+    try:
+        import requests
+        # report_url は .../api/training/update/ → ベースURLを導出
+        base_url = report_url.rsplit('/api/training/update', 1)[0]
+        url = f"{base_url}/api/training/reviewed/"
+        resp = requests.get(url, headers={'X-Training-Api-Key': api_key}, timeout=15)
+        if resp.status_code == 200:
+            data = resp.json()
+            indices = set(data.get('reviewed_indices', []))
+            logger.info(f"  レビュー済みインデックス: {len(indices)} 件取得")
+            return indices
+        else:
+            logger.warning(f"  レビュー済みインデックス取得失敗: HTTP {resp.status_code}")
+    except Exception as e:
+        logger.warning(f"  レビュー済みインデックス取得失敗: {e}")
+    return None
+
+
+def load_training_data(data_path, tokenizer, eval_split=0.1, reviewed_indices=None):
     """学習データを読み込み、train/eval分割"""
     from datasets import Dataset
     logger.info(f"学習データを読み込み: {data_path}")
@@ -375,6 +397,14 @@ def load_training_data(data_path, tokenizer, eval_split=0.1):
     if len(filtered) < len(raw_data):
         logger.info(f"  品質フィルタ: {len(raw_data)} -> {len(filtered)} 件 ({len(raw_data) - len(filtered)} 件除外)")
     raw_data = filtered
+
+    # レビュー済みフィルタリング
+    if reviewed_indices is not None:
+        before_count = len(raw_data)
+        raw_data = [ex for i, ex in enumerate(raw_data) if i in reviewed_indices]
+        logger.info(f"  レビュー済みフィルタ: {before_count} -> {len(raw_data)} 件 ({before_count - len(raw_data)} 件除外)")
+        if len(raw_data) == 0:
+            raise ValueError("レビュー済みデータが0件です。学習データをダッシュボードでレビューしてください。")
 
     formatted_texts = []
     for example in raw_data:
@@ -550,7 +580,8 @@ def train(args):
     )
 
     model, tokenizer = setup_model_and_tokenizer(args.model_name, args.hf_token)
-    train_dataset, eval_dataset = load_training_data(args.data_path, tokenizer, args.eval_split)
+    reviewed_indices = fetch_reviewed_indices(args.report_url, args.api_key)
+    train_dataset, eval_dataset = load_training_data(args.data_path, tokenizer, args.eval_split, reviewed_indices=reviewed_indices)
     model = setup_lora(model, args.model_name, args.lora_rank, args.lora_alpha)
 
     eval_strategy = "epoch" if eval_dataset else "no"

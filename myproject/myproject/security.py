@@ -127,6 +127,24 @@ class SecurityMiddleware:
         path = request.path
         
         # ========================================
+        # スタッフポータル アクセス制限
+        # ========================================
+        if path.startswith('/staff/') or (
+            path.startswith('/api/training/') and path not in ('/api/training/update/', '/api/training/reviewed/')
+        ) or path.startswith('/api/llm/'):
+            # 未認証ユーザーはログインページへリダイレクト
+            if not request.user.is_authenticated:
+                from django.contrib.auth.views import redirect_to_login
+                return redirect_to_login(path)
+            # 認証済みでもスタッフでなければ403
+            if not request.user.is_staff:
+                logger.warning(
+                    f'スタッフポータル不正アクセス: user={request.user.username}, '
+                    f'IP={ip_address}, path={path}'
+                )
+                return self._styled_error_response(403, 'アクセスが拒否されました', 'このページへのアクセスは許可されていません。')
+        
+        # ========================================
         # 管理画面アクセス制限
         # ========================================
         if path.startswith('/admin/'):

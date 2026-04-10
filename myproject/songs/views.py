@@ -2390,11 +2390,9 @@ def recreate_with_lyrics(request, pk):
     return redirect('songs:lyrics_confirmation')
 
 
-@login_required
+@staff_member_required
 def mureka_api_debug(request):
     """Mureka APIのレスポンスフィールド調査用（スタッフのみ）"""
-    if not request.user.is_staff:
-        return JsonResponse({'error': 'Forbidden'}, status=403)
     
     from .ai_services import MurekaAIGenerator
     
@@ -3161,6 +3159,28 @@ def training_api_update(request):
             session.save(update_fields=['pending_command'])
 
     return JsonResponse({'ok': True, 'session_id': session.id, 'command': command, 'training_type': session.training_type})
+
+
+@csrf_exempt
+def training_reviewed_indices(request):
+    """レビュー済みデータインデックスを返すAPIエンドポイント（APIキー認証）"""
+    from .models import TrainingSession
+    from users.models import TrainingDataReview
+
+    api_key = request.headers.get('X-Training-Api-Key', '')
+    if not api_key:
+        return JsonResponse({'error': 'API key required'}, status=401)
+
+    try:
+        TrainingSession.objects.get(api_key=api_key)
+    except TrainingSession.DoesNotExist:
+        return JsonResponse({'error': 'Invalid API key'}, status=403)
+
+    # レビュー済みインデックス（1人以上がレビューしたもの）
+    reviewed = list(
+        TrainingDataReview.objects.values_list('data_index', flat=True).distinct()
+    )
+    return JsonResponse({'ok': True, 'reviewed_indices': sorted(set(reviewed))})
 
 
 @staff_member_required

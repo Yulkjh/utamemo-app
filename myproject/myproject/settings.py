@@ -349,6 +349,9 @@ SESSION_COOKIE_HTTPONLY = True  # JavaScriptからアクセス不可
 SESSION_COOKIE_SAMESITE = 'Lax'  # CSRF対策
 CSRF_COOKIE_SAMESITE = 'Lax'  # CSRF対策
 
+# メッセージストレージ（cookieではなくセッションに保存→リクエストヘッダー肥大化防止）
+MESSAGE_STORAGE = 'django.contrib.messages.storage.session.SessionStorage'
+
 # ========================================
 # 本番環境設定
 # ========================================

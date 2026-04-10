@@ -3,143 +3,157 @@
 {% block title %}{{ page_title }} - UTAMEMO{% endblock %}
 
 {% block content %}
-<div class="container py-4">
-    <div class="d-flex justify-content-between align-items-center mb-4">
-        <h2 style="color: #ff7940;">
-            <i class="bi bi-gpu-card"></i> {{ page_title }}
-        </h2>
-        <div>
-            <span class="badge bg-secondary" id="auto-refresh-badge">Auto-refresh: 10s</span>
-            <a href="{% url 'songs:api_status' %}" class="btn btn-outline-secondary btn-sm ms-2">
-                <i class="bi bi-arrow-left"></i> API Status
+<div class="tm-container">
+    <div class="tm-header">
+        <div class="tm-header-left">
+            <h1>Training Monitor</h1>
+            <span class="tm-badge" id="sessionCount">{{ sessions|length }} sessions</span>
+        </div>
+        <div class="tm-header-right">
+            <span class="tm-refresh-badge" id="auto-refresh-badge">
+                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M23 4v6h-6M1 20v-6h6"/><path d="M3.51 9a9 9 0 0114.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0020.49 15"/></svg>
+                10s
+            </span>
+            <a href="{% url 'songs:api_status' %}" class="tm-btn tm-btn-back">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M19 12H5M12 19l-7-7 7-7"/></svg>
+                API Status
             </a>
         </div>
     </div>
 
     {% if not sessions %}
-    <div class="alert alert-info">
-        <h5><i class="bi bi-info-circle"></i> まだトレーニングセッションがありません</h5>
-        <p class="mb-2">Django Adminからセッションを作成し、APIキーをトレーニングスクリプトに設定してください。</p>
-        <ol class="mb-0">
-            <li><a href="/admin/songs/trainingsession/add/">Admin → TrainingSession → 追加</a>でマシンを登録</li>
-            <li>表示されるAPIキーをトレーニングスクリプトの環境変数 <code>UTAMEMO_TRAINING_API_KEY</code> に設定</li>
-            <li><code>--report_url https://utamemo.com/api/training/update/</code> を引数に追加して実行</li>
-        </ol>
+    <div class="tm-empty">
+        <div class="tm-empty-icon">
+            <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="#ff7940" stroke-width="1.5"><rect x="2" y="3" width="20" height="14" rx="2"/><path d="M8 21h8M12 17v4"/></svg>
+        </div>
+        <h3>No Training Sessions</h3>
+        <p>Django Adminからセッションを作成し、APIキーをトレーニングスクリプトに設定してください。</p>
+        <div class="tm-setup-steps">
+            <div class="tm-step"><span class="tm-step-num">1</span><a href="/admin/songs/trainingsession/add/">Admin → TrainingSession → 追加</a>でマシンを登録</div>
+            <div class="tm-step"><span class="tm-step-num">2</span>表示されるAPIキーを <code>UTAMEMO_TRAINING_API_KEY</code> に設定</div>
+            <div class="tm-step"><span class="tm-step-num">3</span><code>--report_url https://utamemo.com/api/training/update/</code> を引数に追加</div>
+        </div>
     </div>
     {% endif %}
 
-    <!-- Active Sessions -->
     {% for session in sessions %}
-    <div class="card mb-4 session-card" data-session-id="{{ session.id }}">
-        <div class="card-header d-flex justify-content-between align-items-center
-            {% if session.is_active %}bg-success text-white
-            {% elif session.status == 'completed' %}bg-primary text-white
-            {% elif session.status == 'failed' %}bg-danger text-white
-            {% else %}bg-secondary text-white{% endif %}">
-            <div>
-                <i class="bi bi-pc-display-horizontal"></i>
+    <div class="tm-card session-card" data-session-id="{{ session.id }}">
+        <div class="tm-card-header {% if session.is_active %}tm-active{% elif session.status == 'completed' %}tm-completed{% elif session.status == 'failed' %}tm-failed{% else %}tm-idle{% endif %}">
+            <div class="tm-machine-info">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="3" width="20" height="14" rx="2"/><path d="M8 21h8M12 17v4"/></svg>
                 <strong>{{ session.machine_name }}</strong>
                 {% if session.machine_ip %}
-                <small class="ms-2 opacity-75">({{ session.machine_ip }})</small>
+                <span class="tm-ip">({{ session.machine_ip }})</span>
                 {% endif %}
             </div>
-            <div>
-                <span class="badge bg-light text-dark status-badge">{{ session.get_status_display }}</span>
-                <span class="badge training-type-badge {% if session.training_type == 'importance' %}bg-info{% else %}bg-warning text-dark{% endif %} ms-1">
-                    {% if session.training_type == 'importance' %}<i class="bi bi-journal-text"></i> ノート重要度{% else %}<i class="bi bi-music-note-beamed"></i> 歌詞{% endif %}
+            <div class="tm-badges">
+                <span class="tm-status-badge status-badge">{{ session.get_status_display }}</span>
+                <span class="tm-type-badge training-type-badge {% if session.training_type == 'importance' %}tm-type-importance{% else %}tm-type-lyrics{% endif %}">
+                    {% if session.training_type == 'importance' %}
+                    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M2 3h6a4 4 0 014 4v14a3 3 0 00-3-3H2z"/><path d="M22 3h-6a4 4 0 00-4 4v14a3 3 0 013-3h7z"/></svg>
+                    ノート重要度
+                    {% else %}
+                    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 18V5l12-2v13"/><circle cx="6" cy="18" r="3"/><circle cx="18" cy="16" r="3"/></svg>
+                    歌詞
+                    {% endif %}
                 </span>
                 {% if session.gpu_name %}
-                <span class="badge bg-dark ms-1">{{ session.gpu_name }}</span>
+                <span class="tm-gpu-badge">
+                    <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="4" y="4" width="16" height="16" rx="2"/><path d="M9 1v3M15 1v3M9 20v3M15 20v3M1 9h3M1 15h3M20 9h3M20 15h3"/></svg>
+                    {{ session.gpu_name }}
+                </span>
                 {% endif %}
                 {% if session.pending_command == 'start' %}
-                <span class="badge bg-warning text-dark ms-1 pending-badge">開始待ち...</span>
+                <span class="tm-pending-badge pending-badge">開始待ち...</span>
                 {% endif %}
             </div>
         </div>
-        <div class="card-body">
-            <!-- コマンドボタン -->
-            <div class="mb-3 d-flex gap-2 align-items-center command-buttons">
+
+        <div class="tm-card-body">
+            <div class="tm-controls command-buttons">
                 {% if session.is_active %}
-                <button class="btn btn-danger btn-sm cmd-stop" data-session="{{ session.id }}">
-                    <i class="bi bi-stop-fill"></i> 停止
+                <button class="tm-btn tm-btn-stop cmd-stop" data-session="{{ session.id }}">
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><rect x="6" y="6" width="12" height="12" rx="1"/></svg>
+                    停止
                 </button>
                 {% else %}
                 {% if session.status == 'training' or session.status == 'loading' or session.status == 'saving' %}
-                <span class="badge bg-warning text-dark me-2"><i class="bi bi-exclamation-triangle"></i> 応答なし (5分超)</span>
+                <span class="tm-stale-warning">
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
+                    応答なし (5分超)
+                </span>
                 {% endif %}
-                <div class="btn-group" role="group">
-                    <input type="radio" class="btn-check" name="ttype-{{ session.id }}" id="ttype-lyrics-{{ session.id }}" value="lyrics" checked>
-                    <label class="btn btn-outline-warning btn-sm" for="ttype-lyrics-{{ session.id }}">
-                        <i class="bi bi-music-note-beamed"></i> 歌詞LLM
+                <div class="tm-type-switch">
+                    <input type="radio" class="tm-radio" name="ttype-{{ session.id }}" id="ttype-lyrics-{{ session.id }}" value="lyrics" checked>
+                    <label class="tm-radio-label tm-radio-lyrics" for="ttype-lyrics-{{ session.id }}">
+                        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 18V5l12-2v13"/><circle cx="6" cy="18" r="3"/><circle cx="18" cy="16" r="3"/></svg>
+                        歌詞LLM
                     </label>
-                    <input type="radio" class="btn-check" name="ttype-{{ session.id }}" id="ttype-importance-{{ session.id }}" value="importance">
-                    <label class="btn btn-outline-info btn-sm" for="ttype-importance-{{ session.id }}">
-                        <i class="bi bi-journal-text"></i> ノート重要度LLM
+                    <input type="radio" class="tm-radio" name="ttype-{{ session.id }}" id="ttype-importance-{{ session.id }}" value="importance">
+                    <label class="tm-radio-label tm-radio-importance" for="ttype-importance-{{ session.id }}">
+                        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M2 3h6a4 4 0 014 4v14a3 3 0 00-3-3H2z"/><path d="M22 3h-6a4 4 0 00-4 4v14a3 3 0 013-3h7z"/></svg>
+                        ノート重要度LLM
                     </label>
                 </div>
-                <button class="btn btn-success btn-sm cmd-start" data-session="{{ session.id }}"
+                <button class="tm-btn tm-btn-start cmd-start" data-session="{{ session.id }}"
                     {% if session.pending_command == 'start' %}disabled{% endif %}>
-                    <i class="bi bi-play-fill"></i> トレーニング開始
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><polygon points="5,3 19,12 5,21"/></svg>
+                    トレーニング開始
                 </button>
                 {% endif %}
             </div>
-            <div class="row">
-                <!-- Progress -->
-                <div class="col-md-6">
-                    <h6>モデル: <span class="text-muted model-name">{{ session.model_name|default:"N/A" }}</span></h6>
 
-                    <div class="mb-3 epoch-progress" {% if session.total_epochs == 0 and session.total_steps == 0 %}style="display:none"{% endif %}>
-                        <div class="d-flex justify-content-between mb-1">
-                            <small>Epoch <span class="current-epoch">{{ session.current_epoch }}</span> / <span class="total-epochs">{{ session.total_epochs }}</span></small>
-                            <small>
+            <div class="tm-content">
+                <div class="tm-metrics-col">
+                    <div class="tm-model-info">
+                        <span class="tm-label">MODEL</span>
+                        <span class="model-name">{{ session.model_name|default:"N/A" }}</span>
+                    </div>
+
+                    <div class="tm-progress-section epoch-progress" {% if session.total_epochs == 0 and session.total_steps == 0 %}style="display:none"{% endif %}>
+                        <div class="tm-progress-header">
+                            <span>Epoch <span class="current-epoch">{{ session.current_epoch }}</span> / <span class="total-epochs">{{ session.total_epochs }}</span></span>
+                            <span>
                                 <span class="eta-display" {% if not session.eta_seconds %}style="display:none"{% endif %}>
-                                    ⏱ 残り <span class="eta-text">{% if session.eta_seconds %}{{ session.eta_seconds|floatformat:0 }}秒{% endif %}</span>
+                                    ⏱ <span class="eta-text">{% if session.eta_seconds %}{{ session.eta_seconds|floatformat:0 }}s{% endif %}</span>
                                 </span>
-                                <span class="progress-pct ms-2">{{ session.progress_percent }}%</span>
-                            </small>
+                                <span class="progress-pct">{{ session.progress_percent }}%</span>
+                            </span>
                         </div>
-                        <div class="progress" style="height: 24px;">
-                            <div class="progress-bar progress-bar-striped {% if session.is_active %}progress-bar-animated{% endif %} bg-warning"
-                                 role="progressbar"
+                        <div class="tm-progress-track">
+                            <div class="tm-progress-bar {% if session.is_active %}tm-progress-animated{% endif %} bg-warning"
                                  style="width: {{ session.progress_percent }}%">
-                                {% if session.total_steps > 0 %}{{ session.current_step }}/{{ session.total_steps }} ({{ session.progress_percent }}%){% else %}{{ session.progress_percent }}%{% endif %}
+                                {% if session.total_steps > 0 %}{{ session.current_step }}/{{ session.total_steps }}{% endif %}
                             </div>
                         </div>
                     </div>
 
-                    <!-- Metrics -->
-                    <div class="row text-center">
-                        <div class="col-4">
-                            <div class="border rounded p-2">
-                                <div class="fw-bold train-loss" style="color: #ff7940;">
-                                    {% if session.train_loss %}{{ session.train_loss|floatformat:4 }}{% else %}-{% endif %}
-                                </div>
-                                <small class="text-muted">Train Loss</small>
+                    <div class="tm-metric-grid">
+                        <div class="tm-metric">
+                            <div class="tm-metric-value train-loss">
+                                {% if session.train_loss %}{{ session.train_loss|floatformat:4 }}{% else %}-{% endif %}
                             </div>
+                            <div class="tm-metric-label">Train Loss</div>
                         </div>
-                        <div class="col-4">
-                            <div class="border rounded p-2">
-                                <div class="fw-bold eval-loss" style="color: #ff7940;">
-                                    {% if session.eval_loss %}{{ session.eval_loss|floatformat:4 }}{% else %}-{% endif %}
-                                </div>
-                                <small class="text-muted">Eval Loss</small>
+                        <div class="tm-metric">
+                            <div class="tm-metric-value eval-loss">
+                                {% if session.eval_loss %}{{ session.eval_loss|floatformat:4 }}{% else %}-{% endif %}
                             </div>
+                            <div class="tm-metric-label">Eval Loss</div>
                         </div>
-                        <div class="col-4">
-                            <div class="border rounded p-2">
-                                <div class="fw-bold accuracy" style="color: #ff7940;">
-                                    {% if session.accuracy %}{{ session.accuracy|floatformat:1 }}%{% else %}-{% endif %}
-                                </div>
-                                <small class="text-muted">Accuracy</small>
+                        <div class="tm-metric">
+                            <div class="tm-metric-value accuracy">
+                                {% if session.accuracy %}{{ session.accuracy|floatformat:1 }}%{% else %}-{% endif %}
                             </div>
+                            <div class="tm-metric-label">Accuracy</div>
                         </div>
                     </div>
 
                     {% if session.gpu_memory_used and session.gpu_memory_total %}
-                    <div class="mt-2 vram-section">
-                        <small class="text-muted">VRAM:</small>
-                        <div class="progress" style="height: 16px;">
-                            <div class="progress-bar bg-info" style="width: {% widthratio session.gpu_memory_used session.gpu_memory_total 100 %}%">
+                    <div class="tm-vram vram-section">
+                        <span class="tm-label">VRAM</span>
+                        <div class="tm-vram-track">
+                            <div class="tm-vram-bar" style="width: {% widthratio session.gpu_memory_used session.gpu_memory_total 100 %}%">
                                 {{ session.gpu_memory_used|floatformat:1 }} / {{ session.gpu_memory_total|floatformat:1 }} GB
                             </div>
                         </div>
@@ -147,35 +161,531 @@
                     {% endif %}
                 </div>
 
-                <!-- Log -->
-                <div class="col-md-6">
-                    <h6><i class="bi bi-terminal"></i> ログ</h6>
-                    <pre class="bg-dark text-light p-2 rounded log-tail" style="max-height: 200px; overflow-y: auto; font-size: 0.75rem; white-space: pre-wrap;">{{ session.log_tail|default:"ログなし" }}</pre>
-                    
+                <div class="tm-log-col">
+                    <div class="tm-log-header">
+                        <span class="tm-label">
+                            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="4 17 10 11 4 5"/><line x1="12" y1="19" x2="20" y2="19"/></svg>
+                            LOG
+                        </span>
+                    </div>
+                    <pre class="tm-log log-tail">{{ session.log_tail|default:"ログなし" }}</pre>
+
                     {% if session.error_message %}
-                    <div class="alert alert-danger py-1 px-2 mt-1 mb-0" style="font-size: 0.8rem;">
-                        <i class="bi bi-exclamation-triangle"></i> {{ session.error_message|truncatechars:300 }}
+                    <div class="tm-error">
+                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="15" y1="9" x2="9" y2="15"/><line x1="9" y1="9" x2="15" y2="15"/></svg>
+                        {{ session.error_message|truncatechars:300 }}
                     </div>
                     {% endif %}
                 </div>
             </div>
 
-            <!-- Footer info -->
-            <div class="row mt-2">
-                <div class="col text-muted" style="font-size: 0.8rem;">
-                    {% if session.started_at %}
-                    <span><i class="bi bi-play-circle"></i> 開始: {{ session.started_at|date:"Y/m/d H:i" }}</span>
-                    {% endif %}
-                    {% if session.completed_at %}
-                    <span class="ms-3"><i class="bi bi-check-circle"></i> 完了: {{ session.completed_at|date:"Y/m/d H:i" }}</span>
-                    {% endif %}
-                    <span class="ms-3 updated-at"><i class="bi bi-clock"></i> 最終更新: {{ session.updated_at|date:"H:i:s" }}</span>
-                </div>
+            <div class="tm-footer">
+                {% if session.started_at %}
+                <span class="tm-time">
+                    <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="5,3 19,12 5,21"/></svg>
+                    開始: {{ session.started_at|date:"Y/m/d H:i" }}
+                </span>
+                {% endif %}
+                {% if session.completed_at %}
+                <span class="tm-time">
+                    <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="20 6 9 17 4 12"/></svg>
+                    完了: {{ session.completed_at|date:"Y/m/d H:i" }}
+                </span>
+                {% endif %}
+                <span class="tm-time updated-at">
+                    <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+                    最終更新: {{ session.updated_at|date:"H:i:s" }}
+                </span>
             </div>
         </div>
     </div>
     {% endfor %}
 </div>
+
+<style>
+/* ── Hide base chrome ── */
+.navbar-modern, .footer-modern { display: none !important; }
+main { padding-top: 0 !important; }
+body { background: #0d0d0d !important; }
+
+/* ── Container ── */
+.tm-container {
+    max-width: 1400px;
+    margin: 0 auto;
+    padding: 2.5rem 1.5rem;
+    min-height: 100vh;
+    background: #0d0d0d;
+}
+
+/* ── Header ── */
+.tm-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 2rem;
+    padding-bottom: 1.5rem;
+    border-bottom: 1px solid #1a1a1a;
+    flex-wrap: wrap;
+    gap: 1rem;
+}
+.tm-header-left {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+}
+.tm-header h1 {
+    font-size: 1.6rem;
+    font-weight: 700;
+    margin: 0;
+    background: linear-gradient(135deg, #ff7940, #ff5722);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+    letter-spacing: -0.02em;
+}
+.tm-header-right {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+}
+.tm-badge {
+    background: #1a1a1a;
+    border: 1px solid #2a2a2a;
+    color: #888;
+    padding: 0.4rem 1rem;
+    border-radius: 2rem;
+    font-weight: 600;
+    font-size: 0.8rem;
+    letter-spacing: 0.02em;
+    text-transform: uppercase;
+}
+.tm-refresh-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.4rem;
+    background: #1a1a1a;
+    border: 1px solid #2a2a2a;
+    color: #666;
+    padding: 0.4rem 0.8rem;
+    border-radius: 2rem;
+    font-size: 0.75rem;
+    font-weight: 600;
+}
+
+/* ── Buttons ── */
+.tm-btn {
+    padding: 0.5rem 0.9rem;
+    border: 1px solid #2a2a2a;
+    border-radius: 0.5rem;
+    background: #141414;
+    color: #999;
+    cursor: pointer;
+    font-size: 0.82rem;
+    font-weight: 500;
+    transition: all 0.15s ease;
+    text-decoration: none;
+    display: inline-flex;
+    align-items: center;
+    gap: 0.4rem;
+}
+.tm-btn:hover { color: #fff; border-color: #444; background: #1a1a1a; }
+.tm-btn-back { border-color: #222; color: #666; }
+.tm-btn-back:hover { color: #aaa; border-color: #333; }
+.tm-btn-start {
+    background: linear-gradient(135deg, #22c55e, #16a34a);
+    border: none;
+    color: #fff;
+    font-weight: 600;
+}
+.tm-btn-start:hover { opacity: 0.88; color: #fff; }
+.tm-btn-start:disabled { opacity: 0.4; cursor: not-allowed; }
+.tm-btn-stop {
+    background: linear-gradient(135deg, #ef4444, #dc2626);
+    border: none;
+    color: #fff;
+    font-weight: 600;
+}
+.tm-btn-stop:hover { opacity: 0.88; color: #fff; }
+
+/* ── Empty State ── */
+.tm-empty {
+    text-align: center;
+    padding: 4rem 2rem;
+    color: #666;
+}
+.tm-empty-icon { margin-bottom: 1.5rem; opacity: 0.6; }
+.tm-empty h3 {
+    color: #aaa;
+    font-size: 1.2rem;
+    font-weight: 600;
+    margin-bottom: 0.5rem;
+}
+.tm-empty p { font-size: 0.88rem; margin-bottom: 1.5rem; }
+.tm-setup-steps { text-align: left; max-width: 600px; margin: 0 auto; }
+.tm-step {
+    display: flex;
+    gap: 0.75rem;
+    align-items: flex-start;
+    padding: 0.6rem 0;
+    color: #888;
+    font-size: 0.85rem;
+    line-height: 1.6;
+}
+.tm-step a { color: #ff7940; text-decoration: none; }
+.tm-step a:hover { text-decoration: underline; }
+.tm-step code {
+    color: #ff7940;
+    background: #1a1a1a;
+    padding: 0.15rem 0.4rem;
+    border-radius: 0.25rem;
+    font-size: 0.82rem;
+}
+.tm-step-num {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    min-width: 22px;
+    height: 22px;
+    background: #1a1a1a;
+    border: 1px solid #2a2a2a;
+    border-radius: 50%;
+    font-size: 0.72rem;
+    font-weight: 700;
+    color: #ff7940;
+    flex-shrink: 0;
+}
+
+/* ── Session Card ── */
+.tm-card {
+    background: #111;
+    border: 1px solid #1a1a1a;
+    border-radius: 0.75rem;
+    margin-bottom: 1.25rem;
+    overflow: hidden;
+    transition: border-color 0.2s;
+}
+.tm-card:hover { border-color: #2a2a2a; }
+
+/* Card Header */
+.tm-card-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 0.85rem 1.25rem;
+    border-bottom: 1px solid #1a1a1a;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+}
+.tm-card-header.tm-active { border-left: 3px solid #22c55e; }
+.tm-card-header.tm-completed { border-left: 3px solid #3b82f6; }
+.tm-card-header.tm-failed { border-left: 3px solid #ef4444; }
+.tm-card-header.tm-idle { border-left: 3px solid #555; }
+
+.tm-machine-info {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    color: #ddd;
+    font-size: 0.92rem;
+}
+.tm-machine-info svg { color: #ff7940; }
+.tm-ip { color: #666; font-size: 0.82rem; }
+
+.tm-badges {
+    display: flex;
+    align-items: center;
+    gap: 0.4rem;
+    flex-wrap: wrap;
+}
+.tm-status-badge {
+    background: #1a1a1a;
+    border: 1px solid #2a2a2a;
+    color: #aaa;
+    padding: 0.25rem 0.7rem;
+    border-radius: 2rem;
+    font-size: 0.72rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+}
+.tm-active .tm-status-badge { border-color: #22c55e40; color: #4ade80; background: #22c55e12; }
+.tm-completed .tm-status-badge { border-color: #3b82f640; color: #60a5fa; background: #3b82f612; }
+.tm-failed .tm-status-badge { border-color: #ef444440; color: #f87171; background: #ef444412; }
+
+.tm-type-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.3rem;
+    padding: 0.25rem 0.65rem;
+    border-radius: 2rem;
+    font-size: 0.72rem;
+    font-weight: 600;
+    letter-spacing: 0.02em;
+}
+.tm-type-lyrics { background: #f59e0b15; border: 1px solid #f59e0b30; color: #fbbf24; }
+.tm-type-importance { background: #06b6d415; border: 1px solid #06b6d430; color: #22d3ee; }
+
+.tm-gpu-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.3rem;
+    background: #1a1a1a;
+    border: 1px solid #2a2a2a;
+    color: #888;
+    padding: 0.25rem 0.65rem;
+    border-radius: 2rem;
+    font-size: 0.72rem;
+    font-weight: 500;
+}
+.tm-pending-badge {
+    background: #f59e0b18;
+    border: 1px solid #f59e0b30;
+    color: #fbbf24;
+    padding: 0.25rem 0.65rem;
+    border-radius: 2rem;
+    font-size: 0.72rem;
+    font-weight: 600;
+    animation: tmPulse 2s ease-in-out infinite;
+}
+@keyframes tmPulse {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.5; }
+}
+
+/* Card Body */
+.tm-card-body { padding: 1.25rem; }
+
+/* Controls */
+.tm-controls {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    margin-bottom: 1.25rem;
+    flex-wrap: wrap;
+}
+.tm-stale-warning {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.35rem;
+    color: #fbbf24;
+    font-size: 0.78rem;
+    font-weight: 600;
+    padding: 0.3rem 0.7rem;
+    background: #f59e0b10;
+    border: 1px solid #f59e0b25;
+    border-radius: 0.4rem;
+}
+
+/* Radio Type Switch */
+.tm-type-switch {
+    display: flex;
+    background: #0d0d0d;
+    border: 1px solid #1f1f1f;
+    border-radius: 0.5rem;
+    overflow: hidden;
+}
+.tm-radio { display: none; }
+.tm-radio-label {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.35rem;
+    padding: 0.45rem 0.85rem;
+    font-size: 0.78rem;
+    font-weight: 500;
+    color: #666;
+    cursor: pointer;
+    transition: all 0.15s;
+    border-right: 1px solid #1f1f1f;
+}
+.tm-radio-label:last-of-type { border-right: none; }
+.tm-radio:checked + .tm-radio-lyrics { background: #f59e0b18; color: #fbbf24; }
+.tm-radio:checked + .tm-radio-importance { background: #06b6d418; color: #22d3ee; }
+
+/* Content Grid */
+.tm-content {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 1.5rem;
+}
+.tm-metrics-col, .tm-log-col { min-width: 0; }
+
+/* Model Info */
+.tm-model-info {
+    margin-bottom: 1rem;
+}
+.tm-model-info .model-name {
+    color: #bbb;
+    font-size: 0.92rem;
+    font-weight: 500;
+}
+.tm-label {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.35rem;
+    color: #555;
+    text-transform: uppercase;
+    font-size: 0.68rem;
+    font-weight: 600;
+    letter-spacing: 0.08em;
+    margin-bottom: 0.4rem;
+}
+
+/* Progress */
+.tm-progress-section { margin-bottom: 1rem; }
+.tm-progress-header {
+    display: flex;
+    justify-content: space-between;
+    margin-bottom: 0.5rem;
+    font-size: 0.78rem;
+    color: #888;
+}
+.tm-progress-header .progress-pct { color: #ff7940; font-weight: 700; margin-left: 0.5rem; }
+.tm-progress-track {
+    height: 6px;
+    background: #1a1a1a;
+    border-radius: 3px;
+    overflow: hidden;
+}
+.tm-progress-bar {
+    height: 100%;
+    background: linear-gradient(90deg, #ff7940, #ff5722);
+    border-radius: 3px;
+    transition: width 0.6s ease;
+    font-size: 0;
+    color: transparent;
+}
+.tm-progress-animated {
+    background: repeating-linear-gradient(
+        -45deg,
+        #ff7940,
+        #ff7940 10px,
+        #ff5722 10px,
+        #ff5722 20px
+    );
+    background-size: 28px 28px;
+    animation: tmProgressStripe 0.6s linear infinite;
+}
+@keyframes tmProgressStripe {
+    0% { background-position: 0 0; }
+    100% { background-position: 28px 0; }
+}
+
+/* Metrics */
+.tm-metric-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 0.5rem;
+    margin-bottom: 1rem;
+}
+.tm-metric {
+    background: #0d0d0d;
+    border: 1px solid #1a1a1a;
+    border-radius: 0.5rem;
+    padding: 0.75rem;
+    text-align: center;
+}
+.tm-metric-value {
+    font-size: 1.15rem;
+    font-weight: 700;
+    color: #ff7940;
+    font-variant-numeric: tabular-nums;
+}
+.tm-metric-label {
+    font-size: 0.68rem;
+    color: #555;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    margin-top: 0.25rem;
+    font-weight: 500;
+}
+
+/* VRAM */
+.tm-vram { margin-top: 0.5rem; }
+.tm-vram-track {
+    height: 20px;
+    background: #1a1a1a;
+    border-radius: 0.3rem;
+    overflow: hidden;
+    margin-top: 0.3rem;
+}
+.tm-vram-bar {
+    height: 100%;
+    background: linear-gradient(90deg, #06b6d4, #0891b2);
+    border-radius: 0.3rem;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 0.7rem;
+    font-weight: 600;
+    color: #fff;
+    text-shadow: 0 1px 2px rgba(0,0,0,0.3);
+    transition: width 0.6s ease;
+}
+
+/* Log */
+.tm-log-header {
+    margin-bottom: 0.5rem;
+}
+.tm-log {
+    background: #0a0a0a;
+    border: 1px solid #151515;
+    border-radius: 0.5rem;
+    padding: 0.85rem;
+    color: #7fdbca;
+    font-family: 'JetBrains Mono', 'Fira Code', 'Consolas', monospace;
+    font-size: 0.72rem;
+    line-height: 1.65;
+    max-height: 220px;
+    overflow-y: auto;
+    white-space: pre-wrap;
+    margin: 0;
+}
+.tm-error {
+    display: flex;
+    align-items: flex-start;
+    gap: 0.5rem;
+    margin-top: 0.5rem;
+    padding: 0.6rem 0.85rem;
+    background: #ef444410;
+    border: 1px solid #ef444425;
+    border-radius: 0.4rem;
+    color: #f87171;
+    font-size: 0.78rem;
+    line-height: 1.5;
+}
+.tm-error svg { flex-shrink: 0; margin-top: 0.1rem; }
+
+/* Footer */
+.tm-footer {
+    display: flex;
+    gap: 1.5rem;
+    margin-top: 1rem;
+    padding-top: 0.75rem;
+    border-top: 1px solid #1a1a1a;
+    flex-wrap: wrap;
+}
+.tm-time {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.35rem;
+    color: #555;
+    font-size: 0.75rem;
+}
+
+/* ── Responsive ── */
+@media (max-width: 768px) {
+    .tm-container { padding: 1.5rem 1rem; }
+    .tm-header { flex-direction: column; align-items: flex-start; }
+    .tm-content { grid-template-columns: 1fr; }
+    .tm-controls { flex-direction: column; align-items: flex-start; }
+}
+
+/* ── Scrollbar ── */
+.tm-container ::-webkit-scrollbar { width: 4px; }
+.tm-container ::-webkit-scrollbar-track { background: transparent; }
+.tm-container ::-webkit-scrollbar-thumb { background: #2a2a2a; border-radius: 2px; }
+.tm-container ::-webkit-scrollbar-thumb:hover { background: #444; }
+</style>
 
 <script>
 // コマンド送信
@@ -212,7 +722,7 @@ document.querySelectorAll('.cmd-stop').forEach(btn => {
     });
 });
 
-// Auto-refresh: 10秒ごとにJSON APIからデータ取得
+// Auto-refresh
 (function() {
     const REFRESH_INTERVAL = 10000;
     const STATUS_DISPLAY = {
@@ -220,10 +730,10 @@ document.querySelectorAll('.cmd-stop').forEach(btn => {
         'saving': 'Saving', 'completed': 'Completed', 'failed': 'Failed'
     };
     const STATUS_HEADER_CLASS = {
-        'training': 'bg-success', 'loading': 'bg-success', 'saving': 'bg-success',
-        'completed': 'bg-primary', 'failed': 'bg-danger'
+        'training': 'tm-active', 'loading': 'tm-active', 'saving': 'tm-active',
+        'completed': 'tm-completed', 'failed': 'tm-failed'
     };
-    
+
     function refreshData() {
         fetch("{% url 'songs:training_api_status' %}")
             .then(r => r.json())
@@ -231,20 +741,20 @@ document.querySelectorAll('.cmd-stop').forEach(btn => {
                 data.sessions.forEach(s => {
                     const card = document.querySelector(`.session-card[data-session-id="${s.id}"]`);
                     if (!card) return;
-                    
-                    // Update metrics
+
+                    // Metrics
                     const tl = card.querySelector('.train-loss');
                     if (tl) tl.textContent = s.train_loss ? s.train_loss.toFixed(4) : '-';
                     const el = card.querySelector('.eval-loss');
                     if (el) el.textContent = s.eval_loss ? s.eval_loss.toFixed(4) : '-';
                     const ac = card.querySelector('.accuracy');
                     if (ac) ac.textContent = s.accuracy ? s.accuracy.toFixed(1) + '%' : '-';
-                    
-                    // Update model name
+
+                    // Model name
                     const mn = card.querySelector('.model-name');
                     if (mn) mn.textContent = s.model_name || 'N/A';
-                    
-                    // Update progress
+
+                    // Progress
                     const epochSection = card.querySelector('.epoch-progress');
                     if (s.total_epochs > 0 || s.total_steps > 0) {
                         if (epochSection) epochSection.style.display = '';
@@ -255,8 +765,8 @@ document.querySelectorAll('.cmd-stop').forEach(btn => {
                     if (te) te.textContent = s.total_epochs;
                     const pct = card.querySelector('.progress-pct');
                     if (pct) pct.textContent = s.progress_percent + '%';
-                    
-                    // Update ETA
+
+                    // ETA
                     const etaDisplay = card.querySelector('.eta-display');
                     const etaText = card.querySelector('.eta-text');
                     if (etaDisplay && etaText) {
@@ -266,113 +776,106 @@ document.querySelectorAll('.cmd-stop').forEach(btn => {
                             if (secs >= 3600) {
                                 const h = Math.floor(secs / 3600);
                                 const m = Math.floor((secs % 3600) / 60);
-                                etaText.textContent = `${h}時間${m}分`;
+                                etaText.textContent = `${h}h${m}m`;
                             } else if (secs >= 60) {
                                 const m = Math.floor(secs / 60);
                                 const sec = secs % 60;
-                                etaText.textContent = `${m}分${sec}秒`;
+                                etaText.textContent = `${m}m${sec}s`;
                             } else {
-                                etaText.textContent = `${secs}秒`;
+                                etaText.textContent = `${secs}s`;
                             }
                         } else {
                             etaDisplay.style.display = 'none';
                         }
                     }
-                    
-                    const bar = card.querySelector('.progress-bar.bg-warning');
+
+                    // Progress bar
+                    const bar = card.querySelector('.tm-progress-bar');
                     if (bar) {
                         bar.style.width = s.progress_percent + '%';
-                        bar.textContent = s.total_steps > 0
-                            ? `${s.current_step}/${s.total_steps} (${s.progress_percent}%)`
-                            : s.progress_percent + '%';
-                        if (s.is_active) bar.classList.add('progress-bar-animated');
-                        else bar.classList.remove('progress-bar-animated');
+                        if (s.is_active) bar.classList.add('tm-progress-animated');
+                        else bar.classList.remove('tm-progress-animated');
                     }
-                    
-                    // Update card header color
-                    const header = card.querySelector('.card-header');
+
+                    // Card header status
+                    const header = card.querySelector('.tm-card-header');
                     if (header) {
-                        header.classList.remove('bg-success', 'bg-primary', 'bg-danger', 'bg-secondary');
-                        header.classList.add(s.is_active ? 'bg-success' : (STATUS_HEADER_CLASS[s.status] || 'bg-secondary'));
+                        header.classList.remove('tm-active', 'tm-completed', 'tm-failed', 'tm-idle');
+                        header.classList.add(s.is_active ? 'tm-active' : (STATUS_HEADER_CLASS[s.status] || 'tm-idle'));
                     }
-                    
-                    // Update status badge (display label)
+
+                    // Status badge
                     const badge = card.querySelector('.status-badge');
                     if (badge) badge.textContent = STATUS_DISPLAY[s.status] || s.status;
 
-                    // Update GPU name badge
-                    const gpuBadges = card.querySelectorAll('.card-header .badge.bg-dark');
-                    if (s.gpu_name) {
-                        if (gpuBadges.length > 0) {
-                            gpuBadges[0].textContent = s.gpu_name;
-                        } else {
-                            const headerRight = card.querySelector('.card-header > div:last-child');
-                            if (headerRight) headerRight.insertAdjacentHTML('beforeend',
-                                `<span class="badge bg-dark ms-1">${s.gpu_name}</span>`);
-                        }
+                    // GPU badge
+                    const gpuBadge = card.querySelector('.tm-gpu-badge');
+                    if (s.gpu_name && gpuBadge) {
+                        gpuBadge.innerHTML = `<svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="4" y="4" width="16" height="16" rx="2"/><path d="M9 1v3M15 1v3M9 20v3M15 20v3M1 9h3M1 15h3M20 9h3M20 15h3"/></svg> ${s.gpu_name}`;
                     }
 
-                    // Update VRAM
+                    // VRAM
                     const vramContainer = card.querySelector('.vram-section');
                     if (s.gpu_memory_used && s.gpu_memory_total) {
                         const pctVram = Math.round(s.gpu_memory_used / s.gpu_memory_total * 100);
-                        const vramHtml = `<small class="text-muted">VRAM:</small>
-                            <div class="progress" style="height: 16px;">
-                                <div class="progress-bar bg-info" style="width: ${pctVram}%">
+                        const html = `<span class="tm-label">VRAM</span>
+                            <div class="tm-vram-track">
+                                <div class="tm-vram-bar" style="width: ${pctVram}%">
                                     ${s.gpu_memory_used.toFixed(1)} / ${s.gpu_memory_total.toFixed(1)} GB
                                 </div>
                             </div>`;
                         if (vramContainer) {
-                            vramContainer.innerHTML = vramHtml;
+                            vramContainer.innerHTML = html;
                         } else {
-                            // 初期表示にVRAMが無かった場合、メトリクスの後に追加
-                            const metricsRow = card.querySelector('.row.text-center');
-                            if (metricsRow) {
+                            const grid = card.querySelector('.tm-metric-grid');
+                            if (grid) {
                                 const div = document.createElement('div');
-                                div.className = 'mt-2 vram-section';
-                                div.innerHTML = vramHtml;
-                                metricsRow.parentNode.insertBefore(div, metricsRow.nextSibling);
+                                div.className = 'tm-vram vram-section';
+                                div.innerHTML = html;
+                                grid.parentNode.insertBefore(div, grid.nextSibling);
                             }
                         }
-                    }
-                    
-                    // Update error message
-                    let errorAlert = card.querySelector('.alert-danger');
-                    if (s.error_message) {
-                        const truncated = s.error_message.length > 300 ? s.error_message.substring(0, 300) + '...' : s.error_message;
-                        if (errorAlert) {
-                            errorAlert.innerHTML = `<i class="bi bi-exclamation-triangle"></i> ${truncated}`;
-                        } else {
-                            const logTail = card.querySelector('.log-tail');
-                            if (logTail) {
-                                logTail.insertAdjacentHTML('afterend',
-                                    `<div class="alert alert-danger py-1 px-2 mt-1 mb-0" style="font-size: 0.8rem;"><i class="bi bi-exclamation-triangle"></i> ${truncated}</div>`);
-                            }
-                        }
-                    } else {
-                        if (errorAlert) errorAlert.remove();
                     }
 
-                    // Update command buttons based on status
+                    // Error
+                    let errorEl = card.querySelector('.tm-error');
+                    if (s.error_message) {
+                        const truncated = s.error_message.length > 300 ? s.error_message.substring(0, 300) + '...' : s.error_message;
+                        const errorHtml = `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="15" y1="9" x2="9" y2="15"/><line x1="9" y1="9" x2="15" y2="15"/></svg> ${truncated}`;
+                        if (errorEl) {
+                            errorEl.innerHTML = errorHtml;
+                        } else {
+                            const logEl = card.querySelector('.log-tail');
+                            if (logEl) logEl.insertAdjacentHTML('afterend', `<div class="tm-error">${errorHtml}</div>`);
+                        }
+                    } else {
+                        if (errorEl) errorEl.remove();
+                    }
+
+                    // Command buttons
                     const cmdDiv = card.querySelector('.command-buttons');
                     if (cmdDiv) {
                         if (s.is_active) {
-                            cmdDiv.innerHTML = `<button class="btn btn-danger btn-sm cmd-stop" data-session="${s.id}"><i class="bi bi-stop-fill"></i> 停止</button>`;
+                            cmdDiv.innerHTML = `<button class="tm-btn tm-btn-stop cmd-stop" data-session="${s.id}">
+                                <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><rect x="6" y="6" width="12" height="12" rx="1"/></svg> 停止</button>`;
                             cmdDiv.querySelector('.cmd-stop').addEventListener('click', function() {
                                 if (confirm('トレーニングを停止しますか？')) sendCommand(this.dataset.session, 'stop');
                             });
                         } else {
                             const staleWarning = ['training', 'loading', 'saving'].includes(s.status)
-                                ? `<span class="badge bg-warning text-dark me-2"><i class="bi bi-exclamation-triangle"></i> 応答なし (5分超)</span>` : '';
+                                ? `<span class="tm-stale-warning"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg> 応答なし (5分超)</span>` : '';
                             const disabled = s.pending_command === 'start' ? 'disabled' : '';
                             cmdDiv.innerHTML = `${staleWarning}
-                                <div class="btn-group" role="group">
-                                    <input type="radio" class="btn-check" name="ttype-${s.id}" id="ttype-lyrics-${s.id}" value="lyrics" ${s.training_type !== 'importance' ? 'checked' : ''}>
-                                    <label class="btn btn-outline-warning btn-sm" for="ttype-lyrics-${s.id}"><i class="bi bi-music-note-beamed"></i> 歌詞LLM</label>
-                                    <input type="radio" class="btn-check" name="ttype-${s.id}" id="ttype-importance-${s.id}" value="importance" ${s.training_type === 'importance' ? 'checked' : ''}>
-                                    <label class="btn btn-outline-info btn-sm" for="ttype-importance-${s.id}"><i class="bi bi-journal-text"></i> ノート重要度LLM</label>
+                                <div class="tm-type-switch">
+                                    <input type="radio" class="tm-radio" name="ttype-${s.id}" id="ttype-lyrics-${s.id}" value="lyrics" ${s.training_type !== 'importance' ? 'checked' : ''}>
+                                    <label class="tm-radio-label tm-radio-lyrics" for="ttype-lyrics-${s.id}">
+                                        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 18V5l12-2v13"/><circle cx="6" cy="18" r="3"/><circle cx="18" cy="16" r="3"/></svg> 歌詞LLM</label>
+                                    <input type="radio" class="tm-radio" name="ttype-${s.id}" id="ttype-importance-${s.id}" value="importance" ${s.training_type === 'importance' ? 'checked' : ''}>
+                                    <label class="tm-radio-label tm-radio-importance" for="ttype-importance-${s.id}">
+                                        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M2 3h6a4 4 0 014 4v14a3 3 0 00-3-3H2z"/><path d="M22 3h-6a4 4 0 00-4 4v14a3 3 0 013-3h7z"/></svg> ノート重要度LLM</label>
                                 </div>
-                                <button class="btn btn-success btn-sm cmd-start" data-session="${s.id}" ${disabled}><i class="bi bi-play-fill"></i> トレーニング開始</button>`;
+                                <button class="tm-btn tm-btn-start cmd-start" data-session="${s.id}" ${disabled}>
+                                    <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><polygon points="5,3 19,12 5,21"/></svg> トレーニング開始</button>`;
                             const startBtn = cmdDiv.querySelector('.cmd-start');
                             if (startBtn) startBtn.addEventListener('click', function() {
                                 const sid = this.dataset.session;
@@ -382,59 +885,59 @@ document.querySelectorAll('.cmd-stop').forEach(btn => {
                         }
                     }
 
-                    // Update pending badge
+                    // Pending badge
                     const pendingBadge = card.querySelector('.pending-badge');
                     if (s.pending_command === 'start') {
                         if (!pendingBadge) {
-                            const headerRight = card.querySelector('.card-header > div:last-child');
-                            if (headerRight) headerRight.insertAdjacentHTML('beforeend', '<span class="badge bg-warning text-dark ms-1 pending-badge">開始待ち...</span>');
+                            const badges = card.querySelector('.tm-badges');
+                            if (badges) badges.insertAdjacentHTML('beforeend', '<span class="tm-pending-badge pending-badge">開始待ち...</span>');
                         }
                     } else {
                         if (pendingBadge) pendingBadge.remove();
                     }
-                    
-                    // Update training type badge
+
+                    // Training type badge
                     const ttBadge = card.querySelector('.training-type-badge');
                     if (ttBadge) {
                         if (s.training_type === 'importance') {
-                            ttBadge.className = 'badge training-type-badge bg-info ms-1';
-                            ttBadge.innerHTML = '<i class="bi bi-journal-text"></i> ノート重要度';
+                            ttBadge.className = 'tm-type-badge training-type-badge tm-type-importance';
+                            ttBadge.innerHTML = '<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M2 3h6a4 4 0 014 4v14a3 3 0 00-3-3H2z"/><path d="M22 3h-6a4 4 0 00-4 4v14a3 3 0 013-3h7z"/></svg> ノート重要度';
                         } else {
-                            ttBadge.className = 'badge training-type-badge bg-warning text-dark ms-1';
-                            ttBadge.innerHTML = '<i class="bi bi-music-note-beamed"></i> 歌詞';
+                            ttBadge.className = 'tm-type-badge training-type-badge tm-type-lyrics';
+                            ttBadge.innerHTML = '<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 18V5l12-2v13"/><circle cx="6" cy="18" r="3"/><circle cx="18" cy="16" r="3"/></svg> 歌詞';
                         }
                     }
-                    
-                    // Update log
+
+                    // Log
                     const log = card.querySelector('.log-tail');
                     if (log && s.log_tail) {
                         log.textContent = s.log_tail;
                         log.scrollTop = log.scrollHeight;
                     }
-                    
-                    // Update footer times
-                    const footerRow = card.querySelector('.row.mt-2 .col');
-                    if (footerRow) {
+
+                    // Footer times
+                    const footer = card.querySelector('.tm-footer');
+                    if (footer) {
                         let html = '';
                         if (s.started_at) {
                             const sd = new Date(s.started_at);
-                            html += `<span><i class="bi bi-play-circle"></i> 開始: ${sd.toLocaleDateString('ja-JP')} ${sd.toLocaleTimeString('ja-JP', {hour:'2-digit',minute:'2-digit'})}</span>`;
+                            html += `<span class="tm-time"><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="5,3 19,12 5,21"/></svg> 開始: ${sd.toLocaleDateString('ja-JP')} ${sd.toLocaleTimeString('ja-JP', {hour:'2-digit',minute:'2-digit'})}</span>`;
                         }
                         if (s.completed_at) {
                             const cd = new Date(s.completed_at);
-                            html += `<span class="ms-3"><i class="bi bi-check-circle"></i> 完了: ${cd.toLocaleDateString('ja-JP')} ${cd.toLocaleTimeString('ja-JP', {hour:'2-digit',minute:'2-digit'})}</span>`;
+                            html += `<span class="tm-time"><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="20 6 9 17 4 12"/></svg> 完了: ${cd.toLocaleDateString('ja-JP')} ${cd.toLocaleTimeString('ja-JP', {hour:'2-digit',minute:'2-digit'})}</span>`;
                         }
                         if (s.updated_at) {
                             const ud = new Date(s.updated_at);
-                            html += `<span class="ms-3 updated-at"><i class="bi bi-clock"></i> 最終更新: ${ud.toLocaleTimeString('ja-JP')}</span>`;
+                            html += `<span class="tm-time updated-at"><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg> 最終更新: ${ud.toLocaleTimeString('ja-JP')}</span>`;
                         }
-                        footerRow.innerHTML = html;
+                        footer.innerHTML = html;
                     }
                 });
             })
             .catch(err => console.warn('Refresh failed:', err));
     }
-    
+
     setInterval(refreshData, REFRESH_INTERVAL);
 })();
 </script>

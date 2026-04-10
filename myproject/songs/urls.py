@@ -75,6 +75,7 @@ urlpatterns = [
     path('api/mureka/test-submit/', views.test_mureka_submit, name='test_mureka_submit'),
     path('api/mureka/test-poll/', views.test_mureka_poll, name='test_mureka_poll'),
     path('api/training/update/', views.training_api_update, name='training_api_update'),
+    path('api/training/reviewed/', views.training_reviewed_indices, name='training_reviewed_indices'),
     path('api/training/status/', views.training_api_status_json, name='training_api_status'),
     path('api/training/command/', views.training_send_command, name='training_send_command'),
 ]
