@@ -492,6 +492,26 @@ def main():
 
                     training_running = True
 
+                    # 学習前に推論サーバーを停止してGPUメモリを解放
+                    if serve_proc and serve_proc.poll() is None:
+                        logger.info("学習開始: 推論サーバーを一時停止してGPUメモリを解放します")
+                        serve_proc.terminate()
+                        try:
+                            serve_proc.wait(timeout=15)
+                        except subprocess.TimeoutExpired:
+                            serve_proc.kill()
+                            serve_proc.wait()
+                        # トンネルも停止
+                        if tunnel_proc and tunnel_proc.poll() is None:
+                            tunnel_proc.terminate()
+                            try:
+                                tunnel_proc.wait(timeout=5)
+                            except subprocess.TimeoutExpired:
+                                tunnel_proc.kill()
+                        import gc
+                        gc.collect()
+                        logger.info("推論サーバー停止完了")
+
                     try:
                         if current_training_type == 'importance':
                             # ノート重要度LLM: データ生成なしで直接学習
@@ -570,6 +590,22 @@ def main():
                             time.sleep(wait_time)
                     finally:
                         training_running = False
+                        # 学習完了後に推論サーバー+トンネルを再起動
+                        if not args.no_serve:
+                            logger.info("学習完了: 推論サーバーを再起動します...")
+                            serve_proc = start_inference_server()
+                            if serve_proc and serve_proc.poll() is None:
+                                if wait_for_server_ready(SERVE_PORT, timeout=300):
+                                    tunnel_proc, tunnel_url = start_cloudflare_tunnel(SERVE_PORT)
+                                    if tunnel_url:
+                                        send_status(args.report_url, args.api_key,
+                                                    status='idle', tunnel_url=tunnel_url)
+                                        tunnel_fail_count = 0
+                                        logger.info(f"推論サーバー再起動完了: {tunnel_url}")
+                                    else:
+                                        logger.warning("トンネル再起動失敗")
+                                else:
+                                    logger.warning("推論サーバー再起動タイムアウト")
 
             # トンネル健全性チェック (120秒ごと)
             now = time.time()
