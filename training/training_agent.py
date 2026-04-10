@@ -21,11 +21,16 @@ import threading
 import urllib.request
 import urllib.error
 
+import io
+
+# Windows タスクスケジューラ環境ではコンソールが cp1252 になるため
+# UTF-8 ストリームを明示的に設定する
+_log_stream = io.TextIOWrapper(sys.stdout.buffer, encoding='utf-8', errors='replace', line_buffering=True)
 logging.basicConfig(
     level=logging.INFO,
     format="%(asctime)s [%(levelname)s] %(message)s",
     datefmt="%H:%M:%S",
-    stream=sys.stdout,
+    stream=_log_stream,
 )
 logger = logging.getLogger(__name__)
 
