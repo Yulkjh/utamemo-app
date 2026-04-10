@@ -70,10 +70,10 @@
         </select>
         <select id="reviewFilter" class="td-select">
             <option value="">All Status</option>
-            <option value="reviewed">✅ Reviewed Only</option>
-            <option value="unreviewed">⬜ Unreviewed Only</option>
-            <option value="trained">🎓 Trained Only</option>
-            <option value="untrained">📝 Untrained Only</option>
+            <option value="reviewed">Reviewed Only</option>
+            <option value="unreviewed">Unreviewed Only</option>
+            <option value="trained">Trained Only</option>
+            <option value="untrained">Untrained Only</option>
         </select>
         <span id="resultCount" class="td-result-count"></span>
         <span id="approveStats" class="td-approve-stats"></span>
@@ -812,7 +812,7 @@ function renderRecords() {
         const preview = (r.input || '').substring(0, 100);
         const isReviewedByMe = reviewers.includes(CURRENT_USERNAME);
         const trainedBadge = isTrained
-            ? '<span class="td-trained-badge">🎓 学習済み</span>'
+            ? '<span class="td-trained-badge"><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M22 11.08V12a10 10 0 11-5.93-9.14"/><path d="M22 4L12 14.01l-3-3"/></svg> Trained</span>'
             : '';
         const reviewBadge = reviewers.length > 0
             ? `<span class="td-reviewed-badge ${isReviewedByMe ? 'td-reviewed-mine' : ''}">✓ ${reviewers.map(u => escapeHtml(u)).join(', ')}</span>`
@@ -861,7 +861,7 @@ function renderRecords() {
     document.getElementById('totalBadge').textContent = `合計 ${allRecords.length} 件`;
     document.getElementById('approveStats').innerHTML =
         `<span class="approved-count">${reviewedCount}</span> / ${allRecords.length} reviewed` +
-        (trainedCount > 0 ? ` &nbsp;|&nbsp; <span class="trained-count">🎓 ${trainedCount}</span> trained` : '');
+        (trainedCount > 0 ? ` &nbsp;|&nbsp; <span class="trained-count">${trainedCount}</span> trained` : '');
     renderStats();
 }
 
