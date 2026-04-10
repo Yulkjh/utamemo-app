@@ -3312,17 +3312,22 @@ def _get_llm_base_url():
 
 @staff_member_required
 def test_llm_page(request):
-    """LLMテストページ（スタッフのみ）"""
+    """AI楽曲テストページ（LLM歌詞生成 + Mureka楽曲生成を統合）"""
     from .models import TrainingSession
+    from .ai_services import MurekaAIGenerator
     inference_url = _get_llm_base_url()
     # トレーニング中かどうか確認
     active_training = TrainingSession.objects.filter(
         status__in=['training', 'generating']
     ).first()
+    # Mureka API 設定確認
+    generator = MurekaAIGenerator()
+    api_configured = bool(generator.use_real_api and generator.api_key)
     return render(request, 'songs/test_llm.html', {
         'inference_url': inference_url,
         'is_training': bool(active_training),
         'training_status': active_training.status if active_training else None,
+        'api_configured': api_configured,
     })
 
 
@@ -3503,12 +3508,9 @@ def test_llm_generate(request):
 
 @staff_member_required
 def test_mureka_page(request):
-    """Mureka API 楽曲生成テストページ"""
-    from .ai_services import MurekaAIGenerator
-    generator = MurekaAIGenerator()
-    return render(request, 'songs/test_mureka.html', {
-        'api_configured': bool(generator.use_real_api and generator.api_key),
-    })
+    """旧Murekaテストページ → 統合テストページにリダイレクト"""
+    from django.shortcuts import redirect
+    return redirect('songs:test_llm')
 
 
 @staff_member_required

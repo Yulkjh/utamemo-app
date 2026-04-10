@@ -1,60 +1,70 @@
 {% extends 'base.html' %}
 
-{% block title %}LLMテスト - UTAMEMO Staff{% endblock %}
+{% block title %}AI Song Lab - UTAMEMO Staff{% endblock %}
 
 {% block content %}
-<style>
-.spin-icon { animation: spin 1s linear infinite; display: inline-block; }
-@keyframes spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
-</style>
-<div class="container py-4" style="max-width: 900px;">
-    <!-- ヘッダー -->
-    <div class="d-flex justify-content-between align-items-center mb-4">
-        <h2 style="color: #ff7940;">
-            <i class="bi bi-robot"></i> LLM 推論テスト
-        </h2>
-        <a href="{% url 'songs:llm_guide' %}" class="btn btn-outline-secondary btn-sm">
-            <i class="bi bi-arrow-left"></i> スタッフポータル
+<div class="ut-container">
+    <!-- Header -->
+    <div class="ut-header">
+        <div class="ut-header-left">
+            <h1>AI Song Lab</h1>
+            <div class="ut-header-dots">
+                <span class="ut-dot {% if inference_url %}ut-dot-pending{% else %}ut-dot-off{% endif %}" id="llmDot" title="LLM"></span>
+                <span class="ut-dot {% if api_configured %}ut-dot-ok{% else %}ut-dot-off{% endif %}" title="Mureka"></span>
+            </div>
+        </div>
+        <a href="{% url 'songs:llm_guide' %}" class="ut-btn ut-btn-back">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M19 12H5M12 19l-7-7 7-7"/></svg>
+            Portal
         </a>
     </div>
 
-    <!-- サーバーステータス -->
-    <div class="card border-0 shadow-sm mb-4">
-        <div class="card-body">
-            <div class="d-flex justify-content-between align-items-center">
-                <div>
-                    <h5 class="mb-1"><i class="bi bi-hdd-network"></i> 推論サーバー</h5>
-                    <small class="text-muted" id="serverUrl">{{ inference_url|default:"未設定" }}</small>
-                </div>
-                <div id="serverStatus">
-                    <span class="badge bg-secondary"><i class="bi bi-hourglass-split"></i> 確認中...</span>
-                </div>
-            </div>
-            <div id="serverDetails" class="mt-2 d-none">
-                <div class="row g-2 mt-1">
-                    <div class="col-auto"><span class="badge bg-light text-dark" id="srvEngine"></span></div>
-                    <div class="col-auto"><span class="badge bg-light text-dark" id="srvModel"></span></div>
-                    <div class="col-auto"><span class="badge bg-light text-dark" id="srvGpu"></span></div>
-                </div>
-            </div>
+    <!-- Step indicator -->
+    <div class="ut-steps">
+        <div class="ut-step ut-step-active" id="stepInd1">
+            <span class="ut-step-num">1</span>
+            <span class="ut-step-label">歌詞生成</span>
+        </div>
+        <div class="ut-step-arrow">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#444" stroke-width="2"><path d="M5 12h14M12 5l7 7-7 7"/></svg>
+        </div>
+        <div class="ut-step" id="stepInd2">
+            <span class="ut-step-num">2</span>
+            <span class="ut-step-label">楽曲生成</span>
         </div>
     </div>
 
-    <!-- 入力フォーム -->
-    <div class="card border-0 shadow-sm mb-4">
-        <div class="card-body">
-            <h5 class="card-title mb-3"><i class="bi bi-pencil-square"></i> テスト入力</h5>
-            
-            <div class="mb-3">
-                <label for="studyText" class="form-label fw-bold">学習テキスト</label>
-                <textarea class="form-control" id="studyText" rows="5" 
-                    placeholder="歌詞にしたい学習内容を入力...&#10;例: 織田信長は1534年に尾張国で生まれた戦国武将。桶狭間の戦い(1560年)で今川義元を破り..."></textarea>
+    <!-- === STEP 1: LLM Lyrics Generation === -->
+    <div id="step1Section">
+        <!-- Server Status -->
+        <div class="ut-panel ut-server-panel">
+            <div class="ut-server-row">
+                <div>
+                    <h2>推論サーバー</h2>
+                    <span class="ut-server-url" id="serverUrl">{{ inference_url|default:"未設定" }}</span>
+                </div>
+                <div id="serverStatus">
+                    <span class="ut-badge ut-badge-pending">確認中...</span>
+                </div>
             </div>
+            <div id="serverDetails" class="ut-server-details" style="display:none;">
+                <span class="ut-chip" id="srvEngine"></span>
+                <span class="ut-chip" id="srvModel"></span>
+                <span class="ut-chip" id="srvGpu"></span>
+            </div>
+        </div>
 
-            <div class="row g-3 mb-3">
-                <div class="col-md-4">
-                    <label for="genreSelect" class="form-label fw-bold">ジャンル</label>
-                    <select class="form-select" id="genreSelect">
+        <!-- Lyrics Generation Form -->
+        <div class="ut-panel">
+            <h2>Step 1 — 歌詞生成</h2>
+
+            <label class="ut-label">学習テキスト</label>
+            <textarea id="studyText" class="ut-textarea" rows="6" placeholder="歌詞にしたい学習内容を入力...&#10;例: 織田信長は1534年に尾張国で生まれた戦国武将。桶狭間の戦い(1560年)で今川義元を破り..."></textarea>
+
+            <div class="ut-form-grid">
+                <div>
+                    <label class="ut-label">ジャンル</label>
+                    <select id="llmGenre" class="ut-select">
                         <option value="pop" selected>Pop</option>
                         <option value="rock">Rock</option>
                         <option value="hip-hop">Hip-Hop</option>
@@ -66,9 +76,9 @@
                         <option value="K-pop">K-Pop</option>
                     </select>
                 </div>
-                <div class="col-md-4">
-                    <label for="langMode" class="form-label fw-bold">言語モード</label>
-                    <select class="form-select" id="langMode">
+                <div>
+                    <label class="ut-label">言語モード</label>
+                    <select id="langMode" class="ut-select">
                         <option value="japanese" selected>日本語歌詞</option>
                         <option value="english">英語歌詞</option>
                         <option value="english_vocab">英語学習+日本語歌詞</option>
@@ -76,174 +86,465 @@
                         <option value="chinese_vocab">中国語学習+日本語歌詞</option>
                     </select>
                 </div>
-                <div class="col-md-4">
-                    <label class="form-label fw-bold">バックエンド</label>
-                    <select class="form-select" id="backendSelect">
+                <div>
+                    <label class="ut-label">バックエンド</label>
+                    <select id="backendSelect" class="ut-select">
                         <option value="local" selected>ローカルLLM</option>
                         <option value="gemini">Gemini (比較用)</option>
                     </select>
                 </div>
             </div>
 
-            <div class="mb-3">
-                <label for="customRequest" class="form-label fw-bold">カスタム指示 <small class="text-muted">(任意)</small></label>
-                <input type="text" class="form-control" id="customRequest" placeholder="例: サビを特にキャッチーにして">
-            </div>
+            <label class="ut-label">カスタム指示 <span class="ut-hint">(任意)</span></label>
+            <input type="text" id="customRequest" class="ut-input" placeholder="例: サビを特にキャッチーにして">
 
-            <button class="btn btn-lg w-100" id="generateBtn" 
-                style="background: linear-gradient(135deg, #ff7940, #ff9966); color: white; border: none;"
-                onclick="generateLyrics()">
-                <i class="bi bi-magic"></i> 歌詞を生成
+            <button id="step1Btn" class="ut-btn ut-btn-generate" onclick="generateLyrics()">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2L2 7l10 5 10-5-10-5z"/><path d="M2 17l10 5 10-5"/><path d="M2 12l10 5 10-5"/></svg>
+                歌詞を生成
+            </button>
+        </div>
+
+        <!-- Loading -->
+        <div id="step1Loading" class="ut-panel ut-loading-panel" style="display:none;">
+            <div class="ut-spinner"></div>
+            <span class="ut-loading-text">推論サーバーで生成中... <b id="elapsedTime">0</b>秒</span>
+        </div>
+
+        <!-- Step 1 Error -->
+        <div id="step1Error" class="ut-error" style="display:none;">
+            <span class="ut-error-icon">x</span>
+            <span id="step1ErrorText"></span>
+        </div>
+
+        <!-- Generated Lyrics Result -->
+        <div id="lyricsResult" class="ut-panel ut-result-panel" style="display:none;">
+            <div class="ut-result-header">
+                <h2>生成された歌詞</h2>
+                <div class="ut-result-meta">
+                    <span class="ut-chip" id="resultMeta"></span>
+                    <button class="ut-btn ut-btn-sm" onclick="copyLyrics()">
+                        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 01-2-2V4a2 2 0 012-2h9a2 2 0 012 2v1"/></svg>
+                        Copy
+                    </button>
+                </div>
+            </div>
+            <pre class="ut-lyrics-pre" id="resultLyrics"></pre>
+            <button class="ut-btn ut-btn-proceed" onclick="proceedToStep2()">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M5 12h14M12 5l7 7-7 7"/></svg>
+                この歌詞で楽曲を生成 (Step 2)
             </button>
         </div>
     </div>
 
-    <!-- 結果表示 -->
-    <div class="card border-0 shadow-sm mb-4 d-none" id="resultCard">
-        <div class="card-body">
-            <div class="d-flex justify-content-between align-items-center mb-3">
-                <h5 class="mb-0"><i class="bi bi-music-note-list"></i> 生成結果</h5>
-                <div>
-                    <span class="badge bg-light text-dark" id="resultMeta"></span>
-                    <button class="btn btn-sm btn-outline-secondary ms-2" onclick="copyLyrics()">
-                        <i class="bi bi-clipboard"></i> コピー
-                    </button>
-                </div>
+    <!-- === STEP 2: Mureka Song Generation === -->
+    <div id="step2Section" style="display:none;">
+        <div class="ut-grid">
+            <div class="ut-panel">
+                <h2>Step 2 — 楽曲生成</h2>
+                <label class="ut-label">歌詞 <span class="ut-hint">(編集可能)</span></label>
+                <textarea id="murekaLyrics" class="ut-textarea ut-textarea-mono" rows="16" placeholder="[Verse 1]&#10;歌詞を入力..."></textarea>
             </div>
-            <pre class="p-3 rounded" id="resultLyrics" 
-                style="background: #1a1a2e; color: #e0e0e0; white-space: pre-wrap; font-family: 'Inter', monospace; font-size: 0.95rem; line-height: 1.7; max-height: 600px; overflow-y: auto;"></pre>
+            <div class="ut-panel">
+                <h2>Mureka 設定</h2>
+
+                <label class="ut-label">タイトル</label>
+                <input type="text" id="titleInput" class="ut-input" value="Test Song" placeholder="楽曲タイトル">
+
+                <label class="ut-label">ジャンル</label>
+                <select id="murekaGenre" class="ut-select">
+                    <option value="auto" selected>Auto (おまかせ)</option>
+                    <option value="pop">Pop</option>
+                    <option value="rock">Rock</option>
+                    <option value="hip-hop">Hip-Hop</option>
+                    <option value="EDM">EDM</option>
+                    <option value="jazz">Jazz</option>
+                    <option value="R&B">R&B</option>
+                    <option value="ballad">Ballad</option>
+                    <option value="folk">Folk</option>
+                </select>
+
+                <label class="ut-label">ボーカル</label>
+                <select id="vocalSelect" class="ut-select">
+                    <option value="female">Female</option>
+                    <option value="male">Male</option>
+                    <option value="female_cute">Female (Cute)</option>
+                    <option value="female_cool">Female (Cool)</option>
+                    <option value="male_high">Male (High)</option>
+                    <option value="male_low">Male (Low)</option>
+                    <option value="duet">Duet</option>
+                    <option value="choir">Choir</option>
+                    <option value="vocaloid_female">Vocaloid Female</option>
+                    <option value="vocaloid_male">Vocaloid Male</option>
+                </select>
+
+                <label class="ut-label">Music Prompt <span class="ut-hint">(任意)</span></label>
+                <input type="text" id="promptInput" class="ut-input" placeholder="例: アップテンポ、ピアノ、爽やか">
+
+                <button id="step2Btn" class="ut-btn ut-btn-generate" onclick="startMurekaGeneration()" {% if not api_configured %}disabled{% endif %}>
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="5 3 19 12 5 21 5 3"/></svg>
+                    Generate Song
+                </button>
+
+                {% if not api_configured %}
+                <div class="ut-warning-mini">Mureka API が未設定です</div>
+                {% endif %}
+            </div>
         </div>
-    </div>
 
-    <!-- ローディング -->
-    <div class="text-center py-5 d-none" id="loadingArea">
-        <div class="spinner-border" style="color: #ff7940; width: 3rem; height: 3rem;" role="status"></div>
-        <p class="mt-3 text-muted">推論サーバーで生成中... <span id="elapsedTime">0</span>秒</p>
-    </div>
+        <!-- Back to Step 1 -->
+        <button class="ut-btn ut-btn-back-step" onclick="backToStep1()">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M19 12H5M12 19l-7-7 7-7"/></svg>
+            Step 1 に戻る
+        </button>
 
-    <!-- エラー -->
-    <div class="alert alert-danger d-none" id="errorAlert">
-        <i class="bi bi-exclamation-triangle"></i> <span id="errorMessage"></span>
+        <!-- Mureka Status -->
+        <div id="murekaStatus" class="ut-panel ut-status-panel" style="display:none;">
+            <div class="ut-progress-bar"><div class="ut-progress-fill" id="progressFill"></div></div>
+            <div class="ut-status-text" id="statusText">準備中...</div>
+            <div class="ut-prompt-used" id="promptUsed" style="display:none;"></div>
+        </div>
+
+        <!-- Mureka Result -->
+        <div id="murekaResult" class="ut-panel ut-song-result" style="display:none;">
+            <h2>
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="vertical-align: -2px; margin-right: 4px;"><path d="M9 18V5l12-2v13"/><circle cx="6" cy="18" r="3"/><circle cx="18" cy="16" r="3"/></svg>
+                Generated Song
+            </h2>
+            <div class="ut-player-wrap">
+                <audio id="audioPlayer" controls class="ut-audio"></audio>
+            </div>
+            <div class="ut-result-info">
+                <span class="ut-chip" id="resultDuration"></span>
+                <span class="ut-chip" id="resultPrompt"></span>
+            </div>
+            <button class="ut-btn ut-btn-sm" onclick="resetAll()" style="margin-top:1rem;">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 5v14M5 12h14"/></svg>
+                New Test
+            </button>
+        </div>
+
+        <!-- Step 2 Error -->
+        <div id="step2Error" class="ut-error" style="display:none;">
+            <span class="ut-error-icon">x</span>
+            <span id="step2ErrorText"></span>
+        </div>
     </div>
 </div>
 
+<!-- ========== STYLES ========== -->
+<style>
+.navbar-modern, .footer-modern { display: none !important; }
+main { padding-top: 0 !important; }
+body { background: #0d0d0d !important; }
+
+.ut-container {
+    max-width: 1100px;
+    margin: 0 auto;
+    padding: 2.5rem 1.5rem;
+    min-height: 100vh;
+}
+
+/* Header */
+.ut-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 1.5rem;
+    padding-bottom: 1.2rem;
+    border-bottom: 1px solid #1a1a1a;
+}
+.ut-header-left { display: flex; align-items: center; gap: 0.8rem; }
+.ut-header h1 {
+    font-size: 1.6rem; font-weight: 700; margin: 0;
+    background: linear-gradient(135deg, #ff7940, #ff5722);
+    -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+}
+.ut-header-dots { display: flex; gap: 0.4rem; align-items: center; }
+.ut-dot { width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0; }
+.ut-dot-ok { background: #22c55e; box-shadow: 0 0 6px #22c55e80; }
+.ut-dot-off { background: #444; }
+.ut-dot-pending { background: #888; animation: dotPulse 1.5s infinite; }
+@keyframes dotPulse { 0%,100%{opacity:1} 50%{opacity:.3} }
+
+/* Steps */
+.ut-steps { display: flex; align-items: center; gap: 0.6rem; margin-bottom: 1.5rem; }
+.ut-step {
+    display: flex; align-items: center; gap: 0.4rem;
+    padding: 0.35rem 0.8rem; border-radius: 2rem;
+    background: #141414; border: 1px solid #222; transition: all .3s;
+}
+.ut-step-active { border-color: #ff794060; background: #1a1008; }
+.ut-step-num {
+    width: 22px; height: 22px; border-radius: 50%;
+    background: #222; color: #666; font-size: .75rem; font-weight: 700;
+    display: flex; align-items: center; justify-content: center;
+}
+.ut-step-active .ut-step-num { background: linear-gradient(135deg,#ff7940,#ff5722); color: #fff; }
+.ut-step-label { font-size: .8rem; color: #666; font-weight: 500; }
+.ut-step-active .ut-step-label { color: #ccc; }
+.ut-step-arrow { color: #333; display: flex; }
+
+/* Panel */
+.ut-panel {
+    background: #111; border: 1px solid #1a1a1a;
+    border-radius: .6rem; padding: 1.2rem; margin-bottom: 1.2rem;
+}
+.ut-panel h2 {
+    font-size: .85rem; font-weight: 600; color: #888;
+    text-transform: uppercase; letter-spacing: .05em; margin: 0 0 .8rem;
+}
+
+/* Server */
+.ut-server-panel { padding: 1rem 1.2rem; }
+.ut-server-row { display: flex; justify-content: space-between; align-items: center; }
+.ut-server-url { color: #555; font-size: .75rem; font-family: 'SF Mono','Consolas',monospace; }
+.ut-server-details { display: flex; gap: .5rem; margin-top: .6rem; flex-wrap: wrap; }
+
+/* Badge & Chip */
+.ut-badge { font-size: .75rem; font-weight: 600; padding: .25rem .6rem; border-radius: .3rem; }
+.ut-badge-ok { background: #22c55e20; color: #22c55e; }
+.ut-badge-pending { background: #88888820; color: #888; }
+.ut-badge-warn { background: #eab30820; color: #eab308; }
+.ut-badge-err { background: #dc262620; color: #f87171; }
+.ut-badge-info { background: #3b82f620; color: #60a5fa; }
+.ut-chip {
+    font-size: .72rem; color: #666; background: #0d0d0d;
+    padding: .25rem .5rem; border-radius: .25rem; border: 1px solid #1a1a1a;
+}
+
+/* Labels & Inputs */
+.ut-label {
+    display: block; font-size: .78rem; font-weight: 600; color: #777;
+    margin: .7rem 0 .3rem; text-transform: uppercase; letter-spacing: .03em;
+}
+.ut-hint { color: #555; font-weight: 400; text-transform: none; }
+.ut-textarea {
+    width: 100%; background: #0d0d0d; border: 1px solid #222;
+    border-radius: .5rem; color: #ddd; padding: .7rem;
+    font-family: 'Inter',sans-serif; font-size: .82rem; line-height: 1.6;
+    resize: vertical; outline: none; box-sizing: border-box;
+}
+.ut-textarea:focus { border-color: #ff794050; }
+.ut-textarea-mono { font-family: 'SF Mono','Consolas',monospace; line-height: 1.7; }
+.ut-input, .ut-select {
+    width: 100%; background: #0d0d0d; border: 1px solid #222;
+    border-radius: .4rem; color: #ddd; padding: .45rem .7rem;
+    font-size: .82rem; outline: none; box-sizing: border-box;
+}
+.ut-input:focus, .ut-select:focus { border-color: #ff794050; }
+.ut-select { cursor: pointer; }
+
+/* Form grid */
+.ut-form-grid { display: grid; grid-template-columns: repeat(3,1fr); gap: .8rem; margin-bottom: .3rem; }
+@media (max-width:600px) { .ut-form-grid { grid-template-columns: 1fr; } }
+
+/* Grid (Step 2) */
+.ut-grid { display: grid; grid-template-columns: 1fr 320px; gap: 1.5rem; }
+@media (max-width:768px) { .ut-grid { grid-template-columns: 1fr; } }
+
+/* Buttons */
+.ut-btn {
+    display: inline-flex; align-items: center; gap: .4rem;
+    padding: .45rem .8rem; border: 1px solid #2a2a2a; border-radius: .5rem;
+    background: #141414; color: #999; cursor: pointer;
+    font-size: .82rem; font-weight: 500; text-decoration: none; transition: all .15s;
+}
+.ut-btn:hover { color: #fff; border-color: #444; background: #1a1a1a; }
+.ut-btn-back { color: #888; }
+.ut-btn-sm { font-size: .76rem; padding: .3rem .6rem; }
+.ut-btn-generate {
+    width: 100%; margin-top: 1rem; padding: .7rem; justify-content: center;
+    font-size: .9rem; font-weight: 600;
+    background: linear-gradient(135deg,#ff7940,#e8522a); border: none; color: #fff;
+}
+.ut-btn-generate:hover { filter: brightness(1.1); color: #fff; }
+.ut-btn-generate:disabled { opacity: .4; cursor: not-allowed; filter: none; }
+.ut-btn-proceed {
+    width: 100%; margin-top: .8rem; padding: .6rem; justify-content: center;
+    font-size: .85rem; font-weight: 600;
+    background: #1a2a1a; border: 1px solid #22c55e40; color: #22c55e;
+}
+.ut-btn-proceed:hover { background: #1a3a1a; color: #4ade80; border-color: #22c55e80; }
+.ut-btn-back-step { margin-bottom: 1.2rem; color: #777; border-color: #222; background: #111; }
+.ut-btn-generating { pointer-events: none; position: relative; overflow: hidden; }
+.ut-btn-generating::after {
+    content: ''; position: absolute; top: 0; left: -100%;
+    width: 200%; height: 100%;
+    background: linear-gradient(90deg,transparent,rgba(255,255,255,.08),transparent);
+    animation: shimmer 1.5s infinite;
+}
+@keyframes shimmer { 100% { left: 100%; } }
+
+/* Loading */
+.ut-loading-panel { display: flex; align-items: center; gap: 1rem; padding: 1rem 1.2rem; }
+.ut-spinner {
+    width: 24px; height: 24px;
+    border: 3px solid #222; border-top-color: #ff7940;
+    border-radius: 50%; animation: spin .8s linear infinite; flex-shrink: 0;
+}
+@keyframes spin { to { transform: rotate(360deg); } }
+.ut-loading-text { color: #888; font-size: .85rem; }
+
+/* Lyrics result */
+.ut-result-panel { border-color: #22c55e25; }
+.ut-result-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: .5rem; }
+.ut-result-meta { display: flex; align-items: center; gap: .5rem; }
+.ut-lyrics-pre {
+    background: #0a0a0a; border: 1px solid #1a1a1a; border-radius: .4rem;
+    padding: .8rem; color: #ddd; font-family: 'SF Mono','Consolas',monospace;
+    font-size: .82rem; line-height: 1.7; white-space: pre-wrap;
+    max-height: 500px; overflow-y: auto; margin: 0;
+}
+
+/* Status */
+.ut-status-panel { padding: 1rem 1.2rem; }
+.ut-progress-bar { width: 100%; height: 4px; background: #1a1a1a; border-radius: 2px; overflow: hidden; margin-bottom: .6rem; }
+.ut-progress-fill { height: 100%; width: 0%; background: linear-gradient(90deg,#ff7940,#ff5722); border-radius: 2px; transition: width .5s ease; }
+.ut-status-text { color: #aaa; font-size: .85rem; }
+.ut-prompt-used { margin-top: .4rem; font-size: .72rem; color: #555; font-family: 'SF Mono',monospace; word-break: break-all; }
+
+/* Song result */
+.ut-song-result { border-color: #22c55e30; }
+.ut-player-wrap { margin-bottom: .8rem; }
+.ut-audio { width: 100%; border-radius: .5rem; outline: none; }
+.ut-result-info { display: flex; flex-wrap: wrap; gap: .5rem; }
+
+/* Error */
+.ut-error {
+    background: rgba(220,38,38,.1); border: 1px solid rgba(220,38,38,.3);
+    border-radius: .6rem; padding: .8rem 1rem; color: #f87171;
+    font-size: .85rem; display: flex; align-items: center; gap: .5rem; margin-bottom: 1.2rem;
+}
+.ut-error-icon { font-weight: 700; font-size: 1rem; }
+.ut-warning-mini { margin-top: .6rem; font-size: .75rem; color: #f87171; text-align: center; }
+</style>
+
+<!-- ========== SCRIPTS ========== -->
 <script>
-const csrfToken = '{{ csrf_token }}';
+const CSRF = '{{ csrf_token }}';
+const HEALTH_URL = '{% url "songs:test_llm_health" %}';
+const LLM_GEN_URL = '{% url "songs:test_llm_generate" %}';
+const MUREKA_SUBMIT_URL = '{% url "songs:test_mureka_submit" %}';
+const MUREKA_POLL_URL = '{% url "songs:test_mureka_poll" %}';
+
 let timerInterval = null;
-
-// ページ読み込み時にヘルスチェック
-document.addEventListener('DOMContentLoaded', checkHealth);
-
 let healthTimer = null;
+let pollingTimer = null;
+let pollCount = 0;
 
+// Init
+document.addEventListener('DOMContentLoaded', () => {
+    checkHealth();
+    // URL params: ?lyrics=... で Step 2 に直接遷移
+    const params = new URLSearchParams(window.location.search);
+    const prefillLyrics = params.get('lyrics');
+    if (prefillLyrics) {
+        document.getElementById('murekaLyrics').value = prefillLyrics;
+        showStep2();
+    }
+});
+
+// === Health Check ===
 async function checkHealth() {
     const statusEl = document.getElementById('serverStatus');
-    const detailsEl = document.getElementById('serverDetails');
-    // 前回のポーリングタイマーをクリア
+    const llmDot = document.getElementById('llmDot');
     if (healthTimer) { clearTimeout(healthTimer); healthTimer = null; }
     try {
-        const resp = await fetch('{% url "songs:test_llm_health" %}', {
-            headers: {'X-CSRFToken': csrfToken}
-        });
+        const resp = await fetch(HEALTH_URL, { headers: {'X-CSRFToken': CSRF} });
         const data = await resp.json();
+        const det = document.getElementById('serverDetails');
         if (data.online) {
-            statusEl.innerHTML = '<span class="badge bg-success"><i class="bi bi-check-circle"></i> オンライン</span>';
-            detailsEl.classList.remove('d-none');
+            statusEl.innerHTML = '<span class="ut-badge ut-badge-ok">Online</span>';
+            llmDot.className = 'ut-dot ut-dot-ok';
+            det.style.display = 'flex';
             document.getElementById('srvEngine').textContent = 'Engine: ' + (data.engine || '-');
             document.getElementById('srvModel').textContent = 'Model: ' + (data.base_model || '-');
             document.getElementById('srvGpu').textContent = 'GPU: ' + (data.gpu || '-');
         } else if (data.training) {
-            const statusLabel = data.training_status === 'generating' ? 'データ生成中' : '学習中';
-            statusEl.innerHTML = '<span class="badge bg-warning text-dark"><i class="bi bi-gpu-card"></i> ' + statusLabel + '</span>';
-            detailsEl.classList.remove('d-none');
+            const label = data.training_status === 'generating' ? 'データ生成中' : '学習中';
+            statusEl.innerHTML = '<span class="ut-badge ut-badge-warn">' + label + '</span>';
+            llmDot.className = 'ut-dot ut-dot-off';
+            det.style.display = 'flex';
             document.getElementById('srvEngine').textContent = '';
-            document.getElementById('srvModel').textContent = 'GPU学習中のため推論不可';
-            document.getElementById('srvGpu').textContent = 'Geminiバックエンドは利用可能';
+            document.getElementById('srvModel').textContent = 'GPU学習中 — Geminiは利用可能';
+            document.getElementById('srvGpu').textContent = '';
         } else if (data.starting) {
-            statusEl.innerHTML = '<span class="badge bg-info text-dark"><i class="bi bi-arrow-repeat spin-icon"></i> 起動中...</span>';
-            detailsEl.classList.remove('d-none');
+            statusEl.innerHTML = '<span class="ut-badge ut-badge-info">起動中...</span>';
+            llmDot.className = 'ut-dot ut-dot-pending';
+            det.style.display = 'flex';
             document.getElementById('srvEngine').textContent = '';
-            document.getElementById('srvModel').textContent = '推論サーバーを起動しています...';
-            document.getElementById('srvGpu').textContent = 'モデル読込に数分かかる場合があります';
-            // 起動中は15秒ごとに再チェック
+            document.getElementById('srvModel').textContent = '推論サーバー起動中...';
+            document.getElementById('srvGpu').textContent = '';
             healthTimer = setTimeout(checkHealth, 15000);
         } else {
-            statusEl.innerHTML = '<span class="badge bg-danger"><i class="bi bi-x-circle"></i> オフライン</span>';
-            detailsEl.classList.remove('d-none');
+            statusEl.innerHTML = '<span class="ut-badge ut-badge-err">Offline</span>';
+            llmDot.className = 'ut-dot ut-dot-off';
+            det.style.display = 'flex';
             document.getElementById('srvEngine').textContent = '';
-            document.getElementById('srvModel').textContent = 'エージェントが起動していません';
-            document.getElementById('srvGpu').textContent = 'Geminiバックエンドは利用可能';
+            document.getElementById('srvModel').textContent = 'エージェント未起動 — Geminiは利用可能';
+            document.getElementById('srvGpu').textContent = '';
         }
     } catch(e) {
-        statusEl.innerHTML = '<span class="badge bg-danger"><i class="bi bi-x-circle"></i> 接続エラー</span>';
+        statusEl.innerHTML = '<span class="ut-badge ut-badge-err">Error</span>';
+        llmDot.className = 'ut-dot ut-dot-off';
     }
 }
 
+// === Step 1: Lyrics Generation ===
 async function generateLyrics() {
     const text = document.getElementById('studyText').value.trim();
-    if (!text) {
-        alert('学習テキストを入力してください');
-        return;
-    }
+    if (!text) { alert('学習テキストを入力してください'); return; }
 
-    const btn = document.getElementById('generateBtn');
-    const loadingArea = document.getElementById('loadingArea');
-    const resultCard = document.getElementById('resultCard');
-    const errorAlert = document.getElementById('errorAlert');
-    const elapsedEl = document.getElementById('elapsedTime');
+    const btn = document.getElementById('step1Btn');
+    const loading = document.getElementById('step1Loading');
+    const resultEl = document.getElementById('lyricsResult');
+    const errEl = document.getElementById('step1Error');
+    const elapsed = document.getElementById('elapsedTime');
 
-    // UI更新
     btn.disabled = true;
-    btn.innerHTML = '<span class="spinner-border spinner-border-sm"></span> 生成中...';
-    loadingArea.classList.remove('d-none');
-    resultCard.classList.add('d-none');
-    errorAlert.classList.add('d-none');
+    btn.innerHTML = 'Generating...';
+    btn.classList.add('ut-btn-generating');
+    loading.style.display = 'flex';
+    resultEl.style.display = 'none';
+    errEl.style.display = 'none';
 
-    // タイマー開始
-    let elapsed = 0;
-    elapsedEl.textContent = '0';
-    timerInterval = setInterval(() => {
-        elapsed++;
-        elapsedEl.textContent = elapsed;
-    }, 1000);
+    let sec = 0;
+    elapsed.textContent = '0';
+    timerInterval = setInterval(() => { sec++; elapsed.textContent = sec; }, 1000);
 
     try {
-        const resp = await fetch('{% url "songs:test_llm_generate" %}', {
+        const res = await fetch(LLM_GEN_URL, {
             method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-                'X-CSRFToken': csrfToken,
-            },
+            headers: { 'Content-Type': 'application/json', 'X-CSRFToken': CSRF },
             body: JSON.stringify({
                 text: text,
-                genre: document.getElementById('genreSelect').value,
+                genre: document.getElementById('llmGenre').value,
                 language_mode: document.getElementById('langMode').value,
                 custom_request: document.getElementById('customRequest').value,
                 backend: document.getElementById('backendSelect').value,
             }),
         });
-
-        const data = await resp.json();
-
+        const data = await res.json();
         if (data.success) {
-            resultCard.classList.remove('d-none');
             document.getElementById('resultLyrics').textContent = data.lyrics;
             const meta = [];
-            if (data.generation_time) meta.push(data.generation_time + '秒');
+            if (data.generation_time) meta.push(data.generation_time + 's');
             if (data.backend) meta.push(data.backend);
             document.getElementById('resultMeta').textContent = meta.join(' | ');
+            resultEl.style.display = 'block';
         } else {
-            errorAlert.classList.remove('d-none');
-            document.getElementById('errorMessage').textContent = data.error || '生成に失敗しました';
+            errEl.style.display = 'flex';
+            document.getElementById('step1ErrorText').textContent = data.error || '生成に失敗しました';
         }
     } catch(e) {
-        errorAlert.classList.remove('d-none');
-        document.getElementById('errorMessage').textContent = '通信エラー: ' + e.message;
+        errEl.style.display = 'flex';
+        document.getElementById('step1ErrorText').textContent = '通信エラー: ' + e.message;
     } finally {
         clearInterval(timerInterval);
-        loadingArea.classList.add('d-none');
+        loading.style.display = 'none';
         btn.disabled = false;
-        btn.innerHTML = '<i class="bi bi-magic"></i> 歌詞を生成';
+        btn.innerHTML = '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2L2 7l10 5 10-5-10-5z"/><path d="M2 17l10 5 10-5"/><path d="M2 12l10 5 10-5"/></svg> 歌詞を生成';
+        btn.classList.remove('ut-btn-generating');
     }
 }
 
@@ -252,9 +553,145 @@ function copyLyrics() {
     navigator.clipboard.writeText(text).then(() => {
         const btn = event.target.closest('button');
         const orig = btn.innerHTML;
-        btn.innerHTML = '<i class="bi bi-check"></i> コピー済み';
+        btn.innerHTML = 'Copied';
         setTimeout(() => btn.innerHTML = orig, 1500);
     });
+}
+
+// === Step transitions ===
+function proceedToStep2() {
+    const lyrics = document.getElementById('resultLyrics').textContent;
+    document.getElementById('murekaLyrics').value = lyrics;
+    showStep2();
+}
+
+function showStep2() {
+    document.getElementById('step1Section').style.display = 'none';
+    document.getElementById('step2Section').style.display = 'block';
+    document.getElementById('stepInd1').classList.remove('ut-step-active');
+    document.getElementById('stepInd2').classList.add('ut-step-active');
+    window.scrollTo(0, 0);
+}
+
+function backToStep1() {
+    document.getElementById('step1Section').style.display = 'block';
+    document.getElementById('step2Section').style.display = 'none';
+    document.getElementById('stepInd1').classList.add('ut-step-active');
+    document.getElementById('stepInd2').classList.remove('ut-step-active');
+    document.getElementById('murekaStatus').style.display = 'none';
+    document.getElementById('murekaResult').style.display = 'none';
+    document.getElementById('step2Error').style.display = 'none';
+    if (pollingTimer) clearInterval(pollingTimer);
+    window.scrollTo(0, 0);
+}
+
+// === Step 2: Mureka Song Generation ===
+async function startMurekaGeneration() {
+    const lyrics = document.getElementById('murekaLyrics').value.trim();
+    if (!lyrics || lyrics.length < 30) {
+        showStep2Error('歌詞を30文字以上入力してください');
+        return;
+    }
+
+    const btn = document.getElementById('step2Btn');
+    btn.disabled = true;
+    btn.innerHTML = '<span>Generating...</span>';
+    btn.classList.add('ut-btn-generating');
+
+    document.getElementById('murekaStatus').style.display = 'block';
+    document.getElementById('murekaResult').style.display = 'none';
+    document.getElementById('step2Error').style.display = 'none';
+    document.getElementById('progressFill').style.width = '5%';
+    document.getElementById('statusText').textContent = 'Mureka API に送信中...';
+
+    try {
+        const res = await fetch(MUREKA_SUBMIT_URL, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json', 'X-CSRFToken': CSRF },
+            body: JSON.stringify({
+                lyrics: lyrics,
+                title: document.getElementById('titleInput').value.trim() || 'Test Song',
+                genre: document.getElementById('murekaGenre').value,
+                vocal_style: document.getElementById('vocalSelect').value,
+                music_prompt: document.getElementById('promptInput').value.trim(),
+            }),
+        });
+        const data = await res.json();
+        if (data.success && data.task_id) {
+            document.getElementById('progressFill').style.width = '15%';
+            document.getElementById('statusText').textContent = 'タスク送信完了 (ID: ' + data.task_id.substring(0, 8) + '...) — 楽曲生成中...';
+            if (data.prompt_used) {
+                const el = document.getElementById('promptUsed');
+                el.textContent = 'Prompt: ' + data.prompt_used;
+                el.style.display = 'block';
+            }
+            pollCount = 0;
+            pollingTimer = setInterval(() => pollMurekaStatus(data.task_id), 4000);
+        } else {
+            showStep2Error(data.error || '送信に失敗しました');
+            resetStep2Btn();
+        }
+    } catch(e) {
+        showStep2Error('通信エラー: ' + e.message);
+        resetStep2Btn();
+    }
+}
+
+async function pollMurekaStatus(taskId) {
+    pollCount++;
+    const maxPolls = 90;
+    if (pollCount > maxPolls) {
+        clearInterval(pollingTimer);
+        showStep2Error('タイムアウト: 楽曲生成に時間がかかりすぎています');
+        resetStep2Btn();
+        return;
+    }
+    const progress = Math.min(15 + (pollCount / maxPolls) * 80, 95);
+    document.getElementById('progressFill').style.width = progress + '%';
+    document.getElementById('statusText').textContent = '楽曲生成中... (' + (pollCount * 4) + '秒経過)';
+
+    try {
+        const res = await fetch(MUREKA_POLL_URL + '?task_id=' + taskId);
+        const data = await res.json();
+        if (data.status === 'completed') {
+            clearInterval(pollingTimer);
+            document.getElementById('progressFill').style.width = '100%';
+            document.getElementById('statusText').textContent = 'Complete';
+            document.getElementById('audioPlayer').src = data.audio_url;
+            document.getElementById('resultDuration').textContent = data.duration ? 'Duration: ' + Math.round(data.duration) + 's' : '';
+            document.getElementById('resultPrompt').textContent = document.getElementById('promptUsed').textContent || '';
+            document.getElementById('murekaResult').style.display = 'block';
+            resetStep2Btn();
+        } else if (data.status === 'failed') {
+            clearInterval(pollingTimer);
+            showStep2Error(data.error || '楽曲生成に失敗しました');
+            resetStep2Btn();
+        }
+    } catch(e) {
+        console.warn('Poll error:', e);
+    }
+}
+
+function showStep2Error(msg) {
+    document.getElementById('step2Error').style.display = 'flex';
+    document.getElementById('step2ErrorText').textContent = msg;
+}
+
+function resetStep2Btn() {
+    const btn = document.getElementById('step2Btn');
+    btn.disabled = {% if not api_configured %}true{% else %}false{% endif %};
+    btn.innerHTML = '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="5 3 19 12 5 21 5 3"/></svg> Generate Song';
+    btn.classList.remove('ut-btn-generating');
+}
+
+function resetAll() {
+    document.getElementById('murekaStatus').style.display = 'none';
+    document.getElementById('murekaResult').style.display = 'none';
+    document.getElementById('step2Error').style.display = 'none';
+    document.getElementById('promptUsed').style.display = 'none';
+    document.getElementById('audioPlayer').src = '';
+    if (pollingTimer) clearInterval(pollingTimer);
+    backToStep1();
 }
 </script>
 {% endblock %}

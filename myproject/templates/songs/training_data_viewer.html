@@ -417,6 +417,8 @@ body { background: #0d0d0d !important; }
 }
 .td-card-actions .td-act-edit:hover { color: #4ecdc4; background: #4ecdc408; }
 .td-card-actions .td-act-delete:hover { color: #e74c3c; background: #e74c3c08; }
+.td-card-actions .td-act-generate { color: #555; }
+.td-card-actions .td-act-generate:hover { color: #ff7940; background: #ff794010; }
 .td-card-actions .td-act-review { color: #555; }
 .td-card-actions .td-act-review:hover { color: #22c55e; background: #22c55e10; }
 .td-card-actions .td-act-reviewed { color: #22c55e; background: #22c55e12; border-color: #22c55e30; }
@@ -749,6 +751,9 @@ function renderRecords() {
                 ${reviewBadge}
                 <span class="td-card-genre">${escapeHtml(g)}</span>
                 <div class="td-card-actions" onclick="event.stopPropagation()">
+                    <button class="td-act-generate" onclick="openGenerate(${i})" title="楽曲生成テスト">
+                        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="5 3 19 12 5 21 5 3"/></svg>
+                    </button>
                     <button class="td-act-review ${isReviewedByMe ? 'td-act-reviewed' : ''}" onclick="toggleReview(${i})" title="${isReviewedByMe ? '確認取消' : '確認済みマーク'}">
                         <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M20 6L9 17l-5-5"/></svg>
                     </button>
@@ -835,6 +840,14 @@ function openDelete(i) {
     document.getElementById('deleteMessage').textContent = `Record #${i + 1} will be permanently deleted.`;
     document.getElementById('deletePreview').textContent = (r.input || '').substring(0, 200);
     document.getElementById('deleteModal').style.display = 'flex';
+}
+
+function openGenerate(i) {
+    const r = allRecords[i];
+    const lyrics = r.output || '';
+    if (!lyrics.trim()) { alert('出力歌詞がありません'); return; }
+    const url = '{% url "songs:test_llm" %}?lyrics=' + encodeURIComponent(lyrics);
+    window.open(url, '_blank');
 }
 
 function closeDeleteModal(e) {
