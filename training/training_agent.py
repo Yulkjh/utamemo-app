@@ -23,9 +23,16 @@ import urllib.error
 
 import io
 
-# Windows タスクスケジューラ環境ではコンソールが cp1252 になるため
-# UTF-8 ストリームを明示的に設定する
-_log_stream = io.TextIOWrapper(sys.stdout.buffer, encoding='utf-8', errors='replace', line_buffering=True)
+# Windows タスクスケジューラ環境でのエンコーディング問題対策
+# PYTHONIOENCODING=utf-8 が設定されていれば sys.stdout で問題ない
+# 設定されていない場合のフォールバック
+_log_stream = sys.stdout
+try:
+    if hasattr(sys.stdout, 'encoding') and sys.stdout.encoding and sys.stdout.encoding.lower() not in ('utf-8', 'utf8'):
+        _log_stream = io.TextIOWrapper(sys.stdout.buffer, encoding='utf-8', errors='replace', line_buffering=True)
+except Exception:
+    pass
+
 logging.basicConfig(
     level=logging.INFO,
     format="%(asctime)s [%(levelname)s] %(message)s",
