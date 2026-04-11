@@ -445,7 +445,27 @@ def main():
                         help='各サイクルで生成する新規テーマ数 (デフォルト: 5)')
     parser.add_argument('--no_serve', action='store_true',
                         help='推論サーバー+トンネルの自動起動を無効化')
+    parser.add_argument('--sleep_after', action='store_true',
+                        help='全学習完了後にPCをスリープする')
     args = parser.parse_args()
+
+    def do_sleep_if_enabled():
+        """--sleep_after が有効なら推論サーバー+トンネルを停止してPCをスリープ"""
+        if not args.sleep_after:
+            return
+        logger.info("全学習完了 → PCをスリープします...")
+        # サーバー+トンネルをクリーンアップ
+        for name, proc in [('tunnel', tunnel_proc), ('serve', serve_proc)]:
+            if proc and proc.poll() is None:
+                proc.terminate()
+                try:
+                    proc.wait(timeout=10)
+                except subprocess.TimeoutExpired:
+                    proc.kill()
+        send_status(args.report_url, args.api_key, status='idle',
+                    error_message='学習完了 → PCスリープ', tunnel_url='')
+        # Windows スリープ
+        os.system('rundll32.exe powrprof.dll,SetSuspendState 0,1,0')
 
     if not args.api_key:
         logger.error("APIキーが必要です (--api_key または UTAMEMO_TRAINING_API_KEY)")
@@ -592,6 +612,7 @@ def main():
                                 training_running = False
                                 send_status(args.report_url, args.api_key,
                                             status='idle', error_message='レビュー済みデータ消費完了 (新しいレビューを追加してください)')
+                                do_sleep_if_enabled()
                                 continue
 
                         if current_training_type == 'importance':

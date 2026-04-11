@@ -12,6 +12,7 @@ REM === 設定 ===================================================
 set PROJECT_DIR=C:\Users\YU\OneDrive\デスクトップ\UTAMEMO
 set REPORT_URL=https://utamemo.com/api/training/update/
 set GEN_COUNT=5
+set SLEEP_AFTER=1
 set LOG_FILE=%PROJECT_DIR%\training\agent.log
 
 REM --- APIキーは .env ファイルから読み込む ---
@@ -67,11 +68,14 @@ echo [%date% %time%] Agent starting... >> "%LOG_FILE%"
 
 set PYTHONIOENCODING=utf-8
 
+set SLEEP_FLAG=
+if "%SLEEP_AFTER%"=="1" set SLEEP_FLAG=--sleep_after
+
 %PYTHON% -u training\training_agent.py ^
     --api_key %API_KEY% ^
     --report_url %REPORT_URL% ^
     --gemini_key %GEMINI_KEY% ^
-    --gen_count %GEN_COUNT% >> "%LOG_FILE%" 2>&1
+    --gen_count %GEN_COUNT% %SLEEP_FLAG% >> "%LOG_FILE%" 2>&1
 
 echo.
 echo [%date% %time%] エージェントが停止しました。10秒後に自動再起動...
