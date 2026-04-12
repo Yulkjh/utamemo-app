@@ -1,35 +1,26 @@
 """
-全既存学習データを一括で reviewed & trained としてマークする管理コマンド。
+既存の学習データに legacy_trained フラグを付与する管理コマンド。
 
-過去のデータは全て学習に使われた実績があるため、
-TrainingDataReview を作成し trained_at を現在日時にセットする。
+過去のデータは全て学習に使われた実績があるが、
+TrainingDataReview が存在しないためDB上で追跡できない。
+JSONの _meta.legacy_trained = true で「過去に学習済み」を示す。
+
+初回デプロイ時に1度だけ実行すれば良い（2回目以降はno-op）。
 
 Usage:
     python manage.py mark_all_trained
-    python manage.py mark_all_trained --reviewer=admin_username
 """
 import json
 import logging
 from pathlib import Path
 
 from django.core.management.base import BaseCommand
-from django.utils import timezone
-
-from users.models import TrainingDataReview, User
 
 logger = logging.getLogger(__name__)
 
 
 class Command(BaseCommand):
-    help = '全既存学習データを reviewed & trained としてマーク'
-
-    def add_arguments(self, parser):
-        parser.add_argument(
-            '--reviewer',
-            type=str,
-            default=None,
-            help='レビュー者のユーザー名。省略時は最初のsuperuserを使用',
-        )
+    help = '既存学習データに legacy_trained フラグを付与'
 
     def handle(self, *args, **options):
         data_path = (
@@ -43,41 +34,20 @@ class Command(BaseCommand):
         with open(data_path, 'r', encoding='utf-8') as f:
             records = json.load(f)
 
-        total = len(records)
-        self.stdout.write(f'Total records: {total}')
+        updated = 0
+        for r in records:
+            meta = r.setdefault('_meta', {})
+            if not meta.get('legacy_trained'):
+                meta['legacy_trained'] = True
+                updated += 1
 
-        reviewer_name = options.get('reviewer')
-        if reviewer_name:
-            reviewer = User.objects.filter(username=reviewer_name).first()
-        else:
-            reviewer = User.objects.filter(is_superuser=True).first()
-            if not reviewer:
-                reviewer = User.objects.filter(is_staff=True).first()
-
-        if not reviewer:
-            self.stderr.write(self.style.ERROR('レビュー者が見つかりません'))
+        if updated == 0:
+            self.stdout.write('全レコードに legacy_trained が既に設定済みです')
             return
 
-        self.stdout.write(f'Reviewer: {reviewer.username}')
-
-        now = timezone.now()
-        created_count = 0
-        updated_count = 0
-
-        for i in range(total):
-            obj, created = TrainingDataReview.objects.get_or_create(
-                data_index=i,
-                reviewer=reviewer,
-                defaults={'trained_at': now},
-            )
-            if created:
-                created_count += 1
-            elif obj.trained_at is None:
-                obj.trained_at = now
-                obj.save(update_fields=['trained_at'])
-                updated_count += 1
+        with open(data_path, 'w', encoding='utf-8') as f:
+            json.dump(records, f, ensure_ascii=False, indent=2)
 
         self.stdout.write(self.style.SUCCESS(
-            f'完了: {created_count} 件作成, {updated_count} 件更新, '
-            f'全 {total} 件を trained マーク'
+            f'完了: {updated} / {len(records)} 件に legacy_trained フラグを付与'
         ))

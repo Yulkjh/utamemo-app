@@ -2753,6 +2753,10 @@ def training_data_viewer(request):
         reviewed_map.setdefault(rv.data_index, []).append(rv.reviewer.username)
         if rv.trained_at is not None:
             trained_indices.add(rv.data_index)
+    # JSON _meta.legacy_trained が true のものも trained 扱い
+    for i, r in enumerate(records):
+        if r.get('_meta', {}).get('legacy_trained'):
+            trained_indices.add(i)
 
     return render(request, 'songs/training_data_viewer.html', {
         'records_json': json.dumps(records, ensure_ascii=False),
@@ -2788,6 +2792,10 @@ def training_history(request):
         reviewed_map.setdefault(rv.data_index, []).append(rv.reviewer.username)
         if rv.trained_at is not None:
             trained_indices.add(rv.data_index)
+    # JSON _meta.legacy_trained が true のものも trained 扱い
+    for i, r in enumerate(records):
+        if r.get('_meta', {}).get('legacy_trained'):
+            trained_indices.add(i)
 
     return render(request, 'songs/training_history.html', {
         'records_json': json.dumps(records, ensure_ascii=False),
