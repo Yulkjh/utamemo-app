@@ -22,7 +22,7 @@
         </div>
     </div>
     {% else %}
-    <div class="td-review-banner td-review-banner-done" id="reviewBanner">
+    <div class="td-review-banner td-review-banner-done" id="reviewBanner" style="display: none;">
         <div class="td-review-banner-icon"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 11.08V12a10 10 0 11-5.93-9.14"/><path d="M22 4L12 14.01l-3-3"/></svg></div>
         <div class="td-review-banner-content">
             <strong>本日のレビュー完了</strong>
@@ -904,7 +904,6 @@ async function saveEdit() {
             renderRecords();
             closeEditModal();
             showToast(data.message, 'success');
-            updatePendingBanner(data.pending_reviews);
         } else {
             showToast(data.error || 'エラー', 'error');
         }
@@ -1084,8 +1083,9 @@ function updatePendingBanner(pendingReviews) {
     // 0になったら完了バナーに切り替え
     if (pendingReviews <= 0) {
         const banner = document.getElementById('reviewBanner');
-        if (banner && !banner.classList.contains('td-review-banner-done')) {
+        if (banner) {
             banner.className = 'td-review-banner td-review-banner-done';
+            banner.style.display = '';
             banner.innerHTML = `
                 <div class="td-review-banner-icon"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 11.08V12a10 10 0 11-5.93-9.14"/><path d="M22 4L12 14.01l-3-3"/></svg></div>
                 <div class="td-review-banner-content">

@@ -2820,10 +2820,11 @@ def training_data_api(request):
         with open(data_path, 'w', encoding='utf-8') as f:
             json.dump(records, f, ensure_ascii=False, indent=2)
 
-        _decrement_pending(request.user)
-        obligation = StaffReviewObligation.objects.filter(user=request.user).first()
-        pending = obligation.pending_reviews if obligation else 0
-        return JsonResponse({'ok': True, 'message': f'#{index + 1} を更新しました', 'pending_reviews': pending})
+        # 編集ログを記録（mark_reviewed 時の検証用）
+        from users.models import TrainingDataEditLog
+        TrainingDataEditLog.objects.create(data_index=index, editor=request.user)
+
+        return JsonResponse({'ok': True, 'message': f'#{index + 1} を更新しました'})
 
     elif action == 'delete':
         index = body.get('index')
@@ -2846,12 +2847,20 @@ def training_data_api(request):
         index = body.get('index')
         if not isinstance(index, int) or index < 0 or index >= len(records):
             return JsonResponse({'error': 'Invalid index'}, status=400)
-        from users.models import TrainingDataReview
+        from users.models import TrainingDataReview, TrainingDataEditLog
+        # 誰かがこのデータを編集した記録があるか確認
+        has_edit = TrainingDataEditLog.objects.filter(data_index=index).exists()
+        if not has_edit:
+            return JsonResponse({
+                'ok': False,
+                'error': 'このデータはまだ編集されていません。内容を確認・編集してからマークしてください。',
+            }, status=400)
         _, created = TrainingDataReview.objects.get_or_create(
             data_index=index,
             reviewer=request.user,
         )
-        _decrement_pending(request.user)
+        if created:
+            _decrement_pending(request.user)
         obligation = StaffReviewObligation.objects.filter(user=request.user).first()
         pending = obligation.pending_reviews if obligation else 0
         # このレコードの全レビュー情報を返す

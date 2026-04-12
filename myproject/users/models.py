@@ -319,6 +319,34 @@ class StaffReviewObligation(models.Model):
         return f'{self.user.username} - 未処理:{self.pending_reviews} {status}'
 
 
+class TrainingDataEditLog(models.Model):
+    """学習データの編集履歴を記録するモデル
+
+    mark_reviewed 時に「編集されたか」を検証するために使用する。
+    """
+    data_index = models.IntegerField(
+        verbose_name='データインデックス',
+        help_text='lyrics_training_data.json 内のインデックス (0-based)',
+    )
+    editor = models.ForeignKey(
+        User,
+        on_delete=models.CASCADE,
+        related_name='training_edits',
+        verbose_name='編集者',
+    )
+    edited_at = models.DateTimeField(
+        auto_now_add=True,
+        verbose_name='編集日時',
+    )
+
+    class Meta:
+        verbose_name = '学習データ編集ログ'
+        verbose_name_plural = '学習データ編集ログ'
+
+    def __str__(self):
+        return f'#{self.data_index + 1} edited by {self.editor.username}'
+
+
 class TrainingDataReview(models.Model):
     """学習データの個別レコードに対するレビュー済みマーク
 
