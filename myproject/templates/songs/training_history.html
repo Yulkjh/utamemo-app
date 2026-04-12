@@ -1,0 +1,327 @@
+{% extends 'base.html' %}
+
+{% block title %}学習履歴 - UTAMEMO{% endblock %}
+
+{% block content %}
+<div class="th-container">
+    <div class="th-header">
+        <div class="th-header-left">
+            <h1>Training History</h1>
+            <span class="th-badge">{{ trained_count }} / {{ total_count }} trained</span>
+        </div>
+        <div class="th-header-right">
+            <a href="{% url 'songs:training_data_viewer' %}" class="th-btn th-btn-back">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M19 12H5M12 19l-7-7 7-7"/></svg>
+                Training Data
+            </a>
+            <a href="{% url 'songs:llm_guide' %}" class="th-btn th-btn-back">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 9l9-7 9 7v11a2 2 0 01-2 2H5a2 2 0 01-2-2z"/></svg>
+                Portal
+            </a>
+        </div>
+    </div>
+
+    <div class="th-filter">
+        <div class="th-search-wrap">
+            <svg class="th-search-icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><path d="M21 21l-4.35-4.35"/></svg>
+            <input type="text" id="searchInput" placeholder="Search trained records..." class="th-input">
+        </div>
+        <select id="genreFilter" class="th-select">
+            <option value="">All Genres</option>
+        </select>
+    </div>
+
+    <div id="recordsList"></div>
+    <div id="emptyState" class="th-empty" style="display: none;">
+        <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="#333" stroke-width="1.5"><path d="M22 11.08V12a10 10 0 11-5.93-9.14"/><path d="M22 4L12 14.01l-3-3"/></svg>
+        <p>学習済みデータはまだありません</p>
+    </div>
+</div>
+
+<style>
+.navbar-modern, .footer-modern { display: none !important; }
+main { padding-top: 0 !important; }
+body { background: #0d0d0d !important; }
+
+.th-container {
+    max-width: 1400px;
+    margin: 0 auto;
+    padding: 2.5rem 1.5rem;
+    min-height: 100vh;
+    background: #0d0d0d;
+}
+.th-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 2rem;
+    flex-wrap: wrap;
+    gap: 1rem;
+    padding-bottom: 1.5rem;
+    border-bottom: 1px solid #1a1a1a;
+}
+.th-header-left { display: flex; align-items: center; gap: 1rem; }
+.th-header h1 {
+    font-size: 1.6rem;
+    font-weight: 700;
+    margin: 0;
+    background: linear-gradient(135deg, #a78bfa, #6366f1);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+    letter-spacing: -0.02em;
+}
+.th-header-right { display: flex; align-items: center; gap: 0.5rem; flex-wrap: wrap; }
+.th-badge {
+    background: rgba(99, 102, 241, 0.1);
+    border: 1px solid rgba(99, 102, 241, 0.2);
+    color: #a5b4fc;
+    padding: 0.4rem 1rem;
+    border-radius: 2rem;
+    font-weight: 600;
+    font-size: 0.8rem;
+    letter-spacing: 0.02em;
+}
+.th-btn {
+    padding: 0.5rem 0.9rem;
+    border: 1px solid #2a2a2a;
+    border-radius: 0.5rem;
+    background: #141414;
+    color: #999;
+    cursor: pointer;
+    font-size: 0.82rem;
+    font-weight: 500;
+    transition: all 0.15s ease;
+    text-decoration: none;
+    display: inline-flex;
+    align-items: center;
+    gap: 0.4rem;
+}
+.th-btn:hover { color: #fff; border-color: #444; background: #1a1a1a; }
+.th-btn-back { border-color: #222; color: #666; }
+.th-btn-back:hover { color: #aaa; border-color: #333; }
+
+.th-filter {
+    display: flex;
+    gap: 0.75rem;
+    margin-bottom: 1.5rem;
+    align-items: center;
+    flex-wrap: wrap;
+}
+.th-search-wrap { position: relative; flex: 1; min-width: 200px; }
+.th-search-icon {
+    position: absolute; left: 0.9rem; top: 50%;
+    transform: translateY(-50%); color: #444; pointer-events: none;
+}
+.th-input, .th-select {
+    padding: 0.7rem 1rem;
+    background: #111;
+    border: 1px solid #1f1f1f;
+    border-radius: 0.5rem;
+    color: #ddd;
+    font-size: 0.88rem;
+    transition: border-color 0.15s;
+}
+.th-search-wrap .th-input { width: 100%; padding-left: 2.5rem; box-sizing: border-box; }
+.th-input:focus, .th-select:focus {
+    border-color: #6366f1; outline: none;
+    box-shadow: 0 0 0 2px rgba(99, 102, 241, 0.08);
+}
+
+.th-card {
+    background: #111;
+    border: 1px solid rgba(99, 102, 241, 0.15);
+    border-radius: 0.6rem;
+    margin-bottom: 0.35rem;
+    overflow: hidden;
+    transition: border-color 0.15s;
+}
+.th-card:hover { border-color: rgba(99, 102, 241, 0.3); }
+.th-card-header {
+    display: flex;
+    align-items: center;
+    padding: 0.7rem 1rem;
+    cursor: pointer;
+    gap: 0.75rem;
+    user-select: none;
+    background: rgba(99, 102, 241, 0.03);
+}
+.th-card-num {
+    color: #555; font-weight: 600; font-size: 0.78rem;
+    min-width: 42px; font-variant-numeric: tabular-nums;
+}
+.th-card-preview {
+    flex: 1; color: #aaa; font-size: 0.85rem;
+    white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+}
+.th-card-genre {
+    background: #1a1a1a; color: #a5b4fc;
+    padding: 0.2rem 0.65rem; border-radius: 0.3rem;
+    font-size: 0.7rem; font-weight: 600;
+    text-transform: uppercase; white-space: nowrap; letter-spacing: 0.04em;
+}
+.th-card-meta {
+    display: flex; gap: 0.5rem; align-items: center; flex-shrink: 0;
+}
+.th-trained-badge {
+    display: inline-flex; align-items: center; gap: 0.3rem;
+    font-size: 0.68rem; font-weight: 600;
+    padding: 0.2rem 0.6rem; border-radius: 1rem;
+    background: rgba(99, 102, 241, 0.12); color: #a5b4fc;
+    border: 1px solid rgba(99, 102, 241, 0.25);
+    white-space: nowrap;
+}
+.th-reviewers {
+    display: inline-flex; align-items: center; gap: 0.3rem;
+    font-size: 0.68rem; font-weight: 600;
+    padding: 0.2rem 0.6rem; border-radius: 1rem;
+    background: rgba(34, 197, 94, 0.1); color: #4ade80;
+    border: 1px solid rgba(34, 197, 94, 0.2);
+    white-space: nowrap;
+}
+.th-chevron {
+    color: #333; transition: transform 0.2s; flex-shrink: 0; font-size: 0.7rem;
+}
+.th-chevron.open { transform: rotate(180deg); }
+
+.th-card-body {
+    border-top: 1px solid #1a1a1a;
+    padding: 1.25rem;
+    display: none;
+}
+.th-card-body.show { display: block; }
+.th-section { margin-bottom: 1.25rem; }
+.th-section:last-child { margin-bottom: 0; }
+.th-section-label {
+    color: #555; text-transform: uppercase;
+    font-size: 0.7rem; font-weight: 600;
+    letter-spacing: 0.08em; margin-bottom: 0.5rem;
+}
+.th-input-text {
+    background: #0a0a0a; padding: 1rem; border-radius: 0.4rem;
+    color: #bbb; line-height: 1.7; font-size: 0.85rem; border: 1px solid #151515;
+}
+.th-output-lyrics {
+    background: #0a0a0a; padding: 1rem; border-radius: 0.4rem;
+    color: #7fdbca; line-height: 1.8; font-size: 0.85rem;
+    white-space: pre-wrap; font-family: 'Inter', sans-serif;
+    margin: 0; max-height: 500px; overflow-y: auto; border: 1px solid #151515;
+}
+.th-empty {
+    text-align: center; padding: 4rem 2rem; color: #444;
+}
+.th-empty p { margin-top: 1rem; font-size: 0.9rem; }
+
+@media (max-width: 768px) {
+    .th-container { padding: 1.5rem 1rem; }
+    .th-header { flex-direction: column; align-items: flex-start; }
+    .th-filter { flex-direction: column; }
+    .th-search-wrap { min-width: unset; width: 100%; }
+    .th-card-preview { max-width: 180px; }
+}
+</style>
+
+<script>
+const allRecords = {{ records_json|safe }};
+const trainedIndices = new Set({{ trained_indices_json|safe }});
+const reviewedMap = {{ reviewed_map_json|safe }};
+
+// 学習済みのレコードのみ抽出
+const trainedRecords = [];
+allRecords.forEach((r, i) => {
+    if (trainedIndices.has(i)) {
+        trainedRecords.push({ record: r, originalIndex: i });
+    }
+});
+
+function extractGenre(instruction) {
+    const m = (instruction || '').match(/から(\w+)ジャンルの歌詞/);
+    return m ? m[1] : 'other';
+}
+
+function escapeHtml(s) {
+    const d = document.createElement('div');
+    d.textContent = s;
+    return d.innerHTML;
+}
+
+function buildGenreFilter() {
+    const counts = {};
+    trainedRecords.forEach(({ record }) => {
+        const g = extractGenre(record.instruction);
+        counts[g] = (counts[g] || 0) + 1;
+    });
+    const sel = document.getElementById('genreFilter');
+    sel.innerHTML = '<option value="">All Genres</option>';
+    Object.entries(counts).sort((a, b) => b[1] - a[1]).forEach(([g, c]) => {
+        sel.innerHTML += `<option value="${escapeHtml(g)}">${escapeHtml(g)} (${c})</option>`;
+    });
+}
+
+function renderRecords() {
+    const query = document.getElementById('searchInput').value.toLowerCase();
+    const genre = document.getElementById('genreFilter').value;
+    const container = document.getElementById('recordsList');
+    let html = '';
+    let visible = 0;
+
+    trainedRecords.forEach(({ record: r, originalIndex: i }) => {
+        const g = extractGenre(r.instruction);
+        const text = ((r.input || '') + ' ' + (r.output || '')).toLowerCase();
+        if (query && !text.includes(query)) return;
+        if (genre && g !== genre) return;
+        visible++;
+
+        const preview = (r.input || '').substring(0, 100);
+        const reviewers = reviewedMap[String(i)] || [];
+        const reviewerBadge = reviewers.length > 0
+            ? `<span class="th-reviewers">✓ ${reviewers.map(u => escapeHtml(u)).join(', ')}</span>`
+            : '';
+
+        html += `
+        <div class="th-card" id="card-${i}">
+            <div class="th-card-header" onclick="toggleCard(${i})">
+                <span class="th-card-num">#${i + 1}</span>
+                <span class="th-card-preview">${escapeHtml(preview)}</span>
+                <div class="th-card-meta">
+                    <span class="th-trained-badge">
+                        <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M22 11.08V12a10 10 0 11-5.93-9.14"/><path d="M22 4L12 14.01l-3-3"/></svg>
+                        Trained
+                    </span>
+                    ${reviewerBadge}
+                </div>
+                <span class="th-card-genre">${escapeHtml(g)}</span>
+                <span class="th-chevron" id="chev-${i}">&#9662;</span>
+            </div>
+            <div class="th-card-body" id="body-${i}">
+                <div class="th-section">
+                    <div class="th-section-label">Input</div>
+                    <div class="th-input-text">${escapeHtml(r.input || '')}</div>
+                </div>
+                <div class="th-section">
+                    <div class="th-section-label">Output</div>
+                    <pre class="th-output-lyrics">${escapeHtml(r.output || '')}</pre>
+                </div>
+            </div>
+        </div>`;
+    });
+
+    container.innerHTML = html;
+    document.getElementById('emptyState').style.display = visible === 0 ? 'block' : 'none';
+}
+
+function toggleCard(i) {
+    const body = document.getElementById('body-' + i);
+    const chev = document.getElementById('chev-' + i);
+    if (body) {
+        body.classList.toggle('show');
+        chev.classList.toggle('open');
+    }
+}
+
+document.getElementById('searchInput').addEventListener('input', renderRecords);
+document.getElementById('genreFilter').addEventListener('change', renderRecords);
+buildGenreFilter();
+renderRecords();
+</script>
+{% endblock %}

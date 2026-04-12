@@ -2768,6 +2768,38 @@ def training_data_viewer(request):
 
 
 @staff_member_required
+def training_history(request):
+    """学習済みデータ一覧ページ（管理者のみ）"""
+    import json
+    import re
+    from pathlib import Path
+
+    data_path = Path(__file__).resolve().parent.parent.parent / 'training' / 'data' / 'lyrics_training_data.json'
+    records = []
+    if data_path.exists():
+        with open(data_path, 'r', encoding='utf-8') as f:
+            records = json.load(f)
+
+    from users.models import TrainingDataReview
+    reviews_qs = TrainingDataReview.objects.select_related('reviewer').all()
+    reviewed_map = {}
+    trained_indices = set()
+    for rv in reviews_qs:
+        reviewed_map.setdefault(rv.data_index, []).append(rv.reviewer.username)
+        if rv.trained_at is not None:
+            trained_indices.add(rv.data_index)
+
+    return render(request, 'songs/training_history.html', {
+        'records_json': json.dumps(records, ensure_ascii=False),
+        'total_count': len(records),
+        'trained_count': len(trained_indices),
+        'reviewed_map_json': json.dumps(reviewed_map, ensure_ascii=False),
+        'trained_indices_json': json.dumps(sorted(trained_indices)),
+        'page_title': '学習履歴',
+    })
+
+
+@staff_member_required
 @require_POST
 def training_data_api(request):
     """学習データの編集・削除・追加API（管理者のみ）"""

@@ -24,6 +24,7 @@ class StaffReviewLockMiddleware:
     
     ALLOWED_PATHS = [
         '/staff/training-data/',
+        '/staff/training-history/',
         '/api/training/data/',
         '/static/',
         '/media/',
