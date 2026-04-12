@@ -612,7 +612,7 @@ def train(args):
         gradient_checkpointing_kwargs={"use_reentrant": False},
         dataloader_num_workers=0,
         dataloader_pin_memory=False,
-        max_seq_length=MAX_SEQ_LENGTH,
+        max_length=MAX_SEQ_LENGTH,
         dataset_text_field="text",
         packing=True,
     )

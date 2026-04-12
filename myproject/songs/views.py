@@ -2808,6 +2808,37 @@ def training_history(request):
 
 
 @staff_member_required
+def training_history_api(request):
+    """Training History のデータをJSONで返す（定期リフレッシュ用）"""
+    import json
+    from pathlib import Path
+
+    data_path = Path(__file__).resolve().parent.parent.parent / 'training' / 'data' / 'lyrics_training_data.json'
+    records = []
+    if data_path.exists():
+        with open(data_path, 'r', encoding='utf-8') as f:
+            records = json.load(f)
+
+    from users.models import TrainingDataReview
+    reviews_qs = TrainingDataReview.objects.select_related('reviewer').all()
+    reviewed_map = {}
+    trained_indices = set()
+    for rv in reviews_qs:
+        reviewed_map.setdefault(rv.data_index, []).append(rv.reviewer.username)
+        if rv.trained_at is not None:
+            trained_indices.add(rv.data_index)
+
+    return JsonResponse({
+        'ok': True,
+        'records': records,
+        'total_count': len(records),
+        'trained_count': len(trained_indices),
+        'reviewed_map': reviewed_map,
+        'trained_indices': sorted(trained_indices),
+    })
+
+
+@staff_member_required
 @require_POST
 def training_data_api(request):
     """学習データの編集・削除・追加API（管理者のみ）"""
@@ -2973,7 +3004,7 @@ def _save_prompt_config(config):
 @staff_member_required
 @require_POST
 def training_data_generate(request):
-    """Gemini APIで学習データを5件生成"""
+    """Gemini APIで学習データを1件生成"""
     from pathlib import Path
     try:
         import google.generativeai as genai
@@ -3013,7 +3044,7 @@ def training_data_generate(request):
 
     generated = []
     errors = []
-    count = 5
+    count = 1
 
     for i in range(count):
         genre = _GENRES[i % len(_GENRES)]

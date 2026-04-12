@@ -222,17 +222,24 @@ body { background: #0d0d0d !important; }
 </style>
 
 <script>
-const allRecords = {{ records_json|safe }};
-const trainedIndices = new Set({{ trained_indices_json|safe }});
-const reviewedMap = {{ reviewed_map_json|safe }};
+const HISTORY_API_URL = '{% url "songs:training_history_api" %}';
+const CSRF_TOKEN = '{{ csrf_token }}';
+let allRecords = {{ records_json|safe }};
+let trainedIndices = new Set({{ trained_indices_json|safe }});
+let reviewedMap = {{ reviewed_map_json|safe }};
+
+function rebuildTrainedRecords() {
+    trainedRecords.length = 0;
+    allRecords.forEach((r, i) => {
+        if (trainedIndices.has(i)) {
+            trainedRecords.push({ record: r, originalIndex: i });
+        }
+    });
+}
 
 // 学習済みのレコードのみ抽出
 const trainedRecords = [];
-allRecords.forEach((r, i) => {
-    if (trainedIndices.has(i)) {
-        trainedRecords.push({ record: r, originalIndex: i });
-    }
-});
+rebuildTrainedRecords();
 
 function extractGenre(instruction) {
     const m = (instruction || '').match(/から(\w+)ジャンルの歌詞/);
@@ -323,5 +330,23 @@ document.getElementById('searchInput').addEventListener('input', renderRecords);
 document.getElementById('genreFilter').addEventListener('change', renderRecords);
 buildGenreFilter();
 renderRecords();
+
+// ── 定期リフレッシュ (30秒ごと) ──
+async function refreshData() {
+    try {
+        const res = await fetch(HISTORY_API_URL, { headers: { 'X-CSRFToken': CSRF_TOKEN } });
+        const data = await res.json();
+        if (data.ok) {
+            allRecords = data.records;
+            trainedIndices = new Set(data.trained_indices);
+            reviewedMap = data.reviewed_map;
+            rebuildTrainedRecords();
+            buildGenreFilter();
+            renderRecords();
+            document.querySelector('.th-badge').textContent = `${data.trained_count} / ${data.total_count} trained`;
+        }
+    } catch (e) { /* silent */ }
+}
+setInterval(refreshData, 30000);
 </script>
 {% endblock %}
