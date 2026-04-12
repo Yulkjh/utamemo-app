@@ -86,9 +86,9 @@ def load_dataset(data_path: str) -> list[dict]:
 def train(args):
     """QLoRA学習を実行"""
     import torch
-    from transformers import AutoModelForCausalLM, AutoTokenizer, BitsAndBytesConfig, TrainingArguments
+    from transformers import AutoModelForCausalLM, AutoTokenizer, BitsAndBytesConfig
     from peft import LoraConfig, get_peft_model, prepare_model_for_kbit_training
-    from trl import SFTTrainer, DataCollatorForCompletionOnlyLM
+    from trl import SFTTrainer, SFTConfig, DataCollatorForCompletionOnlyLM
     from datasets import Dataset
 
     # データ読み込み
@@ -150,9 +150,10 @@ def train(args):
     eval_dataset = Dataset.from_list(eval_data).map(format_messages) if eval_data else None
 
     # 学習設定
-    training_args = TrainingArguments(
+    training_args = SFTConfig(
         output_dir=args.output_dir,
         num_train_epochs=args.epochs,
+        max_length=MAX_SEQ_LENGTH,
         per_device_train_batch_size=args.batch_size,
         gradient_accumulation_steps=args.gradient_accumulation,
         learning_rate=args.learning_rate,
@@ -173,8 +174,7 @@ def train(args):
         args=training_args,
         train_dataset=train_dataset,
         eval_dataset=eval_dataset,
-        tokenizer=tokenizer,
-        max_seq_length=MAX_SEQ_LENGTH,
+        processing_class=tokenizer,
     )
 
     logger.info("学習開始!")
