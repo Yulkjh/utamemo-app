@@ -571,6 +571,7 @@ def main():
                         current_training_type = ttype
                         logger.info(f">>> 開始コマンド受信! 学習タイプ: {current_training_type}")
                         auto_loop = True
+                        last_trained_indices = None
                     else:
                         logger.info(f">>> 自動ループ: 次のサイクルを開始します (タイプ: {current_training_type})")
 
