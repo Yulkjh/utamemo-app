@@ -95,9 +95,96 @@ def fetch_reviewed_indices(report_url, api_key):
 
 
 def mark_trained(report_url, api_key, indices):
-    """学習完了後、使用したインデックスを学習済みとしてサーバーに通知"""
+    """学習完了後、使用したインデックスを学習済みとしてサーバーに通知（リトライ付き）"""
     if not report_url or not api_key or not indices:
         return False
+
+    MAX_RETRIES = 5
+    RETRY_DELAYS = [5, 15, 30, 60, 120]  # 秒
+
+    for attempt in range(MAX_RETRIES):
+        try:
+            base_url = report_url.rsplit('/api/training/update', 1)[0]
+            url = f"{base_url}/api/training/reviewed/"
+            payload = json.dumps({'trained_indices': sorted(indices)}).encode('utf-8')
+            req = urllib.request.Request(
+                url,
+                data=payload,
+                headers={
+                    'X-Training-Api-Key': api_key,
+                    'Content-Type': 'application/json',
+                },
+                method='POST',
+            )
+            with urllib.request.urlopen(req, timeout=30) as resp:
+                data = json.loads(resp.read().decode('utf-8'))
+                marked = data.get('marked', 0)
+                logger.info(f"学習済みマーク完了: {marked} 件")
+                return True
+        except Exception as e:
+            delay = RETRY_DELAYS[attempt]
+            logger.warning(f"学習済みマーク失敗 (試行 {attempt + 1}/{MAX_RETRIES}): {e} → {delay}秒後にリトライ")
+            time.sleep(delay)
+
+    # 全リトライ失敗 → ローカルに保存して後日送信
+    logger.error(f"学習済みマーク: {MAX_RETRIES}回リトライ全て失敗。ローカルに保存します")
+    _save_pending_trained(indices)
+    return False
+
+
+def _save_pending_trained(indices):
+    """マーク失敗時にローカルファイルに未送信インデックスを保存"""
+    pending_file = os.path.join(os.path.dirname(__file__), 'pending_trained.json')
+    pending = []
+    if os.path.exists(pending_file):
+        try:
+            with open(pending_file, 'r') as f:
+                pending = json.load(f)
+        except Exception:
+            pending = []
+    pending.append({
+        'indices': sorted(indices),
+        'timestamp': time.strftime('%Y-%m-%d %H:%M:%S'),
+    })
+    with open(pending_file, 'w') as f:
+        json.dump(pending, f, indent=2)
+    logger.info(f"未送信インデックスをローカル保存: {len(indices)}件 → {pending_file}")
+
+
+def retry_pending_trained(report_url, api_key):
+    """起動時やアイドル時に、ローカル保存された未送信マークを再送信"""
+    pending_file = os.path.join(os.path.dirname(__file__), 'pending_trained.json')
+    if not os.path.exists(pending_file):
+        return
+    try:
+        with open(pending_file, 'r') as f:
+            pending = json.load(f)
+    except Exception:
+        return
+    if not pending:
+        return
+
+    logger.info(f"未送信の学習済みマークが {len(pending)} 件あります。再送信を試みます...")
+    remaining = []
+    for entry in pending:
+        indices = frozenset(entry.get('indices', []))
+        if not indices:
+            continue
+        success = _try_mark_trained_once(report_url, api_key, indices)
+        if not success:
+            remaining.append(entry)
+
+    if remaining:
+        with open(pending_file, 'w') as f:
+            json.dump(remaining, f, indent=2)
+        logger.warning(f"未送信マーク残り: {len(remaining)} 件")
+    else:
+        os.remove(pending_file)
+        logger.info("未送信マーク全件送信完了! ファイル削除しました")
+
+
+def _try_mark_trained_once(report_url, api_key, indices):
+    """1回だけマーク送信を試みる"""
     try:
         base_url = report_url.rsplit('/api/training/update', 1)[0]
         url = f"{base_url}/api/training/reviewed/"
@@ -114,10 +201,10 @@ def mark_trained(report_url, api_key, indices):
         with urllib.request.urlopen(req, timeout=15) as resp:
             data = json.loads(resp.read().decode('utf-8'))
             marked = data.get('marked', 0)
-            logger.info(f"学習済みマーク完了: {marked} 件")
+            logger.info(f"未送信マーク再送信成功: {marked} 件")
             return True
     except Exception as e:
-        logger.warning(f"学習済みマーク失敗: {e}")
+        logger.warning(f"未送信マーク再送信失敗: {e}")
         return False
 
 
@@ -509,6 +596,9 @@ def main():
     send_status(args.report_url, args.api_key, **status_kwargs)
     logger.info("初回ステータス送信完了 → ダッシュボードからの開始コマンドを待機します")
 
+    # 起動時に未送信の学習済まーくを再送信
+    retry_pending_trained(args.report_url, args.api_key)
+
     training_running = False
     auto_loop = False
     current_training_type = 'lyrics'
@@ -537,6 +627,8 @@ def main():
                 idle_poll_count += 1
                 if idle_poll_count % 30 == 1:
                     logger.info(f"ポーリング中... (コマンド待機中, 応答: {cmd})")
+                    # 定期的に未送信マークを再送信 (約5分ごと)
+                    retry_pending_trained(args.report_url, args.api_key)
 
                 if cmd == 'stop':
                     if auto_loop:
