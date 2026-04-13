@@ -643,9 +643,6 @@ def train(args):
         gradient_checkpointing_kwargs={"use_reentrant": False},
         dataloader_num_workers=0,
         dataloader_pin_memory=False,
-        max_seq_length=MAX_SEQ_LENGTH,
-        dataset_text_field="text",
-        packing=True,
     )
 
     # ログファイル設定
@@ -770,6 +767,9 @@ def train(args):
         train_dataset=train_dataset,
         eval_dataset=eval_dataset,
         args=training_args,
+        max_seq_length=MAX_SEQ_LENGTH,
+        dataset_text_field="text",
+        packing=True,
         callbacks=callbacks if callbacks else None,
     )
 
