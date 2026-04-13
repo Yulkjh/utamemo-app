@@ -118,6 +118,18 @@ GPU_PRESETS = {
         "lora_rank": 32,
         "gradient_accumulation": 4,
     },
+    "4080x2": {
+        "description": "RTX 4080 x2 (16GB x2 = 32GB VRAM)",
+        "recommended_models": [
+            "Qwen/Qwen2.5-14B-Instruct",
+            "Qwen/Qwen2.5-32B-Instruct",
+            "google/gemma-2-27b-it",
+            "meta-llama/Meta-Llama-3-8B-Instruct",
+        ],
+        "batch_size": 4,
+        "lora_rank": 64,
+        "gradient_accumulation": 2,
+    },
 }
 
 
@@ -141,12 +153,29 @@ def detect_gpu_preset():
     """接続中のGPUから推奨プリセットを判定"""
     if not torch.cuda.is_available():
         return None
+    gpu_count = torch.cuda.device_count()
     gpu_name = torch.cuda.get_device_name(0).lower()
     if "4060" in gpu_name:
         return "4060ti"
     elif "4080" in gpu_name:
-        return "4080"
+        return "4080x2" if gpu_count >= 2 else "4080"
     return None
+
+
+def _build_max_memory():
+    """GPU数・VRAM量に応じて max_memory を動的に構築"""
+    if not torch.cuda.is_available():
+        return {"cpu": "4GiB"}
+
+    gpu_count = torch.cuda.device_count()
+    max_memory = {}
+    for i in range(gpu_count):
+        total_gb = torch.cuda.get_device_properties(i).total_memory / 1024**3
+        # VRAMの90%をモデルに割り当て (残りはアクティベーション等に必要)
+        alloc_gb = int(total_gb * 0.90)
+        max_memory[i] = f"{alloc_gb}GiB"
+    max_memory["cpu"] = "1GiB"
+    return max_memory
 
 
 def parse_args():
@@ -464,11 +493,15 @@ def setup_model_and_tokenizer(model_name, hf_token=None):
     tokenizer.pad_token = tokenizer.eos_token
     tokenizer.padding_side = "right"
 
+    # GPU数に応じて max_memory を動的構築
+    max_memory = _build_max_memory()
+    logger.info(f"  max_memory: {max_memory}")
+
     model = AutoModelForCausalLM.from_pretrained(
         model_name,
         quantization_config=bnb_config,
         device_map="auto",
-        max_memory={0: "14GiB", "cpu": "1GiB"},
+        max_memory=max_memory,
         token=hf_token,
         trust_remote_code=True,
         torch_dtype=torch.bfloat16,

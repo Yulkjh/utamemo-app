@@ -129,6 +129,45 @@ def mark_trained(report_url, api_key, indices):
         return False
 
 
+def sync_training_data(report_url, api_key, action='sync'):
+    """sync_data.py を使って学習データを同期する
+
+    action: 'pull' | 'push' | 'sync'
+    """
+    if not report_url or not api_key:
+        logger.warning("同期スキップ: URL/APIキー未設定")
+        return False
+
+    base_url = report_url.rsplit('/api/training/update', 1)[0]
+
+    try:
+        # sync_data.py をインポートして直接呼ぶ
+        script_dir = os.path.dirname(os.path.abspath(__file__))
+        if script_dir not in sys.path:
+            sys.path.insert(0, script_dir)
+        import sync_data
+        # モジュールが既にキャッシュされている場合でも最新版を使う
+        import importlib
+        importlib.reload(sync_data)
+
+        if action == 'pull':
+            result = sync_data.pull(base_url, api_key, dry_run=False, timeout=60)
+        elif action == 'push':
+            result = sync_data.push(base_url, api_key, dry_run=False, timeout=60)
+        else:  # sync
+            result = sync_data.sync(base_url, api_key, dry_run=False, timeout=60)
+
+        if result.get('ok'):
+            logger.info(f"データ同期完了 ({action})")
+            return True
+        else:
+            logger.warning(f"データ同期失敗 ({action}): {result.get('error', '不明')}")
+            return False
+    except Exception as e:
+        logger.warning(f"データ同期エラー ({action}): {e}")
+        return False
+
+
 def get_python_exe():
     """Python実行ファイルを決定"""
     script_dir = os.path.dirname(os.path.abspath(__file__))
@@ -630,6 +669,10 @@ def main():
                                 continue
 
                             logger.info("--- LoRA学習 (レビュー済みデータのみ) ---")
+                            # 学習前: サーバーから最新データをダウンロード
+                            logger.info("--- データ同期 (Pull: サーバー → ローカル) ---")
+                            sync_training_data(args.report_url, args.api_key, action='pull')
+
                             # 学習前にレビュー済みインデックスを取得（学習後のマーク用）
                             pre_train_indices = fetch_reviewed_indices(args.report_url, args.api_key)
                             exit_code = run_training(args, stop_checker=check_stop)
@@ -640,6 +683,9 @@ def main():
                                     last_trained_indices = pre_train_indices
                                     # サーバーに学習済みマークを送信
                                     mark_trained(args.report_url, args.api_key, pre_train_indices)
+                                # 学習後: ローカルデータをサーバーにアップロード
+                                logger.info("--- データ同期 (Push: ローカル → サーバー) ---")
+                                sync_training_data(args.report_url, args.api_key, action='push')
 
                         if exit_code == -99:
                             # 停止コマンドでプロセスが終了された

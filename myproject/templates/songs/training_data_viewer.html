@@ -137,8 +137,13 @@
         </div>
         <div class="td-modal-body">
             <p class="td-modal-hint">
-                Geminiに送信するInstruction部分。<code>{genre}</code> は自動でジャンル名に置き換わります。
+                Geminiに送信するInstruction部分。<code>{genre}</code> は自動でジャンル名に置き換わります。<br>
+                保存するとDB経由で全スタッフに即反映されます。
             </p>
+            <div id="promptMeta" class="td-prompt-meta" style="display: none;">
+                <span id="promptUpdatedBy"></span>
+                <span id="promptUpdatedAt"></span>
+            </div>
             <div class="td-form-group">
                 <label>Template</label>
                 <textarea id="promptInput" class="td-textarea" rows="18" style="font-size: 0.85rem; line-height: 1.7;"></textarea>
@@ -304,6 +309,23 @@ body { background: #0d0d0d !important; }
 .td-btn-generate:disabled { opacity: 0.4; cursor: not-allowed; }
 .td-btn-prompt { border-color: #333; }
 .td-btn-prompt:hover { border-color: #ff7940; color: #ff7940; }
+.td-prompt-meta {
+    display: flex;
+    gap: 1rem;
+    padding: 0.5rem 0.8rem;
+    margin-bottom: 0.8rem;
+    background: rgba(255, 121, 64, 0.08);
+    border: 1px solid rgba(255, 121, 64, 0.2);
+    border-radius: 0.4rem;
+    font-size: 0.78rem;
+    color: #aaa;
+}
+.td-prompt-meta span::before {
+    margin-right: 0.3rem;
+    opacity: 0.6;
+}
+#promptUpdatedBy::before { content: '✏️'; }
+#promptUpdatedAt::before { content: '🕐'; }
 .td-btn-refresh { border-color: #333; }
 .td-btn-refresh:hover { border-color: #4ecdc4; color: #4ecdc4; }
 .td-btn-back { border-color: #222; color: #666; }
@@ -1025,12 +1047,26 @@ async function generateData() {
 }
 
 // ── プロンプト編集 ──
+function _updatePromptMeta(updatedBy, updatedAt) {
+    const metaEl = document.getElementById('promptMeta');
+    const byEl = document.getElementById('promptUpdatedBy');
+    const atEl = document.getElementById('promptUpdatedAt');
+    if (updatedBy) {
+        byEl.textContent = updatedBy;
+        atEl.textContent = updatedAt ? new Date(updatedAt).toLocaleString('ja-JP') : '';
+        metaEl.style.display = 'flex';
+    } else {
+        metaEl.style.display = 'none';
+    }
+}
+
 async function openPromptEditor() {
     try {
         const res = await fetch(PROMPT_URL, { headers: { 'X-CSRFToken': CSRF_TOKEN } });
         const data = await res.json();
         if (data.ok) {
             document.getElementById('promptInput').value = data.instruction_template;
+            _updatePromptMeta(data.updated_by, data.updated_at);
             document.getElementById('promptModal').style.display = 'flex';
         } else {
             showToast(data.error || 'エラー', 'error');
@@ -1059,6 +1095,7 @@ async function savePrompt() {
         });
         const data = await res.json();
         if (data.ok) {
+            _updatePromptMeta(data.updated_by, data.updated_at);
             closePromptModal();
             showToast(data.message, 'success');
         } else {

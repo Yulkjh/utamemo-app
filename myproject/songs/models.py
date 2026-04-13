@@ -793,3 +793,69 @@ class TrainingSession(models.Model):
         if self.status in ('training', 'loading', 'saving'):
             return self.updated_at >= timezone.now() - timedelta(minutes=5)
         return False
+
+
+class PromptTemplate(models.Model):
+    """プロンプトテンプレート（スタッフ間共有・DB管理）
+
+    歌詞生成に使うInstruction Templateなどをスタッフが編集・共有できるようにする。
+    ファイルベースだと本番環境（Render.com）で再デプロイ時に消えるため、DB管理にする。
+    """
+    TEMPLATE_KEYS = [
+        ('lyrics_instruction', '歌詞生成 Instruction Template'),
+        ('lyrics_system', '歌詞生成 System Prompt'),
+    ]
+
+    key = models.CharField(
+        max_length=50,
+        unique=True,
+        choices=TEMPLATE_KEYS,
+        verbose_name='テンプレートキー'
+    )
+    content = models.TextField(
+        verbose_name='テンプレート本文'
+    )
+    updated_by = models.ForeignKey(
+        User,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='updated_prompts',
+        verbose_name='最終編集者'
+    )
+    updated_at = models.DateTimeField(
+        auto_now=True,
+        verbose_name='最終更新日時'
+    )
+    created_at = models.DateTimeField(
+        auto_now_add=True,
+        verbose_name='作成日時'
+    )
+
+    class Meta:
+        verbose_name = 'プロンプトテンプレート'
+        verbose_name_plural = 'プロンプトテンプレート'
+        ordering = ['key']
+
+    def __str__(self):
+        return self.get_key_display()
+
+    @classmethod
+    def get_template(cls, key, default=''):
+        """テンプレートを取得。存在しない場合はdefaultを返す"""
+        try:
+            return cls.objects.get(key=key).content
+        except cls.DoesNotExist:
+            return default
+
+    @classmethod
+    def set_template(cls, key, content, user=None):
+        """テンプレートを保存（なければ作成）"""
+        obj, created = cls.objects.update_or_create(
+            key=key,
+            defaults={
+                'content': content,
+                'updated_by': user,
+            }
+        )
+        return obj

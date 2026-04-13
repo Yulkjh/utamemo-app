@@ -42,6 +42,15 @@ if exist "venv\Scripts\python.exe" (
     set PYTHON=python
 )
 
+echo 学習データを双方向同期中...
+%PYTHON% sync_data.py sync --api_key "%UTAMEMO_TRAINING_API_KEY%" --base_url "https://utamemo.onrender.com"
+if %ERRORLEVEL% EQU 0 (
+    echo データ同期完了!
+) else (
+    echo データ同期失敗。ローカルデータで続行します。
+)
+echo.
+
 if not exist "data\lyrics_training_data.json" (
     echo エラー: data\lyrics_training_data.json が見つかりません
     pause
@@ -64,6 +73,13 @@ echo.
 echo.
 if %ERRORLEVEL% EQU 0 (
     echo 学習完了! LoRA: %OUTPUT_DIR%
+    echo 学習後データをサーバーにアップロード中...
+    %PYTHON% sync_data.py push --api_key "%UTAMEMO_TRAINING_API_KEY%" --base_url "https://utamemo.onrender.com"
+    if %ERRORLEVEL% EQU 0 (
+        echo アップロード完了!
+    ) else (
+        echo アップロード失敗 (学習結果は保存済み)
+    )
 ) else (
     echo エラーが発生しました (コード: %ERRORLEVEL%)
 )

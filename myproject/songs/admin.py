@@ -3,7 +3,7 @@ from django.utils import timezone
 from .models import (
     Song, Lyrics, Like, Favorite, Comment, UploadedImage,
     Tag, PlayHistory, Classroom, ClassroomMembership, ClassroomSong,
-    FlashcardDeck, Flashcard, TrainingSession,
+    FlashcardDeck, Flashcard, TrainingSession, PromptTemplate,
 )
 
 
@@ -252,3 +252,17 @@ class TrainingSessionAdmin(admin.ModelAdmin):
     readonly_fields = ('api_key', 'created_at', 'updated_at')
     ordering = ('-updated_at',)
     list_per_page = 20
+
+
+@admin.register(PromptTemplate)
+class PromptTemplateAdmin(admin.ModelAdmin):
+    list_display = ('key', 'get_key_display', 'updated_by', 'updated_at')
+    list_display_links = ('key',)
+    readonly_fields = ('created_at', 'updated_at')
+    raw_id_fields = ('updated_by',)
+    ordering = ('key',)
+    list_per_page = 20
+
+    def get_key_display(self, obj):
+        return obj.get_key_display()
+    get_key_display.short_description = '名前'

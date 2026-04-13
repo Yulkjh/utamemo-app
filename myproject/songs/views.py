@@ -7,7 +7,7 @@ from django.contrib import messages
 from django.http import JsonResponse
 from django.urls import reverse_lazy
 from django.contrib.admin.views.decorators import staff_member_required
-from django.views.decorators.http import require_POST
+from django.views.decorators.http import require_POST, require_http_methods
 from django.views.decorators.csrf import csrf_exempt
 from django.db.models import Q, Count, F
 from django.conf import settings
@@ -2967,8 +2967,7 @@ def training_data_api(request):
         return JsonResponse({'error': f'Unknown action: {action}'}, status=400)
 
 
-# ── プロンプト設定ファイルのパス ──
-_PROMPT_CONFIG_PATH = Path(__file__).resolve().parent.parent.parent / 'training' / 'data' / 'prompt_config.json'
+# ── プロンプト設定（DB管理） ──
 
 _DEFAULT_INSTRUCTION_TEMPLATE = (
     "あなたは暗記学習用の歌詞作成の専門家です。以下の学習テキストから{genre}ジャンルの歌詞を作成してください。\n"
@@ -2990,19 +2989,28 @@ _DEFAULT_INSTRUCTION_TEMPLATE = (
 _GENRES = ["pop", "rock", "hip-hop", "EDM", "jazz", "R&B", "folk", "J-pop", "K-pop"]
 
 
-def _get_prompt_config():
-    """プロンプト設定を読み込み"""
-    if _PROMPT_CONFIG_PATH.exists():
-        with open(_PROMPT_CONFIG_PATH, 'r', encoding='utf-8') as f:
-            return json.load(f)
-    return {'instruction_template': _DEFAULT_INSTRUCTION_TEMPLATE}
+def _get_instruction_template():
+    """DB からプロンプトテンプレートを取得（なければデフォルト）"""
+    from .models import PromptTemplate
+    return PromptTemplate.get_template('lyrics_instruction', _DEFAULT_INSTRUCTION_TEMPLATE)
 
 
-def _save_prompt_config(config):
-    """プロンプト設定を保存"""
-    _PROMPT_CONFIG_PATH.parent.mkdir(parents=True, exist_ok=True)
-    with open(_PROMPT_CONFIG_PATH, 'w', encoding='utf-8') as f:
-        json.dump(config, f, ensure_ascii=False, indent=2)
+def _get_instruction_template_with_meta():
+    """DB からプロンプトテンプレートと編集者情報を取得"""
+    from .models import PromptTemplate
+    try:
+        obj = PromptTemplate.objects.get(key='lyrics_instruction')
+        return {
+            'instruction_template': obj.content,
+            'updated_by': obj.updated_by.username if obj.updated_by else None,
+            'updated_at': obj.updated_at.isoformat() if obj.updated_at else None,
+        }
+    except PromptTemplate.DoesNotExist:
+        return {
+            'instruction_template': _DEFAULT_INSTRUCTION_TEMPLATE,
+            'updated_by': None,
+            'updated_at': None,
+        }
 
 
 @staff_member_required
@@ -3025,9 +3033,8 @@ def training_data_generate(request):
         with open(data_path, 'r', encoding='utf-8') as f:
             records = json.load(f)
 
-    # プロンプト設定を読み込み
-    config = _get_prompt_config()
-    instruction_template = config.get('instruction_template', _DEFAULT_INSTRUCTION_TEMPLATE)
+    # プロンプト設定をDBから読み込み
+    instruction_template = _get_instruction_template()
 
     genai.configure(api_key=gemini_key)
     model = genai.GenerativeModel("gemini-2.5-pro")
@@ -3123,10 +3130,12 @@ def training_data_generate(request):
 
 @staff_member_required
 def training_prompt_api(request):
-    """プロンプト設定の取得・更新"""
+    """プロンプト設定の取得・更新（DB管理）"""
+    from .models import PromptTemplate
+
     if request.method == 'GET':
-        config = _get_prompt_config()
-        return JsonResponse({'ok': True, 'instruction_template': config.get('instruction_template', _DEFAULT_INSTRUCTION_TEMPLATE)})
+        meta = _get_instruction_template_with_meta()
+        return JsonResponse({'ok': True, **meta})
 
     elif request.method == 'POST':
         try:
@@ -3140,14 +3149,22 @@ def training_prompt_api(request):
         if '{genre}' not in instruction_template:
             return JsonResponse({'error': 'プロンプトに {genre} プレースホルダーが必要です'}, status=400)
 
-        config = _get_prompt_config()
-        config['instruction_template'] = instruction_template
-        _save_prompt_config(config)
+        # DBに保存（編集者情報も記録）
+        obj = PromptTemplate.set_template(
+            key='lyrics_instruction',
+            content=instruction_template,
+            user=request.user,
+        )
 
-        # generate_history_data.py のINSTRUCTION_TEMPLATEも同期
+        # generate_history_data.py のINSTRUCTION_TEMPLATEも同期（ローカル開発用）
         _sync_prompt_to_script(instruction_template)
 
-        return JsonResponse({'ok': True, 'message': 'プロンプトを保存しました'})
+        return JsonResponse({
+            'ok': True,
+            'message': 'プロンプトを保存しました',
+            'updated_by': request.user.username,
+            'updated_at': obj.updated_at.isoformat(),
+        })
 
     return JsonResponse({'error': 'Method not allowed'}, status=405)
 
@@ -3250,6 +3267,7 @@ def training_api_update(request):
 
 
 @csrf_exempt
+@require_http_methods(["GET", "POST"])
 def training_reviewed_indices(request):
     """レビュー済み（未学習）データインデックスを返すAPIエンドポイント（APIキー認証）
 
@@ -3296,6 +3314,145 @@ def training_reviewed_indices(request):
         ).values_list('data_index', flat=True).distinct()
     )
     return JsonResponse({'ok': True, 'reviewed_indices': sorted(set(reviewed))})
+
+
+@csrf_exempt
+@require_http_methods(["GET"])
+def training_data_download(request):
+    """学習データJSON全件をダウンロードするAPI（APIキー認証）
+
+    学校PC / 自宅PC から学習前に最新データを取得するためのエンドポイント。
+    GET /api/training/data/download/
+    Header: X-Training-Api-Key: <api_key>
+    Response: 学習データJSON配列 + プロンプトテンプレート
+    """
+    from .models import TrainingSession, PromptTemplate
+
+    api_key = request.headers.get('X-Training-Api-Key', '')
+    if not api_key:
+        return JsonResponse({'error': 'API key required'}, status=401)
+
+    try:
+        TrainingSession.objects.get(api_key=api_key)
+    except TrainingSession.DoesNotExist:
+        return JsonResponse({'error': 'Invalid API key'}, status=403)
+
+    data_path = Path(__file__).resolve().parent.parent.parent / 'training' / 'data' / 'lyrics_training_data.json'
+    if not data_path.exists():
+        return JsonResponse({'error': 'データファイルが見つかりません'}, status=404)
+
+    with open(data_path, 'r', encoding='utf-8') as f:
+        records = json.load(f)
+
+    # プロンプトテンプレートも返す
+    prompt = PromptTemplate.get_template('lyrics_instruction')
+
+    return JsonResponse({
+        'ok': True,
+        'total': len(records),
+        'records': records,
+        'prompt_template': prompt or '',
+    })
+
+
+@csrf_exempt
+@require_POST
+def training_data_upload(request):
+    """GPUマシンからサーバーへ学習データをアップロード（マージ）するAPI
+
+    POST /api/training/data/upload/
+    Header: X-Training-Api-Key: <api_key>
+    Body: {"records": [...], "mode": "merge"|"replace"}
+
+    mode:
+      - "merge" (デフォルト): 新規レコードのみ追加（input の先頭50文字で重複判定）
+      - "replace": サーバー側を完全に置き換え（危険 - 管理者専用）
+    """
+    from .models import TrainingSession
+
+    api_key = request.headers.get('X-Training-Api-Key', '')
+    if not api_key:
+        return JsonResponse({'error': 'API key required'}, status=401)
+
+    try:
+        session = TrainingSession.objects.get(api_key=api_key)
+    except TrainingSession.DoesNotExist:
+        return JsonResponse({'error': 'Invalid API key'}, status=403)
+
+    try:
+        body = json.loads(request.body)
+    except json.JSONDecodeError:
+        return JsonResponse({'error': 'Invalid JSON'}, status=400)
+
+    upload_records = body.get('records', [])
+    mode = body.get('mode', 'merge')
+
+    if not isinstance(upload_records, list):
+        return JsonResponse({'error': 'records must be a list'}, status=400)
+
+    if not upload_records:
+        return JsonResponse({'error': 'records is empty'}, status=400)
+
+    # バリデーション: 各レコードに必須キーがあるか
+    for i, rec in enumerate(upload_records):
+        if not isinstance(rec, dict):
+            return JsonResponse({'error': f'records[{i}] is not an object'}, status=400)
+        if 'input' not in rec or 'output' not in rec:
+            return JsonResponse({'error': f'records[{i}] に input/output がありません'}, status=400)
+
+    data_path = Path(__file__).resolve().parent.parent.parent / 'training' / 'data' / 'lyrics_training_data.json'
+
+    # 既存データ読み込み
+    existing = []
+    if data_path.exists():
+        with open(data_path, 'r', encoding='utf-8') as f:
+            existing = json.load(f)
+
+    if mode == 'replace':
+        # 完全置き換え
+        import shutil
+        if data_path.exists():
+            shutil.copy2(data_path, str(data_path) + '.bak')
+        final = upload_records
+        added = len(upload_records)
+        logger.info('学習データ置換: %d 件 (by session %s)', added, session.machine_name)
+    else:
+        # マージ: input の先頭50文字で重複判定
+        existing_keys = {r.get('input', '')[:50] for r in existing}
+        new_records = [r for r in upload_records if r.get('input', '')[:50] not in existing_keys]
+        added = len(new_records)
+
+        if added == 0:
+            return JsonResponse({
+                'ok': True,
+                'message': '新規データなし（すべて既存と重複）',
+                'added': 0,
+                'total': len(existing),
+            })
+
+        # バックアップ → マージ
+        import shutil
+        if data_path.exists():
+            shutil.copy2(data_path, str(data_path) + '.bak')
+
+        final = existing + new_records
+        logger.info('学習データマージ: +%d 件 (既存 %d → 合計 %d, by session %s)',
+                     added, len(existing), len(final), session.machine_name)
+
+    # 安全な書き込み (tmp → rename)
+    data_path.parent.mkdir(parents=True, exist_ok=True)
+    tmp_path = str(data_path) + '.tmp'
+    with open(tmp_path, 'w', encoding='utf-8') as f:
+        json.dump(final, f, ensure_ascii=False, indent=2)
+    import os as _os
+    _os.replace(tmp_path, str(data_path))
+
+    return JsonResponse({
+        'ok': True,
+        'message': f'{added} 件追加しました',
+        'added': added,
+        'total': len(final),
+    })
 
 
 @staff_member_required

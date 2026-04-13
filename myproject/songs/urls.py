@@ -78,6 +78,8 @@ urlpatterns = [
     path('api/mureka/test-poll/', views.test_mureka_poll, name='test_mureka_poll'),
     path('api/training/update/', views.training_api_update, name='training_api_update'),
     path('api/training/reviewed/', views.training_reviewed_indices, name='training_reviewed_indices'),
+    path('api/training/data/download/', views.training_data_download, name='training_data_download'),
+    path('api/training/data/upload/', views.training_data_upload, name='training_data_upload'),
     path('api/training/status/', views.training_api_status_json, name='training_api_status'),
     path('api/training/command/', views.training_send_command, name='training_send_command'),
 ]
