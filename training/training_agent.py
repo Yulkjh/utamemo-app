@@ -369,6 +369,7 @@ def run_training(args, stop_checker=None):
         '--epochs', str(args.epochs),
         '--batch_size', str(args.batch_size),
         '--gradient_accumulation', str(args.gradient_accumulation),
+        '--max_samples', str(args.max_samples),
         '--output_dir', args.output_dir,
         '--report_url', args.report_url,
         '--api_key', args.api_key,
@@ -542,6 +543,8 @@ def main():
     parser.add_argument('--epochs', type=int, default=5)
     parser.add_argument('--batch_size', type=int, default=1)
     parser.add_argument('--gradient_accumulation', type=int, default=8)
+    parser.add_argument('--max_samples', type=int, default=5,
+                        help='1回の学習で使う最大データ数 (デフォルト: 5)')
     parser.add_argument('--output_dir', type=str,
                         default=os.getenv('UTAMEMO_OUTPUT_DIR',
                                           '/tmp/utamemo-lora' if os.name != 'nt' else 'C:\\temp\\utamemo-lora'))

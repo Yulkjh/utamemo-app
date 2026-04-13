@@ -223,6 +223,10 @@ def parse_args():
         help="検証データの割合 (0.0で検証なし, 0.1で10%%を検証用)"
     )
     parser.add_argument(
+        "--max_samples", type=int, default=0,
+        help="1回の学習で使う最大データ数 (0=全件使用, 5=5件ずつ)"
+    )
+    parser.add_argument(
         "--early_stopping_patience", type=int, default=3,
         help="Early Stoppingの忍耐回数 (0で無効)"
     )
@@ -405,7 +409,7 @@ def fetch_reviewed_indices(report_url, api_key):
     return None
 
 
-def load_training_data(data_path, tokenizer, eval_split=0.1, reviewed_indices=None):
+def load_training_data(data_path, tokenizer, eval_split=0.1, reviewed_indices=None, max_samples=0):
     """学習データを読み込み、train/eval分割"""
     from datasets import Dataset
     logger.info(f"学習データを読み込み: {data_path}")
@@ -435,6 +439,11 @@ def load_training_data(data_path, tokenizer, eval_split=0.1, reviewed_indices=No
         logger.info(f"  レビュー済みフィルタ: {before_count} -> {len(raw_data)} 件 ({before_count - len(raw_data)} 件除外)")
         if len(raw_data) == 0:
             raise ValueError("レビュー済みデータが0件です。学習データをダッシュボードでレビューしてください。")
+
+    # max_samples で件数制限
+    if max_samples > 0 and len(raw_data) > max_samples:
+        logger.info(f"  max_samples={max_samples}: {len(raw_data)} -> {max_samples} 件に制限")
+        raw_data = raw_data[:max_samples]
 
     formatted_texts = []
     for example in raw_data:
@@ -615,7 +624,7 @@ def train(args):
 
     model, tokenizer = setup_model_and_tokenizer(args.model_name, args.hf_token)
     reviewed_indices = fetch_reviewed_indices(args.report_url, args.api_key)
-    train_dataset, eval_dataset = load_training_data(args.data_path, tokenizer, args.eval_split, reviewed_indices=reviewed_indices)
+    train_dataset, eval_dataset = load_training_data(args.data_path, tokenizer, args.eval_split, reviewed_indices=reviewed_indices, max_samples=args.max_samples)
     model = setup_lora(model, args.model_name, args.lora_rank, args.lora_alpha)
 
     eval_strategy = "epoch" if eval_dataset else "no"
