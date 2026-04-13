@@ -3276,6 +3276,7 @@ def training_reviewed_indices(request):
     """
     from .models import TrainingSession
     from users.models import TrainingDataReview
+    from django.utils import timezone
 
     api_key = request.headers.get('X-Training-Api-Key', '')
     if not api_key:

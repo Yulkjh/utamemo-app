@@ -691,6 +691,13 @@ def main():
                     try:
                         if auto_loop and current_training_type == 'lyrics':
                             current_indices = fetch_reviewed_indices(args.report_url, args.api_key)
+                            if current_indices is not None and len(current_indices) == 0:
+                                logger.info("レビュー済みデータが0件 → 自動ループを停止します")
+                                auto_loop = False
+                                training_running = False
+                                send_status(args.report_url, args.api_key,
+                                            status='idle', error_message='レビュー済みデータ消費完了 (新しいレビューを追加してください)')
+                                continue
                             if current_indices is not None and current_indices == last_trained_indices:
                                 logger.info("レビュー済みデータに変化なし → 自動ループを停止します")
                                 auto_loop = False
@@ -714,13 +721,41 @@ def main():
                             logger.info("--- データ同期 (Pull) ---")
                             sync_training_data(args.report_url, args.api_key, action='pull')
 
-                            pre_train_indices = fetch_reviewed_indices(args.report_url, args.api_key)
+                            # レビュー済みインデックス取得（リトライ付き）
+                            pre_train_indices = None
+                            for _fetch_attempt in range(3):
+                                pre_train_indices = fetch_reviewed_indices(args.report_url, args.api_key)
+                                if pre_train_indices is not None:
+                                    break
+                                logger.warning(f"レビュー済みインデックス取得リトライ ({_fetch_attempt + 1}/3)")
+                                time.sleep(5)
+
+                            if pre_train_indices is not None:
+                                logger.info(f"レビュー済みインデックス取得成功: {len(pre_train_indices)}件")
+                            else:
+                                logger.warning("レビュー済みインデックス取得失敗 → マーク処理は学習後にスキップされます")
+
                             exit_code = run_training(args, stop_checker=check_stop)
 
                             if exit_code == 0:
-                                if pre_train_indices is not None:
+                                if pre_train_indices is not None and len(pre_train_indices) > 0:
                                     last_trained_indices = pre_train_indices
-                                    mark_trained(args.report_url, args.api_key, pre_train_indices)
+                                    mark_result = mark_trained(args.report_url, args.api_key, pre_train_indices)
+                                    if mark_result:
+                                        logger.info(f"学習済みマーク成功: {len(pre_train_indices)}件")
+                                    else:
+                                        logger.error(f"学習済みマーク失敗（ローカル保存済み）: {len(pre_train_indices)}件")
+                                        send_status(args.report_url, args.api_key,
+                                                    status='completed',
+                                                    error_message=f'学習完了だがマーク送信失敗 ({len(pre_train_indices)}件はローカル保存済み)')
+                                elif pre_train_indices is not None and len(pre_train_indices) == 0:
+                                    last_trained_indices = pre_train_indices
+                                    logger.info("レビュー済みインデックスが0件のためマーク不要")
+                                else:
+                                    logger.warning("学習完了だがインデックス取得失敗のためマーク不可")
+                                    send_status(args.report_url, args.api_key,
+                                                status='completed',
+                                                error_message='学習完了だがインデックス取得失敗のためマーク未実行')
                                 logger.info("--- データ同期 (Push) ---")
                                 sync_training_data(args.report_url, args.api_key, action='push')
 
