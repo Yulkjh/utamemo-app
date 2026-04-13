@@ -456,7 +456,8 @@ def main():
     parser.add_argument('--batch_size', type=int, default=1)
     parser.add_argument('--gradient_accumulation', type=int, default=8)
     parser.add_argument('--output_dir', type=str,
-                        default=os.getenv('UTAMEMO_OUTPUT_DIR', 'C:\\temp\\utamemo-lora'))
+                        default=os.getenv('UTAMEMO_OUTPUT_DIR',
+                                          '/tmp/utamemo-lora' if os.name != 'nt' else 'C:\\temp\\utamemo-lora'))
     parser.add_argument('--gemini_key', type=str,
                         default=os.getenv('GEMINI_API_KEY', ''),
                         help='Gemini APIキー (データ自動生成用)')
