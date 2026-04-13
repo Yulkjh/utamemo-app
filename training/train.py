@@ -126,9 +126,9 @@ GPU_PRESETS = {
             "google/gemma-2-27b-it",
             "meta-llama/Meta-Llama-3-8B-Instruct",
         ],
-        "batch_size": 4,
-        "lora_rank": 64,
-        "gradient_accumulation": 2,
+        "batch_size": 1,
+        "lora_rank": 16,
+        "gradient_accumulation": 8,
     },
 }
 
@@ -171,10 +171,9 @@ def _build_max_memory():
     max_memory = {}
     for i in range(gpu_count):
         total_gb = torch.cuda.get_device_properties(i).total_memory / 1024**3
-        # VRAMの90%をモデルに割り当て (残りはアクティベーション等に必要)
         alloc_gb = int(total_gb * 0.90)
         max_memory[i] = f"{alloc_gb}GiB"
-    max_memory["cpu"] = "1GiB"
+    max_memory["cpu"] = "8GiB"
     return max_memory
 
 
@@ -645,7 +644,7 @@ def train(args):
         gradient_checkpointing_kwargs={"use_reentrant": False},
         dataloader_num_workers=0,
         dataloader_pin_memory=False,
-        max_length=MAX_SEQ_LENGTH,
+        max_seq_length=MAX_SEQ_LENGTH,
         dataset_text_field="text",
         packing=True,
     )
