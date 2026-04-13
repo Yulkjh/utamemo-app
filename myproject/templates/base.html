@@ -1055,7 +1055,8 @@
     </style>
 </head>
 <body>
-    <!-- DEMOバナー -->
+    <!-- DEMOバナー（スタッフポータル内では非表示） -->
+    {% if not request.path|slice:":7" == "/staff/" %}
     <div class="demo-banner" id="demoBanner" style="cursor: pointer;" onclick="showDemoModal()">
         <div class="demo-banner-content">
             <i class="bi bi-exclamation-circle"></i>
@@ -1147,6 +1148,7 @@
             </div>
         </div>
     </div>
+    {% endif %}
 
     <!-- ナビゲーション -->
     <nav class="navbar navbar-expand-lg navbar-modern fixed-top" id="mainNavbar">
