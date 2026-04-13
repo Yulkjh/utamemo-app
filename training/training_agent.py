@@ -23,16 +23,8 @@ import urllib.error
 
 import io
 
-# Windows タスクスケジューラ環境でのエンコーディング問題対策
-# PYTHONIOENCODING=utf-8 が設定されていれば sys.stdout で問題ない
-# 設定されていない場合のフォールバック
-_log_stream = sys.stdout
-try:
-    if hasattr(sys.stdout, 'encoding') and sys.stdout.encoding and sys.stdout.encoding.lower() not in ('utf-8', 'utf8'):
-        _log_stream = io.TextIOWrapper(sys.stdout.buffer, encoding='utf-8', errors='replace', line_buffering=True)
-except Exception:
-    pass
-
+# Windows環境のUTF-8対応
+_log_stream = io.TextIOWrapper(sys.stdout.buffer, encoding='utf-8', errors='replace', line_buffering=True)
 logging.basicConfig(
     level=logging.INFO,
     format="%(asctime)s [%(levelname)s] %(message)s",
@@ -141,12 +133,10 @@ def sync_training_data(report_url, api_key, action='sync'):
     base_url = report_url.rsplit('/api/training/update', 1)[0]
 
     try:
-        # sync_data.py をインポートして直接呼ぶ
         script_dir = os.path.dirname(os.path.abspath(__file__))
         if script_dir not in sys.path:
             sys.path.insert(0, script_dir)
         import sync_data
-        # モジュールが既にキャッシュされている場合でも最新版を使う
         import importlib
         importlib.reload(sync_data)
 
@@ -172,7 +162,6 @@ def get_python_exe():
     """Python実行ファイルを決定"""
     script_dir = os.path.dirname(os.path.abspath(__file__))
     project_root = os.path.dirname(script_dir)
-    # training/venv (torch入り) → .venv (プロジェクトルート) → sys.executable
     for venv_dir in [
         os.path.join(script_dir, 'venv', 'Scripts', 'python.exe'),
         os.path.join(project_root, '.venv', 'Scripts', 'python.exe'),
@@ -183,11 +172,7 @@ def get_python_exe():
 
 
 def run_subprocess(cmd, label="process", stop_checker=None):
-    """サブプロセスを実行し出力をログに流す
-    
-    stop_checker: 呼ぶと停止すべきかを返す callable (True=停止)
-    Windows対応: スレッドで stdout を読み取り、メインスレッドで停止チェック
-    """
+    """サブプロセスを実行し出力をログに流す"""
     import threading
     import queue
 
@@ -207,7 +192,6 @@ def run_subprocess(cmd, label="process", stop_checker=None):
         errors='replace',
     )
 
-    # スレッドで stdout を読み取り、キューに入れる
     output_queue = queue.Queue()
 
     def reader_thread():
@@ -225,18 +209,16 @@ def run_subprocess(cmd, label="process", stop_checker=None):
     last_stop_check = time.time()
 
     while True:
-        # キューから出力を読む (最大1秒待機)
         try:
             line = output_queue.get(timeout=1.0)
             if line is None:
-                break  # reader_thread 終了
+                break
             line = line.rstrip()
             if line:
                 logger.info(f"  [{label}] {line}")
         except queue.Empty:
             pass
 
-        # プロセスが終了していたらキューを空にして抜ける
         if process.poll() is not None:
             while not output_queue.empty():
                 line = output_queue.get_nowait()
@@ -247,7 +229,6 @@ def run_subprocess(cmd, label="process", stop_checker=None):
                     logger.info(f"  [{label}] {line}")
             break
 
-        # 5秒ごとに停止チェック
         now = time.time()
         if stop_checker and now - last_stop_check >= 5:
             last_stop_check = now
@@ -260,7 +241,7 @@ def run_subprocess(cmd, label="process", stop_checker=None):
                     logger.warning(f"{label} プロセスが応答しません。強制終了します")
                     process.kill()
                     process.wait()
-                return -99  # 停止による終了
+                return -99
 
     process.wait()
     return process.returncode
@@ -331,7 +312,7 @@ def run_importance_training(args, stop_checker=None):
     return run_subprocess(cmd, label="importance-train", stop_checker=stop_checker)
 
 
-# ── 推論サーバー + Cloudflare Tunnel 自動起動 ──
+# ── 推論サーバー + Cloudflare Tunnel ──
 
 CLOUDFLARED_PATH = r'C:\Program Files (x86)\cloudflared\cloudflared.exe'
 SERVE_PORT = 8000
@@ -345,7 +326,6 @@ def start_inference_server():
 
     env = os.environ.copy()
     env['PYTHONIOENCODING'] = 'utf-8'
-    # HF_HOME が未設定なら B: ドライブのキャッシュを使う
     if 'HF_HOME' not in env and os.path.exists('B:\\huggingface_cache'):
         env['HF_HOME'] = 'B:\\huggingface_cache'
 
@@ -369,7 +349,6 @@ def start_inference_server():
         errors='replace',
     )
 
-    # 出力を読んでログに流すスレッド
     def _log_output():
         try:
             for line in proc.stdout:
@@ -406,7 +385,6 @@ def start_cloudflare_tunnel(port=SERVE_PORT):
     tunnel_url = ''
     url_pattern = re.compile(r'(https://[a-z0-9-]+\.trycloudflare\.com)')
 
-    # 最大60秒待ってURLを取得
     deadline = time.time() + 60
 
     def _read_and_find_url():
@@ -425,7 +403,6 @@ def start_cloudflare_tunnel(port=SERVE_PORT):
     t = threading.Thread(target=_read_and_find_url, daemon=True)
     t.start()
 
-    # URL 検出まで待機
     while time.time() < deadline:
         if tunnel_url:
             break
@@ -484,27 +461,7 @@ def main():
                         help='各サイクルで生成する新規テーマ数 (デフォルト: 5)')
     parser.add_argument('--no_serve', action='store_true',
                         help='推論サーバー+トンネルの自動起動を無効化')
-    parser.add_argument('--sleep_after', action='store_true',
-                        help='全学習完了後にPCをスリープする')
     args = parser.parse_args()
-
-    def do_sleep_if_enabled():
-        """--sleep_after が有効なら推論サーバー+トンネルを停止してPCをスリープ"""
-        if not args.sleep_after:
-            return
-        logger.info("全学習完了 → PCをスリープします...")
-        # サーバー+トンネルをクリーンアップ
-        for name, proc in [('tunnel', tunnel_proc), ('serve', serve_proc)]:
-            if proc and proc.poll() is None:
-                proc.terminate()
-                try:
-                    proc.wait(timeout=10)
-                except subprocess.TimeoutExpired:
-                    proc.kill()
-        send_status(args.report_url, args.api_key, status='idle',
-                    error_message='学習完了 → PCスリープ', tunnel_url='')
-        # Windows スリープ
-        os.system('rundll32.exe powrprof.dll,SetSuspendState 0,1,0')
 
     if not args.api_key:
         logger.error("APIキーが必要です (--api_key または UTAMEMO_TRAINING_API_KEY)")
@@ -535,14 +492,13 @@ def main():
         if serve_proc and serve_proc.poll() is None:
             logger.info("推論サーバーのモデル読込を待機中 (最大5分)...")
             if wait_for_server_ready(SERVE_PORT, timeout=300):
-                # サーバー準備完了 → トンネル起動
                 tunnel_proc, tunnel_url = start_cloudflare_tunnel(SERVE_PORT)
             else:
                 logger.warning("推論サーバー起動失敗、トンネルなしで続行します")
         else:
             logger.warning("推論サーバープロセスが即終了しました")
 
-    # 初回: idle状態を送信 (古いエラーメッセージもクリア)
+    # 初回idle送信
     status_kwargs = {'status': 'idle', 'error_message': ''}
     if tunnel_url:
         status_kwargs['tunnel_url'] = tunnel_url
@@ -550,17 +506,17 @@ def main():
     logger.info("初回ステータス送信完了 → ダッシュボードからの開始コマンドを待機します")
 
     training_running = False
-    auto_loop = False  # 一度開始されたら自動ループ
-    current_training_type = 'lyrics'  # 現在の学習タイプ
-    consecutive_errors = 0  # 連続エラー回数
-    MAX_CONSECUTIVE_ERRORS = 3  # この回数連続失敗したら自動ループを停止
+    auto_loop = False
+    current_training_type = 'lyrics'
+    consecutive_errors = 0
+    MAX_CONSECUTIVE_ERRORS = 3
     last_tunnel_check = time.time()
-    TUNNEL_CHECK_INTERVAL = 120  # 120秒ごとにトンネル健全性チェック
-    tunnel_fail_count = 0  # 連続トンネルチェック失敗回数
-    last_trained_indices = None  # 前回学習に使ったレビュー済みインデックス
+    TUNNEL_CHECK_INTERVAL = 120
+    tunnel_fail_count = 0
+    last_trained_indices = None
 
     def check_stop():
-        """サブプロセス実行中に停止コマンドをチェック (5秒ごとに呼ばれる)"""
+        """停止コマンドをチェック"""
         try:
             check_cmd, _ = send_status(args.report_url, args.api_key, status='training')
             return check_cmd == 'stop'
@@ -572,16 +528,13 @@ def main():
     while True:
         try:
             if not training_running:
-                # サーバーにポーリング → コマンド取得
                 cmd, ttype = send_status(args.report_url, args.api_key, status='idle', error_message='')
 
                 idle_poll_count += 1
-                # 30回ごと(約5分)にアイドル中ログを出力
                 if idle_poll_count % 30 == 1:
                     logger.info(f"ポーリング中... (コマンド待機中, 応答: {cmd})")
 
                 if cmd == 'stop':
-                    # 停止コマンドは常に最優先
                     if auto_loop:
                         logger.info("停止コマンド受信: 自動ループを停止します")
                         auto_loop = False
@@ -589,7 +542,6 @@ def main():
                         logger.info("停止コマンド受信 (既にアイドル状態)")
 
                 elif cmd == 'start_serve':
-                    # 推論サーバー起動コマンド
                     if serve_proc and serve_proc.poll() is None:
                         logger.info("推論サーバーは既に起動中です")
                     else:
@@ -621,7 +573,6 @@ def main():
                     training_running = True
                     idle_poll_count = 0
 
-                    # 学習前に推論サーバーを停止してGPUメモリを解放
                     if serve_proc and serve_proc.poll() is None:
                         logger.info("学習開始: 推論サーバーを一時停止してGPUメモリを解放します")
                         serve_proc.terminate()
@@ -630,7 +581,6 @@ def main():
                         except subprocess.TimeoutExpired:
                             serve_proc.kill()
                             serve_proc.wait()
-                        # トンネルも停止
                         if tunnel_proc and tunnel_proc.poll() is None:
                             tunnel_proc.terminate()
                             try:
@@ -642,7 +592,6 @@ def main():
                         logger.info("推論サーバー停止完了")
 
                     try:
-                        # レビュー済みデータの変化チェック (自動ループ時)
                         if auto_loop and current_training_type == 'lyrics':
                             current_indices = fetch_reviewed_indices(args.report_url, args.api_key)
                             if current_indices is not None and current_indices == last_trained_indices:
@@ -651,16 +600,12 @@ def main():
                                 training_running = False
                                 send_status(args.report_url, args.api_key,
                                             status='idle', error_message='レビュー済みデータ消費完了 (新しいレビューを追加してください)')
-                                do_sleep_if_enabled()
                                 continue
 
                         if current_training_type == 'importance':
-                            # ノート重要度LLM: 直接学習
                             logger.info("--- ノート重要度LLM 学習 ---")
                             exit_code = run_importance_training(args, stop_checker=check_stop)
                         else:
-                            # 歌詞LLM: レビュー済みデータのみで学習
-                            # 停止コマンドチェック
                             check_cmd, _ = send_status(args.report_url, args.api_key, status='training')
                             if check_cmd == 'stop':
                                 logger.info("停止コマンド受信: 学習をスキップしてアイドルに戻ります")
@@ -668,33 +613,26 @@ def main():
                                 training_running = False
                                 continue
 
-                            logger.info("--- LoRA学習 (レビュー済みデータのみ) ---")
-                            # 学習前: サーバーから最新データをダウンロード
-                            logger.info("--- データ同期 (Pull: サーバー → ローカル) ---")
+                            logger.info("--- LoRA学習 ---")
+                            logger.info("--- データ同期 (Pull) ---")
                             sync_training_data(args.report_url, args.api_key, action='pull')
 
-                            # 学習前にレビュー済みインデックスを取得（学習後のマーク用）
                             pre_train_indices = fetch_reviewed_indices(args.report_url, args.api_key)
                             exit_code = run_training(args, stop_checker=check_stop)
 
-                            # 学習に使ったインデックスを記録 + 学習済みマーク
                             if exit_code == 0:
                                 if pre_train_indices is not None:
                                     last_trained_indices = pre_train_indices
-                                    # サーバーに学習済みマークを送信
                                     mark_trained(args.report_url, args.api_key, pre_train_indices)
-                                # 学習後: ローカルデータをサーバーにアップロード
-                                logger.info("--- データ同期 (Push: ローカル → サーバー) ---")
+                                logger.info("--- データ同期 (Push) ---")
                                 sync_training_data(args.report_url, args.api_key, action='push')
 
                         if exit_code == -99:
-                            # 停止コマンドでプロセスが終了された
                             logger.info("停止コマンドで学習を中断しました")
                             auto_loop = False
                             consecutive_errors = 0
                         elif exit_code == 0:
                             consecutive_errors = 0
-                            # 学習完了後、停止コマンドが来ていたかチェック
                             check_cmd, _ = send_status(args.report_url, args.api_key, status='idle', error_message='')
                             if check_cmd == 'stop':
                                 logger.info("停止コマンド受信: 自動ループを停止します")
@@ -732,7 +670,6 @@ def main():
                             time.sleep(wait_time)
                     finally:
                         training_running = False
-                        # 学習完了後に推論サーバー+トンネルを再起動
                         if not args.no_serve:
                             logger.info("学習完了: 推論サーバーを再起動します...")
                             serve_proc = start_inference_server()
@@ -749,11 +686,10 @@ def main():
                                 else:
                                     logger.warning("推論サーバー再起動タイムアウト")
 
-            # トンネル健全性チェック (120秒ごと)
+            # トンネル健全性チェック
             now = time.time()
             if not args.no_serve and tunnel_url and now - last_tunnel_check >= TUNNEL_CHECK_INTERVAL:
                 last_tunnel_check = now
-                # 推論サーバーが死んでいたら再起動
                 if serve_proc and serve_proc.poll() is not None:
                     logger.warning("推論サーバーが停止しています。再起動します...")
                     serve_proc = start_inference_server()
@@ -766,7 +702,6 @@ def main():
                                 send_status(args.report_url, args.api_key,
                                             status='idle', tunnel_url=tunnel_url)
                                 tunnel_fail_count = 0
-                # トンネルの到達性チェック (プロセス生死 + HTTP到達性)
                 elif tunnel_proc:
                     tunnel_dead = tunnel_proc.poll() is not None
                     tunnel_unreachable = False
@@ -803,7 +738,6 @@ def main():
 
         except KeyboardInterrupt:
             logger.info("エージェント停止")
-            # 推論サーバー + トンネルのクリーンアップ
             for name, proc in [('tunnel', tunnel_proc), ('serve', serve_proc)]:
                 if proc and proc.poll() is None:
                     logger.info(f"{name} プロセスを終了します...")
