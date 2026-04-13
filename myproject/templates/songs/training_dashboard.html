@@ -766,22 +766,26 @@ document.querySelectorAll('.cmd-wol').forEach(btn => {
                     const card = document.querySelector(`.session-card[data-session-id="${s.id}"]`);
                     if (!card) return;
 
-                    // Metrics
+                    // Metrics - show values only during/after active training
                     const tl = card.querySelector('.train-loss');
-                    if (tl) tl.textContent = s.train_loss ? s.train_loss.toFixed(4) : '-';
+                    if (tl) tl.textContent = (s.is_active && s.train_loss) ? s.train_loss.toFixed(4) : '-';
                     const el = card.querySelector('.eval-loss');
-                    if (el) el.textContent = s.eval_loss ? s.eval_loss.toFixed(4) : '-';
+                    if (el) el.textContent = (s.is_active && s.eval_loss) ? s.eval_loss.toFixed(4) : '-';
                     const ac = card.querySelector('.accuracy');
-                    if (ac) ac.textContent = s.accuracy ? s.accuracy.toFixed(1) + '%' : '-';
+                    if (ac) ac.textContent = (s.is_active && s.accuracy) ? s.accuracy.toFixed(1) + '%' : '-';
 
                     // Model name
                     const mn = card.querySelector('.model-name');
                     if (mn) mn.textContent = s.model_name || 'N/A';
 
-                    // Progress
+                    // Progress - only show during active training
                     const epochSection = card.querySelector('.epoch-progress');
-                    if (s.total_epochs > 0 || s.total_steps > 0) {
-                        if (epochSection) epochSection.style.display = '';
+                    if (epochSection) {
+                        if (s.is_active && (s.total_epochs > 0 || s.total_steps > 0)) {
+                            epochSection.style.display = '';
+                        } else if (!s.is_active) {
+                            epochSection.style.display = 'none';
+                        }
                     }
                     const ce = card.querySelector('.current-epoch');
                     if (ce) ce.textContent = s.current_epoch;
@@ -816,9 +820,13 @@ document.querySelectorAll('.cmd-wol').forEach(btn => {
                     // Progress bar
                     const bar = card.querySelector('.tm-progress-bar');
                     if (bar) {
-                        bar.style.width = s.progress_percent + '%';
-                        if (s.is_active) bar.classList.add('tm-progress-animated');
-                        else bar.classList.remove('tm-progress-animated');
+                        if (s.is_active) {
+                            bar.style.width = s.progress_percent + '%';
+                            bar.classList.add('tm-progress-animated');
+                        } else {
+                            bar.style.width = '0%';
+                            bar.classList.remove('tm-progress-animated');
+                        }
                     }
 
                     // Card header status
@@ -838,9 +846,9 @@ document.querySelectorAll('.cmd-wol').forEach(btn => {
                         gpuBadge.innerHTML = `<svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="4" y="4" width="16" height="16" rx="2"/><path d="M9 1v3M15 1v3M9 20v3M15 20v3M1 9h3M1 15h3M20 9h3M20 15h3"/></svg> ${s.gpu_name}`;
                     }
 
-                    // VRAM
+                    // VRAM - only show during active training
                     const vramContainer = card.querySelector('.vram-section');
-                    if (s.gpu_memory_used && s.gpu_memory_total) {
+                    if (s.is_active && s.gpu_memory_used && s.gpu_memory_total) {
                         const pctVram = Math.round(s.gpu_memory_used / s.gpu_memory_total * 100);
                         const html = `<span class="tm-label">VRAM</span>
                             <div class="tm-vram-track">
@@ -850,6 +858,7 @@ document.querySelectorAll('.cmd-wol').forEach(btn => {
                             </div>`;
                         if (vramContainer) {
                             vramContainer.innerHTML = html;
+                            vramContainer.style.display = '';
                         } else {
                             const grid = card.querySelector('.tm-metric-grid');
                             if (grid) {
@@ -859,6 +868,8 @@ document.querySelectorAll('.cmd-wol').forEach(btn => {
                                 grid.parentNode.insertBefore(div, grid.nextSibling);
                             }
                         }
+                    } else if (vramContainer) {
+                        vramContainer.style.display = 'none';
                     }
 
                     // Error
@@ -941,9 +952,13 @@ document.querySelectorAll('.cmd-wol').forEach(btn => {
 
                     // Log
                     const log = card.querySelector('.log-tail');
-                    if (log && s.log_tail) {
-                        log.textContent = s.log_tail;
-                        log.scrollTop = log.scrollHeight;
+                    if (log) {
+                        if (s.is_active && s.log_tail) {
+                            log.textContent = s.log_tail;
+                            log.scrollTop = log.scrollHeight;
+                        } else if (!s.is_active) {
+                            log.textContent = 'ログなし';
+                        }
                     }
 
                     // Footer times

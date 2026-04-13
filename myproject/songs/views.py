@@ -3249,7 +3249,7 @@ def training_api_update(request):
 
     if data.get('status') == 'training' and not session.started_at:
         session.started_at = timezone.now()
-    if data.get('status') in ('completed', 'failed') and not session.completed_at:
+    if data.get('status') in ('completed', 'failed'):
         session.completed_at = timezone.now()
 
     session.save()
@@ -3481,9 +3481,20 @@ def training_send_command(request):
         training_type = request.POST.get('training_type', 'lyrics')
         if training_type in ('lyrics', 'importance'):
             session.training_type = training_type
-            session.save(update_fields=['pending_command', 'training_type'])
-        else:
-            session.save(update_fields=['pending_command'])
+        # 新しい学習開始時にリセット
+        session.started_at = None
+        session.completed_at = None
+        session.current_epoch = 0
+        session.total_epochs = 0
+        session.current_step = 0
+        session.total_steps = 0
+        session.train_loss = None
+        session.eval_loss = None
+        session.accuracy = None
+        session.log_tail = ''
+        session.error_message = ''
+        session.eta_seconds = None
+        session.save()
     else:
         session.save(update_fields=['pending_command'])
     return JsonResponse({'ok': True, 'command': command})
