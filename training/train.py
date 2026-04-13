@@ -119,16 +119,15 @@ GPU_PRESETS = {
         "gradient_accumulation": 4,
     },
     "4080x2": {
-        "description": "RTX 4080 x2 (16GB x2 = 32GB VRAM)",
+        "description": "RTX 4080 SUPER x2 (16GB x2 = 32GB VRAM)",
         "recommended_models": [
             "Qwen/Qwen2.5-14B-Instruct",
-            "Qwen/Qwen2.5-32B-Instruct",
             "google/gemma-2-27b-it",
             "meta-llama/Meta-Llama-3-8B-Instruct",
         ],
-        "batch_size": 1,
-        "lora_rank": 16,
-        "gradient_accumulation": 8,
+        "batch_size": 2,
+        "lora_rank": 128,
+        "gradient_accumulation": 4,
     },
 }
 
