@@ -125,9 +125,9 @@ GPU_PRESETS = {
             "google/gemma-2-27b-it",
             "meta-llama/Meta-Llama-3-8B-Instruct",
         ],
-        "batch_size": 2,
-        "lora_rank": 128,
-        "gradient_accumulation": 4,
+        "batch_size": 1,
+        "lora_rank": 64,
+        "gradient_accumulation": 8,
     },
 }
 

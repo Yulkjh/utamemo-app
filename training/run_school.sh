@@ -51,13 +51,13 @@ OUTPUT_DIR="${OUTPUT_DIR:-./output/utamemo-lyrics-lora}"
 # エポック数
 EPOCHS="${EPOCHS:-5}"
 
-# バッチサイズ (4080x2 なら 4 が最適)
-BATCH_SIZE="${BATCH_SIZE:-4}"
+# バッチサイズ (4080 SUPER x2 なら 1 が安定)
+BATCH_SIZE="${BATCH_SIZE:-1}"
 
-# 勾配蓄積
-GRAD_ACCUM="${GRAD_ACCUM:-2}"
+# 勾配蓄積 (実効バッチ = BATCH_SIZE x GRAD_ACCUM = 8)
+GRAD_ACCUM="${GRAD_ACCUM:-8}"
 
-# LoRAランク (4080x2 なら 64 推奨)
+# LoRAランク (4080 SUPER x2 なら 64 推奨)
 LORA_RANK="${LORA_RANK:-64}"
 
 # Hugging Face トークン (Llamaモデル使用時に必要)

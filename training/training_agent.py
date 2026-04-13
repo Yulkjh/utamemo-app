@@ -162,12 +162,15 @@ def get_python_exe():
     """Python実行ファイルを決定"""
     script_dir = os.path.dirname(os.path.abspath(__file__))
     project_root = os.path.dirname(script_dir)
-    for venv_dir in [
+    candidates = [
+        os.path.join(script_dir, 'venv', 'bin', 'python'),
         os.path.join(script_dir, 'venv', 'Scripts', 'python.exe'),
+        os.path.join(project_root, '.venv', 'bin', 'python'),
         os.path.join(project_root, '.venv', 'Scripts', 'python.exe'),
-    ]:
-        if os.path.exists(venv_dir):
-            return venv_dir
+    ]
+    for path in candidates:
+        if os.path.exists(path):
+            return path
     return sys.executable
 
 
