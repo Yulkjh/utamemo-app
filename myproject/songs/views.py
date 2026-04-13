@@ -2753,10 +2753,6 @@ def training_data_viewer(request):
         reviewed_map.setdefault(rv.data_index, []).append(rv.reviewer.username)
         if rv.trained_at is not None:
             trained_indices.add(rv.data_index)
-    # JSON _meta.legacy_trained が true のものも trained 扱い
-    for i, r in enumerate(records):
-        if r.get('_meta', {}).get('legacy_trained'):
-            trained_indices.add(i)
 
     return render(request, 'songs/training_data_viewer.html', {
         'records_json': json.dumps(records, ensure_ascii=False),
@@ -2768,77 +2764,6 @@ def training_data_viewer(request):
         'reviewed_map_json': json.dumps(reviewed_map, ensure_ascii=False),
         'trained_indices_json': json.dumps(sorted(trained_indices)),
         'current_username': request.user.username,
-    })
-
-
-@staff_member_required
-def training_history(request):
-    """学習済みデータ一覧ページ（管理者のみ）"""
-    import json
-    import re
-    from pathlib import Path
-
-    data_path = Path(__file__).resolve().parent.parent.parent / 'training' / 'data' / 'lyrics_training_data.json'
-    records = []
-    if data_path.exists():
-        with open(data_path, 'r', encoding='utf-8') as f:
-            records = json.load(f)
-
-    from users.models import TrainingDataReview
-    reviews_qs = TrainingDataReview.objects.select_related('reviewer').all()
-    reviewed_map = {}
-    trained_indices = set()
-    for rv in reviews_qs:
-        reviewed_map.setdefault(rv.data_index, []).append(rv.reviewer.username)
-        if rv.trained_at is not None:
-            trained_indices.add(rv.data_index)
-    # JSON _meta.legacy_trained が true のものも trained 扱い
-    for i, r in enumerate(records):
-        if r.get('_meta', {}).get('legacy_trained'):
-            trained_indices.add(i)
-
-    return render(request, 'songs/training_history.html', {
-        'records_json': json.dumps(records, ensure_ascii=False),
-        'total_count': len(records),
-        'trained_count': len(trained_indices),
-        'reviewed_map_json': json.dumps(reviewed_map, ensure_ascii=False),
-        'trained_indices_json': json.dumps(sorted(trained_indices)),
-        'page_title': '学習履歴',
-    })
-
-
-@staff_member_required
-def training_history_api(request):
-    """Training History のデータをJSONで返す（定期リフレッシュ用）"""
-    import json
-    from pathlib import Path
-
-    data_path = Path(__file__).resolve().parent.parent.parent / 'training' / 'data' / 'lyrics_training_data.json'
-    records = []
-    if data_path.exists():
-        with open(data_path, 'r', encoding='utf-8') as f:
-            records = json.load(f)
-
-    from users.models import TrainingDataReview
-    reviews_qs = TrainingDataReview.objects.select_related('reviewer').all()
-    reviewed_map = {}
-    trained_indices = set()
-    for rv in reviews_qs:
-        reviewed_map.setdefault(rv.data_index, []).append(rv.reviewer.username)
-        if rv.trained_at is not None:
-            trained_indices.add(rv.data_index)
-    # JSON _meta.legacy_trained が true のものも trained 扱い
-    for i, r in enumerate(records):
-        if r.get('_meta', {}).get('legacy_trained'):
-            trained_indices.add(i)
-
-    return JsonResponse({
-        'ok': True,
-        'records': records,
-        'total_count': len(records),
-        'trained_count': len(trained_indices),
-        'reviewed_map': reviewed_map,
-        'trained_indices': sorted(trained_indices),
     })
 
 
@@ -2895,11 +2820,10 @@ def training_data_api(request):
         with open(data_path, 'w', encoding='utf-8') as f:
             json.dump(records, f, ensure_ascii=False, indent=2)
 
-        # 編集ログを記録（mark_reviewed 時の検証用）
-        from users.models import TrainingDataEditLog
-        TrainingDataEditLog.objects.create(data_index=index, editor=request.user)
-
-        return JsonResponse({'ok': True, 'message': f'#{index + 1} を更新しました'})
+        _decrement_pending(request.user)
+        obligation = StaffReviewObligation.objects.filter(user=request.user).first()
+        pending = obligation.pending_reviews if obligation else 0
+        return JsonResponse({'ok': True, 'message': f'#{index + 1} を更新しました', 'pending_reviews': pending})
 
     elif action == 'delete':
         index = body.get('index')
@@ -2922,20 +2846,12 @@ def training_data_api(request):
         index = body.get('index')
         if not isinstance(index, int) or index < 0 or index >= len(records):
             return JsonResponse({'error': 'Invalid index'}, status=400)
-        from users.models import TrainingDataReview, TrainingDataEditLog
-        # 誰かがこのデータを編集した記録があるか確認
-        has_edit = TrainingDataEditLog.objects.filter(data_index=index).exists()
-        if not has_edit:
-            return JsonResponse({
-                'ok': False,
-                'error': 'このデータはまだ編集されていません。内容を確認・編集してからマークしてください。',
-            }, status=400)
+        from users.models import TrainingDataReview
         _, created = TrainingDataReview.objects.get_or_create(
             data_index=index,
             reviewer=request.user,
         )
-        if created:
-            _decrement_pending(request.user)
+        _decrement_pending(request.user)
         obligation = StaffReviewObligation.objects.filter(user=request.user).first()
         pending = obligation.pending_reviews if obligation else 0
         # このレコードの全レビュー情報を返す
@@ -3016,7 +2932,7 @@ def _get_instruction_template_with_meta():
 @staff_member_required
 @require_POST
 def training_data_generate(request):
-    """Gemini APIで学習データを1件生成"""
+    """Gemini APIで学習データを5件生成"""
     from pathlib import Path
     try:
         import google.generativeai as genai
@@ -3055,7 +2971,7 @@ def training_data_generate(request):
 
     generated = []
     errors = []
-    count = 1
+    count = 5
 
     for i in range(count):
         genre = _GENRES[i % len(_GENRES)]
@@ -3249,7 +3165,7 @@ def training_api_update(request):
 
     if data.get('status') == 'training' and not session.started_at:
         session.started_at = timezone.now()
-    if data.get('status') in ('completed', 'failed'):
+    if data.get('status') in ('completed', 'failed') and not session.completed_at:
         session.completed_at = timezone.now()
 
     session.save()
@@ -3276,7 +3192,6 @@ def training_reviewed_indices(request):
     """
     from .models import TrainingSession
     from users.models import TrainingDataReview
-    from django.utils import timezone
 
     api_key = request.headers.get('X-Training-Api-Key', '')
     if not api_key:
@@ -3298,6 +3213,14 @@ def training_reviewed_indices(request):
         indices = body.get('trained_indices', [])
         if not isinstance(indices, list):
             return JsonResponse({'error': 'trained_indices must be a list'}, status=400)
+
+        # リセットモード: trained_at を null に戻す
+        if body.get('action') == 'reset':
+            reset_count = TrainingDataReview.objects.filter(
+                trained_at__isnull=False,
+            ).update(trained_at=None)
+            logger.info('学習済みマーク全リセット: %d 件', reset_count)
+            return JsonResponse({'ok': True, 'reset': reset_count})
 
         now = timezone.now()
         updated = TrainingDataReview.objects.filter(
@@ -3482,20 +3405,9 @@ def training_send_command(request):
         training_type = request.POST.get('training_type', 'lyrics')
         if training_type in ('lyrics', 'importance'):
             session.training_type = training_type
-        # 新しい学習開始時にリセット
-        session.started_at = None
-        session.completed_at = None
-        session.current_epoch = 0
-        session.total_epochs = 0
-        session.current_step = 0
-        session.total_steps = 0
-        session.train_loss = None
-        session.eval_loss = None
-        session.accuracy = None
-        session.log_tail = ''
-        session.error_message = ''
-        session.eta_seconds = None
-        session.save()
+            session.save(update_fields=['pending_command', 'training_type'])
+        else:
+            session.save(update_fields=['pending_command'])
     else:
         session.save(update_fields=['pending_command'])
     return JsonResponse({'ok': True, 'command': command})

@@ -434,11 +434,14 @@ def load_training_data(data_path, tokenizer, eval_split=0.1, reviewed_indices=No
 
     # レビュー済みフィルタリング
     if reviewed_indices is not None:
-        before_count = len(raw_data)
-        raw_data = [ex for i, ex in enumerate(raw_data) if i in reviewed_indices]
-        logger.info(f"  レビュー済みフィルタ: {before_count} -> {len(raw_data)} 件 ({before_count - len(raw_data)} 件除外)")
-        if len(raw_data) == 0:
-            raise ValueError("レビュー済みデータが0件です。学習データをダッシュボードでレビューしてください。")
+        if len(reviewed_indices) == 0:
+            logger.info("  レビュー済み未学習データが0件 → フィルタをスキップして全データで学習します")
+        else:
+            before_count = len(raw_data)
+            raw_data = [ex for i, ex in enumerate(raw_data) if i in reviewed_indices]
+            logger.info(f"  レビュー済みフィルタ: {before_count} -> {len(raw_data)} 件 ({before_count - len(raw_data)} 件除外)")
+            if len(raw_data) == 0:
+                raise ValueError("レビュー済みデータが0件です。学習データをダッシュボードでレビューしてください。")
 
     # max_samples で件数制限
     if max_samples > 0 and len(raw_data) > max_samples:
