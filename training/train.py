@@ -388,30 +388,36 @@ def format_training_example(example, tokenizer):
 
 
 def fetch_reviewed_indices(report_url, api_key):
-    """ダッシュボードからレビュー済みデータインデックスを取得"""
+    """ダッシュボードからレビュー済みデータハッシュを取得（後方互換でインデックスも対応）"""
     if not report_url or not api_key:
         return None
     try:
         import requests
-        # report_url は .../api/training/update/ → ベースURLを導出
         base_url = report_url.rsplit('/api/training/update', 1)[0]
         url = f"{base_url}/api/training/reviewed/"
         resp = requests.get(url, headers={'X-Training-Api-Key': api_key}, timeout=15)
         if resp.status_code == 200:
             data = resp.json()
+            # ハッシュベース (推奨)
+            hashes = data.get('reviewed_hashes', [])
+            if hashes:
+                logger.info(f"  レビュー済みハッシュ: {len(hashes)} 件取得")
+                return {'hashes': set(hashes)}
+            # 後方互換: インデックスベース
             indices = set(data.get('reviewed_indices', []))
-            logger.info(f"  レビュー済みインデックス: {len(indices)} 件取得")
-            return indices
+            logger.info(f"  レビュー済みインデックス(後方互換): {len(indices)} 件取得")
+            return {'indices': indices}
         else:
-            logger.warning(f"  レビュー済みインデックス取得失敗: HTTP {resp.status_code}")
+            logger.warning(f"  レビュー済みデータ取得失敗: HTTP {resp.status_code}")
     except Exception as e:
-        logger.warning(f"  レビュー済みインデックス取得失敗: {e}")
+        logger.warning(f"  レビュー済みデータ取得失敗: {e}")
     return None
 
 
 def load_training_data(data_path, tokenizer, eval_split=0.1, reviewed_indices=None, max_samples=0):
     """学習データを読み込み、train/eval分割"""
     from datasets import Dataset
+    import hashlib
     logger.info(f"学習データを読み込み: {data_path}")
 
     with open(data_path, 'r', encoding='utf-8') as f:
@@ -434,14 +440,42 @@ def load_training_data(data_path, tokenizer, eval_split=0.1, reviewed_indices=No
 
     # レビュー済みフィルタリング
     if reviewed_indices is not None:
-        if len(reviewed_indices) == 0:
-            logger.info("  レビュー済み未学習データが0件 → フィルタをスキップして全データで学習します")
+        if isinstance(reviewed_indices, dict):
+            # ハッシュベース
+            if 'hashes' in reviewed_indices:
+                hashes = reviewed_indices['hashes']
+                if len(hashes) == 0:
+                    logger.info("  レビュー済み未学習データが0件 → フィルタをスキップして全データで学習します")
+                else:
+                    before_count = len(raw_data)
+                    raw_data = [
+                        ex for ex in raw_data
+                        if hashlib.sha256(ex.get('input', '')[:100].encode('utf-8')).hexdigest()[:16] in hashes
+                    ]
+                    logger.info(f"  レビュー済みフィルタ(hash): {before_count} -> {len(raw_data)} 件")
+                    if len(raw_data) == 0:
+                        raise ValueError("レビュー済みデータが0件です。学習データをダッシュボードでレビューしてください。")
+            # 後方互換: インデックスベース
+            elif 'indices' in reviewed_indices:
+                idx_set = reviewed_indices['indices']
+                if len(idx_set) == 0:
+                    logger.info("  レビュー済み未学習データが0件 → フィルタをスキップして全データで学習します")
+                else:
+                    before_count = len(raw_data)
+                    raw_data = [ex for i, ex in enumerate(raw_data) if i in idx_set]
+                    logger.info(f"  レビュー済みフィルタ(index): {before_count} -> {len(raw_data)} 件")
+                    if len(raw_data) == 0:
+                        raise ValueError("レビュー済みデータが0件です。学習データをダッシュボードでレビューしてください。")
         else:
-            before_count = len(raw_data)
-            raw_data = [ex for i, ex in enumerate(raw_data) if i in reviewed_indices]
-            logger.info(f"  レビュー済みフィルタ: {before_count} -> {len(raw_data)} 件 ({before_count - len(raw_data)} 件除外)")
-            if len(raw_data) == 0:
-                raise ValueError("レビュー済みデータが0件です。学習データをダッシュボードでレビューしてください。")
+            # レガシー: set of indices
+            if len(reviewed_indices) == 0:
+                logger.info("  レビュー済み未学習データが0件 → フィルタをスキップして全データで学習します")
+            else:
+                before_count = len(raw_data)
+                raw_data = [ex for i, ex in enumerate(raw_data) if i in reviewed_indices]
+                logger.info(f"  レビュー済みフィルタ: {before_count} -> {len(raw_data)} 件")
+                if len(raw_data) == 0:
+                    raise ValueError("レビュー済みデータが0件です。学習データをダッシュボードでレビューしてください。")
 
     # max_samples で件数制限
     if max_samples > 0 and len(raw_data) > max_samples:

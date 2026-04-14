@@ -2744,15 +2744,20 @@ def training_data_viewer(request):
         g = m.group(1) if m else 'other'
         genre_counts[g] = genre_counts.get(g, 0) + 1
 
-    # レビュー済みマップ生成: { index: [username, ...] }
-    from users.models import TrainingDataReview
+    # レビュー済みマップ生成: { data_hash: [username, ...] }
+    from users.models import TrainingDataReview, make_data_hash
     reviews_qs = TrainingDataReview.objects.select_related('reviewer').all()
-    reviewed_map = {}
-    trained_indices = set()
+    reviewed_map = {}  # hash -> [usernames]
+    trained_hashes = set()
     for rv in reviews_qs:
-        reviewed_map.setdefault(rv.data_index, []).append(rv.reviewer.username)
+        key = rv.data_hash or str(rv.data_index)  # 旧データはdata_indexフォールバック
+        reviewed_map.setdefault(key, []).append(rv.reviewer.username)
         if rv.trained_at is not None:
-            trained_indices.add(rv.data_index)
+            trained_hashes.add(key)
+
+    # records にハッシュを付与
+    for i, r in enumerate(records):
+        r['_hash'] = make_data_hash(r.get('input', ''))
 
     return render(request, 'songs/training_data_viewer.html', {
         'records_json': json.dumps(records, ensure_ascii=False),
@@ -2762,7 +2767,7 @@ def training_data_viewer(request):
         'pending_reviews': obligation.pending_reviews,
         'is_review_locked': obligation.is_review_locked,
         'reviewed_map_json': json.dumps(reviewed_map, ensure_ascii=False),
-        'trained_indices_json': json.dumps(sorted(trained_indices)),
+        'trained_hashes_json': json.dumps(sorted(trained_hashes)),
         'current_username': request.user.username,
     })
 
@@ -2846,37 +2851,44 @@ def training_data_api(request):
         index = body.get('index')
         if not isinstance(index, int) or index < 0 or index >= len(records):
             return JsonResponse({'error': 'Invalid index'}, status=400)
-        from users.models import TrainingDataReview
+        from users.models import TrainingDataReview, make_data_hash
+        data_hash = make_data_hash(records[index].get('input', ''))
         _, created = TrainingDataReview.objects.get_or_create(
-            data_index=index,
+            data_hash=data_hash,
             reviewer=request.user,
+            defaults={'data_index': index},
         )
+        if not created:
+            # data_indexを最新に更新
+            TrainingDataReview.objects.filter(data_hash=data_hash, reviewer=request.user).update(data_index=index)
         _decrement_pending(request.user)
         obligation = StaffReviewObligation.objects.filter(user=request.user).first()
         pending = obligation.pending_reviews if obligation else 0
-        # このレコードの全レビュー情報を返す
-        reviews = list(TrainingDataReview.objects.filter(data_index=index).select_related('reviewer').values_list('reviewer__username', flat=True))
+        reviews = list(TrainingDataReview.objects.filter(data_hash=data_hash).select_related('reviewer').values_list('reviewer__username', flat=True))
         return JsonResponse({
             'ok': True,
             'message': f'#{index + 1} を確認済みにしました' if created else f'#{index + 1} は既に確認済みです',
             'pending_reviews': pending,
             'reviewers': reviews,
+            'data_hash': data_hash,
         })
 
     elif action == 'unmark_reviewed':
         index = body.get('index')
         if not isinstance(index, int) or index < 0 or index >= len(records):
             return JsonResponse({'error': 'Invalid index'}, status=400)
-        from users.models import TrainingDataReview
+        from users.models import TrainingDataReview, make_data_hash
+        data_hash = make_data_hash(records[index].get('input', ''))
         deleted, _ = TrainingDataReview.objects.filter(
-            data_index=index,
+            data_hash=data_hash,
             reviewer=request.user,
         ).delete()
-        reviews = list(TrainingDataReview.objects.filter(data_index=index).select_related('reviewer').values_list('reviewer__username', flat=True))
+        reviews = list(TrainingDataReview.objects.filter(data_hash=data_hash).select_related('reviewer').values_list('reviewer__username', flat=True))
         return JsonResponse({
             'ok': True,
             'message': f'#{index + 1} の確認を取り消しました',
             'reviewers': reviews,
+            'data_hash': data_hash,
         })
 
     else:
@@ -3210,10 +3222,6 @@ def training_reviewed_indices(request):
         except (ValueError, TypeError):
             return JsonResponse({'error': 'Invalid JSON'}, status=400)
 
-        indices = body.get('trained_indices', [])
-        if not isinstance(indices, list):
-            return JsonResponse({'error': 'trained_indices must be a list'}, status=400)
-
         # リセットモード: trained_at を null に戻す
         if body.get('action') == 'reset':
             reset_count = TrainingDataReview.objects.filter(
@@ -3222,22 +3230,41 @@ def training_reviewed_indices(request):
             logger.info('学習済みマーク全リセット: %d 件', reset_count)
             return JsonResponse({'ok': True, 'reset': reset_count})
 
-        now = timezone.now()
-        updated = TrainingDataReview.objects.filter(
-            data_index__in=indices,
-            trained_at__isnull=True,
-        ).update(trained_at=now)
+        # ハッシュベース (推奨)
+        trained_hashes = body.get('trained_hashes', [])
+        if trained_hashes and isinstance(trained_hashes, list):
+            now = timezone.now()
+            updated = TrainingDataReview.objects.filter(
+                data_hash__in=trained_hashes,
+                trained_at__isnull=True,
+            ).update(trained_at=now)
+            logger.info('学習済みマーク(hash): %d 件 (hashes=%s)', updated, trained_hashes)
+            return JsonResponse({'ok': True, 'marked': updated})
 
-        logger.info('学習済みマーク: %d 件 (indices=%s)', updated, indices)
-        return JsonResponse({'ok': True, 'marked': updated})
+        # 後方互換: インデックスベース (非推奨)
+        indices = body.get('trained_indices', [])
+        if isinstance(indices, list) and indices:
+            now = timezone.now()
+            updated = TrainingDataReview.objects.filter(
+                data_index__in=indices,
+                trained_at__isnull=True,
+            ).update(trained_at=now)
+            logger.info('学習済みマーク(index, 非推奨): %d 件 (indices=%s)', updated, indices)
+            return JsonResponse({'ok': True, 'marked': updated})
 
-    # GET: レビュー済み かつ 未学習 のインデックスのみ返す
-    reviewed = list(
-        TrainingDataReview.objects.filter(
-            trained_at__isnull=True,
-        ).values_list('data_index', flat=True).distinct()
-    )
-    return JsonResponse({'ok': True, 'reviewed_indices': sorted(set(reviewed))})
+        return JsonResponse({'error': 'trained_hashes or trained_indices required'}, status=400)
+
+    # GET: レビュー済み かつ 未学習 のハッシュ+インデックスを返す
+    reviewed_qs = TrainingDataReview.objects.filter(
+        trained_at__isnull=True,
+    ).values('data_hash', 'data_index').distinct()
+    reviewed_hashes = sorted(set(r['data_hash'] for r in reviewed_qs if r['data_hash']))
+    reviewed_indices = sorted(set(r['data_index'] for r in reviewed_qs))
+    return JsonResponse({
+        'ok': True,
+        'reviewed_hashes': reviewed_hashes,
+        'reviewed_indices': reviewed_indices,  # 後方互換
+    })
 
 
 @csrf_exempt

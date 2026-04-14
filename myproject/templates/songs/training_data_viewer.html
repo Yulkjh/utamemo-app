@@ -22,7 +22,7 @@
         </div>
     </div>
     {% else %}
-    <div class="td-review-banner td-review-banner-done" id="reviewBanner" style="display: none;">
+    <div class="td-review-banner td-review-banner-done" id="reviewBanner">
         <div class="td-review-banner-icon"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 11.08V12a10 10 0 11-5.93-9.14"/><path d="M22 4L12 14.01l-3-3"/></svg></div>
         <div class="td-review-banner-content">
             <strong>本日のレビュー完了</strong>
@@ -39,7 +39,7 @@
         <div class="td-header-right">
             <button class="td-btn td-btn-generate" onclick="generateData()" id="generateBtn">
                 <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 5v14M5 12h14"/></svg>
-                Generate
+                Generate 5
             </button>
             <button class="td-btn td-btn-prompt" onclick="openPromptEditor()">
                 <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M11 4H4a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 013 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
@@ -49,10 +49,6 @@
                 <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M23 4v6h-6M1 20v-6h6"/><path d="M3.51 9a9 9 0 0114.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0020.49 15"/></svg>
                 Reload
             </button>
-            <a href="{% url 'songs:training_history' %}" class="td-btn" style="border-color: rgba(99,102,241,0.3); color: #a5b4fc;">
-                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
-                History
-            </a>
             <a href="{% url 'songs:llm_guide' %}" class="td-btn td-btn-back">
                 <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M19 12H5M12 19l-7-7 7-7"/></svg>
                 Portal
@@ -73,11 +69,11 @@
             <option value="">All Genres</option>
         </select>
         <select id="reviewFilter" class="td-select">
-            <option value="untrained" selected>Untrained Only</option>
             <option value="">All Status</option>
             <option value="reviewed">Reviewed Only</option>
             <option value="unreviewed">Unreviewed Only</option>
             <option value="trained">Trained Only</option>
+            <option value="untrained">Untrained Only</option>
         </select>
         <span id="resultCount" class="td-result-count"></span>
         <span id="approveStats" class="td-approve-stats"></span>
@@ -769,7 +765,7 @@ let allRecords = {{ records_json|safe }};
 let editingIndex = -1;
 let deletingIndex = -1;
 let reviewedMap = {{ reviewed_map_json|safe }};
-let trainedIndices = new Set({{ trained_indices_json|safe }});
+let trainedHashes = new Set({{ trained_hashes_json|safe }});
 const CURRENT_USERNAME = '{{ current_username|escapejs }}';
 
 function extractGenre(instruction) {
@@ -818,17 +814,17 @@ function renderRecords() {
     let html = '';
     let visible = 0;
 
-    let reviewedCount = allRecords.filter((r, i) => (reviewedMap[String(i)] || []).length > 0).length;
-    let trainedCount = allRecords.filter((r, i) => trainedIndices.has(i)).length;
+    let reviewedCount = allRecords.filter((r, i) => (reviewedMap[r._hash] || []).length > 0).length;
+    let trainedCount = allRecords.filter((r, i) => trainedHashes.has(r._hash)).length;
 
     allRecords.forEach((r, i) => {
         const g = extractGenre(r.instruction);
         const text = ((r.input || '') + ' ' + (r.output || '')).toLowerCase();
         if (query && !text.includes(query)) return;
         if (genre && g !== genre) return;
-        const reviewers = reviewedMap[String(i)] || [];
+        const reviewers = reviewedMap[r._hash] || [];
         const isReviewed = reviewers.length > 0;
-        const isTrained = trainedIndices.has(i);
+        const isTrained = trainedHashes.has(r._hash);
         if (approveFilter === 'reviewed' && !isReviewed) return;
         if (approveFilter === 'unreviewed' && isReviewed) return;
         if (approveFilter === 'trained' && !isTrained) return;
@@ -930,6 +926,7 @@ async function saveEdit() {
             renderRecords();
             closeEditModal();
             showToast(data.message, 'success');
+            updatePendingBanner(data.pending_reviews);
         } else {
             showToast(data.error || 'エラー', 'error');
         }
@@ -1010,7 +1007,7 @@ async function generateData() {
     btn.disabled = true;
     btn.textContent = 'Generating...';
     statusEl.style.display = 'block';
-    statusEl.innerHTML = 'Generating 1 record via Gemini API...';
+    statusEl.innerHTML = 'Generating 5 records via Gemini API (30〜60s)...';
 
     try {
         const res = await fetch(GENERATE_URL, {
@@ -1042,7 +1039,7 @@ async function generateData() {
         showToast('Connection error: ' + err.message, 'error');
     } finally {
         btn.disabled = false;
-        btn.textContent = 'Generate';
+        btn.textContent = 'Generate 5';
     }
 }
 
@@ -1124,9 +1121,8 @@ function updatePendingBanner(pendingReviews) {
     // 0になったら完了バナーに切り替え
     if (pendingReviews <= 0) {
         const banner = document.getElementById('reviewBanner');
-        if (banner) {
+        if (banner && !banner.classList.contains('td-review-banner-done')) {
             banner.className = 'td-review-banner td-review-banner-done';
-            banner.style.display = '';
             banner.innerHTML = `
                 <div class="td-review-banner-icon"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 11.08V12a10 10 0 11-5.93-9.14"/><path d="M22 4L12 14.01l-3-3"/></svg></div>
                 <div class="td-review-banner-content">
@@ -1140,7 +1136,9 @@ function updatePendingBanner(pendingReviews) {
 
 // ── 確認済みマーク切り替え ──
 async function toggleReview(index) {
-    const reviewers = reviewedMap[String(index)] || [];
+    const record = allRecords[index];
+    const hash = record._hash;
+    const reviewers = reviewedMap[hash] || [];
     const isReviewed = reviewers.includes(CURRENT_USERNAME);
     const action = isReviewed ? 'unmark_reviewed' : 'mark_reviewed';
     try {
@@ -1151,7 +1149,8 @@ async function toggleReview(index) {
         });
         const data = await res.json();
         if (data.ok) {
-            reviewedMap[String(index)] = data.reviewers || [];
+            const key = data.data_hash || hash;
+            reviewedMap[key] = data.reviewers || [];
             renderRecords();
             showToast(data.message, 'success');
             if (data.pending_reviews !== undefined) {

@@ -347,16 +347,31 @@ class TrainingDataEditLog(models.Model):
         return f'#{self.data_index + 1} edited by {self.editor.username}'
 
 
+def make_data_hash(input_text):
+    """学習データのinputからハッシュを生成 (SHA256先頭16文字)"""
+    import hashlib
+    return hashlib.sha256(input_text[:100].encode('utf-8')).hexdigest()[:16]
+
+
 class TrainingDataReview(models.Model):
     """学習データの個別レコードに対するレビュー済みマーク
 
     スタッフが学習データを確認したことを記録する。
-    data_index は JSON 配列のインデックス (0-based)。
+    data_hash は各レコードの input 先頭100文字の SHA256 ハッシュ（先頭16文字）。
+    データの追加・削除でインデックスがずれてもレビューが正しく紐づく。
+    data_index は表示用の参考値（同期時に更新される）。
     trained_at が設定されると「学習済み」として二重学習を防止。
     """
+    data_hash = models.CharField(
+        max_length=16,
+        verbose_name='データハッシュ',
+        help_text='input先頭100文字のSHA256ハッシュ(先頭16文字)',
+        default='',
+        db_index=True,
+    )
     data_index = models.IntegerField(
         verbose_name='データインデックス',
-        help_text='lyrics_training_data.json 内のインデックス (0-based)',
+        help_text='lyrics_training_data.json 内のインデックス (0-based, 参考値)',
     )
     reviewer = models.ForeignKey(
         User,
@@ -378,7 +393,7 @@ class TrainingDataReview(models.Model):
     class Meta:
         verbose_name = '学習データレビュー'
         verbose_name_plural = '学習データレビュー'
-        unique_together = ('data_index', 'reviewer')
+        unique_together = ('data_hash', 'reviewer')
 
     def __str__(self):
         return f'#{self.data_index + 1} reviewed by {self.reviewer.username}'

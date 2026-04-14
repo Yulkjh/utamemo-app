@@ -74,7 +74,7 @@ def send_status(report_url, api_key, **kwargs):
 
 
 def fetch_reviewed_indices(report_url, api_key):
-    """サーバーからレビュー済み（未学習）データインデックスを取得"""
+    """サーバーからレビュー済み（未学習）データハッシュを取得（後方互換でインデックスも対応）"""
     if not report_url or not api_key:
         return None
     try:
@@ -87,26 +87,36 @@ def fetch_reviewed_indices(report_url, api_key):
         )
         with urllib.request.urlopen(req, timeout=15) as resp:
             data = json.loads(resp.read().decode('utf-8'))
+            hashes = data.get('reviewed_hashes', [])
+            if hashes:
+                return frozenset(hashes)
             indices = frozenset(data.get('reviewed_indices', []))
             return indices
     except Exception as e:
-        logger.warning(f"レビュー済みインデックス取得失敗: {e}")
+        logger.warning(f"レビュー済みデータ取得失敗: {e}")
         return None
 
 
 def mark_trained(report_url, api_key, indices):
-    """学習完了後、使用したインデックスを学習済みとしてサーバーに通知（リトライ付き）"""
+    """学習完了後、使用したハッシュ/インデックスを学習済みとしてサーバーに通知（リトライ付き）"""
     if not report_url or not api_key or not indices:
         return False
 
     MAX_RETRIES = 5
-    RETRY_DELAYS = [5, 15, 30, 60, 120]  # 秒
+    RETRY_DELAYS = [5, 15, 30, 60, 120]
+
+    # ハッシュかインデックスかを判定
+    sample = next(iter(indices))
+    is_hash = isinstance(sample, str)
 
     for attempt in range(MAX_RETRIES):
         try:
             base_url = report_url.rsplit('/api/training/update', 1)[0]
             url = f"{base_url}/api/training/reviewed/"
-            payload = json.dumps({'trained_indices': sorted(indices)}).encode('utf-8')
+            if is_hash:
+                payload = json.dumps({'trained_hashes': sorted(indices)}).encode('utf-8')
+            else:
+                payload = json.dumps({'trained_indices': sorted(indices)}).encode('utf-8')
             req = urllib.request.Request(
                 url,
                 data=payload,
@@ -133,7 +143,7 @@ def mark_trained(report_url, api_key, indices):
 
 
 def _save_pending_trained(indices):
-    """マーク失敗時にローカルファイルに未送信インデックスを保存"""
+    """マーク失敗時にローカルファイルに未送信データを保存"""
     pending_file = os.path.join(os.path.dirname(__file__), 'pending_trained.json')
     pending = []
     if os.path.exists(pending_file):
@@ -142,13 +152,19 @@ def _save_pending_trained(indices):
                 pending = json.load(f)
         except Exception:
             pending = []
-    pending.append({
-        'indices': sorted(indices),
+    sample = next(iter(indices), None)
+    is_hash = isinstance(sample, str) if sample else False
+    entry = {
         'timestamp': time.strftime('%Y-%m-%d %H:%M:%S'),
-    })
+    }
+    if is_hash:
+        entry['hashes'] = sorted(indices)
+    else:
+        entry['indices'] = sorted(indices)
+    pending.append(entry)
     with open(pending_file, 'w') as f:
         json.dump(pending, f, indent=2)
-    logger.info(f"未送信インデックスをローカル保存: {len(indices)}件 → {pending_file}")
+    logger.info(f"未送信データをローカル保存: {len(indices)}件 → {pending_file}")
 
 
 def retry_pending_trained(report_url, api_key):
@@ -167,10 +183,12 @@ def retry_pending_trained(report_url, api_key):
     logger.info(f"未送信の学習済みマークが {len(pending)} 件あります。再送信を試みます...")
     remaining = []
     for entry in pending:
-        indices = frozenset(entry.get('indices', []))
-        if not indices:
+        hashes = entry.get('hashes', [])
+        indices = entry.get('indices', [])
+        items = frozenset(hashes) if hashes else frozenset(indices)
+        if not items:
             continue
-        success = _try_mark_trained_once(report_url, api_key, indices)
+        success = _try_mark_trained_once(report_url, api_key, items)
         if not success:
             remaining.append(entry)
 
@@ -184,11 +202,16 @@ def retry_pending_trained(report_url, api_key):
 
 
 def _try_mark_trained_once(report_url, api_key, indices):
-    """1回だけマーク送信を試みる"""
+    """1回だけマーク送信を試みる（ハッシュ/インデックス自動判定）"""
     try:
         base_url = report_url.rsplit('/api/training/update', 1)[0]
         url = f"{base_url}/api/training/reviewed/"
-        payload = json.dumps({'trained_indices': sorted(indices)}).encode('utf-8')
+        sample = next(iter(indices), None)
+        is_hash = isinstance(sample, str) if sample else False
+        if is_hash:
+            payload = json.dumps({'trained_hashes': sorted(indices)}).encode('utf-8')
+        else:
+            payload = json.dumps({'trained_indices': sorted(indices)}).encode('utf-8')
         req = urllib.request.Request(
             url,
             data=payload,
