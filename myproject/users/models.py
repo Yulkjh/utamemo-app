@@ -353,6 +353,12 @@ def make_data_hash(input_text):
     return hashlib.sha256(input_text[:100].encode('utf-8')).hexdigest()[:16]
 
 
+class ActiveReviewManager(models.Manager):
+    """ソフトデリートされていないレビューのみ返すマネージャー"""
+    def get_queryset(self):
+        return super().get_queryset().filter(is_deleted=False)
+
+
 class TrainingDataReview(models.Model):
     """学習データの個別レコードに対するレビュー済みマーク
 
@@ -361,6 +367,7 @@ class TrainingDataReview(models.Model):
     データの追加・削除でインデックスがずれてもレビューが正しく紐づく。
     data_index は表示用の参考値（同期時に更新される）。
     trained_at が設定されると「学習済み」として二重学習を防止。
+    is_deleted=True のレコードはデフォルトでは表示されない（ソフトデリート）。
     """
     data_hash = models.CharField(
         max_length=16,
@@ -389,14 +396,40 @@ class TrainingDataReview(models.Model):
         verbose_name='学習完了日時',
         help_text='このデータが学習に使用された日時（null=未学習）',
     )
+    is_deleted = models.BooleanField(
+        default=False,
+        verbose_name='ソフトデリート',
+        help_text='True の場合、論理削除済み（復元可能）',
+        db_index=True,
+    )
+    deleted_at = models.DateTimeField(
+        null=True,
+        blank=True,
+        verbose_name='削除日時',
+    )
+
+    objects = ActiveReviewManager()
+    all_objects = models.Manager()
 
     class Meta:
         verbose_name = '学習データレビュー'
         verbose_name_plural = '学習データレビュー'
         unique_together = ('data_hash', 'reviewer')
 
+    def soft_delete(self):
+        from django.utils import timezone
+        self.is_deleted = True
+        self.deleted_at = timezone.now()
+        self.save(update_fields=['is_deleted', 'deleted_at'])
+
+    def restore(self):
+        self.is_deleted = False
+        self.deleted_at = None
+        self.save(update_fields=['is_deleted', 'deleted_at'])
+
     def __str__(self):
-        return f'#{self.data_index + 1} reviewed by {self.reviewer.username}'
+        prefix = '[削除済] ' if self.is_deleted else ''
+        return f'{prefix}#{self.data_index + 1} reviewed by {self.reviewer.username}'
 
 
 class StaffMessage(models.Model):
@@ -418,3 +451,22 @@ class StaffMessage(models.Model):
 
     def __str__(self):
         return f'{self.sender.username} → {self.recipient.username}: {self.message[:30]}'
+
+
+class ReviewBackup(models.Model):
+    """レビューデータのDBバックアップ（デプロイ時に自動作成）"""
+    snapshot = models.JSONField(
+        verbose_name='バックアップデータ',
+        help_text='TrainingDataReviewの全レコードをJSON形式で保存',
+    )
+    record_count = models.IntegerField(verbose_name='レコード数')
+    created_at = models.DateTimeField(auto_now_add=True)
+    note = models.CharField(max_length=200, blank=True, default='')
+
+    class Meta:
+        verbose_name = 'レビューバックアップ'
+        verbose_name_plural = 'レビューバックアップ'
+        ordering = ['-created_at']
+
+    def __str__(self):
+        return f'{self.created_at:%Y-%m-%d %H:%M} ({self.record_count}件)'

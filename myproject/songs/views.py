@@ -2871,14 +2871,26 @@ def training_data_api(request):
             return JsonResponse({'error': 'Invalid index'}, status=400)
         from users.models import TrainingDataReview, make_data_hash
         data_hash = make_data_hash(records[index].get('input', ''))
-        _, created = TrainingDataReview.objects.get_or_create(
+        # ソフトデリート済みのレコードがあれば復元、なければ新規作成
+        existing = TrainingDataReview.all_objects.filter(
             data_hash=data_hash,
             reviewer=request.user,
-            defaults={'data_index': index},
-        )
-        if not created:
-            # data_indexを最新に更新
-            TrainingDataReview.objects.filter(data_hash=data_hash, reviewer=request.user).update(data_index=index)
+        ).first()
+        if existing:
+            if existing.is_deleted:
+                existing.restore()
+                created = True
+            else:
+                created = False
+            existing.data_index = index
+            existing.save(update_fields=['data_index'])
+        else:
+            TrainingDataReview.all_objects.create(
+                data_hash=data_hash,
+                reviewer=request.user,
+                data_index=index,
+            )
+            created = True
         _decrement_pending(request.user)
         obligation = StaffReviewObligation.objects.filter(user=request.user).first()
         pending = obligation.pending_reviews if obligation else 0
@@ -2897,10 +2909,12 @@ def training_data_api(request):
             return JsonResponse({'error': 'Invalid index'}, status=400)
         from users.models import TrainingDataReview, make_data_hash
         data_hash = make_data_hash(records[index].get('input', ''))
-        deleted, _ = TrainingDataReview.objects.filter(
+        # ソフトデリート（復元可能）
+        from django.utils import timezone as tz
+        soft_deleted = TrainingDataReview.objects.filter(
             data_hash=data_hash,
             reviewer=request.user,
-        ).delete()
+        ).update(is_deleted=True, deleted_at=tz.now())
         reviews = list(TrainingDataReview.objects.filter(data_hash=data_hash).select_related('reviewer').values_list('reviewer__username', flat=True))
         return JsonResponse({
             'ok': True,

@@ -72,11 +72,25 @@ class Command(BaseCommand):
 
         for i, record in enumerate(records):
             data_hash = make_data_hash(record.get('input', ''))
-            _, created = TrainingDataReview.objects.get_or_create(
+            existing = TrainingDataReview.all_objects.filter(
                 data_hash=data_hash,
                 reviewer=reviewer,
-                defaults={'data_index': i},
-            )
+            ).first()
+            if existing:
+                if existing.is_deleted:
+                    existing.restore()
+                    existing.data_index = i
+                    existing.save(update_fields=['data_index'])
+                    created = True
+                else:
+                    created = False
+            else:
+                TrainingDataReview.all_objects.create(
+                    data_hash=data_hash,
+                    reviewer=reviewer,
+                    data_index=i,
+                )
+                created = True
             if created:
                 created_count += 1
             else:
