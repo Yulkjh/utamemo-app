@@ -578,6 +578,8 @@ def main():
                         help='各サイクルで生成する新規テーマ数 (デフォルト: 5)')
     parser.add_argument('--no_serve', action='store_true',
                         help='推論サーバー+トンネルの自動起動を無効化')
+    parser.add_argument('--sleep_after', action='store_true',
+                        help='学習完了後にスリープする')
     args = parser.parse_args()
 
     if not args.api_key:

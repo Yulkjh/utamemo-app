@@ -1,0 +1,227 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Staff Monitor - UTAMEMO</title>
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+body{background:#0d0d0d;color:#e0e0e0;font-family:Inter,-apple-system,sans-serif;min-height:100vh}
+.container{max-width:1000px;margin:0 auto;padding:24px 16px}
+h1{font-size:1.5rem;font-weight:700;margin-bottom:24px;color:#ff7940}
+.back-link{color:#888;text-decoration:none;font-size:.85rem;display:inline-block;margin-bottom:16px}
+.back-link:hover{color:#ff7940}
+
+/* テーブル */
+.staff-table{width:100%;border-collapse:collapse;margin-bottom:32px}
+.staff-table th{text-align:left;padding:10px 12px;border-bottom:2px solid #333;color:#888;font-size:.8rem;font-weight:600;text-transform:uppercase;letter-spacing:.5px}
+.staff-table td{padding:10px 12px;border-bottom:1px solid #1a1a1a;font-size:.9rem;vertical-align:middle}
+.staff-table tr:hover td{background:#111}
+
+.username{font-weight:600;color:#fff}
+.stat{color:#aaa}
+.stat-warn{color:#f59e0b;font-weight:600}
+.stat-danger{color:#ef4444;font-weight:600}
+.stat-ok{color:#22c55e}
+
+.badge{display:inline-block;padding:2px 8px;border-radius:4px;font-size:.75rem;font-weight:600}
+.badge-locked{background:#ef444420;color:#ef4444;border:1px solid #ef444440}
+.badge-ok{background:#22c55e15;color:#22c55e;border:1px solid #22c55e30}
+.badge-inactive{background:#66666620;color:#666}
+
+.time-ago{color:#666;font-size:.8rem}
+
+/* メッセージ送信 */
+.msg-btn{background:none;border:1px solid #333;color:#aaa;padding:4px 10px;border-radius:4px;cursor:pointer;font-size:.8rem;transition:all .15s}
+.msg-btn:hover{border-color:#ff7940;color:#ff7940}
+
+/* モーダル */
+.modal-overlay{display:none;position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,.7);z-index:1000;justify-content:center;align-items:center}
+.modal-overlay.active{display:flex}
+.modal{background:#1a1a1a;border:1px solid #333;border-radius:12px;padding:24px;width:90%;max-width:420px}
+.modal h3{font-size:1.1rem;margin-bottom:4px;color:#fff}
+.modal .modal-sub{color:#888;font-size:.85rem;margin-bottom:16px}
+.modal textarea{width:100%;background:#111;border:1px solid #333;border-radius:8px;color:#e0e0e0;padding:10px;font-size:.9rem;resize:vertical;min-height:80px;font-family:inherit}
+.modal textarea:focus{outline:none;border-color:#ff7940}
+.modal-actions{display:flex;gap:8px;justify-content:flex-end;margin-top:12px}
+.btn-cancel{background:#333;color:#aaa;border:none;padding:8px 16px;border-radius:6px;cursor:pointer;font-size:.85rem}
+.btn-cancel:hover{background:#444}
+.btn-send{background:#ff7940;color:#fff;border:none;padding:8px 16px;border-radius:6px;cursor:pointer;font-size:.85rem;font-weight:600}
+.btn-send:hover{background:#e06830}
+.btn-send:disabled{opacity:.5;cursor:not-allowed}
+
+.toast{position:fixed;top:20px;right:20px;background:#22c55e;color:#fff;padding:10px 20px;border-radius:8px;font-size:.9rem;z-index:2000;display:none;font-weight:600}
+.toast.error{background:#ef4444}
+
+.summary{display:flex;gap:24px;margin-bottom:24px;flex-wrap:wrap}
+.summary-card{background:#141414;border:1px solid #222;border-radius:8px;padding:14px 20px}
+.summary-card .num{font-size:1.5rem;font-weight:700;color:#ff7940}
+.summary-card .label{font-size:.75rem;color:#888;margin-top:2px}
+</style>
+</head>
+<body>
+<div class="container">
+  <a href="{% url 'songs:llm_guide' %}" class="back-link">← Portal</a>
+  <h1>Staff Monitor</h1>
+
+  <div class="summary">
+    <div class="summary-card">
+      <div class="num">{{ staff_data|length }}</div>
+      <div class="label">スタッフ数</div>
+    </div>
+    <div class="summary-card">
+      <div class="num" id="locked-count">0</div>
+      <div class="label">ロック中</div>
+    </div>
+    <div class="summary-card">
+      <div class="num" id="total-reviews">0</div>
+      <div class="label">総レビュー数</div>
+    </div>
+  </div>
+
+  <table class="staff-table">
+    <thead>
+      <tr>
+        <th>ユーザー</th>
+        <th>ノルマ残</th>
+        <th>ロック</th>
+        <th>レビュー数</th>
+        <th>編集数</th>
+        <th>最終活動</th>
+        <th></th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for s in staff_data %}
+      <tr>
+        <td class="username">{{ s.user.username }}</td>
+        <td>
+          {% if s.obligation %}
+            {% if s.obligation.pending_reviews >= 15 %}
+              <span class="stat-danger">{{ s.obligation.pending_reviews }}</span>
+            {% elif s.obligation.pending_reviews >= 5 %}
+              <span class="stat-warn">{{ s.obligation.pending_reviews }}</span>
+            {% else %}
+              <span class="stat-ok">{{ s.obligation.pending_reviews }}</span>
+            {% endif %}
+          {% else %}
+            <span class="stat">-</span>
+          {% endif %}
+        </td>
+        <td>
+          {% if s.obligation and s.obligation.is_review_locked %}
+            <span class="badge badge-locked">LOCKED</span>
+          {% elif s.obligation %}
+            <span class="badge badge-ok">OK</span>
+          {% else %}
+            <span class="badge badge-inactive">未登録</span>
+          {% endif %}
+        </td>
+        <td class="stat">{{ s.review_count }}</td>
+        <td class="stat">{{ s.edit_count }}</td>
+        <td>
+          {% if s.last_activity %}
+            <span class="time-ago" data-ts="{{ s.last_activity|date:'c' }}"></span>
+          {% else %}
+            <span class="stat">-</span>
+          {% endif %}
+        </td>
+        <td>
+          <button class="msg-btn" onclick="openModal('{{ s.user.username }}')">msg</button>
+        </td>
+      </tr>
+      {% empty %}
+      <tr><td colspan="7" style="text-align:center;color:#666;padding:32px">スタッフユーザーがいません</td></tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
+
+<!-- メッセージモーダル -->
+<div class="modal-overlay" id="modal">
+  <div class="modal">
+    <h3 id="modal-title">メッセージ送信</h3>
+    <p class="modal-sub">→ <span id="modal-user"></span></p>
+    <textarea id="msg-text" placeholder="メッセージを入力..." maxlength="500"></textarea>
+    <div class="modal-actions">
+      <button class="btn-cancel" onclick="closeModal()">キャンセル</button>
+      <button class="btn-send" id="btn-send" onclick="sendMessage()">送信</button>
+    </div>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+// 集計
+let lockedCount = 0, totalReviews = 0;
+{% for s in staff_data %}
+  {% if s.obligation and s.obligation.is_review_locked %}lockedCount++;{% endif %}
+  totalReviews += {{ s.review_count }};
+{% endfor %}
+document.getElementById('locked-count').textContent = lockedCount;
+document.getElementById('total-reviews').textContent = totalReviews;
+
+// 時間表示
+document.querySelectorAll('.time-ago').forEach(el => {
+  const ts = new Date(el.dataset.ts);
+  const diff = (Date.now() - ts.getTime()) / 1000;
+  if (diff < 60) el.textContent = '数秒前';
+  else if (diff < 3600) el.textContent = Math.floor(diff/60) + '分前';
+  else if (diff < 86400) el.textContent = Math.floor(diff/3600) + '時間前';
+  else el.textContent = Math.floor(diff/86400) + '日前';
+});
+
+// モーダル
+let targetUser = '';
+function openModal(username) {
+  targetUser = username;
+  document.getElementById('modal-user').textContent = username;
+  document.getElementById('msg-text').value = '';
+  document.getElementById('modal').classList.add('active');
+  document.getElementById('msg-text').focus();
+}
+function closeModal() {
+  document.getElementById('modal').classList.remove('active');
+}
+document.getElementById('modal').addEventListener('click', e => {
+  if (e.target === e.currentTarget) closeModal();
+});
+
+function showToast(msg, isError) {
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.className = 'toast' + (isError ? ' error' : '');
+  t.style.display = 'block';
+  setTimeout(() => t.style.display = 'none', 3000);
+}
+
+async function sendMessage() {
+  const text = document.getElementById('msg-text').value.trim();
+  if (!text) return;
+  const btn = document.getElementById('btn-send');
+  btn.disabled = true;
+  try {
+    const resp = await fetch('{% url "songs:staff_send_message" %}', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'X-CSRFToken': '{{ csrf_token }}',
+      },
+      body: JSON.stringify({ username: targetUser, message: text }),
+    });
+    const data = await resp.json();
+    if (data.ok) {
+      showToast(data.message, false);
+      closeModal();
+    } else {
+      showToast(data.error || 'エラーが発生しました', true);
+    }
+  } catch(e) {
+    showToast('通信エラー', true);
+  }
+  btn.disabled = false;
+}
+</script>
+</body>
+</html>

@@ -397,3 +397,24 @@ class TrainingDataReview(models.Model):
 
     def __str__(self):
         return f'#{self.data_index + 1} reviewed by {self.reviewer.username}'
+
+
+class StaffMessage(models.Model):
+    """スーパーユーザーからスタッフへのメッセージ"""
+    sender = models.ForeignKey(
+        User, on_delete=models.CASCADE, related_name='sent_staff_messages',
+    )
+    recipient = models.ForeignKey(
+        User, on_delete=models.CASCADE, related_name='received_staff_messages',
+    )
+    message = models.TextField(verbose_name='メッセージ')
+    is_read = models.BooleanField(default=False)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        verbose_name = 'スタッフメッセージ'
+        verbose_name_plural = 'スタッフメッセージ'
+        ordering = ['-created_at']
+
+    def __str__(self):
+        return f'{self.sender.username} → {self.recipient.username}: {self.message[:30]}'

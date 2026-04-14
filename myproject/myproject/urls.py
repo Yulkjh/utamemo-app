@@ -23,12 +23,11 @@ from django.http import HttpResponse
 from django.views.decorators.cache import cache_page
 from .media_views import serve_protected_media
 from .legal_views import terms, privacy, contact, tokushoho
-from .sitemaps import StaticViewSitemap, SongSitemap
+from .sitemaps import StaticViewSitemap
 from .security_views import admin_2fa_verify
 
 sitemaps = {
     'static': StaticViewSitemap,
-    'songs': SongSitemap,
 }
 
 @cache_page(60 * 60 * 24)
@@ -36,6 +35,8 @@ def robots_txt(request):
     lines = [
         "User-agent: *",
         "Allow: /",
+        "Disallow: /songs/",
+        "Disallow: /s/",
         "",
         "Sitemap: https://utamemo.com/sitemap.xml",
     ]

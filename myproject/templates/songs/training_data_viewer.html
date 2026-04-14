@@ -31,6 +31,9 @@
     </div>
     {% endif %}
 
+    <!-- スタッフメッセージバナー -->
+    <div id="staffMessageBanner" style="display:none; margin-bottom: 1rem;"></div>
+
     <div class="td-header">
         <div class="td-header-left">
             <h1>Training Data</h1>
@@ -767,6 +770,21 @@ let deletingIndex = -1;
 let reviewedMap = {{ reviewed_map_json|safe }};
 let trainedHashes = new Set({{ trained_hashes_json|safe }});
 const CURRENT_USERNAME = '{{ current_username|escapejs }}';
+
+// スタッフメッセージ表示
+(function() {
+    const msgs = {{ staff_messages_json|safe }};
+    if (msgs && msgs.length > 0) {
+        const banner = document.getElementById('staffMessageBanner');
+        banner.style.display = 'block';
+        banner.innerHTML = msgs.map(m =>
+            `<div style="background:#1a1207; border:1px solid #ff7940; border-radius:8px; padding:0.8rem 1rem; margin-bottom:0.5rem; color:#fbbf24; font-size:0.88rem;">
+                <strong style="color:#ff7940;">📩 ${m.sender} からのメッセージ:</strong>
+                <span style="color:#e5e5e5; margin-left:0.5rem;">${m.message}</span>
+            </div>`
+        ).join('');
+    }
+})();
 
 function extractGenre(instruction) {
     const m = (instruction || '').match(/から(\w+)ジャンルの歌詞/);

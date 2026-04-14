@@ -3,6 +3,10 @@
 
 {% block title %}{{ song.title }} - UTAMEMO{% endblock %}
 
+{% block extra_meta %}
+<meta name="robots" content="noindex, nofollow">
+{% endblock %}
+
 {% block content %}
 {% csrf_token %}
 <div class="container py-5">
@@ -3550,9 +3554,6 @@ function executeDeleteSong() {
             btn.disabled = false;
             btn.textContent = '{% if is_english %}Delete{% elif is_spanish %}Eliminar{% elif is_german %}Löschen{% elif is_portuguese %}Excluir{% elif is_chinese %}删除{% else %}削除{% endif %}';
         }
-    });
-}
-
-</script>
+    });</script>
 
 {% endblock %}
