@@ -482,6 +482,13 @@ def load_training_data(data_path, tokenizer, eval_split=0.1, reviewed_indices=No
         logger.info(f"  max_samples={max_samples}: {len(raw_data)} -> {max_samples} 件に制限")
         raw_data = raw_data[:max_samples]
 
+    # 実際に使用したデータのハッシュを記録
+    used_hashes = []
+    for example in raw_data:
+        input_text = example.get('input', '')[:100]
+        h = hashlib.sha256(input_text.encode('utf-8')).hexdigest()[:16]
+        used_hashes.append(h)
+
     formatted_texts = []
     for example in raw_data:
         text = format_training_example(example, tokenizer)
@@ -494,10 +501,10 @@ def load_training_data(data_path, tokenizer, eval_split=0.1, reviewed_indices=No
         train_dataset = split["train"]
         eval_dataset = split["test"]
         logger.info(f"  Train: {len(train_dataset)} 件, Eval: {len(eval_dataset)} 件")
-        return train_dataset, eval_dataset
+        return train_dataset, eval_dataset, used_hashes
     else:
         logger.info(f"  Dataset: {len(dataset)} 件 (検証データなし)")
-        return dataset, None
+        return dataset, None, used_hashes
 
 
 def setup_model_and_tokenizer(model_name, hf_token=None):
@@ -661,7 +668,15 @@ def train(args):
 
     model, tokenizer = setup_model_and_tokenizer(args.model_name, args.hf_token)
     reviewed_indices = fetch_reviewed_indices(args.report_url, args.api_key)
-    train_dataset, eval_dataset = load_training_data(args.data_path, tokenizer, args.eval_split, reviewed_indices=reviewed_indices, max_samples=args.max_samples)
+    train_dataset, eval_dataset, used_hashes = load_training_data(args.data_path, tokenizer, args.eval_split, reviewed_indices=reviewed_indices, max_samples=args.max_samples)
+
+    # 実際に使用したハッシュをファイルに保存（エージェントが読む）
+    used_hashes_path = os.path.join(args.output_dir, 'used_hashes.json')
+    os.makedirs(args.output_dir, exist_ok=True)
+    with open(used_hashes_path, 'w') as f:
+        json.dump(used_hashes, f)
+    logger.info(f"使用データハッシュを保存: {used_hashes_path} ({len(used_hashes)}件)")
+
     model = setup_lora(model, args.model_name, args.lora_rank, args.lora_alpha)
 
     eval_strategy = "epoch" if eval_dataset else "no"

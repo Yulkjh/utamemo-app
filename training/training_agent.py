@@ -33,6 +33,8 @@ logging.basicConfig(
 )
 logger = logging.getLogger(__name__)
 
+
+で
 POLL_INTERVAL = 10  # 秒
 
 
@@ -747,7 +749,7 @@ def main():
                             logger.info("--- データ同期 (Pull) ---")
                             sync_training_data(args.report_url, args.api_key, action='pull')
 
-                            # レビュー済みインデックス取得（リトライ付き）
+                            # レビュー済みインデックス取得（変化検出用）
                             pre_train_indices = None
                             for _fetch_attempt in range(3):
                                 pre_train_indices = fetch_reviewed_indices(args.report_url, args.api_key)
@@ -764,17 +766,31 @@ def main():
                             exit_code = run_training(args, stop_checker=check_stop)
 
                             if exit_code == 0:
-                                if pre_train_indices is not None and len(pre_train_indices) > 0:
-                                    last_trained_indices = pre_train_indices
-                                    mark_result = mark_trained(args.report_url, args.api_key, pre_train_indices)
+                                # train.py が出力した used_hashes.json を読む（実際に学習したデータのみ）
+                                used_hashes_path = os.path.join(args.output_dir, 'used_hashes.json')
+                                actual_hashes = None
+                                if os.path.exists(used_hashes_path):
+                                    try:
+                                        with open(used_hashes_path, 'r') as f:
+                                            actual_hashes = frozenset(json.load(f))
+                                        logger.info(f"実際の学習データハッシュ: {len(actual_hashes)}件 (used_hashes.json)")
+                                    except Exception as e:
+                                        logger.warning(f"used_hashes.json 読み込み失敗: {e}")
+
+                                # マーク対象: used_hashes があればそれを使う、なければ pre_train_indices にフォールバック
+                                mark_hashes = actual_hashes if actual_hashes else pre_train_indices
+
+                                if mark_hashes is not None and len(mark_hashes) > 0:
+                                    last_trained_indices = pre_train_indices  # 変化検出用は全体
+                                    mark_result = mark_trained(args.report_url, args.api_key, mark_hashes)
                                     if mark_result:
-                                        logger.info(f"学習済みマーク成功: {len(pre_train_indices)}件")
+                                        logger.info(f"学習済みマーク成功: {len(mark_hashes)}件")
                                     else:
-                                        logger.error(f"学習済みマーク失敗（ローカル保存済み）: {len(pre_train_indices)}件")
+                                        logger.error(f"学習済みマーク失敗（ローカル保存済み）: {len(mark_hashes)}件")
                                         send_status(args.report_url, args.api_key,
                                                     status='completed',
-                                                    error_message=f'学習完了だがマーク送信失敗 ({len(pre_train_indices)}件はローカル保存済み)')
-                                elif pre_train_indices is not None and len(pre_train_indices) == 0:
+                                                    error_message=f'学習完了だがマーク送信失敗 ({len(mark_hashes)}件はローカル保存済み)')
+                                elif mark_hashes is not None and len(mark_hashes) == 0:
                                     last_trained_indices = pre_train_indices
                                     logger.info("レビュー済みインデックスが0件のためマーク不要")
                                 else:
