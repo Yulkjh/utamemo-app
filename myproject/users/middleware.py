@@ -37,7 +37,9 @@ class StaffReviewLockMiddleware:
         self.get_response = get_response
     
     def __call__(self, request):
-        if request.user.is_authenticated and getattr(request.user, 'is_staff', False):
+        if (request.user.is_authenticated
+                and getattr(request.user, 'is_staff', False)
+                and not getattr(request.user, 'is_superuser', False)):
             path = request.path
             if not any(path.startswith(allowed) for allowed in self.ALLOWED_PATHS):
                 try:

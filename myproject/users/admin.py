@@ -2,7 +2,7 @@ from django.contrib import admin
 from django.contrib.auth.admin import UserAdmin as BaseUserAdmin
 from django.contrib.admin import AdminSite
 from django.utils import timezone
-from .models import User
+from .models import User, StaffReviewObligation, TrainingDataReview, ReviewBackup
 from myproject.security import (
     get_client_ip, is_locked_out, record_failed_login,
     clear_login_attempts, get_login_attempts, MAX_LOGIN_ATTEMPTS
@@ -145,3 +145,35 @@ class UserAdmin(BaseUserAdmin):
             stripe_subscription_id=None,
         )
         self.message_user(request, f'{count}人のユーザーをフリープランにリセットしました。')
+
+
+@admin.register(StaffReviewObligation)
+class StaffReviewObligationAdmin(admin.ModelAdmin):
+    list_display = ('user', 'pending_reviews', 'is_review_locked', 'first_access_date', 'last_checked_date')
+    list_filter = ('is_review_locked',)
+    raw_id_fields = ('user',)
+    list_per_page = 50
+
+
+@admin.register(TrainingDataReview)
+class TrainingDataReviewAdmin(admin.ModelAdmin):
+    list_display = ('data_index', 'data_hash', 'reviewer', 'reviewed_at', 'trained_at', 'is_deleted')
+    list_filter = ('is_deleted', 'trained_at')
+    raw_id_fields = ('reviewer',)
+    list_per_page = 50
+    actions = ['restore_deleted']
+
+    def get_queryset(self, request):
+        return TrainingDataReview.all_objects.all()
+
+    @admin.action(description='選択したレビューを復元（ソフトデリート解除）')
+    def restore_deleted(self, request, queryset):
+        count = queryset.filter(is_deleted=True).update(is_deleted=False, deleted_at=None)
+        self.message_user(request, f'{count}件のレビューを復元しました。')
+
+
+@admin.register(ReviewBackup)
+class ReviewBackupAdmin(admin.ModelAdmin):
+    list_display = ('id', 'record_count', 'note', 'created_at')
+    readonly_fields = ('snapshot', 'record_count', 'created_at')
+    list_per_page = 20
