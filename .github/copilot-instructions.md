@@ -84,12 +84,20 @@ myproject/
 - **2つのLLM開発中**:
   - LLM-1: ノート重要度スコアリング (OCRテキスト → 重要ワードスコア付け)
   - LLM-2: 歌詞生成 (教育内容 → エグスプロージョン「本能寺の変」スタイル暗記歌詞)
-- **ベースモデル**: Qwen2.5-7B-Instruct (QLoRA)
-- **学習データ**: `training/data/lyrics_training_data.json` (82件、9教科)
+- **ベースモデル**: Qwen2.5-14B-Instruct (QLoRA)
+- **学習データ**: `training/data/lyrics_training_data.json` (143件、9教科)
 - **データ生成**: `training/generate_history_data.py` で Gemini API から自動生成
   - `--random-count N`: ランダムテーマ自動生成モード
 - **学習エージェント**: `training/training_agent.py` がWebダッシュボードと連携して学習を自動制御
   - フロー: idle → start受信 → Step1:Geminiデータ生成 → Step1.5:stop確認 → Step2:LoRA学習 → 自動ループ
   - `poll=True` フラグでエージェントのみがpending_commandを消費
 - **推論サーバー**: `training/serve.py` + Cloudflare Tunnel で本番接続
-- **ハードウェア**: 自宅 RTX 4060 Ti 16GB / 学校 RTX 4080 x2
+- **ハードウェア**: 自宅 RTX 4060 Ti 16GB / 学校 RTX 4080 SUPER x2
+
+### 学習データ管理ルール (重要)
+- **学習対象はスタッフがダッシュボードで手動レビュー確認したデータのみ**
+- 全データを一括レビュー済みにしてはいけない。スタッフが1件ずつ確認して品質を担保する
+- `TrainingDataReview` レコード = スタッフが内容を確認済みの証。勝手に自動作成しない
+- `trained_at` = 学習済みマーク。学習完了後に `used_hashes.json` の実際に使ったハッシュのみマーク
+- リセット (`trained_at` を null化) は再学習のためだけに使う。レビュー自体は消さない
+- ハッシュは `sha256(input[:100])[:16]` で計算。ローカルデータとサーバーDBで一致する必要がある
