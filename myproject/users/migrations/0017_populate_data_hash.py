@@ -60,4 +60,8 @@ class Migration(migrations.Migration):
 
     operations = [
         migrations.RunPython(populate_data_hash, reverse_populate),
+        migrations.AlterUniqueTogether(
+            name='trainingdatareview',
+            unique_together={('data_hash', 'reviewer')},
+        ),
     ]

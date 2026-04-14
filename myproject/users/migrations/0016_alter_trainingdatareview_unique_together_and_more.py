@@ -24,8 +24,5 @@ class Migration(migrations.Migration):
             name='data_index',
             field=models.IntegerField(help_text='lyrics_training_data.json 内のインデックス (0-based, 参考値)', verbose_name='データインデックス'),
         ),
-        migrations.AlterUniqueTogether(
-            name='trainingdatareview',
-            unique_together={('data_hash', 'reviewer')},
-        ),
+        # unique_together は 0017 でデータ変換後に設定
     ]
