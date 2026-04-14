@@ -3217,6 +3217,7 @@ def training_reviewed_indices(request):
     # POST: 学習完了後に trained_at をセット
     if request.method == 'POST':
         import json as _json
+        from django.utils import timezone
         try:
             body = _json.loads(request.body)
         except (ValueError, TypeError):
