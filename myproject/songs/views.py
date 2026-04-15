@@ -2740,14 +2740,14 @@ def training_data_viewer(request):
         if not created and obligation.last_checked_date < today:
             from django.db.models import F as _F_ob
             days_missed = (today - obligation.last_checked_date).days
-            increment = days_missed * 3  # 1日あたり+3
+            increment = days_missed * 5  # 1日あたり+5
             StaffReviewObligation.objects.filter(pk=obligation.pk).update(
                 pending_reviews=_F_ob('pending_reviews') + increment,
                 last_checked_date=today,
             )
             obligation.refresh_from_db()
-            # 15以上でロック
-            if obligation.pending_reviews >= 15 and not obligation.is_review_locked:
+            # 35以上でロック
+            if obligation.pending_reviews >= 35 and not obligation.is_review_locked:
                 obligation.is_review_locked = True
                 obligation.save(update_fields=['is_review_locked'])
                 logger.warning(
@@ -2819,9 +2819,9 @@ def training_data_api(request):
             user=user, pending_reviews__gt=0
         ).update(pending_reviews=_F('pending_reviews') - 1)
         if updated:
-            # ロック解除判定（15未満になったら解除）
+            # ロック解除判定（35未満になったら解除）
             StaffReviewObligation.objects.filter(
-                user=user, pending_reviews__lt=15, is_review_locked=True
+                user=user, pending_reviews__lt=35, is_review_locked=True
             ).update(is_review_locked=False)
 
     data_path = Path(__file__).resolve().parent.parent.parent / 'training' / 'data' / 'lyrics_training_data.json'
@@ -4062,7 +4062,7 @@ def staff_monitor(request):
             projected_pending = obligation.pending_reviews
             if obligation.last_checked_date < today:
                 days_missed = (today - obligation.last_checked_date).days
-                pending_extra = days_missed * 3
+                pending_extra = days_missed * 5
                 projected_pending += pending_extra
 
         staff_data.append({
@@ -4153,11 +4153,11 @@ def staff_monitor_api(request):
         if value < 0:
             value = 0
         ob.pending_reviews = value
-        # 15未満になったらロック解除
-        if value < 15 and ob.is_review_locked:
+        # 35未満になったらロック解除
+        if value < 35 and ob.is_review_locked:
             ob.is_review_locked = False
-        # 15以上になったらロック
-        if value >= 15 and not ob.is_review_locked:
+        # 35以上になったらロック
+        if value >= 35 and not ob.is_review_locked:
             ob.is_review_locked = True
         ob.save(update_fields=['pending_reviews', 'is_review_locked'])
         logger.info(
@@ -4231,7 +4231,7 @@ def staff_monitor_refresh(request):
             is_locked = obligation.is_review_locked
             if obligation.last_checked_date < today:
                 days_missed = (today - obligation.last_checked_date).days
-                pending_extra = days_missed * 3
+                pending_extra = days_missed * 5
                 projected_pending += pending_extra
 
         if is_locked:

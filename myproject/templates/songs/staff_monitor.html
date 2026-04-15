@@ -71,7 +71,7 @@ h1{font-size:1.5rem;font-weight:700;margin-bottom:24px;color:#ff7940}
 
   <div class="note">
     <strong>スタッフの学習データレビュー活動を確認するページです。</strong><br>
-    サボっている人がいたら直接話してください。ノルマ残が15以上でロックされます。
+    サボっている人がいたら直接話してください。ノルマ残が35以上でロックされます。
   </div>
 
   <div class="summary">
@@ -122,9 +122,9 @@ h1{font-size:1.5rem;font-weight:700;margin-bottom:24px;color:#ff7940}
         <td id="status-{{ s.user.username }}">
           {% if s.obligation and s.obligation.is_review_locked %}
             <span class="badge badge-locked">🔒 LOCKED</span>
-          {% elif s.projected_pending >= 15 %}
+          {% elif s.projected_pending >= 35 %}
             <span class="badge badge-locked">🔒 次回ロック</span>
-          {% elif s.projected_pending >= 10 %}
+          {% elif s.projected_pending >= 25 %}
             <span class="badge badge-warn">⚠️ 要注意</span>
           {% elif s.obligation %}
             <span class="badge badge-ok">✅ OK</span>
@@ -205,8 +205,8 @@ function showToast(msg, isError) {
 
 function buildStatusBadge(s) {
   if (s.is_locked) return '<span class="badge badge-locked">🔒 LOCKED</span>';
-  if (s.projected_pending >= 15) return '<span class="badge badge-locked">🔒 次回ロック</span>';
-  if (s.projected_pending >= 10) return '<span class="badge badge-warn">⚠️ 要注意</span>';
+  if (s.projected_pending >= 35) return '<span class="badge badge-locked">🔒 次回ロック</span>';
+  if (s.projected_pending >= 25) return '<span class="badge badge-warn">⚠️ 要注意</span>';
   if (s.has_obligation) return '<span class="badge badge-ok">✅ OK</span>';
   return '<span class="badge badge-inactive">未登録</span>';
 }
@@ -289,7 +289,7 @@ function updateRow(username, data) {
   if (st) {
     if (data.is_locked) {
       st.innerHTML = '<span class="badge badge-locked">🔒 LOCKED</span>';
-    } else if (data.pending >= 10) {
+    } else if (data.pending >= 25) {
       st.innerHTML = '<span class="badge badge-warn">⚠️ 要注意</span>';
     } else {
       st.innerHTML = '<span class="badge badge-ok">✅ OK</span>';
