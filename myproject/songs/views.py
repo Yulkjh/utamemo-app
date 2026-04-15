@@ -2731,6 +2731,25 @@ def training_data_viewer(request):
         },
     )
 
+    # --- 日次ノルマ加算（Cron不要: アクセス時にチェック） ---
+    if not created and obligation.last_checked_date < today:
+        from django.db.models import F as _F_ob
+        days_missed = (today - obligation.last_checked_date).days
+        increment = days_missed * 3  # 1日あたり+3
+        StaffReviewObligation.objects.filter(pk=obligation.pk).update(
+            pending_reviews=_F_ob('pending_reviews') + increment,
+            last_checked_date=today,
+        )
+        obligation.refresh_from_db()
+        # 15以上でロック
+        if obligation.pending_reviews >= 15 and not obligation.is_review_locked:
+            obligation.is_review_locked = True
+            obligation.save(update_fields=['is_review_locked'])
+            logger.warning(
+                f'Staff review lock: {request.user.username} '
+                f'(pending={obligation.pending_reviews})'
+            )
+
     data_path = Path(__file__).resolve().parent.parent.parent / 'training' / 'data' / 'lyrics_training_data.json'
     records = []
     if data_path.exists():
@@ -3995,7 +4014,31 @@ def staff_monitor(request):
         User, StaffReviewObligation, TrainingDataReview,
         TrainingDataEditLog,
     )
-    from django.db.models import Max, Count
+    from django.db.models import Max, Count, F as _F_mon
+    from django.utils import timezone as _tz_mon
+
+    today = _tz_mon.localdate()
+
+    # --- 全スタッフの日次ノルマ加算（閲覧時に最新化） ---
+    stale_obligations = StaffReviewObligation.objects.filter(
+        last_checked_date__lt=today,
+        user__is_staff=True,
+        user__is_active=True,
+    )
+    for ob in stale_obligations:
+        days_missed = (today - ob.last_checked_date).days
+        increment = days_missed * 3
+        ob.pending_reviews += increment
+        ob.last_checked_date = today
+        if ob.pending_reviews >= 15 and not ob.is_review_locked:
+            ob.is_review_locked = True
+            logger.warning(
+                f'Staff review lock (via monitor): {ob.user.username} '
+                f'(pending={ob.pending_reviews})'
+            )
+        ob.save(update_fields=[
+            'pending_reviews', 'last_checked_date', 'is_review_locked',
+        ])
 
     staff_users = User.objects.filter(is_staff=True).exclude(is_superuser=True)
 
