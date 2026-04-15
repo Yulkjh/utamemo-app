@@ -53,13 +53,13 @@ vllm_engine = None  # vLLMエンジン (--engine vllm 時のみ)
 inference_engine = "transformers"  # "transformers" or "vllm"
 
 DEFAULT_LORA_PATH = "./output/utamemo-lyrics-lora"
-DEFAULT_BASE_MODEL = "meta-llama/Meta-Llama-3-8B-Instruct"
+DEFAULT_BASE_MODEL = "Qwen/Qwen2.5-14B-Instruct"
 
 # 対応モデル例 (--base_model にどれでも指定可能)
 # Llama 3:  meta-llama/Meta-Llama-3-8B-Instruct
 # Gemma 2:  google/gemma-2-2b-it, google/gemma-2-9b-it, google/gemma-2-27b-it
 # Phi 3.5:  microsoft/Phi-3.5-mini-instruct
-# Qwen 2.5: Qwen/Qwen2.5-7B-Instruct
+# Qwen 2.5: Qwen/Qwen2.5-7B-Instruct, Qwen/Qwen2.5-14B-Instruct, Qwen/Qwen2.5-32B-Instruct
 
 # 起動中のモデル名 (health エンドポイントで表示用)
 loaded_base_model = ""
@@ -95,11 +95,20 @@ def load_model(base_model_name, lora_path, hf_token=None, no_lora=False):
     if tokenizer.pad_token is None:
         tokenizer.pad_token = tokenizer.eos_token
 
+    # GPU数を自動検出して max_memory を設定
+    num_gpus = torch.cuda.device_count()
+    if num_gpus >= 2:
+        max_mem = {i: "15GiB" for i in range(num_gpus)}
+        max_mem["cpu"] = "4GiB"
+        logger.info(f"  マルチGPU検出: {num_gpus}基 → 分散ロード")
+    else:
+        max_mem = {0: "14GiB", "cpu": "1GiB"}
+
     base_model = AutoModelForCausalLM.from_pretrained(
         base_model_name,
         quantization_config=bnb_config,
         device_map="auto",
-        max_memory={0: "14GiB", "cpu": "1GiB"},
+        max_memory=max_mem,
         token=hf_token,
         torch_dtype=torch.bfloat16,
         low_cpu_mem_usage=True,
