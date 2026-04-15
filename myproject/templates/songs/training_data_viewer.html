@@ -22,13 +22,23 @@
         </div>
     </div>
     {% else %}
+    {% if unreviewed_count > 0 %}
+    <div class="td-review-banner td-review-banner-info" id="reviewBanner">
+        <div class="td-review-banner-icon"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="12" y1="16" x2="12" y2="12"/><line x1="12" y1="8" x2="12.01" y2="8"/></svg></div>
+        <div class="td-review-banner-content">
+            <strong>レビュー義務なし</strong>
+            <span>未レビューデータが <strong id="unreviewedCount">{{ unreviewed_count }}</strong> 件あります（{{ reviewed_count }} / {{ total_count }} レビュー済み）</span>
+        </div>
+    </div>
+    {% else %}
     <div class="td-review-banner td-review-banner-done" id="reviewBanner">
         <div class="td-review-banner-icon"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 11.08V12a10 10 0 11-5.93-9.14"/><path d="M22 4L12 14.01l-3-3"/></svg></div>
         <div class="td-review-banner-content">
-            <strong>本日のレビュー完了</strong>
-            <span>お疲れさまでした！未処理のレビューはありません。</span>
+            <strong>全データレビュー完了</strong>
+            <span>お疲れさまでした！全 {{ total_count }} 件のレビューが完了しています。</span>
         </div>
     </div>
+    {% endif %}
     {% endif %}
 
     <!-- スタッフメッセージバナー -->
@@ -217,6 +227,17 @@
 }
 .td-review-banner-done .td-review-banner-content span {
     color: #6ee7a0;
+}
+.td-review-banner-info {
+    background: rgba(96, 165, 250, 0.1);
+    border: 1px solid rgba(96, 165, 250, 0.25);
+}
+.td-review-banner-info .td-review-banner-icon svg { stroke: #60a5fa; }
+.td-review-banner-info .td-review-banner-content strong:first-child {
+    color: #60a5fa;
+}
+.td-review-banner-info .td-review-banner-content span {
+    color: #93bbfd;
 }
 /* ── Hide base chrome ── */
 .navbar-modern, .footer-modern { display: none !important; }
@@ -771,21 +792,6 @@ let reviewedMap = {{ reviewed_map_json|safe }};
 let trainedHashes = new Set({{ trained_hashes_json|safe }});
 const CURRENT_USERNAME = '{{ current_username|escapejs }}';
 
-// スタッフメッセージ表示
-(function() {
-    const msgs = {{ staff_messages_json|safe }};
-    if (msgs && msgs.length > 0) {
-        const banner = document.getElementById('staffMessageBanner');
-        banner.style.display = 'block';
-        banner.innerHTML = msgs.map(m =>
-            `<div style="background:#1a1207; border:1px solid #ff7940; border-radius:8px; padding:0.8rem 1rem; margin-bottom:0.5rem; color:#fbbf24; font-size:0.88rem;">
-                <strong style="color:#ff7940;">📩 ${m.sender} からのメッセージ:</strong>
-                <span style="color:#e5e5e5; margin-left:0.5rem;">${m.message}</span>
-            </div>`
-        ).join('');
-    }
-})();
-
 function extractGenre(instruction) {
     const m = (instruction || '').match(/から(\w+)ジャンルの歌詞/);
     return m ? m[1] : 'other';
@@ -1136,17 +1142,33 @@ function updatePendingBanner(pendingReviews) {
     if (el) {
         el.textContent = pendingReviews;
     }
-    // 0になったら完了バナーに切り替え
+    // 0になったらバナー切り替え（未レビュー数に応じて分岐）
     if (pendingReviews <= 0) {
         const banner = document.getElementById('reviewBanner');
-        if (banner && !banner.classList.contains('td-review-banner-done')) {
-            banner.className = 'td-review-banner td-review-banner-done';
-            banner.innerHTML = `
-                <div class="td-review-banner-icon"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 11.08V12a10 10 0 11-5.93-9.14"/><path d="M22 4L12 14.01l-3-3"/></svg></div>
-                <div class="td-review-banner-content">
-                    <strong>本日のレビュー完了</strong>
-                    <span>お疲れさまでした！未処理のレビューはありません。</span>
-                </div>`;
+        if (banner && !banner.classList.contains('td-review-banner-done') && !banner.classList.contains('td-review-banner-info')) {
+            // 未レビュー件数を計算
+            const allHashes = new Set(allRecords.map(r => r._hash));
+            const reviewedHashes = new Set(Object.keys(reviewedMap));
+            const unreviewedCount = [...allHashes].filter(h => !reviewedHashes.has(h)).length;
+            const reviewedCount = allHashes.size - unreviewedCount;
+
+            if (unreviewedCount > 0) {
+                banner.className = 'td-review-banner td-review-banner-info';
+                banner.innerHTML = `
+                    <div class="td-review-banner-icon"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="12" y1="16" x2="12" y2="12"/><line x1="12" y1="8" x2="12.01" y2="8"/></svg></div>
+                    <div class="td-review-banner-content">
+                        <strong>レビュー義務なし</strong>
+                        <span>未レビューデータが <strong id="unreviewedCount">${unreviewedCount}</strong> 件あります（${reviewedCount} / ${allHashes.size} レビュー済み）</span>
+                    </div>`;
+            } else {
+                banner.className = 'td-review-banner td-review-banner-done';
+                banner.innerHTML = `
+                    <div class="td-review-banner-icon"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 11.08V12a10 10 0 11-5.93-9.14"/><path d="M22 4L12 14.01l-3-3"/></svg></div>
+                    <div class="td-review-banner-content">
+                        <strong>全データレビュー完了</strong>
+                        <span>お疲れさまでした！全 ${allHashes.size} 件のレビューが完了しています。</span>
+                    </div>`;
+            }
             banner.style.animation = 'bannerSlideIn 0.4s ease';
         }
     }

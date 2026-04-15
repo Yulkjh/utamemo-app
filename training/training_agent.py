@@ -580,6 +580,8 @@ def main():
                         help='推論サーバー+トンネルの自動起動を無効化')
     parser.add_argument('--sleep_after', action='store_true',
                         help='学習完了後にスリープする')
+    parser.add_argument('--auto_start', action='store_true',
+                        help='起動直後にダッシュボードのコマンドを待たずに学習を開始する')
     args = parser.parse_args()
 
     if not args.api_key:

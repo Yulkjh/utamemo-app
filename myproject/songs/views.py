@@ -2759,22 +2759,10 @@ def training_data_viewer(request):
     for i, r in enumerate(records):
         r['_hash'] = make_data_hash(r.get('input', ''))
 
-    # スタッフメッセージ（未読）
-    from users.models import StaffMessage
-    unread_messages = list(
-        StaffMessage.objects.filter(recipient=request.user, is_read=False)
-        .select_related('sender')
-        .values_list('id', 'sender__username', 'message', 'created_at')
-    )
-    staff_messages = [
-        {'id': m[0], 'sender': m[1], 'message': m[2], 'created_at': m[3].isoformat()}
-        for m in unread_messages
-    ]
-    # 表示したら既読にする
-    if unread_messages:
-        StaffMessage.objects.filter(
-            id__in=[m[0] for m in unread_messages]
-        ).update(is_read=True)
+    # 未レビュー件数を算出 (レビュー済みハッシュに含まれないレコード)
+    reviewed_hashes = set(reviewed_map.keys())
+    all_hashes = {r['_hash'] for r in records}
+    unreviewed_count = len(all_hashes - reviewed_hashes)
 
     return render(request, 'songs/training_data_viewer.html', {
         'records_json': json.dumps(records, ensure_ascii=False),
@@ -2786,7 +2774,8 @@ def training_data_viewer(request):
         'reviewed_map_json': json.dumps(reviewed_map, ensure_ascii=False),
         'trained_hashes_json': json.dumps(sorted(trained_hashes)),
         'current_username': request.user.username,
-        'staff_messages_json': json.dumps(staff_messages, ensure_ascii=False),
+        'unreviewed_count': unreviewed_count,
+        'reviewed_count': len(reviewed_hashes),
     })
 
 
@@ -3215,7 +3204,6 @@ def training_api_update(request):
     session.save()
 
     # コマンドがあれば返して消す（poll=Trueの場合のみ = エージェントからのポーリング）
-    # train.pyからの進捗報告ではコマンドを消費しない
     command = 'none'
     if data.get('poll'):
         command = session.pending_command
@@ -3982,98 +3970,3 @@ def test_mureka_poll(request):
     except Exception as e:
         logger.error(f'[TEST-MUREKA] Poll error: {e}')
         return JsonResponse({'status': 'error', 'error': str(e)})
-
-
-# =============================================================================
-# スタッフ活動監視（スーパーユーザー専用）
-# =============================================================================
-
-def superuser_required(view_func):
-    """スーパーユーザーのみアクセス可能"""
-    from functools import wraps
-    @wraps(view_func)
-    def wrapper(request, *args, **kwargs):
-        if not request.user.is_authenticated or not request.user.is_superuser:
-            from django.http import Http404
-            raise Http404
-        return view_func(request, *args, **kwargs)
-    return wrapper
-
-
-@superuser_required
-def staff_monitor(request):
-    """スタッフの学習データ活動を監視するページ（スーパーユーザー専用）"""
-    from users.models import (
-        User, StaffReviewObligation, TrainingDataReview,
-        TrainingDataEditLog, StaffMessage,
-    )
-    from django.db.models import Max
-    from django.utils import timezone as _tz
-
-    staff_users = User.objects.filter(is_staff=True).exclude(is_superuser=True)
-
-    staff_data = []
-    for user in staff_users:
-        obligation = StaffReviewObligation.objects.filter(user=user).first()
-        review_count = TrainingDataReview.objects.filter(reviewer=user).count()
-        edit_count = TrainingDataEditLog.objects.filter(editor=user).count()
-        last_review = TrainingDataReview.objects.filter(reviewer=user).aggregate(
-            last=Max('reviewed_at'))['last']
-        last_edit = TrainingDataEditLog.objects.filter(editor=user).aggregate(
-            last=Max('edited_at'))['last']
-        unread_msgs = StaffMessage.objects.filter(
-            recipient=user, is_read=False).count()
-
-        last_activity = None
-        if last_review and last_edit:
-            last_activity = max(last_review, last_edit)
-        else:
-            last_activity = last_review or last_edit
-
-        staff_data.append({
-            'user': user,
-            'obligation': obligation,
-            'review_count': review_count,
-            'edit_count': edit_count,
-            'last_activity': last_activity,
-            'unread_messages': unread_msgs,
-        })
-
-    return render(request, 'songs/staff_monitor.html', {
-        'staff_data': staff_data,
-        'page_title': 'スタッフ活動監視',
-    })
-
-
-@superuser_required
-@require_POST
-def staff_send_message(request):
-    """スタッフにメッセージを送信するAPI"""
-    from users.models import User, StaffMessage
-
-    try:
-        data = json.loads(request.body)
-    except json.JSONDecodeError:
-        return JsonResponse({'error': 'Invalid JSON'}, status=400)
-
-    username = data.get('username', '').strip()
-    message_text = data.get('message', '').strip()
-
-    if not username or not message_text:
-        return JsonResponse({'error': 'ユーザー名とメッセージは必須です'}, status=400)
-
-    if len(message_text) > 500:
-        return JsonResponse({'error': 'メッセージは500文字以内です'}, status=400)
-
-    try:
-        recipient = User.objects.get(username=username, is_staff=True)
-    except User.DoesNotExist:
-        return JsonResponse({'error': 'スタッフが見つかりません'}, status=404)
-
-    StaffMessage.objects.create(
-        sender=request.user,
-        recipient=recipient,
-        message=message_text,
-    )
-
-    return JsonResponse({'ok': True, 'message': f'{username} にメッセージを送信しました'})
