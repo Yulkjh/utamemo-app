@@ -4075,8 +4075,14 @@ def staff_monitor(request):
             'pending_extra': pending_extra,
         })
 
+    # 非スタッフユーザー一覧（スタッフ昇格用）
+    non_staff_users = User.objects.filter(
+        is_staff=False, is_active=True
+    ).exclude(is_superuser=True).order_by('username')
+
     return render(request, 'songs/staff_monitor.html', {
         'staff_data': staff_data,
+        'non_staff_users': non_staff_users,
         'page_title': 'スタッフ活動監視',
     })
 

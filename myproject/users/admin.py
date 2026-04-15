@@ -100,6 +100,28 @@ class UserAdmin(BaseUserAdmin):
     
     # 一括アクション
     actions = ['ban_users', 'unban_users', 'reset_to_free_plan']
+
+    def get_form(self, request, obj=None, **kwargs):
+        """非スーパーユーザーはis_superuserを変更不可"""
+        form = super().get_form(request, obj, **kwargs)
+        if not request.user.is_superuser:
+            # is_superuserフィールドがフォームに含まれていたら除去
+            if 'is_superuser' in form.base_fields:
+                del form.base_fields['is_superuser']
+        return form
+
+    def save_model(self, request, obj, form, change):
+        """非スーパーユーザーがis_superuserを変更しようとした場合はブロック"""
+        if change and not request.user.is_superuser:
+            original = User.objects.get(pk=obj.pk)
+            if obj.is_superuser and not original.is_superuser:
+                # 昇格を阻止
+                obj.is_superuser = False
+                logger.warning(
+                    f'[SECURITY] {request.user.username} tried to escalate '
+                    f'{obj.username} to superuser - BLOCKED'
+                )
+        super().save_model(request, obj, form, change)
     
     def is_minor_display(self, obj):
         """未成年かどうかを表示"""
