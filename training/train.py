@@ -170,10 +170,9 @@ def _build_max_memory():
     max_memory = {}
     for i in range(gpu_count):
         total_gb = torch.cuda.get_device_properties(i).total_memory / 1024**3
-        # 学習時は勾配・optimizer用に余裕を持たせる (70%)
-        alloc_gb = int(total_gb * 0.70)
+        alloc_gb = int(total_gb * 0.90)
         max_memory[i] = f"{alloc_gb}GiB"
-    max_memory["cpu"] = "16GiB"
+    max_memory["cpu"] = "8GiB"
     return max_memory
 
 
