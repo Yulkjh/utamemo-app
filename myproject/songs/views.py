@@ -3634,6 +3634,15 @@ def quality_check(request):
 @staff_member_required
 def llm_guide(request):
     """ローカルLLM学習プラットフォームの使い方ガイド（スタッフのみ）"""
+    # ロック中のスタッフはレビューページに強制リダイレクト
+    if not request.user.is_superuser:
+        from users.models import StaffReviewObligation
+        ob = StaffReviewObligation.objects.filter(
+            user=request.user, is_review_locked=True
+        ).first()
+        if ob:
+            from django.shortcuts import redirect
+            return redirect('songs:training_data_viewer')
     return render(request, 'songs/llm_guide.html')
 
 
