@@ -130,7 +130,12 @@ class SecurityMiddleware:
         # スタッフポータル アクセス制限
         # ========================================
         if path.startswith('/staff/') or (
-            path.startswith('/api/training/') and path not in ('/api/training/update/', '/api/training/reviewed/')
+            path.startswith('/api/training/') and path not in (
+                '/api/training/update/',
+                '/api/training/reviewed/',
+                '/api/training/data/download/',
+                '/api/training/data/upload/',
+            )
         ) or path.startswith('/api/llm/'):
             # 未認証ユーザーはログインページへリダイレクト
             if not request.user.is_authenticated:
