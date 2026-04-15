@@ -1066,7 +1066,7 @@
         }
     </style>
 </head>
-<body>
+<body class="{% if request.path|slice:':7' == '/staff/' %}banner-closed{% endif %}">
     <!-- DEMOバナー（スタッフポータル内では非表示） -->
     {% if not request.path|slice:":7" == "/staff/" %}
     <div class="demo-banner" id="demoBanner" style="cursor: pointer;" onclick="showDemoModal()">
@@ -1163,7 +1163,7 @@
     {% endif %}
 
     <!-- ナビゲーション -->
-    <nav class="navbar navbar-expand-lg navbar-modern fixed-top" id="mainNavbar">
+    <nav class="navbar navbar-expand-lg navbar-modern fixed-top {% if request.path|slice:':7' == '/staff/' %}banner-closed{% endif %}" id="mainNavbar">
         <div class="container">
             <a class="navbar-brand-modern" href="{% url 'songs:home' %}">
                 UTAMEMO
