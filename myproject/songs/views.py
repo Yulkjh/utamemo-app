@@ -2723,7 +2723,10 @@ def training_data_viewer(request):
     # --- スタッフレビュー義務: 初回アクセス記録（スーパーユーザーは対象外） ---
     today = _tz.localdate()
     obligation = None
-    if not request.user.is_superuser:
+    if request.user.is_superuser:
+        # スーパーユーザーの古いObligationレコードがあれば削除
+        StaffReviewObligation.objects.filter(user=request.user).delete()
+    else:
         obligation, created = StaffReviewObligation.objects.get_or_create(
             user=request.user,
             defaults={

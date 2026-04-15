@@ -4,7 +4,7 @@
 
 {% block content %}
 
-{% if is_review_locked %}
+{% if is_review_locked and not is_superuser %}
 <!-- ===== 全画面ロックオーバーレイ（閉じられない） ===== -->
 <div id="lockOverlay" style="
     position:fixed;top:0;left:0;right:0;bottom:0;z-index:99999;
@@ -49,7 +49,9 @@
 {% endif %}
 
 <div class="td-container">
-    {% if is_review_locked %}
+    {% if is_superuser %}
+    <!-- スーパーユーザーはノルマ対象外 -->
+    {% elif is_review_locked %}
     <div class="td-review-banner td-review-banner-locked" id="reviewBanner">
         <div class="td-review-banner-icon"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0110 0v4"/></svg></div>
         <div class="td-review-banner-content">
