@@ -227,6 +227,10 @@ def parse_args():
         help="1回の学習で使う最大データ数 (0=全件使用, 5=5件ずつ)"
     )
     parser.add_argument(
+        "--max_seq_length", type=int, default=None,
+        help="最大シーケンス長 (未指定時はデフォルト1024)"
+    )
+    parser.add_argument(
         "--early_stopping_patience", type=int, default=3,
         help="Early Stoppingの忍耐回数 (0で無効)"
     )
@@ -634,6 +638,12 @@ def train(args):
         args.lora_alpha = args.lora_rank * 2
     if args.gradient_accumulation is None:
         args.gradient_accumulation = GPU_PRESETS.get(gpu_preset, {}).get("gradient_accumulation", 4)
+
+    # max_seq_length 上書き
+    global MAX_SEQ_LENGTH
+    if args.max_seq_length is not None:
+        MAX_SEQ_LENGTH = args.max_seq_length
+        logger.info(f"  MAX_SEQ_LENGTH: {MAX_SEQ_LENGTH} (引数で指定)")
 
     # W&B連携
     report_to = "none"
