@@ -167,6 +167,7 @@ h1{font-size:1.5rem;font-weight:700;margin-bottom:24px;color:#ff7940}
 
 <script>
 const API_URL = '{% url "songs:staff_monitor_api" %}';
+const REFRESH_URL = '{% url "songs:staff_monitor_refresh" %}';
 const CSRF = '{{ csrf_token }}';
 
 // 集計
@@ -178,14 +179,20 @@ let lockedCount = 0, totalReviews = 0;
 document.getElementById('locked-count').textContent = lockedCount;
 document.getElementById('total-reviews').textContent = totalReviews;
 
-// 時間表示
-document.querySelectorAll('.time-ago').forEach(el => {
-  const ts = new Date(el.dataset.ts);
+// 時間表示ユーティリティ
+function formatTimeAgo(isoStr) {
+  if (!isoStr) return '未活動';
+  const ts = new Date(isoStr);
   const diff = (Date.now() - ts.getTime()) / 1000;
-  if (diff < 60) el.textContent = '数秒前';
-  else if (diff < 3600) el.textContent = Math.floor(diff/60) + '分前';
-  else if (diff < 86400) el.textContent = Math.floor(diff/3600) + '時間前';
-  else el.textContent = Math.floor(diff/86400) + '日前';
+  if (diff < 60) return '数秒前';
+  if (diff < 3600) return Math.floor(diff/60) + '分前';
+  if (diff < 86400) return Math.floor(diff/3600) + '時間前';
+  return Math.floor(diff/86400) + '日前';
+}
+
+// 初期時間表示
+document.querySelectorAll('.time-ago').forEach(el => {
+  el.textContent = formatTimeAgo(el.dataset.ts);
 });
 
 function showToast(msg, isError) {
@@ -196,12 +203,88 @@ function showToast(msg, isError) {
   setTimeout(() => t.style.display = 'none', 3000);
 }
 
+function buildStatusBadge(s) {
+  if (s.is_locked) return '<span class="badge badge-locked">🔒 LOCKED</span>';
+  if (s.projected_pending >= 15) return '<span class="badge badge-locked">🔒 次回ロック</span>';
+  if (s.projected_pending >= 10) return '<span class="badge badge-warn">⚠️ 要注意</span>';
+  if (s.has_obligation) return '<span class="badge badge-ok">✅ OK</span>';
+  return '<span class="badge badge-inactive">未登録</span>';
+}
+
+function buildPendingCell(s) {
+  if (!s.has_obligation) return '<span class="stat">-</span>';
+  let html = '<div class="pending-edit">';
+  html += `<input type="number" class="pending-input" id="pending-${s.username}" value="${s.pending}" min="0" max="99">`;
+  html += `<button class="act-btn" onclick="setPending('${s.username}')">設定</button>`;
+  if (s.pending_extra > 0) {
+    html += `<span style="color:#f59e0b;font-size:.7rem;margin-left:4px" title="次回アクセス時に+${s.pending_extra}加算予定">→${s.projected_pending}</span>`;
+  }
+  html += '</div>';
+  return html;
+}
+
+function buildActionCell(s) {
+  if (!s.has_obligation) return '<span class="stat">-</span>';
+  let html = '';
+  if (s.is_locked) {
+    html += `<button class="act-btn success" onclick="doAction('${s.username}','unlock')">🔓 解除</button>`;
+  }
+  html += `<button class="act-btn" onclick="doAction('${s.username}','reset')">🔄 リセット</button>`;
+  return html;
+}
+
+function refreshData() {
+  fetch(REFRESH_URL)
+    .then(r => r.json())
+    .then(data => {
+      if (!data.ok) return;
+
+      // サマリー更新
+      document.getElementById('locked-count').textContent = data.locked_count;
+      document.getElementById('total-reviews').textContent = data.total_reviews;
+
+      // 各行を更新
+      const tbody = document.querySelector('.staff-table tbody');
+      // 既存行のユーザー名セットを作成
+      const existingRows = {};
+      tbody.querySelectorAll('tr[id^="row-"]').forEach(tr => {
+        const un = tr.id.replace('row-', '');
+        existingRows[un] = tr;
+      });
+
+      data.staff.forEach(s => {
+        let row = existingRows[s.username];
+        if (!row) {
+          // 新しいスタッフ行を追加
+          row = document.createElement('tr');
+          row.id = 'row-' + s.username;
+          tbody.appendChild(row);
+        }
+
+        row.innerHTML =
+          `<td class="username">${s.username}</td>` +
+          `<td>${buildPendingCell(s)}</td>` +
+          `<td id="status-${s.username}">${buildStatusBadge(s)}</td>` +
+          `<td class="stat">${s.review_count}</td>` +
+          `<td class="stat">${s.edit_count}</td>` +
+          `<td><span class="time-ago">${formatTimeAgo(s.last_activity)}</span></td>` +
+          `<td>${buildActionCell(s)}</td>`;
+
+        delete existingRows[s.username];
+      });
+
+      // サーバーから返ってこなかった行は削除（スタッフ解除された等）
+      Object.values(existingRows).forEach(tr => tr.remove());
+    })
+    .catch(() => {});  // サイレント失敗
+}
+
+// 10秒ごとに自動更新
+setInterval(refreshData, 10000);
+
 function updateRow(username, data) {
-  // ノルマ入力更新
   const inp = document.getElementById('pending-' + username);
   if (inp) inp.value = data.pending;
-
-  // ステータスバッジ更新
   const st = document.getElementById('status-' + username);
   if (st) {
     if (data.is_locked) {
@@ -224,9 +307,7 @@ async function doAction(username, action) {
     const data = await res.json();
     if (data.ok) {
       showToast(data.message, false);
-      updateRow(username, data);
-      // ページ再読み込みで操作ボタンも更新
-      setTimeout(() => location.reload(), 800);
+      refreshData();  // 即座に全体更新
     } else {
       showToast(data.error || 'エラー', true);
     }
@@ -252,8 +333,7 @@ async function setPending(username) {
     const data = await res.json();
     if (data.ok) {
       showToast(data.message, false);
-      updateRow(username, data);
-      setTimeout(() => location.reload(), 800);
+      refreshData();  // 即座に全体更新
     } else {
       showToast(data.error || 'エラー', true);
     }
@@ -273,7 +353,7 @@ async function resetAll() {
     const data = await res.json();
     if (data.ok) {
       showToast(data.message, false);
-      setTimeout(() => location.reload(), 800);
+      refreshData();  // 即座に全体更新
     } else {
       showToast(data.error || 'エラー', true);
     }

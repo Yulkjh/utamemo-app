@@ -4185,3 +4185,74 @@ def staff_monitor_api(request):
 
     else:
         return JsonResponse({'ok': False, 'error': f'Unknown action: {action}'}, status=400)
+
+
+@superuser_required
+@require_http_methods(["GET"])
+def staff_monitor_refresh(request):
+    """スタッフ監視データをJSONで返す（リアルタイム更新用）"""
+    from users.models import (
+        User, StaffReviewObligation, TrainingDataReview,
+        TrainingDataEditLog,
+    )
+    from django.db.models import Max
+    from django.utils import timezone as _tz_ref
+
+    today = _tz_ref.localdate()
+    staff_users = User.objects.filter(is_staff=True).exclude(is_superuser=True)
+
+    staff_list = []
+    locked_count = 0
+    total_reviews = 0
+
+    for user in staff_users:
+        obligation = StaffReviewObligation.objects.filter(user=user).first()
+        review_count = TrainingDataReview.objects.filter(reviewer=user).count()
+        edit_count = TrainingDataEditLog.objects.filter(editor=user).count()
+        last_review = TrainingDataReview.objects.filter(reviewer=user).aggregate(
+            last=Max('reviewed_at'))['last']
+        last_edit = TrainingDataEditLog.objects.filter(editor=user).aggregate(
+            last=Max('edited_at'))['last']
+
+        last_activity = None
+        if last_review and last_edit:
+            last_activity = max(last_review, last_edit)
+        else:
+            last_activity = last_review or last_edit
+
+        projected_pending = 0
+        pending_extra = 0
+        is_locked = False
+        has_obligation = False
+
+        if obligation:
+            has_obligation = True
+            projected_pending = obligation.pending_reviews
+            is_locked = obligation.is_review_locked
+            if obligation.last_checked_date < today:
+                days_missed = (today - obligation.last_checked_date).days
+                pending_extra = days_missed * 3
+                projected_pending += pending_extra
+
+        if is_locked:
+            locked_count += 1
+        total_reviews += review_count
+
+        staff_list.append({
+            'username': user.username,
+            'has_obligation': has_obligation,
+            'pending': obligation.pending_reviews if obligation else 0,
+            'projected_pending': projected_pending,
+            'pending_extra': pending_extra,
+            'is_locked': is_locked,
+            'review_count': review_count,
+            'edit_count': edit_count,
+            'last_activity': last_activity.isoformat() if last_activity else None,
+        })
+
+    return JsonResponse({
+        'ok': True,
+        'staff': staff_list,
+        'locked_count': locked_count,
+        'total_reviews': total_reviews,
+    })
