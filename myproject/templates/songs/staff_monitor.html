@@ -111,6 +111,9 @@ h1{font-size:1.5rem;font-weight:700;margin-bottom:24px;color:#ff7940}
               <input type="number" class="pending-input" id="pending-{{ s.user.username }}"
                      value="{{ s.obligation.pending_reviews }}" min="0" max="99">
               <button class="act-btn" onclick="setPending('{{ s.user.username }}')">設定</button>
+              {% if s.pending_extra > 0 %}
+                <span style="color:#f59e0b;font-size:.7rem;margin-left:4px" title="次回アクセス時に+{{ s.pending_extra }}加算予定">→{{ s.projected_pending }}</span>
+              {% endif %}
             {% else %}
               <span class="stat">-</span>
             {% endif %}
@@ -119,7 +122,9 @@ h1{font-size:1.5rem;font-weight:700;margin-bottom:24px;color:#ff7940}
         <td id="status-{{ s.user.username }}">
           {% if s.obligation and s.obligation.is_review_locked %}
             <span class="badge badge-locked">🔒 LOCKED</span>
-          {% elif s.obligation and s.obligation.pending_reviews >= 10 %}
+          {% elif s.projected_pending >= 15 %}
+            <span class="badge badge-locked">🔒 次回ロック</span>
+          {% elif s.projected_pending >= 10 %}
             <span class="badge badge-warn">⚠️ 要注意</span>
           {% elif s.obligation %}
             <span class="badge badge-ok">✅ OK</span>
@@ -152,6 +157,10 @@ h1{font-size:1.5rem;font-weight:700;margin-bottom:24px;color:#ff7940}
       {% endfor %}
     </tbody>
   </table>
+
+  <div style="text-align:right;margin-bottom:32px">
+    <button class="act-btn danger" style="padding:8px 16px;font-size:.85rem" onclick="resetAll()">⚠️ 全員リセット</button>
+  </div>
 </div>
 
 <div class="toast" id="toast"></div>
@@ -244,6 +253,26 @@ async function setPending(username) {
     if (data.ok) {
       showToast(data.message, false);
       updateRow(username, data);
+      setTimeout(() => location.reload(), 800);
+    } else {
+      showToast(data.error || 'エラー', true);
+    }
+  } catch (e) {
+    showToast('通信エラー', true);
+  }
+}
+
+async function resetAll() {
+  if (!confirm('全スタッフのノルマをリセットしますか？')) return;
+  try {
+    const res = await fetch(API_URL, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'X-CSRFToken': CSRF },
+      body: JSON.stringify({ action: 'reset_all' }),
+    });
+    const data = await res.json();
+    if (data.ok) {
+      showToast(data.message, false);
       setTimeout(() => location.reload(), 800);
     } else {
       showToast(data.error || 'エラー', true);

@@ -4034,26 +4034,8 @@ def staff_monitor(request):
 
     today = _tz_mon.localdate()
 
-    # --- 全スタッフの日次ノルマ加算（閲覧時に最新化） ---
-    stale_obligations = StaffReviewObligation.objects.filter(
-        last_checked_date__lt=today,
-        user__is_staff=True,
-        user__is_active=True,
-    )
-    for ob in stale_obligations:
-        days_missed = (today - ob.last_checked_date).days
-        increment = days_missed * 3
-        ob.pending_reviews += increment
-        ob.last_checked_date = today
-        if ob.pending_reviews >= 15 and not ob.is_review_locked:
-            ob.is_review_locked = True
-            logger.warning(
-                f'Staff review lock (via monitor): {ob.user.username} '
-                f'(pending={ob.pending_reviews})'
-            )
-        ob.save(update_fields=[
-            'pending_reviews', 'last_checked_date', 'is_review_locked',
-        ])
+    # --- 全スタッフのノルマを最新化（表示用に計算するだけ、DBは更新しない） ---
+    # 実際の加算は各スタッフがtraining-dataにアクセスした時のみ行う
 
     staff_users = User.objects.filter(is_staff=True).exclude(is_superuser=True)
 
@@ -4073,12 +4055,24 @@ def staff_monitor(request):
         else:
             last_activity = last_review or last_edit
 
+        # 表示用: まだ加算されてない分を計算
+        projected_pending = 0
+        pending_extra = 0
+        if obligation:
+            projected_pending = obligation.pending_reviews
+            if obligation.last_checked_date < today:
+                days_missed = (today - obligation.last_checked_date).days
+                pending_extra = days_missed * 3
+                projected_pending += pending_extra
+
         staff_data.append({
             'user': user,
             'obligation': obligation,
             'review_count': review_count,
             'edit_count': edit_count,
             'last_activity': last_activity,
+            'projected_pending': projected_pending,
+            'pending_extra': pending_extra,
         })
 
     return render(request, 'songs/staff_monitor.html', {
@@ -4101,6 +4095,23 @@ def staff_monitor_api(request):
 
     action = body.get('action')
     username = body.get('username')
+
+    # reset_all はusername不要
+    if action == 'reset_all':
+        from django.utils import timezone as _tz_api
+        today_api = _tz_api.localdate()
+        updated = StaffReviewObligation.objects.filter(
+            user__is_staff=True, user__is_active=True
+        ).update(
+            pending_reviews=0,
+            is_review_locked=False,
+            last_checked_date=today_api,
+        )
+        logger.info(f'[STAFF-MONITOR] Reset ALL ({updated} records) by {request.user.username}')
+        return JsonResponse({
+            'ok': True,
+            'message': f'全スタッフ（{updated}名）のノルマをリセットしました',
+        })
 
     if not username:
         return JsonResponse({'ok': False, 'error': 'username required'}, status=400)
