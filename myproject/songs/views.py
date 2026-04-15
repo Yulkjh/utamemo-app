@@ -2720,35 +2720,37 @@ def training_data_viewer(request):
     from django.utils import timezone as _tz
     from users.models import StaffReviewObligation
 
-    # --- スタッフレビュー義務: 初回アクセス記録 ---
+    # --- スタッフレビュー義務: 初回アクセス記録（スーパーユーザーは対象外） ---
     today = _tz.localdate()
-    obligation, created = StaffReviewObligation.objects.get_or_create(
-        user=request.user,
-        defaults={
-            'first_access_date': today,
-            'pending_reviews': 0,
-            'last_checked_date': today,
-        },
-    )
-
-    # --- 日次ノルマ加算（Cron不要: アクセス時にチェック） ---
-    if not created and obligation.last_checked_date < today:
-        from django.db.models import F as _F_ob
-        days_missed = (today - obligation.last_checked_date).days
-        increment = days_missed * 3  # 1日あたり+3
-        StaffReviewObligation.objects.filter(pk=obligation.pk).update(
-            pending_reviews=_F_ob('pending_reviews') + increment,
-            last_checked_date=today,
+    obligation = None
+    if not request.user.is_superuser:
+        obligation, created = StaffReviewObligation.objects.get_or_create(
+            user=request.user,
+            defaults={
+                'first_access_date': today,
+                'pending_reviews': 0,
+                'last_checked_date': today,
+            },
         )
-        obligation.refresh_from_db()
-        # 15以上でロック
-        if obligation.pending_reviews >= 15 and not obligation.is_review_locked:
-            obligation.is_review_locked = True
-            obligation.save(update_fields=['is_review_locked'])
-            logger.warning(
-                f'Staff review lock: {request.user.username} '
-                f'(pending={obligation.pending_reviews})'
+
+        # --- 日次ノルマ加算（Cron不要: アクセス時にチェック） ---
+        if not created and obligation.last_checked_date < today:
+            from django.db.models import F as _F_ob
+            days_missed = (today - obligation.last_checked_date).days
+            increment = days_missed * 3  # 1日あたり+3
+            StaffReviewObligation.objects.filter(pk=obligation.pk).update(
+                pending_reviews=_F_ob('pending_reviews') + increment,
+                last_checked_date=today,
             )
+            obligation.refresh_from_db()
+            # 15以上でロック
+            if obligation.pending_reviews >= 15 and not obligation.is_review_locked:
+                obligation.is_review_locked = True
+                obligation.save(update_fields=['is_review_locked'])
+                logger.warning(
+                    f'Staff review lock: {request.user.username} '
+                    f'(pending={obligation.pending_reviews})'
+                )
 
     data_path = Path(__file__).resolve().parent.parent.parent / 'training' / 'data' / 'lyrics_training_data.json'
     records = []
@@ -2788,8 +2790,9 @@ def training_data_viewer(request):
         'total_count': len(records),
         'genre_counts': json.dumps(genre_counts, ensure_ascii=False),
         'page_title': '学習データ管理',
-        'pending_reviews': obligation.pending_reviews,
-        'is_review_locked': obligation.is_review_locked,
+        'pending_reviews': obligation.pending_reviews if obligation else 0,
+        'is_review_locked': obligation.is_review_locked if obligation else False,
+        'is_superuser': request.user.is_superuser,
         'reviewed_map_json': json.dumps(reviewed_map, ensure_ascii=False),
         'trained_hashes_json': json.dumps(sorted(trained_hashes)),
         'current_username': request.user.username,
