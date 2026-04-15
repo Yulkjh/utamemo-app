@@ -540,6 +540,17 @@
             color: #dc3545;
         }
         
+        .staff-option {
+            color: #60a5fa;
+        }
+        .staff-option:hover {
+            background: rgba(96, 165, 250, 0.1);
+            color: #93bbfd;
+        }
+        .staff-option i {
+            opacity: 0.9;
+        }
+        
         .nav-link-modern {
             color: var(--text-secondary);
             font-weight: 500;
@@ -1249,6 +1260,13 @@
                                     <i class="bi bi-gem"></i>
                                     <span>{% if is_english %}Plans{% elif is_chinese %}套餐{% elif is_spanish %}Planes{% elif is_german %}Pläne{% elif is_portuguese %}Planos{% else %}料金プラン{% endif %}</span>
                                 </a>
+                                {% if user.is_staff %}
+                                <div class="user-divider"></div>
+                                <a href="{% url 'songs:llm_guide' %}" class="user-option staff-option">
+                                    <i class="bi bi-cpu"></i>
+                                    <span>Staff Portal</span>
+                                </a>
+                                {% endif %}
                                 <div class="user-divider"></div>
                                 <form method="post" action="{% url 'users:logout' %}">
                                     {% csrf_token %}
