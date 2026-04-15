@@ -80,4 +80,7 @@ urlpatterns = [
     path('api/training/data/upload/', views.training_data_upload, name='training_data_upload'),
     path('api/training/status/', views.training_api_status_json, name='training_api_status'),
     path('api/training/command/', views.training_send_command, name='training_send_command'),
+
+    # スタッフ監視 (superuser only)
+    path('staff/monitor/', views.staff_monitor, name='staff_monitor'),
 ]

@@ -27,42 +27,35 @@ h1{font-size:1.5rem;font-weight:700;margin-bottom:24px;color:#ff7940}
 .badge{display:inline-block;padding:2px 8px;border-radius:4px;font-size:.75rem;font-weight:600}
 .badge-locked{background:#ef444420;color:#ef4444;border:1px solid #ef444440}
 .badge-ok{background:#22c55e15;color:#22c55e;border:1px solid #22c55e30}
+.badge-warn{background:#f59e0b20;color:#f59e0b;border:1px solid #f59e0b40}
 .badge-inactive{background:#66666620;color:#666}
 
 .time-ago{color:#666;font-size:.8rem}
-
-/* メッセージ送信 */
-.msg-btn{background:none;border:1px solid #333;color:#aaa;padding:4px 10px;border-radius:4px;cursor:pointer;font-size:.8rem;transition:all .15s}
-.msg-btn:hover{border-color:#ff7940;color:#ff7940}
-
-/* モーダル */
-.modal-overlay{display:none;position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,.7);z-index:1000;justify-content:center;align-items:center}
-.modal-overlay.active{display:flex}
-.modal{background:#1a1a1a;border:1px solid #333;border-radius:12px;padding:24px;width:90%;max-width:420px}
-.modal h3{font-size:1.1rem;margin-bottom:4px;color:#fff}
-.modal .modal-sub{color:#888;font-size:.85rem;margin-bottom:16px}
-.modal textarea{width:100%;background:#111;border:1px solid #333;border-radius:8px;color:#e0e0e0;padding:10px;font-size:.9rem;resize:vertical;min-height:80px;font-family:inherit}
-.modal textarea:focus{outline:none;border-color:#ff7940}
-.modal-actions{display:flex;gap:8px;justify-content:flex-end;margin-top:12px}
-.btn-cancel{background:#333;color:#aaa;border:none;padding:8px 16px;border-radius:6px;cursor:pointer;font-size:.85rem}
-.btn-cancel:hover{background:#444}
-.btn-send{background:#ff7940;color:#fff;border:none;padding:8px 16px;border-radius:6px;cursor:pointer;font-size:.85rem;font-weight:600}
-.btn-send:hover{background:#e06830}
-.btn-send:disabled{opacity:.5;cursor:not-allowed}
-
-.toast{position:fixed;top:20px;right:20px;background:#22c55e;color:#fff;padding:10px 20px;border-radius:8px;font-size:.9rem;z-index:2000;display:none;font-weight:600}
-.toast.error{background:#ef4444}
 
 .summary{display:flex;gap:24px;margin-bottom:24px;flex-wrap:wrap}
 .summary-card{background:#141414;border:1px solid #222;border-radius:8px;padding:14px 20px}
 .summary-card .num{font-size:1.5rem;font-weight:700;color:#ff7940}
 .summary-card .label{font-size:.75rem;color:#888;margin-top:2px}
+
+.note{background:#1a1a1a;border:1px solid #222;border-radius:8px;padding:14px 18px;margin-bottom:24px;font-size:.85rem;color:#888;line-height:1.6}
+.note strong{color:#e0e0e0}
+
+@media(max-width:700px){
+  .staff-table{font-size:.8rem}
+  .staff-table th,.staff-table td{padding:8px 6px}
+  .summary{gap:12px}
+}
 </style>
 </head>
 <body>
 <div class="container">
   <a href="{% url 'songs:llm_guide' %}" class="back-link">← Portal</a>
-  <h1>Staff Monitor</h1>
+  <h1>🔍 Staff Monitor</h1>
+
+  <div class="note">
+    <strong>スタッフの学習データレビュー活動を確認するページです。</strong><br>
+    サボっている人がいたら直接話してください。ノルマ残が15以上でロックされます。
+  </div>
 
   <div class="summary">
     <div class="summary-card">
@@ -84,11 +77,10 @@ h1{font-size:1.5rem;font-weight:700;margin-bottom:24px;color:#ff7940}
       <tr>
         <th>ユーザー</th>
         <th>ノルマ残</th>
-        <th>ロック</th>
+        <th>ステータス</th>
         <th>レビュー数</th>
         <th>編集数</th>
         <th>最終活動</th>
-        <th></th>
       </tr>
     </thead>
     <tbody>
@@ -110,9 +102,11 @@ h1{font-size:1.5rem;font-weight:700;margin-bottom:24px;color:#ff7940}
         </td>
         <td>
           {% if s.obligation and s.obligation.is_review_locked %}
-            <span class="badge badge-locked">LOCKED</span>
+            <span class="badge badge-locked">🔒 LOCKED</span>
+          {% elif s.obligation and s.obligation.pending_reviews >= 10 %}
+            <span class="badge badge-warn">⚠️ 要注意</span>
           {% elif s.obligation %}
-            <span class="badge badge-ok">OK</span>
+            <span class="badge badge-ok">✅ OK</span>
           {% else %}
             <span class="badge badge-inactive">未登録</span>
           {% endif %}
@@ -123,34 +117,16 @@ h1{font-size:1.5rem;font-weight:700;margin-bottom:24px;color:#ff7940}
           {% if s.last_activity %}
             <span class="time-ago" data-ts="{{ s.last_activity|date:'c' }}"></span>
           {% else %}
-            <span class="stat">-</span>
+            <span class="stat">未活動</span>
           {% endif %}
-        </td>
-        <td>
-          <button class="msg-btn" onclick="openModal('{{ s.user.username }}')">msg</button>
         </td>
       </tr>
       {% empty %}
-      <tr><td colspan="7" style="text-align:center;color:#666;padding:32px">スタッフユーザーがいません</td></tr>
+      <tr><td colspan="6" style="text-align:center;color:#666;padding:32px">スタッフユーザーがいません</td></tr>
       {% endfor %}
     </tbody>
   </table>
 </div>
-
-<!-- メッセージモーダル -->
-<div class="modal-overlay" id="modal">
-  <div class="modal">
-    <h3 id="modal-title">メッセージ送信</h3>
-    <p class="modal-sub">→ <span id="modal-user"></span></p>
-    <textarea id="msg-text" placeholder="メッセージを入力..." maxlength="500"></textarea>
-    <div class="modal-actions">
-      <button class="btn-cancel" onclick="closeModal()">キャンセル</button>
-      <button class="btn-send" id="btn-send" onclick="sendMessage()">送信</button>
-    </div>
-  </div>
-</div>
-
-<div class="toast" id="toast"></div>
 
 <script>
 // 集計
@@ -171,57 +147,6 @@ document.querySelectorAll('.time-ago').forEach(el => {
   else if (diff < 86400) el.textContent = Math.floor(diff/3600) + '時間前';
   else el.textContent = Math.floor(diff/86400) + '日前';
 });
-
-// モーダル
-let targetUser = '';
-function openModal(username) {
-  targetUser = username;
-  document.getElementById('modal-user').textContent = username;
-  document.getElementById('msg-text').value = '';
-  document.getElementById('modal').classList.add('active');
-  document.getElementById('msg-text').focus();
-}
-function closeModal() {
-  document.getElementById('modal').classList.remove('active');
-}
-document.getElementById('modal').addEventListener('click', e => {
-  if (e.target === e.currentTarget) closeModal();
-});
-
-function showToast(msg, isError) {
-  const t = document.getElementById('toast');
-  t.textContent = msg;
-  t.className = 'toast' + (isError ? ' error' : '');
-  t.style.display = 'block';
-  setTimeout(() => t.style.display = 'none', 3000);
-}
-
-async function sendMessage() {
-  const text = document.getElementById('msg-text').value.trim();
-  if (!text) return;
-  const btn = document.getElementById('btn-send');
-  btn.disabled = true;
-  try {
-    const resp = await fetch('{% url "songs:staff_send_message" %}', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'X-CSRFToken': '{{ csrf_token }}',
-      },
-      body: JSON.stringify({ username: targetUser, message: text }),
-    });
-    const data = await resp.json();
-    if (data.ok) {
-      showToast(data.message, false);
-      closeModal();
-    } else {
-      showToast(data.error || 'エラーが発生しました', true);
-    }
-  } catch(e) {
-    showToast('通信エラー', true);
-  }
-  btn.disabled = false;
-}
 </script>
 </body>
 </html>

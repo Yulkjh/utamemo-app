@@ -135,6 +135,23 @@
                 </div>
             </a>
         </div>
+
+        {% if user.is_superuser %}
+        <!-- 9. スタッフ監視 (スーパーユーザー専用) -->
+        <div class="col-md-4 col-sm-6">
+            <a href="{% url 'songs:staff_monitor' %}" class="text-decoration-none">
+                <div class="card h-100 border-0 shadow-sm" style="transition: transform .15s; border-left: 3px solid #60a5fa !important;" onmouseover="this.style.transform='translateY(-4px)'" onmouseout="this.style.transform=''">
+                    <div class="card-body text-center py-4">
+                        <div class="rounded-circle d-inline-flex align-items-center justify-content-center mb-3" style="width:56px;height:56px;background:linear-gradient(135deg,#3b82f6,#60a5fa);">
+                            <i class="bi bi-people text-white fs-4"></i>
+                        </div>
+                        <h5 class="card-title text-dark">スタッフ監視</h5>
+                        <p class="card-text text-muted small">スタッフのレビュー活動を確認</p>
+                    </div>
+                </div>
+            </a>
+        </div>
+        {% endif %}
     </div>
 
     <hr class="mb-4">

@@ -3970,3 +3970,60 @@ def test_mureka_poll(request):
     except Exception as e:
         logger.error(f'[TEST-MUREKA] Poll error: {e}')
         return JsonResponse({'status': 'error', 'error': str(e)})
+
+
+# =============================================================================
+# スタッフ活動監視（スーパーユーザー専用）
+# =============================================================================
+
+def superuser_required(view_func):
+    """スーパーユーザーのみアクセス可能"""
+    from functools import wraps
+    @wraps(view_func)
+    def wrapper(request, *args, **kwargs):
+        if not request.user.is_authenticated or not request.user.is_superuser:
+            from django.http import Http404
+            raise Http404
+        return view_func(request, *args, **kwargs)
+    return wrapper
+
+
+@superuser_required
+def staff_monitor(request):
+    """スタッフの学習データ活動を監視するページ（スーパーユーザー専用）"""
+    from users.models import (
+        User, StaffReviewObligation, TrainingDataReview,
+        TrainingDataEditLog,
+    )
+    from django.db.models import Max, Count
+
+    staff_users = User.objects.filter(is_staff=True).exclude(is_superuser=True)
+
+    staff_data = []
+    for user in staff_users:
+        obligation = StaffReviewObligation.objects.filter(user=user).first()
+        review_count = TrainingDataReview.objects.filter(reviewer=user).count()
+        edit_count = TrainingDataEditLog.objects.filter(editor=user).count()
+        last_review = TrainingDataReview.objects.filter(reviewer=user).aggregate(
+            last=Max('reviewed_at'))['last']
+        last_edit = TrainingDataEditLog.objects.filter(editor=user).aggregate(
+            last=Max('edited_at'))['last']
+
+        last_activity = None
+        if last_review and last_edit:
+            last_activity = max(last_review, last_edit)
+        else:
+            last_activity = last_review or last_edit
+
+        staff_data.append({
+            'user': user,
+            'obligation': obligation,
+            'review_count': review_count,
+            'edit_count': edit_count,
+            'last_activity': last_activity,
+        })
+
+    return render(request, 'songs/staff_monitor.html', {
+        'staff_data': staff_data,
+        'page_title': 'スタッフ活動監視',
+    })
