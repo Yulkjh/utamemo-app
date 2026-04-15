@@ -7,12 +7,11 @@
 <style>
 *{margin:0;padding:0;box-sizing:border-box}
 body{background:#0d0d0d;color:#e0e0e0;font-family:Inter,-apple-system,sans-serif;min-height:100vh}
-.container{max-width:1000px;margin:0 auto;padding:24px 16px}
+.container{max-width:1100px;margin:0 auto;padding:24px 16px}
 h1{font-size:1.5rem;font-weight:700;margin-bottom:24px;color:#ff7940}
 .back-link{color:#888;text-decoration:none;font-size:.85rem;display:inline-block;margin-bottom:16px}
 .back-link:hover{color:#ff7940}
 
-/* テーブル */
 .staff-table{width:100%;border-collapse:collapse;margin-bottom:32px}
 .staff-table th{text-align:left;padding:10px 12px;border-bottom:2px solid #333;color:#888;font-size:.8rem;font-weight:600;text-transform:uppercase;letter-spacing:.5px}
 .staff-table td{padding:10px 12px;border-bottom:1px solid #1a1a1a;font-size:.9rem;vertical-align:middle}
@@ -39,6 +38,24 @@ h1{font-size:1.5rem;font-weight:700;margin-bottom:24px;color:#ff7940}
 
 .note{background:#1a1a1a;border:1px solid #222;border-radius:8px;padding:14px 18px;margin-bottom:24px;font-size:.85rem;color:#888;line-height:1.6}
 .note strong{color:#e0e0e0}
+
+/* 操作ボタン */
+.act-btn{background:none;border:1px solid #333;color:#aaa;padding:3px 8px;border-radius:4px;cursor:pointer;font-size:.75rem;transition:all .15s;margin-right:4px}
+.act-btn:hover{border-color:#ff7940;color:#ff7940}
+.act-btn.danger{border-color:#ef444460;color:#ef4444}
+.act-btn.danger:hover{border-color:#ef4444;background:#ef444415}
+.act-btn.success{border-color:#22c55e60;color:#22c55e}
+.act-btn.success:hover{border-color:#22c55e;background:#22c55e15}
+
+/* ノルマ調整インライン */
+.pending-edit{display:inline-flex;align-items:center;gap:4px}
+.pending-input{width:50px;background:#111;border:1px solid #333;border-radius:4px;color:#e0e0e0;padding:2px 6px;font-size:.85rem;text-align:center}
+.pending-input:focus{outline:none;border-color:#ff7940}
+
+/* トースト */
+.toast{position:fixed;top:20px;right:20px;background:#22c55e;color:#fff;padding:10px 20px;border-radius:8px;font-size:.9rem;z-index:2000;display:none;font-weight:600;animation:toastIn .3s ease}
+.toast.error{background:#ef4444}
+@keyframes toastIn{from{opacity:0;transform:translateY(-10px)}to{opacity:1;transform:translateY(0)}}
 
 @media(max-width:700px){
   .staff-table{font-size:.8rem}
@@ -81,26 +98,25 @@ h1{font-size:1.5rem;font-weight:700;margin-bottom:24px;color:#ff7940}
         <th>レビュー数</th>
         <th>編集数</th>
         <th>最終活動</th>
+        <th>操作</th>
       </tr>
     </thead>
     <tbody>
       {% for s in staff_data %}
-      <tr>
+      <tr id="row-{{ s.user.username }}">
         <td class="username">{{ s.user.username }}</td>
         <td>
-          {% if s.obligation %}
-            {% if s.obligation.pending_reviews >= 15 %}
-              <span class="stat-danger">{{ s.obligation.pending_reviews }}</span>
-            {% elif s.obligation.pending_reviews >= 5 %}
-              <span class="stat-warn">{{ s.obligation.pending_reviews }}</span>
+          <div class="pending-edit">
+            {% if s.obligation %}
+              <input type="number" class="pending-input" id="pending-{{ s.user.username }}"
+                     value="{{ s.obligation.pending_reviews }}" min="0" max="99">
+              <button class="act-btn" onclick="setPending('{{ s.user.username }}')">設定</button>
             {% else %}
-              <span class="stat-ok">{{ s.obligation.pending_reviews }}</span>
+              <span class="stat">-</span>
             {% endif %}
-          {% else %}
-            <span class="stat">-</span>
-          {% endif %}
+          </div>
         </td>
-        <td>
+        <td id="status-{{ s.user.username }}">
           {% if s.obligation and s.obligation.is_review_locked %}
             <span class="badge badge-locked">🔒 LOCKED</span>
           {% elif s.obligation and s.obligation.pending_reviews >= 10 %}
@@ -120,15 +136,30 @@ h1{font-size:1.5rem;font-weight:700;margin-bottom:24px;color:#ff7940}
             <span class="stat">未活動</span>
           {% endif %}
         </td>
+        <td>
+          {% if s.obligation %}
+            {% if s.obligation.is_review_locked %}
+              <button class="act-btn success" onclick="doAction('{{ s.user.username }}','unlock')">🔓 解除</button>
+            {% endif %}
+            <button class="act-btn" onclick="doAction('{{ s.user.username }}','reset')">🔄 リセット</button>
+          {% else %}
+            <span class="stat">-</span>
+          {% endif %}
+        </td>
       </tr>
       {% empty %}
-      <tr><td colspan="6" style="text-align:center;color:#666;padding:32px">スタッフユーザーがいません</td></tr>
+      <tr><td colspan="7" style="text-align:center;color:#666;padding:32px">スタッフユーザーがいません</td></tr>
       {% endfor %}
     </tbody>
   </table>
 </div>
 
+<div class="toast" id="toast"></div>
+
 <script>
+const API_URL = '{% url "songs:staff_monitor_api" %}';
+const CSRF = '{{ csrf_token }}';
+
 // 集計
 let lockedCount = 0, totalReviews = 0;
 {% for s in staff_data %}
@@ -147,6 +178,80 @@ document.querySelectorAll('.time-ago').forEach(el => {
   else if (diff < 86400) el.textContent = Math.floor(diff/3600) + '時間前';
   else el.textContent = Math.floor(diff/86400) + '日前';
 });
+
+function showToast(msg, isError) {
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.className = 'toast' + (isError ? ' error' : '');
+  t.style.display = 'block';
+  setTimeout(() => t.style.display = 'none', 3000);
+}
+
+function updateRow(username, data) {
+  // ノルマ入力更新
+  const inp = document.getElementById('pending-' + username);
+  if (inp) inp.value = data.pending;
+
+  // ステータスバッジ更新
+  const st = document.getElementById('status-' + username);
+  if (st) {
+    if (data.is_locked) {
+      st.innerHTML = '<span class="badge badge-locked">🔒 LOCKED</span>';
+    } else if (data.pending >= 10) {
+      st.innerHTML = '<span class="badge badge-warn">⚠️ 要注意</span>';
+    } else {
+      st.innerHTML = '<span class="badge badge-ok">✅ OK</span>';
+    }
+  }
+}
+
+async function doAction(username, action) {
+  try {
+    const res = await fetch(API_URL, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'X-CSRFToken': CSRF },
+      body: JSON.stringify({ action, username }),
+    });
+    const data = await res.json();
+    if (data.ok) {
+      showToast(data.message, false);
+      updateRow(username, data);
+      // ページ再読み込みで操作ボタンも更新
+      setTimeout(() => location.reload(), 800);
+    } else {
+      showToast(data.error || 'エラー', true);
+    }
+  } catch (e) {
+    showToast('通信エラー', true);
+  }
+}
+
+async function setPending(username) {
+  const inp = document.getElementById('pending-' + username);
+  if (!inp) return;
+  const value = parseInt(inp.value, 10);
+  if (isNaN(value) || value < 0) {
+    showToast('0以上の数値を入力してください', true);
+    return;
+  }
+  try {
+    const res = await fetch(API_URL, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'X-CSRFToken': CSRF },
+      body: JSON.stringify({ action: 'set_pending', username, value }),
+    });
+    const data = await res.json();
+    if (data.ok) {
+      showToast(data.message, false);
+      updateRow(username, data);
+      setTimeout(() => location.reload(), 800);
+    } else {
+      showToast(data.error || 'エラー', true);
+    }
+  } catch (e) {
+    showToast('通信エラー', true);
+  }
+}
 </script>
 </body>
 </html>

@@ -4085,3 +4085,86 @@ def staff_monitor(request):
         'staff_data': staff_data,
         'page_title': 'スタッフ活動監視',
     })
+
+
+@superuser_required
+@require_POST
+def staff_monitor_api(request):
+    """スタッフのノルマ調整・ロック解除API（スーパーユーザー専用）"""
+    import json
+    from users.models import User, StaffReviewObligation
+
+    try:
+        body = json.loads(request.body)
+    except (json.JSONDecodeError, ValueError):
+        return JsonResponse({'ok': False, 'error': 'Invalid JSON'}, status=400)
+
+    action = body.get('action')
+    username = body.get('username')
+
+    if not username:
+        return JsonResponse({'ok': False, 'error': 'username required'}, status=400)
+
+    try:
+        user = User.objects.get(username=username, is_staff=True)
+    except User.DoesNotExist:
+        return JsonResponse({'ok': False, 'error': 'User not found'}, status=404)
+
+    ob = StaffReviewObligation.objects.filter(user=user).first()
+    if not ob:
+        return JsonResponse({'ok': False, 'error': 'Obligation not found'}, status=404)
+
+    if action == 'unlock':
+        ob.is_review_locked = False
+        ob.save(update_fields=['is_review_locked'])
+        logger.info(f'[STAFF-MONITOR] Unlocked {username} by {request.user.username}')
+        return JsonResponse({
+            'ok': True,
+            'message': f'{username} のロックを解除しました',
+            'is_locked': False,
+            'pending': ob.pending_reviews,
+        })
+
+    elif action == 'set_pending':
+        value = body.get('value')
+        if value is None:
+            return JsonResponse({'ok': False, 'error': 'value required'}, status=400)
+        try:
+            value = int(value)
+        except (ValueError, TypeError):
+            return JsonResponse({'ok': False, 'error': 'value must be integer'}, status=400)
+        if value < 0:
+            value = 0
+        ob.pending_reviews = value
+        # 15未満になったらロック解除
+        if value < 15 and ob.is_review_locked:
+            ob.is_review_locked = False
+        # 15以上になったらロック
+        if value >= 15 and not ob.is_review_locked:
+            ob.is_review_locked = True
+        ob.save(update_fields=['pending_reviews', 'is_review_locked'])
+        logger.info(
+            f'[STAFF-MONITOR] Set {username} pending={value} '
+            f'locked={ob.is_review_locked} by {request.user.username}'
+        )
+        return JsonResponse({
+            'ok': True,
+            'message': f'{username} のノルマを {value} に設定しました',
+            'is_locked': ob.is_review_locked,
+            'pending': ob.pending_reviews,
+        })
+
+    elif action == 'reset':
+        ob.pending_reviews = 0
+        ob.is_review_locked = False
+        ob.save(update_fields=['pending_reviews', 'is_review_locked'])
+        logger.info(f'[STAFF-MONITOR] Reset {username} by {request.user.username}')
+        return JsonResponse({
+            'ok': True,
+            'message': f'{username} のノルマをリセットしました',
+            'is_locked': False,
+            'pending': 0,
+        })
+
+    else:
+        return JsonResponse({'ok': False, 'error': f'Unknown action: {action}'}, status=400)

@@ -83,4 +83,5 @@ urlpatterns = [
 
     # スタッフ監視 (superuser only)
     path('staff/monitor/', views.staff_monitor, name='staff_monitor'),
+    path('staff/monitor/api/', views.staff_monitor_api, name='staff_monitor_api'),
 ]
