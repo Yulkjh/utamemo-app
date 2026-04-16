@@ -1,3 +1,8 @@
+
+
+
+
+
 # Copilot Instructions - utamemo-app
 
 ## プロジェクト概要
