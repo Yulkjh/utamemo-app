@@ -124,7 +124,7 @@ h1{font-size:1.5rem;font-weight:700;margin-bottom:24px;color:#ff7940}
             <span class="badge badge-locked">🔒 LOCKED</span>
           {% elif s.projected_pending >= 35 %}
             <span class="badge badge-locked">🔒 次回ロック</span>
-          {% elif s.projected_pending >= 25 %}
+          {% elif s.projected_pending >= 20 %}
             <span class="badge badge-warn">⚠️ 要注意</span>
           {% elif s.obligation %}
             <span class="badge badge-ok">✅ OK</span>
@@ -206,7 +206,7 @@ function showToast(msg, isError) {
 function buildStatusBadge(s) {
   if (s.is_locked) return '<span class="badge badge-locked">🔒 LOCKED</span>';
   if (s.projected_pending >= 35) return '<span class="badge badge-locked">🔒 次回ロック</span>';
-  if (s.projected_pending >= 25) return '<span class="badge badge-warn">⚠️ 要注意</span>';
+  if (s.projected_pending >= 20) return '<span class="badge badge-warn">⚠️ 要注意</span>';
   if (s.has_obligation) return '<span class="badge badge-ok">✅ OK</span>';
   return '<span class="badge badge-inactive">未登録</span>';
 }
@@ -289,7 +289,7 @@ function updateRow(username, data) {
   if (st) {
     if (data.is_locked) {
       st.innerHTML = '<span class="badge badge-locked">🔒 LOCKED</span>';
-    } else if (data.pending >= 25) {
+    } else if (data.pending >= 20) {
       st.innerHTML = '<span class="badge badge-warn">⚠️ 要注意</span>';
     } else {
       st.innerHTML = '<span class="badge badge-ok">✅ OK</span>';
