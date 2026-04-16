@@ -2716,7 +2716,6 @@ def training_data_viewer(request):
     """学習データ確認・編集ページ（管理者のみ）"""
     import json
     import re
-    from pathlib import Path
     from django.utils import timezone as _tz
     from users.models import StaffReviewObligation
 
@@ -2755,11 +2754,9 @@ def training_data_viewer(request):
                     f'(pending={obligation.pending_reviews})'
                 )
 
-    data_path = Path(__file__).resolve().parent.parent.parent / 'training' / 'data' / 'lyrics_training_data.json'
-    records = []
-    if data_path.exists():
-        with open(data_path, 'r', encoding='utf-8') as f:
-            records = json.load(f)
+    from .models import TrainingData
+    data_records = TrainingData.objects.all()
+    records = [r.to_dict() for r in data_records]
 
     # ジャンル抽出
     genre_counts = {}
@@ -2778,10 +2775,6 @@ def training_data_viewer(request):
         reviewed_map.setdefault(key, []).append(rv.reviewer.username)
         if rv.trained_at is not None:
             trained_hashes.add(key)
-
-    # records にハッシュを付与
-    for i, r in enumerate(records):
-        r['_hash'] = make_data_hash(r.get('input', ''))
 
     # 未レビュー件数を算出 (レビュー済みハッシュに含まれないレコード)
     reviewed_hashes = set(reviewed_map.keys())
@@ -2809,9 +2802,9 @@ def training_data_viewer(request):
 def training_data_api(request):
     """学習データの編集・削除・追加API（管理者のみ）"""
     import json
-    from pathlib import Path
     from django.db.models import F as _F
     from users.models import StaffReviewObligation
+    from .models import TrainingData
 
     def _decrement_pending(user):
         """編集/削除1回ごとに pending_reviews を -1（下限0）"""
@@ -2824,10 +2817,6 @@ def training_data_api(request):
                 user=user, pending_reviews__lt=35, is_review_locked=True
             ).update(is_review_locked=False)
 
-    data_path = Path(__file__).resolve().parent.parent.parent / 'training' / 'data' / 'lyrics_training_data.json'
-    if not data_path.exists():
-        return JsonResponse({'error': 'データファイルが見つかりません'}, status=404)
-
     try:
         body = json.loads(request.body)
     except json.JSONDecodeError:
@@ -2835,56 +2824,62 @@ def training_data_api(request):
 
     action = body.get('action')
 
-    with open(data_path, 'r', encoding='utf-8') as f:
-        records = json.load(f)
-
     if action == 'update':
+        data_hash = body.get('data_hash')
         index = body.get('index')
-        if not isinstance(index, int) or index < 0 or index >= len(records):
-            return JsonResponse({'error': 'Invalid index'}, status=400)
+        if not data_hash:
+            return JsonResponse({'error': 'data_hash required'}, status=400)
+
+        try:
+            record = TrainingData.objects.get(data_hash=data_hash)
+        except TrainingData.DoesNotExist:
+            return JsonResponse({'error': f'Record not found: {data_hash}'}, status=404)
 
         new_input = body.get('input')
         new_output = body.get('output')
         new_instruction = body.get('instruction')
 
         if new_input is not None:
-            records[index]['input'] = new_input
+            record.input_text = new_input
         if new_output is not None:
-            records[index]['output'] = new_output
+            record.output_text = new_output
         if new_instruction is not None:
-            records[index]['instruction'] = new_instruction
-
-        with open(data_path, 'w', encoding='utf-8') as f:
-            json.dump(records, f, ensure_ascii=False, indent=2)
+            record.instruction = new_instruction
+        record.save()
 
         _decrement_pending(request.user)
         obligation = StaffReviewObligation.objects.filter(user=request.user).first()
         pending = obligation.pending_reviews if obligation else 0
-        return JsonResponse({'ok': True, 'message': f'#{index + 1} を更新しました', 'pending_reviews': pending})
+        display_idx = (index + 1) if isinstance(index, int) else '?'
+        return JsonResponse({'ok': True, 'message': f'#{display_idx} を更新しました', 'pending_reviews': pending})
 
     elif action == 'delete':
+        data_hash = body.get('data_hash')
         index = body.get('index')
-        if not isinstance(index, int) or index < 0 or index >= len(records):
-            return JsonResponse({'error': 'Invalid index'}, status=400)
+        if not data_hash:
+            return JsonResponse({'error': 'data_hash required'}, status=400)
 
-        deleted = records.pop(index)
-        with open(data_path, 'w', encoding='utf-8') as f:
-            json.dump(records, f, ensure_ascii=False, indent=2)
+        deleted_count, _ = TrainingData.objects.filter(data_hash=data_hash).delete()
+        if deleted_count == 0:
+            return JsonResponse({'error': f'Record not found: {data_hash}'}, status=404)
 
         _decrement_pending(request.user)
         obligation = StaffReviewObligation.objects.filter(user=request.user).first()
         pending = obligation.pending_reviews if obligation else 0
-        return JsonResponse({'ok': True, 'message': f'#{index + 1} を削除しました', 'total': len(records), 'pending_reviews': pending})
+        total = TrainingData.objects.count()
+        display_idx = (index + 1) if isinstance(index, int) else '?'
+        return JsonResponse({'ok': True, 'message': f'#{display_idx} を削除しました', 'total': total, 'pending_reviews': pending})
 
     elif action == 'reload':
+        records = [r.to_dict() for r in TrainingData.objects.all()]
         return JsonResponse({'ok': True, 'records': records, 'total': len(records)})
 
     elif action == 'mark_reviewed':
+        data_hash = body.get('data_hash')
         index = body.get('index')
-        if not isinstance(index, int) or index < 0 or index >= len(records):
-            return JsonResponse({'error': 'Invalid index'}, status=400)
-        from users.models import TrainingDataReview, make_data_hash
-        data_hash = make_data_hash(records[index].get('input', ''))
+        if not data_hash:
+            return JsonResponse({'error': 'data_hash required'}, status=400)
+        from users.models import TrainingDataReview
         # ソフトデリート済みのレコードがあれば復元、なければ新規作成
         existing = TrainingDataReview.all_objects.filter(
             data_hash=data_hash,
@@ -2896,33 +2891,35 @@ def training_data_api(request):
                 created = True
             else:
                 created = False
-            existing.data_index = index
-            existing.save(update_fields=['data_index'])
+            if isinstance(index, int):
+                existing.data_index = index
+                existing.save(update_fields=['data_index'])
         else:
             TrainingDataReview.all_objects.create(
                 data_hash=data_hash,
                 reviewer=request.user,
-                data_index=index,
+                data_index=index if isinstance(index, int) else 0,
             )
             created = True
         _decrement_pending(request.user)
         obligation = StaffReviewObligation.objects.filter(user=request.user).first()
         pending = obligation.pending_reviews if obligation else 0
         reviews = list(TrainingDataReview.objects.filter(data_hash=data_hash).select_related('reviewer').values_list('reviewer__username', flat=True))
+        display_idx = (index + 1) if isinstance(index, int) else '?'
         return JsonResponse({
             'ok': True,
-            'message': f'#{index + 1} を確認済みにしました' if created else f'#{index + 1} は既に確認済みです',
+            'message': f'#{display_idx} を確認済みにしました' if created else f'#{display_idx} は既に確認済みです',
             'pending_reviews': pending,
             'reviewers': reviews,
             'data_hash': data_hash,
         })
 
     elif action == 'unmark_reviewed':
+        data_hash = body.get('data_hash')
         index = body.get('index')
-        if not isinstance(index, int) or index < 0 or index >= len(records):
-            return JsonResponse({'error': 'Invalid index'}, status=400)
-        from users.models import TrainingDataReview, make_data_hash
-        data_hash = make_data_hash(records[index].get('input', ''))
+        if not data_hash:
+            return JsonResponse({'error': 'data_hash required'}, status=400)
+        from users.models import TrainingDataReview
         # ソフトデリート（復元可能）
         from django.utils import timezone as tz
         soft_deleted = TrainingDataReview.objects.filter(
@@ -2930,9 +2927,10 @@ def training_data_api(request):
             reviewer=request.user,
         ).update(is_deleted=True, deleted_at=tz.now())
         reviews = list(TrainingDataReview.objects.filter(data_hash=data_hash).select_related('reviewer').values_list('reviewer__username', flat=True))
+        display_idx = (index + 1) if isinstance(index, int) else '?'
         return JsonResponse({
             'ok': True,
-            'message': f'#{index + 1} の確認を取り消しました',
+            'message': f'#{display_idx} の確認を取り消しました',
             'reviewers': reviews,
             'data_hash': data_hash,
         })
@@ -2991,7 +2989,7 @@ def _get_instruction_template_with_meta():
 @require_POST
 def training_data_generate(request):
     """Gemini APIで学習データを5件生成"""
-    from pathlib import Path
+    from .models import TrainingData
     try:
         import google.generativeai as genai
     except ImportError:
@@ -3001,11 +2999,7 @@ def training_data_generate(request):
     if not gemini_key:
         return JsonResponse({'error': 'GEMINI_API_KEY が未設定です'}, status=500)
 
-    data_path = Path(__file__).resolve().parent.parent.parent / 'training' / 'data' / 'lyrics_training_data.json'
-    records = []
-    if data_path.exists():
-        with open(data_path, 'r', encoding='utf-8') as f:
-            records = json.load(f)
+    records = [r.to_dict() for r in TrainingData.objects.all()]
 
     # プロンプト設定をDBから読み込み
     instruction_template = _get_instruction_template()
@@ -3074,6 +3068,13 @@ def training_data_generate(request):
                 "input": data["input"],
                 "output": data["output"],
             }
+            # DBに保存
+            td = TrainingData.objects.create(
+                instruction=instruction,
+                input_text=data["input"],
+                output_text=data["output"],
+            )
+            record['_hash'] = td.data_hash
             records.append(record)
             generated.append({
                 'subject': data.get('subject', '?'),
@@ -3087,10 +3088,7 @@ def training_data_generate(request):
         except Exception as e:
             errors.append(f"[{i+1}] {str(e)[:100]}")
 
-    # 保存
-    if generated:
-        with open(data_path, 'w', encoding='utf-8') as f:
-            json.dump(records, f, ensure_ascii=False, indent=2)
+    # 保存はDBに直接行われるため、ファイル書き込み不要
 
     return JsonResponse({
         'ok': True,
@@ -3323,7 +3321,7 @@ def training_data_download(request):
     Header: X-Training-Api-Key: <api_key>
     Response: 学習データJSON配列 + プロンプトテンプレート
     """
-    from .models import TrainingSession, PromptTemplate
+    from .models import TrainingSession, PromptTemplate, TrainingData
 
     api_key = request.headers.get('X-Training-Api-Key', '')
     if not api_key:
@@ -3334,12 +3332,7 @@ def training_data_download(request):
     except TrainingSession.DoesNotExist:
         return JsonResponse({'error': 'Invalid API key'}, status=403)
 
-    data_path = Path(__file__).resolve().parent.parent.parent / 'training' / 'data' / 'lyrics_training_data.json'
-    if not data_path.exists():
-        return JsonResponse({'error': 'データファイルが見つかりません'}, status=404)
-
-    with open(data_path, 'r', encoding='utf-8') as f:
-        records = json.load(f)
+    records = [r.to_dict() for r in TrainingData.objects.all()]
 
     # プロンプトテンプレートも返す
     prompt = PromptTemplate.get_template('lyrics_instruction')
@@ -3365,7 +3358,9 @@ def training_data_upload(request):
       - "merge" (デフォルト): 新規レコードのみ追加（input の先頭50文字で重複判定）
       - "replace": サーバー側を完全に置き換え（危険 - 管理者専用）
     """
-    from .models import TrainingSession
+    from .models import TrainingSession, TrainingData
+    from users.models import make_data_hash
+    from django.db import transaction
 
     api_key = request.headers.get('X-Training-Api-Key', '')
     if not api_key:
@@ -3397,58 +3392,55 @@ def training_data_upload(request):
         if 'input' not in rec or 'output' not in rec:
             return JsonResponse({'error': f'records[{i}] に input/output がありません'}, status=400)
 
-    data_path = Path(__file__).resolve().parent.parent.parent / 'training' / 'data' / 'lyrics_training_data.json'
-
-    # 既存データ読み込み
-    existing = []
-    if data_path.exists():
-        with open(data_path, 'r', encoding='utf-8') as f:
-            existing = json.load(f)
-
     if mode == 'replace':
         # 完全置き換え
-        import shutil
-        if data_path.exists():
-            shutil.copy2(data_path, str(data_path) + '.bak')
-        final = upload_records
+        with transaction.atomic():
+            TrainingData.objects.all().delete()
+            for rec in upload_records:
+                TrainingData.objects.create(
+                    instruction=rec.get('instruction', ''),
+                    input_text=rec.get('input', ''),
+                    output_text=rec.get('output', ''),
+                )
         added = len(upload_records)
+        total = added
         logger.info('学習データ置換: %d 件 (by session %s)', added, session.machine_name)
     else:
-        # マージ: input の先頭50文字で重複判定
-        existing_keys = {r.get('input', '')[:50] for r in existing}
-        new_records = [r for r in upload_records if r.get('input', '')[:50] not in existing_keys]
-        added = len(new_records)
+        # マージ: data_hash で重複判定
+        existing_hashes = set(TrainingData.objects.values_list('data_hash', flat=True))
+        new_records = []
+        for rec in upload_records:
+            h = make_data_hash(rec.get('input', ''))
+            if h not in existing_hashes:
+                new_records.append(rec)
+                existing_hashes.add(h)
 
+        added = len(new_records)
         if added == 0:
+            total = TrainingData.objects.count()
             return JsonResponse({
                 'ok': True,
                 'message': '新規データなし（すべて既存と重複）',
                 'added': 0,
-                'total': len(existing),
+                'total': total,
             })
 
-        # バックアップ → マージ
-        import shutil
-        if data_path.exists():
-            shutil.copy2(data_path, str(data_path) + '.bak')
-
-        final = existing + new_records
-        logger.info('学習データマージ: +%d 件 (既存 %d → 合計 %d, by session %s)',
-                     added, len(existing), len(final), session.machine_name)
-
-    # 安全な書き込み (tmp → rename)
-    data_path.parent.mkdir(parents=True, exist_ok=True)
-    tmp_path = str(data_path) + '.tmp'
-    with open(tmp_path, 'w', encoding='utf-8') as f:
-        json.dump(final, f, ensure_ascii=False, indent=2)
-    import os as _os
-    _os.replace(tmp_path, str(data_path))
+        with transaction.atomic():
+            for rec in new_records:
+                TrainingData.objects.create(
+                    instruction=rec.get('instruction', ''),
+                    input_text=rec.get('input', ''),
+                    output_text=rec.get('output', ''),
+                )
+        total = TrainingData.objects.count()
+        logger.info('学習データマージ: +%d 件 (合計 %d, by session %s)',
+                     added, total, session.machine_name)
 
     return JsonResponse({
         'ok': True,
         'message': f'{added} 件追加しました',
         'added': added,
-        'total': len(final),
+        'total': total,
     })
 
 

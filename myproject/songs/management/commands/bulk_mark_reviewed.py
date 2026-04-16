@@ -6,13 +6,12 @@
   python manage.py bulk_mark_reviewed --username admin
   python manage.py bulk_mark_reviewed --dry-run
 """
-import json
 import logging
-from pathlib import Path
 
 from django.core.management.base import BaseCommand
 
-from users.models import TrainingDataReview, User, make_data_hash
+from songs.models import TrainingData
+from users.models import TrainingDataReview, User
 
 logger = logging.getLogger(__name__)
 
@@ -33,15 +32,10 @@ class Command(BaseCommand):
         )
 
     def handle(self, *args, **options):
-        data_path = Path(__file__).resolve().parent.parent.parent.parent.parent / 'training' / 'data' / 'lyrics_training_data.json'
-        if not data_path.exists():
-            self.stderr.write(self.style.ERROR(f'データファイルが見つかりません: {data_path}'))
-            return
+        records = TrainingData.objects.all()
+        total = records.count()
 
-        with open(data_path, 'r', encoding='utf-8') as f:
-            records = json.load(f)
-
-        self.stdout.write(f'学習データ: {len(records)} 件')
+        self.stdout.write(f'学習データ: {total} 件')
 
         # レビュー者を決定
         username = options['username']
@@ -71,7 +65,7 @@ class Command(BaseCommand):
         skipped_count = 0
 
         for i, record in enumerate(records):
-            data_hash = make_data_hash(record.get('input', ''))
+            data_hash = record.data_hash
             existing = TrainingDataReview.all_objects.filter(
                 data_hash=data_hash,
                 reviewer=reviewer,

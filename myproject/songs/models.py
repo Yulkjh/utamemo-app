@@ -859,3 +859,44 @@ class PromptTemplate(models.Model):
             }
         )
         return obj
+
+
+class TrainingData(models.Model):
+    """学習データレコード（PostgreSQL永続化）
+
+    Renderのエフェメラルファイルシステム問題を解消するため、
+    学習データをDBで管理する。GPUマシン側はdownload APIで取得。
+    """
+    instruction = models.TextField(verbose_name='Instruction')
+    input_text = models.TextField(verbose_name='Input (学習テキスト)')
+    output_text = models.TextField(verbose_name='Output (生成歌詞)')
+    data_hash = models.CharField(
+        max_length=16,
+        unique=True,
+        verbose_name='データハッシュ',
+        help_text='input先頭100文字のSHA256先頭16文字',
+        db_index=True,
+    )
+    created_at = models.DateTimeField(auto_now_add=True, verbose_name='作成日時')
+    updated_at = models.DateTimeField(auto_now=True, verbose_name='更新日時')
+
+    class Meta:
+        verbose_name = '学習データ'
+        verbose_name_plural = '学習データ'
+        ordering = ['id']
+
+    def save(self, *args, **kwargs):
+        from users.models import make_data_hash
+        self.data_hash = make_data_hash(self.input_text)
+        super().save(*args, **kwargs)
+
+    def to_dict(self):
+        return {
+            'instruction': self.instruction,
+            'input': self.input_text,
+            'output': self.output_text,
+            '_hash': self.data_hash,
+        }
+
+    def __str__(self):
+        return f'#{self.id} {self.input_text[:40]}...'

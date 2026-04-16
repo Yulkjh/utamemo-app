@@ -988,7 +988,7 @@ async function saveEdit() {
         const res = await fetch(API_URL, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json', 'X-CSRFToken': CSRF_TOKEN },
-            body: JSON.stringify({ action: 'update', index: editingIndex, input, output })
+            body: JSON.stringify({ action: 'update', index: editingIndex, data_hash: allRecords[editingIndex]._hash, input, output })
         });
         const data = await res.json();
         if (data.ok) {
@@ -1034,7 +1034,7 @@ async function confirmDelete() {
         const res = await fetch(API_URL, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json', 'X-CSRFToken': CSRF_TOKEN },
-            body: JSON.stringify({ action: 'delete', index: deletingIndex })
+            body: JSON.stringify({ action: 'delete', index: deletingIndex, data_hash: allRecords[deletingIndex]._hash })
         });
         const data = await res.json();
         if (data.ok) {
@@ -1232,7 +1232,7 @@ async function toggleReview(index) {
         const res = await fetch(API_URL, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json', 'X-CSRFToken': CSRF_TOKEN },
-            body: JSON.stringify({ action, index })
+            body: JSON.stringify({ action, index, data_hash: hash })
         });
         const data = await res.json();
         if (data.ok) {

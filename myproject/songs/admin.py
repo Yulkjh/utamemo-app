@@ -4,6 +4,7 @@ from .models import (
     Song, Lyrics, Like, Favorite, Comment, UploadedImage,
     Tag, PlayHistory, Classroom, ClassroomMembership, ClassroomSong,
     FlashcardDeck, Flashcard, TrainingSession, PromptTemplate,
+    TrainingData,
 )
 
 
@@ -266,3 +267,16 @@ class PromptTemplateAdmin(admin.ModelAdmin):
     def get_key_display(self, obj):
         return obj.get_key_display()
     get_key_display.short_description = '名前'
+
+
+@admin.register(TrainingData)
+class TrainingDataAdmin(admin.ModelAdmin):
+    list_display = ('id', 'data_hash', 'short_input', 'created_at', 'updated_at')
+    search_fields = ('input_text', 'output_text', 'data_hash')
+    readonly_fields = ('data_hash', 'created_at', 'updated_at')
+    list_per_page = 50
+    ordering = ('id',)
+
+    def short_input(self, obj):
+        return obj.input_text[:60] + '...' if len(obj.input_text) > 60 else obj.input_text
+    short_input.short_description = 'Input'

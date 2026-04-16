@@ -13,3 +13,6 @@ python manage.py cleanup_inactive_songs
 
 # レビューデータの自動バックアップ
 python manage.py backup_reviews || true
+
+# 学習データをJSONからDBにインポート（初回デプロイ用、冪等）
+python manage.py import_training_data || true
