@@ -7,36 +7,13 @@ from django.contrib import messages
 from django.http import JsonResponse
 from django.urls import reverse_lazy
 from django.contrib.admin.views.decorators import staff_member_required
-from django.views.decorators.http import require_POST, require_http_methods
-from django.views.decorators.csrf import csrf_exempt
-from django.db.models import Q, Count, F
-from django.conf import settings
+from django.views.decorators.http import require_POST
+from django.db.models import Q, Count
 import json
-import logging
-from pathlib import Path
 
 from .models import Song, Like, Favorite, Comment, UploadedImage, Lyrics, PlayHistory, Tag
 from .forms import SongCreateForm, ImageUploadForm, CommentForm, SongPrivacyForm
-from .ai_services import GeminiLyricsGenerator, GeminiOCR, MurekaAIGenerator, get_lyrics_generator
-from .content_filter import check_text_for_inappropriate_content, check_name_for_inappropriate_content
-
-# ロガー設定
-logger = logging.getLogger(__name__)
-
-
-def hiragana_to_katakana(text):
-    """ひらがなをカタカナに変換"""
-    return ''.join(
-        chr(ord(char) + 96) if 'ぁ' <= char <= 'ゖ' else char
-        for char in text
-    )
-
-def katakana_to_hiragana(text):
-    """カタカナをひらがなに変換"""
-    return ''.join(
-        chr(ord(char) - 96) if 'ァ' <= char <= 'ヶ' else char
-        for char in text
-    )
+from .ai_services import GeminiLyricsGenerator, GeminiOCR, MurekaAIGenerator
 
 
 class HomeView(TemplateView):
@@ -45,27 +22,46 @@ class HomeView(TemplateView):
     
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
-        # 公開楽曲一覧は著作権保護のため無効化
-        context['recent_songs'] = []
-        context['popular_songs'] = []
+        try:
+            # 生成完了した公開楽曲のみ表示
+            base_query = Song.objects.filter(
+                is_public=True,
+                generation_status='completed'
+            ).select_related('created_by')
+            
+            context['recent_songs'] = base_query.order_by('-created_at')[:6]
+            context['popular_songs'] = base_query.order_by('-likes_count', '-created_at')[:6]
+        except Exception as e:
+            print(f"HomeView query error: {e}")
+            context['recent_songs'] = []
+            context['popular_songs'] = []
         return context
 
 
 class SongListView(ListView):
-    """楽曲一覧ビュー（著作権保護のため公開一覧を無効化 — ホームにリダイレクト）"""
+    """楽曲一覧ビュー"""
     model = Song
     template_name = 'songs/song_list.html'
     context_object_name = 'songs'
     paginate_by = 12
-
-    def get(self, request, *args, **kwargs):
-        return redirect('songs:home')
-
-
-def song_share_redirect(request, share_id):
-    """シェアURL（/s/<share_id>/）から曲詳細ページにリダイレクト"""
-    song = get_object_or_404(Song, share_id=share_id)
-    return redirect('songs:song_detail', pk=song.pk)
+    
+    def get_queryset(self):
+        # 生成完了した公開楽曲のみ表示
+        queryset = Song.objects.filter(
+            is_public=True,
+            generation_status='completed'
+        ).select_related('created_by').prefetch_related('tags')
+        
+        search_query = self.request.GET.get('q', '').strip()
+        if search_query:
+            queryset = queryset.filter(
+                Q(title__icontains=search_query) |
+                Q(artist__icontains=search_query) |
+                Q(genre__icontains=search_query) |
+                Q(tags__name__icontains=search_query)
+            ).distinct()
+        
+        return queryset.order_by('-created_at')
 
 
 class SongDetailView(DetailView):
@@ -85,8 +81,8 @@ class SongDetailView(DetailView):
         try:
             if hasattr(song, 'lyrics') and song.lyrics:
                 context['lyrics_content'] = song.lyrics.content or ''
-                context['decrypted_lyrics'] = song.lyrics.content or ''
                 context['original_text'] = song.lyrics.original_text or ''
+                context['decrypted_lyrics'] = song.lyrics.content or ''
                 context['decrypted_original_text'] = song.lyrics.original_text or ''
             else:
                 context['lyrics_content'] = ''
@@ -127,105 +123,43 @@ class SongDetailView(DetailView):
         except Exception:
             context['related_songs'] = []
         
-        # この楽曲の暗記カードデッキ
-        if self.request.user.is_authenticated and self.request.user == song.created_by:
-            from .models import FlashcardDeck
-            context['flashcard_deck'] = FlashcardDeck.objects.filter(
-                source_song=song, user=self.request.user
-            ).first()
-        
-        # シェア用URL
-        context['share_url'] = self.request.build_absolute_uri(song.get_share_url())
-        
         return context
     
     def _get_related_songs(self, song):
-        """関連楽曲を取得 - ジャンル、タグ、作成者で関連性を計算"""
-        from django.db.models import Case, When, IntegerField, Value
-        
-        # 自分自身を除外し、公開済みの楽曲のみ
+        """関連楽曲を取得"""
         related = Song.objects.filter(
             is_public=True,
             generation_status='completed'
         ).exclude(pk=song.pk)
         
-        # スコアリングで関連度を計算
+        # 同じタグを持つ楽曲を優先
         song_tags = song.tags.all()
-        tag_ids = list(song_tags.values_list('id', flat=True)) if song_tags.exists() else []
-        
-        # 同じジャンルかどうか
-        genre_match = Case(
-            When(genre=song.genre, then=Value(10)) if song.genre else When(pk__isnull=True, then=Value(0)),
-            default=Value(0),
-            output_field=IntegerField()
-        )
-        
-        # 同じ作成者かどうか
-        creator_match = Case(
-            When(created_by=song.created_by, then=Value(5)),
-            default=Value(0),
-            output_field=IntegerField()
-        )
-        
-        # タグの一致数
-        if tag_ids:
+        if song_tags.exists():
+            tag_ids = list(song_tags.values_list('id', flat=True))
             related = related.annotate(
-                matching_tags=Count('tags', filter=Q(tags__id__in=tag_ids)),
-                genre_score=genre_match,
-                creator_score=creator_match
-            ).annotate(
-                relevance_score=F('matching_tags') * 3 + F('genre_score') + F('creator_score')
-            ).order_by('-relevance_score', '-likes_count', '-created_at')
+                matching_tags=Count('tags', filter=Q(tags__id__in=tag_ids))
+            ).order_by('-matching_tags', '-likes_count')
         else:
-            # タグがない場合はジャンルと作成者でスコアリング
-            related = related.annotate(
-                genre_score=genre_match,
-                creator_score=creator_match
-            ).annotate(
-                relevance_score=F('genre_score') + F('creator_score')
-            ).order_by('-relevance_score', '-likes_count', '-created_at')
+            # タグがない場合は似た名前やジャンルで検索
+            filters = Q(genre=song.genre) if song.genre else Q()
+            if song.title and len(song.title) >= 3:
+                filters |= Q(title__icontains=song.title[:3])
+            if song.artist and len(song.artist) >= 3:
+                filters |= Q(artist__icontains=song.artist[:3])
+            if filters:
+                related = related.filter(filters).order_by('-likes_count')
+            else:
+                related = related.order_by('-likes_count')
         
         return related.select_related('created_by')[:5]
 
 
 class CreateSongView(LoginRequiredMixin, CreateView):
-
     """楽曲作成ビュー"""
     model = Song
     form_class = SongCreateForm
     template_name = 'songs/create_song.html'
-    success_url = reverse_lazy('songs:my_songs')
-    
-    def get_context_data(self, **kwargs):
-        context = super().get_context_data(**kwargs)
-        # モデル別の残り使用可能回数を取得
-        model_remaining = self.request.user.get_remaining_model_usage()
-        context['model_remaining'] = model_remaining
-        
-        # 次月1日のリセット日を計算
-        from django.utils import timezone
-        import calendar
-        now = timezone.now()
-        _, last_day = calendar.monthrange(now.year, now.month)
-        if now.month == 12:
-            next_reset = now.replace(year=now.year + 1, month=1, day=1)
-        else:
-            next_reset = now.replace(month=now.month + 1, day=1)
-        days_until_reset = (next_reset.date() - now.date()).days
-        context['next_reset_date'] = next_reset
-        context['days_until_reset'] = days_until_reset
-        
-        user = self.request.user
-        # V8の残りで判定（全プラン共通）
-        v8_remaining = model_remaining.get('v8', 0)
-        context['free_plan_remaining'] = v8_remaining
-        context['free_plan_limit_reached'] = v8_remaining == 0
-        context['paid_plan_all_exhausted'] = v8_remaining == 0
-        
-        # セッションからプリフィルデータを取得（再生成時）
-        context['prefill_music_prompt'] = self.request.session.pop('prefill_music_prompt', '')
-        
-        return context
+    success_url = reverse_lazy('songs:song_list')
     
     def get_form_kwargs(self):
         kwargs = super().get_form_kwargs()
@@ -244,7 +178,6 @@ class CreateSongView(LoginRequiredMixin, CreateView):
     
     def form_valid(self, form):
         form.instance.created_by = self.request.user
-        form.instance.artist = self.request.user.username  # アーティスト名をユーザー名に設定
         form.instance.is_public = False
         form.instance.is_encrypted = False
         form.instance.generation_status = 'pending'
@@ -259,36 +192,6 @@ class CreateSongView(LoginRequiredMixin, CreateView):
         genre = form.cleaned_data.get('genre', 'ポップ')
         vocal_style = form.cleaned_data.get('vocal_style', 'female')
         
-        # タイトルの不適切コンテンツチェック
-        title_check = check_text_for_inappropriate_content(title)
-        if title_check['is_inappropriate']:
-            app_language = self.request.session.get('app_language', 'ja')
-            self.request.session['content_violation'] = True
-            self.request.session['violation_message'] = title_check['message']
-            self.request.session['detected_words'] = title_check['detected_words']
-            logger.warning(f"Inappropriate title detected for user {self.request.user.id}: {title_check['detected_words']}")
-            return redirect('songs:content_violation')
-        
-        # カスタム音楽プロンプトを取得
-        music_prompt = self.request.POST.get('music_prompt', '').strip()
-        form.instance.music_prompt = music_prompt
-        
-        # AIモデルはV8（プレミアム）に固定
-        mureka_model = 'mureka-v8'
-        
-        # 使用制限のチェック
-        if not self.request.user.can_use_model('v8'):
-            app_language = self.request.session.get('app_language', 'ja')
-            if app_language == 'en':
-                messages.error(self.request, 'You have reached your monthly song creation limit.')
-            elif app_language == 'zh':
-                messages.error(self.request, '您已达到本月歌曲创建上限。')
-            else:
-                messages.error(self.request, '今月の楽曲作成上限に達しました。')
-            return redirect('users:upgrade')
-        
-        form.instance.mureka_model = mureka_model
-        
         generated_lyrics = self.request.POST.get('generated_lyrics', '')
         if not generated_lyrics:
             generated_lyrics = self.request.session.get('generated_lyrics', '')
@@ -300,23 +203,9 @@ class CreateSongView(LoginRequiredMixin, CreateView):
                 messages.error(self.request, 'Lyrics are empty.')
             elif app_language == 'zh':
                 messages.error(self.request, '歌词为空。')
-            elif app_language == 'es':
-                messages.error(self.request, 'Las letras están vacías.')
-            elif app_language == 'de':
-                messages.error(self.request, 'Der Liedtext ist leer.')
             else:
                 messages.error(self.request, '歌詞が入力されていません。')
             return redirect('songs:lyrics_confirmation')
-        
-        # 歌詞の不適切コンテンツチェック
-        content_check = check_text_for_inappropriate_content(generated_lyrics)
-        if content_check['is_inappropriate']:
-            app_language = self.request.session.get('app_language', 'ja')
-            self.request.session['content_violation'] = True
-            self.request.session['violation_message'] = content_check['message']
-            self.request.session['detected_words'] = content_check['detected_words']
-            logger.warning(f"Inappropriate lyrics detected for user {self.request.user.id}: {content_check['detected_words']}")
-            return redirect('songs:content_violation')
         
         lyrics_content = generated_lyrics
         
@@ -328,16 +217,6 @@ class CreateSongView(LoginRequiredMixin, CreateView):
             original_text=original_text or ''
         )
         
-        # アップロード画像をSongに関連付け（生成完了後に削除するため）
-        uploaded_image_id = self.request.session.get('uploaded_image_id')
-        if uploaded_image_id:
-            try:
-                uploaded_image = UploadedImage.objects.get(id=uploaded_image_id, user=self.request.user)
-                self.object.source_image = uploaded_image
-                self.object.save(update_fields=['source_image'])
-            except UploadedImage.DoesNotExist:
-                pass
-        
         from .queue_manager import queue_manager
         
         queue_manager.add_to_queue(
@@ -347,11 +226,6 @@ class CreateSongView(LoginRequiredMixin, CreateView):
             genre=genre,
             vocal_style=vocal_style
         )
-        
-        # フラッシュカード同時作成
-        create_flashcards = self.request.POST.get('create_flashcards') == 'true'
-        if create_flashcards:
-            self._create_flashcards_from_session(original_text, title)
         
         app_language = self.request.session.get('app_language', 'ja')
         
@@ -366,16 +240,6 @@ class CreateSongView(LoginRequiredMixin, CreateView):
                     self.request, 
                     f'歌曲已加入队列。当前排在第{self.object.queue_position - 1}位。将按顺序生成。'
                 )
-            elif app_language == 'es':
-                messages.success(
-                    self.request, 
-                    f'Canción añadida a la cola. Actualmente hay {self.object.queue_position - 1} personas delante. Se generará en orden.'
-                )
-            elif app_language == 'de':
-                messages.success(
-                    self.request, 
-                    f'Lied zur Warteschlange hinzugefügt. Derzeit {self.object.queue_position - 1} Personen vor Ihnen. Wird der Reihe nach generiert.'
-                )
             else:
                 messages.success(
                     self.request, 
@@ -383,206 +247,26 @@ class CreateSongView(LoginRequiredMixin, CreateView):
                 )
         else:
             if app_language == 'en':
-                messages.success(self.request, 'Song generation started. Will be ready in 1-2 minutes.')
+                messages.success(self.request, 'Song generation started. Will be ready in 1-2 minutes. Please refresh the page when complete.')
             elif app_language == 'zh':
-                messages.success(self.request, '歌曲生成已开始。1-2分钟后完成。')
-            elif app_language == 'es':
-                messages.success(self.request, 'La generación de la canción ha comenzado. Estará lista en 1-2 minutos.')
-            elif app_language == 'de':
-                messages.success(self.request, 'Liederstellung gestartet. In 1-2 Minuten fertig.')
+                messages.success(self.request, '歌曲生成已开始。1-2分钟后完成。完成后请刷新页面。')
             else:
-                messages.success(self.request, '楽曲の生成を開始しました。1〜2分で完成します。')
+                messages.success(self.request, '楽曲の生成を開始しました。1〜2分で完成します。完成したらページを更新してください。')
         
-        # セッションから楽曲作成関連データをすべてクリア
-        keys_to_clear = [
-            'extracted_text', 'extracted_texts', 'generated_lyrics',
-            'uploaded_image_id', 'uploaded_image_ids', 'custom_request',
-        ]
-        for key in keys_to_clear:
-            self.request.session.pop(key, None)
+        if 'extracted_text' in self.request.session:
+            del self.request.session['extracted_text']
+        if 'generated_lyrics' in self.request.session:
+            del self.request.session['generated_lyrics']
         
         return response
     
     def get_success_url(self):
-        return reverse_lazy('songs:song_generating', kwargs={'pk': self.object.pk})
-    
-    def _create_flashcards_from_session(self, original_text, song_title):
-        """セッションの画像/テキストからフラッシュカードデッキを作成"""
-        from .models import FlashcardDeck, Flashcard, UploadedImage as UImage
-        from .ai_services import GeminiFlashcardExtractor, GeminiOCR
-        
-        try:
-            extractor = GeminiFlashcardExtractor()
-            all_terms = []
-            source_image_obj = None
-            source_text = original_text or ''
-            
-            # 1. 画像がある場合 → 画像から直接抽出を試みる
-            uploaded_image_ids = self.request.session.get('uploaded_image_ids', [])
-            if uploaded_image_ids:
-                for img_id in uploaded_image_ids:
-                    try:
-                        uploaded = UImage.objects.get(id=img_id, user=self.request.user)
-                        if source_image_obj is None:
-                            source_image_obj = uploaded
-                        terms = extractor.extract_terms_from_image(uploaded.image)
-                        if terms:
-                            all_terms.extend(terms)
-                    except Exception as img_err:
-                        logger.warning(f"Flashcard image extraction error: {img_err}")
-            
-            # 画像ID が1つの場合のフォールバック
-            if not uploaded_image_ids:
-                single_id = self.request.session.get('uploaded_image_id')
-                if single_id:
-                    try:
-                        uploaded = UImage.objects.get(id=single_id, user=self.request.user)
-                        source_image_obj = uploaded
-                        terms = extractor.extract_terms_from_image(uploaded.image)
-                        if terms:
-                            all_terms.extend(terms)
-                    except Exception as img_err:
-                        logger.warning(f"Flashcard single image error: {img_err}")
-            
-            # 2. 画像から取れなかった場合 → テキストから抽出
-            if not all_terms and source_text:
-                terms = extractor.extract_terms_from_text(source_text)
-                if terms:
-                    all_terms.extend(terms)
-            
-            if not all_terms:
-                logger.info("Flashcard: No terms extracted, skipping deck creation")
-                return
-            
-            # 重複除去
-            seen = set()
-            unique_terms = []
-            for t in all_terms:
-                key = t['term'].strip().lower()
-                if key not in seen:
-                    seen.add(key)
-                    unique_terms.append(t)
-            
-            # デッキ作成
-            deck_title = f'{song_title} の暗記カード' if song_title else 'テスト対策カード'
-            deck = FlashcardDeck.objects.create(
-                user=self.request.user,
-                title=deck_title,
-                source_song=self.object,
-                source_image=source_image_obj,
-                source_text=source_text[:5000] if source_text else '',
-            )
-            
-            # カードを作成（highはデフォルト選択、選択画面へ誘導）
-            for i, t in enumerate(unique_terms):
-                importance = t.get('importance', 'normal')
-                Flashcard.objects.create(
-                    deck=deck,
-                    term=t['term'],
-                    definition=t['definition'],
-                    importance=importance,
-                    is_selected=(importance == 'high'),
-                    order=i,
-                )
-            
-            deck.update_card_count()
-            
-            # セッションにデッキIDを保存（song_generating画面で選択画面へのリンク表示用）
-            self.request.session['created_flashcard_deck_id'] = deck.pk
-            
-            logger.info(f"Flashcard deck created: '{deck_title}' with {deck.card_count} cards for user {self.request.user.id}")
-            
-        except Exception as e:
-            logger.error(f"Flashcard creation error: {e}", exc_info=True)
-            # フラッシュカード作成失敗しても楽曲生成は続行
-
-
-def validate_uploaded_file(file, app_language='ja'):
-    """アップロードされたファイルを検証"""
-    errors = []
-    file_name = file.name.lower()
-    
-    # ファイルタイプの確認
-    is_pdf = file_name.endswith('.pdf')
-    is_image = any(file_name.endswith(ext) for ext in ['.jpg', '.jpeg', '.png', '.gif', '.webp', '.heic', '.heif'])
-    
-    if not is_pdf and not is_image:
-        if app_language == 'en':
-            errors.append(f'{file.name}: Unsupported file format')
-        elif app_language == 'zh':
-            errors.append(f'{file.name}：不支持的文件格式')
-        else:
-            errors.append(f'{file.name}: 対応していないファイル形式です')
-        return errors
-    
-    # ファイルサイズの確認
-    max_size = getattr(settings, 'MAX_PDF_SIZE', 25 * 1024 * 1024) if is_pdf else getattr(settings, 'MAX_IMAGE_SIZE', 10 * 1024 * 1024)
-    max_size_mb = max_size // (1024 * 1024)
-    
-    if file.size > max_size:
-        if app_language == 'en':
-            errors.append(f'{file.name}: File too large (max {max_size_mb}MB)')
-        elif app_language == 'zh':
-            errors.append(f'{file.name}：文件过大（最大{max_size_mb}MB）')
-        else:
-            errors.append(f'{file.name}: ファイルサイズが大きすぎます（最大{max_size_mb}MB）')
-    
-    # MIMEタイプの確認（追加のセキュリティ）
-    content_type = file.content_type
-    allowed_image_types = getattr(settings, 'ALLOWED_IMAGE_TYPES', ['image/jpeg', 'image/png', 'image/gif', 'image/webp', 'image/heic', 'image/heif'])
-    allowed_doc_types = getattr(settings, 'ALLOWED_DOCUMENT_TYPES', ['application/pdf'])
-    
-    if is_pdf and content_type not in allowed_doc_types:
-        if app_language == 'en':
-            errors.append(f'{file.name}: Invalid PDF file')
-        elif app_language == 'zh':
-            errors.append(f'{file.name}：无效的PDF文件')
-        else:
-            errors.append(f'{file.name}: 無効なPDFファイルです')
-    elif is_image and content_type not in allowed_image_types:
-        # スマホ（iOS Safari等）ではHEIC画像のMIMEタイプが空や
-        # application/octet-streamで送信されることがあるため、
-        # 拡張子で画像と判定済みの場合はMIMEタイプチェックをスキップ
-        if content_type and content_type != 'application/octet-stream':
-            if app_language == 'en':
-                errors.append(f'{file.name}: Invalid image file')
-            elif app_language == 'zh':
-                errors.append(f'{file.name}：无效的图片文件')
-            else:
-                errors.append(f'{file.name}: 無効な画像ファイルです')
-    
-    return errors
+        return reverse_lazy('songs:song_detail', kwargs={'pk': self.object.pk})
 
 
 class UploadImageView(LoginRequiredMixin, FormView):
     template_name = 'songs/upload_image.html'
     form_class = ImageUploadForm
-
-    def get(self, request, *args, **kwargs):
-        # ?new=true で明示的に新規作成する場合はセッションをクリアしてそのまま表示
-        if request.GET.get('new') == 'true':
-            for key in ['extracted_texts', 'extracted_text', 'generated_lyrics',
-                        'uploaded_image_ids', 'uploaded_image_id', 'custom_request']:
-                request.session.pop(key, None)
-            return super().get(request, *args, **kwargs)
-
-        # 生成中の楽曲がある場合はその生成画面にリダイレクト
-        in_progress_song = Song.objects.filter(
-            created_by=request.user,
-            generation_status__in=['pending', 'generating']
-        ).order_by('-created_at').first()
-        if in_progress_song:
-            return redirect('songs:song_generating', pk=in_progress_song.pk)
-
-        # 歌詞が既に生成済みでセッションにある場合は確認画面へ
-        if request.session.get('generated_lyrics'):
-            return redirect('songs:lyrics_confirmation')
-
-        # 歌詞生成中（テキスト抽出済み）の場合は歌詞生成画面へ
-        if request.session.get('extracted_texts'):
-            return redirect('songs:lyrics_generating')
-
-        return super().get(request, *args, **kwargs)
 
     def form_valid(self, form):
         files = self.request.FILES.getlist('images')
@@ -596,40 +280,6 @@ class UploadImageView(LoginRequiredMixin, FormView):
                 messages.error(self.request, '未选择文件。')
             else:
                 messages.error(self.request, 'ファイルが選択されていません。')
-            return redirect('songs:upload_image')
-        
-        # 10ファイル制限
-        MAX_FILES = 10
-        if len(files) > MAX_FILES:
-            if app_language == 'en':
-                messages.error(self.request, f'You can upload up to {MAX_FILES} files at a time.')
-            elif app_language == 'zh':
-                messages.error(self.request, f'一次最多可上传{MAX_FILES}个文件。')
-            elif app_language == 'es':
-                messages.error(self.request, f'Puedes subir hasta {MAX_FILES} archivos a la vez.')
-            elif app_language == 'de':
-                messages.error(self.request, f'Sie können maximal {MAX_FILES} Dateien gleichzeitig hochladen.')
-            elif app_language == 'pt':
-                messages.error(self.request, f'Você pode enviar até {MAX_FILES} arquivos por vez.')
-            else:
-                messages.error(self.request, f'一度にアップロードできるのは最大{MAX_FILES}ファイルです。')
-            return redirect('songs:upload_image')
-        
-        # ファイルの検証
-        validation_errors = []
-        valid_files = []
-        for file in files:
-            file_errors = validate_uploaded_file(file, app_language)
-            if file_errors:
-                validation_errors.extend(file_errors)
-            else:
-                valid_files.append(file)
-        
-        if validation_errors:
-            for error in validation_errors:
-                messages.error(self.request, error)
-        
-        if not valid_files:
             return redirect('songs:upload_image')
         
         user = self.request.user
@@ -651,13 +301,9 @@ class UploadImageView(LoginRequiredMixin, FormView):
                 language_mode = 'japanese'
         self.request.session['language_mode'] = language_mode
         
-        # カスタムリクエストをセッションに保存
-        custom_request = self.request.POST.get('custom_request', '').strip()
-        self.request.session['custom_request'] = custom_request
-        
         from .ai_services import PDFTextExtractor
         
-        for file in valid_files:
+        for file in files:
             file_name = file.name.lower()
             
             try:
@@ -667,58 +313,39 @@ class UploadImageView(LoginRequiredMixin, FormView):
                     extracted_text = pdf_extractor.extract_text_from_pdf(file)
                     if extracted_text:
                         extracted_texts.append(extracted_text)
-                    else:
-                        logger.warning(f"PDF extraction returned empty for {file.name}")
                 else:
                     # 画像ファイルの処理
                     uploaded = UploadedImage.objects.create(user=user, image=file)
                     try:
                         ocr_processor = GeminiOCR()
-                        logger.info(f"OCR starting for {file.name} (size={file.size}, type={file.content_type}, model={ocr_processor.model})")
                         extracted_text = ocr_processor.extract_text_from_image(uploaded.image)
                         uploaded.extracted_text = extracted_text or ''
                         uploaded.processed = True
                         uploaded.save()
                         if extracted_text:
                             extracted_texts.append(extracted_text)
-                            logger.info(f"OCR success for {file.name}: {len(extracted_text)} chars")
-                        else:
-                            logger.warning(f"OCR returned empty for {file.name} (language_mode={language_mode})")
                         uploaded_image_ids.append(uploaded.id)
                     except Exception as e:
                         errors.append(f'{file.name}: OCR処理に失敗しました')
-                        logger.error(f"OCR error for {file.name} (language_mode={language_mode}): {e}")
+                        print(f"OCR error for {file.name}: {e}")
             except Exception as e:
                 errors.append(f'{file.name}: 処理に失敗しました')
-                logger.error(f"File processing error for {file.name}: {e}")
+                print(f"File processing error for {file.name}: {e}")
         
         self.request.session['extracted_texts'] = extracted_texts
         self.request.session['uploaded_image_ids'] = uploaded_image_ids
         
-        # 不適切コンテンツのチェック
-        combined_text = '\n'.join(extracted_texts)
-        content_check = check_text_for_inappropriate_content(combined_text)
-        
-        if content_check['is_inappropriate']:
-            # 不適切なコンテンツが検出された場合
-            self.request.session['content_violation'] = True
-            self.request.session['violation_message'] = content_check['message']
-            self.request.session['detected_words'] = content_check['detected_words']
-            logger.warning(f"Inappropriate content detected for user {user.id}: {content_check['detected_words']}")
-            return redirect('songs:content_violation')
-        
         if not extracted_texts:
-            logger.warning(f"No text extracted from {len(valid_files)} files for user {user.id} (language_mode={language_mode})")
             if app_language == 'en':
-                messages.warning(self.request, 'Could not extract text from the uploaded file. You can enter lyrics manually.')
+                messages.error(self.request, 'Could not extract text. Please try another file.')
             elif app_language == 'zh':
-                messages.warning(self.request, '无法从上传的文件中提取文字。您可以手动输入歌词。')
+                messages.error(self.request, '无法提取文字。请尝试其他文件。')
             else:
-                messages.warning(self.request, 'アップロードされたファイルからテキストを抽出できませんでした。手動で歌詞を入力できます。')
-            return redirect(f"{reverse_lazy('songs:lyrics_confirmation')}?manual=true&lang={language_mode}")
+                messages.error(self.request, 'テキストを抽出できませんでした。別のファイルを試してください。')
+            return redirect('songs:upload_image')
         
-        pdf_count = sum(1 for f in valid_files if f.name.lower().endswith('.pdf'))
-        image_count = len(valid_files) - pdf_count
+        pdf_count = sum(1 for f in files if f.name.lower().endswith('.pdf'))
+        image_count = len(files) - pdf_count
         
         if errors:
             if app_language == 'en':
@@ -753,7 +380,7 @@ class UploadImageView(LoginRequiredMixin, FormView):
         return super().form_valid(form)
 
     def get_success_url(self):
-        return reverse_lazy('songs:lyrics_generating')
+        return reverse_lazy('songs:lyrics_confirmation')
 
 
 class TextExtractionResultView(LoginRequiredMixin, TemplateView):
@@ -778,140 +405,9 @@ class TextExtractionResultView(LoginRequiredMixin, TemplateView):
         return context
 
 
-class LyricsGeneratingView(LoginRequiredMixin, TemplateView):
-    """歌詞生成中のローディング画面"""
-    template_name = 'songs/lyrics_generating.html'
-    
-    def get(self, request, *args, **kwargs):
-        # セッションに抽出テキストも生成済み歌詞もない場合はアップロード画面へ
-        extracted_texts = request.session.get('extracted_texts', [])
-        generated_lyrics = request.session.get('generated_lyrics')
-        if not extracted_texts and not generated_lyrics:
-            return redirect('songs:upload_image')
-        return super().get(request, *args, **kwargs)
-    
-    def get_context_data(self, **kwargs):
-        context = super().get_context_data(**kwargs)
-        language_mode = self.request.session.get('language_mode', 'japanese')
-        context['language_mode'] = language_mode
-        
-        # 歌詞が既に生成済みかどうかをテンプレートに渡す（JS側で即遷移用）
-        context['lyrics_already_generated'] = bool(self.request.session.get('generated_lyrics'))
-        
-        extracted_texts = self.request.session.get('extracted_texts', [])
-        if extracted_texts and isinstance(extracted_texts, list):
-            text_length = sum(len(t) for t in extracted_texts)
-        else:
-            text_length = 0
-        context['text_length'] = text_length
-        return context
-
-
-@login_required
-def generate_lyrics_api(request):
-    """歌詞生成API（AJAXで呼ばれる）
-    
-    画像がアップロードされている場合:
-      → 画像+テキストを直接Geminiに渡して一発で歌詞生成（高品質）
-    テキストのみの場合:
-      → 従来のテキストベース歌詞生成
-    """
-    if request.method != 'POST':
-        return JsonResponse({'success': False, 'error': 'POST only'}, status=405)
-    
-    extracted_texts = request.session.get('extracted_texts', [])
-    if extracted_texts and isinstance(extracted_texts, list):
-        extracted_text = '\n\n'.join(extracted_texts)
-    else:
-        extracted_text = request.session.get('extracted_text', '')
-    
-    if not extracted_text:
-        return JsonResponse({'success': False, 'error': 'No text found'})
-    
-    language_mode = request.session.get('language_mode', 'japanese')
-    custom_request = request.session.get('custom_request', '')
-    
-    try:
-        lyrics_generator = get_lyrics_generator()
-        
-        # 画像がある場合 → 画像直接生成パス（OCRの情報ロスを回避）
-        uploaded_image_ids = request.session.get('uploaded_image_ids', [])
-        generated_lyrics = None
-        
-        if uploaded_image_ids:
-            try:
-                from PIL import Image as PILImage
-                from .models import UploadedImage
-                images = []
-                for img_id in uploaded_image_ids:
-                    try:
-                        uploaded = UploadedImage.objects.get(id=img_id, user=request.user)
-                        img = PILImage.open(uploaded.image.path)
-                        if img.mode != 'RGB':
-                            img = img.convert('RGB')
-                        images.append(img)
-                    except Exception as img_err:
-                        logger.warning(f"Could not load image {img_id}: {img_err}")
-                
-                if images:
-                    logger.info(f"Using direct image-to-lyrics generation with {len(images)} image(s)")
-                    generated_lyrics = lyrics_generator.generate_lyrics_from_images(
-                        images,
-                        language_mode=language_mode,
-                        custom_request=custom_request,
-                        extracted_text=extracted_text,
-                    )
-            except Exception as img_gen_err:
-                logger.warning(f"Image-based generation failed, falling back to text: {img_gen_err}")
-                generated_lyrics = None
-        
-        # 画像パスが使えない場合 → 従来のテキストベース生成
-        if not generated_lyrics:
-            generated_lyrics = lyrics_generator.generate_lyrics(
-                extracted_text, 
-                language_mode=language_mode, 
-                custom_request=custom_request
-            )
-        
-        if generated_lyrics:
-            # セッションに保存（LyricsConfirmationViewで使う）
-            request.session['generated_lyrics'] = generated_lyrics
-            request.session['extracted_text'] = extracted_text
-            logger.info(f"Lyrics generated via API: {len(generated_lyrics)} chars for user {request.user.id}")
-            return JsonResponse({'success': True, 'length': len(generated_lyrics)})
-        else:
-            logger.warning(f"Lyrics generation returned empty for user {request.user.id}")
-            return JsonResponse({'success': False, 'error': 'Generated lyrics was empty'})
-    except Exception as e:
-        logger.error(f"Lyrics generation API error: {e}", exc_info=True)
-        return JsonResponse({'success': False, 'error': 'An error occurred during lyrics generation. Please try again.'})
-
-
-@login_required
-def reset_lyrics_session(request):
-    """歌詞セッションデータをクリアしてアップロード画面に戻る"""
-    keys_to_clear = [
-        'generated_lyrics', 'extracted_text', 'extracted_texts',
-        'uploaded_image_ids', 'custom_request',
-    ]
-    for key in keys_to_clear:
-        request.session.pop(key, None)
-    return redirect('songs:upload_image')
-
-
 class LyricsConfirmationView(LoginRequiredMixin, TemplateView):
     """歌詞確認ビュー（AI生成または手動入力）"""
     template_name = 'songs/lyrics_confirmation.html'
-    
-    def get(self, request, *args, **kwargs):
-        """セッションに歌詞データがない場合はアップロード画面へリダイレクト"""
-        manual_mode = request.GET.get('manual', 'false') == 'true'
-        if not manual_mode:
-            has_lyrics = request.session.get('generated_lyrics')
-            has_texts = request.session.get('extracted_texts') or request.session.get('extracted_text')
-            if not has_lyrics and not has_texts:
-                return redirect('songs:upload_image')
-        return super().get(request, *args, **kwargs)
     
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
@@ -922,13 +418,6 @@ class LyricsConfirmationView(LoginRequiredMixin, TemplateView):
         language_mode = self.request.GET.get('lang', self.request.session.get('language_mode', 'japanese'))
         self.request.session['language_mode'] = language_mode
         context['language_mode'] = language_mode
-        
-        # カスタムリクエストを取得
-        custom_request = self.request.session.get('custom_request', '')
-        context['custom_request'] = custom_request
-        
-        # セッションから既存の歌詞を確認（再生成機能で保存されたもの）
-        existing_lyrics = self.request.session.get('generated_lyrics', '')
         
         # セッションから抽出されたテキストを取得（複数画像対応）
         extracted_texts = self.request.session.get('extracted_texts', [])
@@ -941,23 +430,17 @@ class LyricsConfirmationView(LoginRequiredMixin, TemplateView):
             generated_lyrics = ""
             context['manual_mode'] = True
             context['extracted_text'] = ""
-        elif existing_lyrics:
-            # ローディング画面や再生成機能でセッションに保存された歌詞をそのまま使用
-            generated_lyrics = existing_lyrics
-            context['manual_mode'] = False
-            context['extracted_text'] = extracted_text
         elif extracted_text:
-            # セッションに歌詞がない場合のみ歌詞生成呼び出し（直接アクセス時のフォールバック）
             try:
-                lyrics_generator = get_lyrics_generator()
-                generated_lyrics = lyrics_generator.generate_lyrics(extracted_text, language_mode=language_mode, custom_request=custom_request)
+                lyrics_generator = GeminiLyricsGenerator()
+                generated_lyrics = lyrics_generator.generate_lyrics(extracted_text, language_mode=language_mode)
                 context['manual_mode'] = False
                 context['extracted_text'] = extracted_text
                 self.request.session['generated_lyrics'] = generated_lyrics
                 self.request.session['extracted_text'] = extracted_text
             except Exception as e:
                 # AI生成失敗時は手動モードにフォールバック
-                logger.error(f"Lyrics generation error: {e}")
+                print(f"Lyrics generation error: {e}")
                 generated_lyrics = ""
                 context['manual_mode'] = True
                 context['extracted_text'] = extracted_text
@@ -983,55 +466,19 @@ class LyricsConfirmationView(LoginRequiredMixin, TemplateView):
                 extracted_text = request.session.get('extracted_text', '')
             
             language_mode = request.session.get('language_mode', 'japanese')
-            custom_request = request.session.get('custom_request', '')
             
             if extracted_text:
                 try:
-                    lyrics_generator = get_lyrics_generator()
-                    new_lyrics = None
-                    
-                    # 画像がある場合 → 画像直接生成パス
-                    uploaded_image_ids = request.session.get('uploaded_image_ids', [])
-                    if uploaded_image_ids:
-                        try:
-                            from PIL import Image as PILImage
-                            from .models import UploadedImage
-                            images = []
-                            for img_id in uploaded_image_ids:
-                                try:
-                                    uploaded = UploadedImage.objects.get(id=img_id, user=request.user)
-                                    img = PILImage.open(uploaded.image.path)
-                                    if img.mode != 'RGB':
-                                        img = img.convert('RGB')
-                                    images.append(img)
-                                except Exception:
-                                    pass
-                            
-                            if images:
-                                new_lyrics = lyrics_generator.generate_lyrics_from_images(
-                                    images,
-                                    language_mode=language_mode,
-                                    custom_request=custom_request,
-                                    extracted_text=extracted_text,
-                                )
-                        except Exception as img_err:
-                            logger.warning(f"Regenerate image-based failed: {img_err}")
-                            new_lyrics = None
-                    
-                    # フォールバック: テキストベース
-                    if not new_lyrics:
-                        new_lyrics = lyrics_generator.generate_lyrics(extracted_text, language_mode=language_mode, custom_request=custom_request)
-                    
-                    request.session['generated_lyrics'] = new_lyrics
+                    lyrics_generator = GeminiLyricsGenerator()
+                    new_lyrics = lyrics_generator.generate_lyrics(extracted_text, language_mode=language_mode)
                     return JsonResponse({
                         'success': True,
                         'lyrics': new_lyrics
                     })
                 except Exception as e:
-                    logger.error(f"Lyrics regeneration error: {e}", exc_info=True)
                     return JsonResponse({
                         'success': False,
-                        'error': '歌詞生成に失敗しました。もう一度お試しください。'
+                        'error': f'歌詞生成に失敗しました: {str(e)}'
                     })
             else:
                 return JsonResponse({
@@ -1043,27 +490,20 @@ class LyricsConfirmationView(LoginRequiredMixin, TemplateView):
 
 
 @login_required
-@require_POST
 def like_song(request, pk):
     """楽曲いいね機能"""
-    from django.db import transaction
-    
     song = get_object_or_404(Song, pk=pk)
+    like, created = Like.objects.get_or_create(user=request.user, song=song)
     
-    with transaction.atomic():
-        # select_for_updateでデッドロック防止
-        song = Song.objects.select_for_update().get(pk=pk)
-        like, created = Like.objects.get_or_create(user=request.user, song=song)
-        
-        if not created:
-            like.delete()
-            song.likes_count = max(0, song.likes_count - 1)
-            liked = False
-        else:
-            song.likes_count += 1
-            liked = True
-        
-        song.save()
+    if not created:
+        like.delete()
+        song.likes_count = max(0, song.likes_count - 1)
+        liked = False
+    else:
+        song.likes_count += 1
+        liked = True
+    
+    song.save()
     
     if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
         return JsonResponse({
@@ -1075,21 +515,16 @@ def like_song(request, pk):
 
 
 @login_required
-@require_POST
 def favorite_song(request, pk):
     """楽曲お気に入り機能"""
-    from django.db import transaction
-
     song = get_object_or_404(Song, pk=pk)
+    favorite, created = Favorite.objects.get_or_create(user=request.user, song=song)
     
-    with transaction.atomic():
-        favorite, created = Favorite.objects.get_or_create(user=request.user, song=song)
-        
-        if not created:
-            favorite.delete()
-            favorited = False
-        else:
-            favorited = True
+    if not created:
+        favorite.delete()
+        favorited = False
+    else:
+        favorited = True
     
     if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
         return JsonResponse({'favorited': favorited})
@@ -1099,64 +534,23 @@ def favorite_song(request, pk):
 
 @login_required
 @require_POST
-def delete_song(request, pk):
-    """楽曲削除機能"""
-    song = get_object_or_404(Song, pk=pk)
-    
-    # 作成者のみ削除可能
-    if song.created_by != request.user:
-        if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
-            return JsonResponse({'success': False, 'error': '削除権限がありません'}, status=403)
-        messages.error(request, '削除権限がありません')
-        return redirect('songs:my_songs')
-    
-    try:
-        song_title = song.title
-        song.delete()
-        
-        if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
-            return JsonResponse({'success': True})
-        
-        messages.success(request, f'「{song_title}」を削除しました')
-        return redirect('songs:my_songs')
-    except Exception as e:
-        logger.error(f"Song delete error: {e}")
-        if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
-            return JsonResponse({'success': False, 'error': '削除に失敗しました'}, status=500)
-        messages.error(request, '削除に失敗しました')
-        return redirect('songs:my_songs')
-
-
-@require_POST
 def record_play(request, pk):
     """再生回数を記録するAPI"""
-    from django.db.models import F
-
     song = get_object_or_404(Song, pk=pk)
     
-    # F()式でレースコンディション防止
-    Song.objects.filter(pk=pk).update(total_plays=F('total_plays') + 1)
-    song.refresh_from_db()
+    play_history, created = PlayHistory.objects.get_or_create(
+        user=request.user,
+        song=song,
+        defaults={'play_count': 1}
+    )
     
-    # ログインユーザーの場合は個人の再生履歴も更新
-    my_play_count = 0
-    if request.user.is_authenticated:
-        play_history, created = PlayHistory.objects.get_or_create(
-            user=request.user,
-            song=song,
-            defaults={'play_count': 1}
-        )
-        
-        if not created:
-            PlayHistory.objects.filter(pk=play_history.pk).update(play_count=F('play_count') + 1)
-            play_history.refresh_from_db()
-        
-        my_play_count = play_history.play_count
+    if not created:
+        play_history.play_count += 1
+        play_history.save()
     
     return JsonResponse({
         'success': True,
-        'total_plays': song.total_plays,
-        'my_play_count': my_play_count
+        'play_count': play_history.play_count
     })
 
 
@@ -1242,16 +636,7 @@ def toggle_song_privacy(request, pk):
         if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
             try:
                 data = json.loads(request.body)
-                new_is_public = data.get('is_public', not song.is_public)
-                
-                # 無料ユーザーは公開設定を許可しない
-                if new_is_public and not request.user.is_starter:
-                    return JsonResponse({
-                        'success': False,
-                        'error': 'Public sharing is available for paid plans only.'
-                    }, status=403)
-                
-                song.is_public = new_is_public
+                song.is_public = data.get('is_public', not song.is_public)
                 song.save()
                 if app_language == 'en':
                     status = "public" if song.is_public else "private"
@@ -1268,25 +653,12 @@ def toggle_song_privacy(request, pk):
                     'message': msg
                 })
             except Exception as e:
-                logger.error(f"Toggle privacy error for song {song.pk}: {e}")
                 return JsonResponse({
                     'success': False,
-                    'error': 'An error occurred. Please try again.'
+                    'error': str(e)
                 })
         else:
-            new_is_public = not song.is_public
-            
-            # 無料ユーザーは公開設定を許可しない
-            if new_is_public and not request.user.is_starter:
-                if app_language == 'en':
-                    messages.error(request, 'Public sharing is available for paid plans only.')
-                elif app_language == 'zh':
-                    messages.error(request, '公开分享仅限付费用户使用。')
-                else:
-                    messages.error(request, '楽曲の公開は有料プラン限定の機能です。')
-                return redirect('songs:my_songs')
-            
-            song.is_public = new_is_public
+            song.is_public = not song.is_public
             song.save()
             if app_language == 'en':
                 messages.success(request, f'Privacy settings for "{song.title}" updated.')
@@ -1306,9 +678,8 @@ class SongPrivacyView(LoginRequiredMixin, TemplateView):
     
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
-        song = self.get_object()
-        context['song'] = song
-        context['form'] = SongPrivacyForm(instance=song)
+        context['song'] = self.get_object()
+        context['form'] = SongPrivacyForm(instance=context['song'])
         return context
     
     def post(self, request, *args, **kwargs):
@@ -1337,57 +708,35 @@ def api_status_view(request):
     from django.utils import timezone
     from datetime import timedelta
     
-    # Gemini OCRステータス
+    # Gemini OCR Status
     ocr_gen = GeminiOCR()
     gemini_ocr_status = {
         'available': bool(ocr_gen.model),
         'api_key_set': bool(ocr_gen.api_key),
-        'status': '有効' if ocr_gen.model else '未設定',
+        'status': 'Active' if ocr_gen.model else 'Not Configured',
         'health': 'unknown'
     }
     
-    # Gemini歌詞生成ステータス
+    # Gemini Lyrics Status
     lyrics_gen = GeminiLyricsGenerator()
     gemini_lyrics_status = {
         'available': bool(lyrics_gen.model),
         'api_key_set': bool(lyrics_gen.api_key),
-        'status': '有効' if lyrics_gen.model else '未設定',
+        'status': 'Active' if lyrics_gen.model else 'Not Configured',
         'health': 'unknown'
     }
     
-    # ローカルLLMステータス
-    from .ai_services import LocalLLMLyricsGenerator, CloudLLMLyricsGenerator
-    local_llm = LocalLLMLyricsGenerator()
-    lyrics_backend = getattr(settings, 'LYRICS_BACKEND', 'gemini')
-    local_llm_status = {
-        'available': local_llm.is_available,
-        'url': local_llm.base_url or '未設定',
-        'backend': lyrics_backend,
-        'status': '接続OK' if local_llm.is_available else ('未設定' if not local_llm.base_url else '接続不可'),
-    }
-
-    # クラウドLLMステータス
-    cloud_llm = CloudLLMLyricsGenerator()
-    cloud_llm_status = {
-        'available': cloud_llm.is_available,
-        'provider': cloud_llm.provider or '未設定',
-        'model': cloud_llm.model_name or '未設定',
-        'url': cloud_llm.api_url or '未設定',
-        'api_key_set': bool(cloud_llm.api_key),
-        'status': '有効' if cloud_llm.is_available else '未設定',
-    }
-    
-    # Murekaステータス
+    # Mureka Status
     mureka_gen = MurekaAIGenerator()
     mureka_status = {
         'available': mureka_gen.use_real_api,
         'api_key_set': bool(mureka_gen.api_key),
         'api_url': mureka_gen.base_url,
-        'status': '有効' if mureka_gen.use_real_api else '未設定',
+        'status': 'Active' if mureka_gen.use_real_api else 'Not Configured',
         'health': 'unknown'
     }
     
-    # キュー統計
+    # Queue Statistics
     now = timezone.now()
     last_24h = now - timedelta(hours=24)
     last_7d = now - timedelta(days=7)
@@ -1407,7 +756,7 @@ def api_status_view(request):
         'total_failed': Song.objects.filter(generation_status='failed').count(),
     }
     
-    # 最近のエラー
+    # Recent Errors
     recent_errors = Song.objects.filter(
         generation_status='failed',
         error_message__isnull=False
@@ -1415,7 +764,7 @@ def api_status_view(request):
         'id', 'title', 'error_message', 'updated_at', 'retry_count'
     )
     
-    # スタックしたジョブの検出（30分以上生成中のもの）
+    # Stuck Jobs Detection (generating for more than 30 minutes)
     stuck_threshold = now - timedelta(minutes=30)
     stuck_jobs = Song.objects.filter(
         generation_status='generating',
@@ -1425,8 +774,6 @@ def api_status_view(request):
     context = {
         'gemini_ocr_status': gemini_ocr_status,
         'gemini_lyrics_status': gemini_lyrics_status,
-        'local_llm_status': local_llm_status,
-        'cloud_llm_status': cloud_llm_status,
         'mureka_status': mureka_status,
         'queue_stats': queue_stats,
         'recent_errors': list(recent_errors),
@@ -1440,9 +787,6 @@ def api_status_view(request):
 @login_required
 def add_tag_to_song(request, pk):
     """楽曲にタグを追加"""
-    import html
-    import re
-    
     if request.method != 'POST':
         return JsonResponse({'success': False, 'error': 'Invalid method'}, status=400)
     
@@ -1453,22 +797,10 @@ def add_tag_to_song(request, pk):
     
     try:
         data = json.loads(request.body)
-    except json.JSONDecodeError:
-        return JsonResponse({'success': False, 'error': 'Invalid JSON'}, status=400)
-    
-    try:
         tag_name = data.get('tag_name', '').strip()
         
         if not tag_name:
             return JsonResponse({'success': False, 'error': 'Tag name is required'})
-        
-        # サニタイズ：HTMLエスケープ、危険な文字を削除
-        tag_name = html.escape(tag_name)
-        tag_name = re.sub(r'[<>"\'/\\;]', '', tag_name)
-        
-        # 長さ制限
-        if len(tag_name) > 50:
-            return JsonResponse({'success': False, 'error': 'Tag name too long (max 50 characters)'})
         
         tag, created = Tag.objects.get_or_create(name=tag_name)
         
@@ -1481,8 +813,7 @@ def add_tag_to_song(request, pk):
         })
     
     except Exception as e:
-        logger.error(f"Error adding tag to song {pk}: {e}")
-        return JsonResponse({'success': False, 'error': 'An error occurred.'}, status=500)
+        return JsonResponse({'success': False, 'error': str(e)}, status=500)
 
 
 @login_required
@@ -1509,16 +840,12 @@ def remove_tag_from_song(request, pk):
         return JsonResponse({'success': True})
     
     except Exception as e:
-        logger.error(f"Error removing tag from song {pk}: {e}")
-        return JsonResponse({'success': False, 'error': 'An error occurred.'}, status=500)
+        return JsonResponse({'success': False, 'error': str(e)}, status=500)
 
 
 @login_required
 def update_song_title(request, pk):
     """楽曲のタイトルを更新"""
-    import html
-    import re
-    
     if request.method != 'POST':
         return JsonResponse({'success': False, 'error': 'Invalid method'}, status=400)
     
@@ -1529,10 +856,6 @@ def update_song_title(request, pk):
     
     try:
         data = json.loads(request.body)
-    except json.JSONDecodeError:
-        return JsonResponse({'success': False, 'error': 'Invalid JSON'}, status=400)
-    
-    try:
         new_title = data.get('title', '').strip()
         
         if not new_title:
@@ -1540,10 +863,6 @@ def update_song_title(request, pk):
         
         if len(new_title) > 200:
             return JsonResponse({'success': False, 'error': 'Title is too long (max 200 characters)'})
-        
-        # サニタイズ：HTMLエスケープ、危険な文字を削除
-        new_title = html.escape(new_title)
-        new_title = re.sub(r'[<>\"\\;]', '', new_title)
         
         song.title = new_title
         song.save()
@@ -1554,35 +873,34 @@ def update_song_title(request, pk):
         })
     
     except Exception as e:
-        logger.error(f"Error updating title for song {pk}: {e}")
-        return JsonResponse({'success': False, 'error': 'An error occurred.'}, status=500)
+        return JsonResponse({'success': False, 'error': str(e)}, status=500)
 
 
 @login_required
 def retry_song_generation(request, pk):
-    """失敗した楽曲の再生成（1回目は無料、2回目以降は月間生成回数を消費）"""
+    """失敗した楽曲の再生成（設定された回数まで許可）"""
     from django.conf import settings
     
     song = get_object_or_404(Song, pk=pk, created_by=request.user)
+    max_retries = getattr(settings, 'MAX_GENERATION_RETRIES', 3)
     app_language = request.session.get('app_language', 'ja')
-    user = request.user
     
     if request.method == 'POST':
-        # 2回目以降の再生成は月間生成回数を消費
-        if song.retry_count >= 1:
-            # モデルの残り回数をチェック
-            # V8（プレミアム）としてカウント
-            if not user.can_use_model('v8'):
-                if app_language == 'en':
-                    error_msg = 'Monthly generation limit reached. Upgrade your plan for more.'
-                elif app_language == 'zh':
-                    error_msg = '本月生成次数已用完。升级计划获取更多。'
-                else:
-                    error_msg = '今月の生成回数の上限に達しました。プランをアップグレードしてください。'
-                if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
-                    return JsonResponse({'success': False, 'error': error_msg})
-                messages.error(request, error_msg)
-                return redirect('songs:song_detail', pk=song.pk)
+        # 再生成回数をチェック
+        if song.retry_count >= max_retries:
+            if app_language == 'en':
+                error_msg = f'Retry limit is {max_retries} times'
+            elif app_language == 'zh':
+                error_msg = f'重试次数上限为{max_retries}次'
+            else:
+                error_msg = f'再生成は{max_retries}回までです'
+            if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
+                return JsonResponse({
+                    'success': False,
+                    'error': error_msg
+                })
+            messages.error(request, error_msg)
+            return redirect('songs:song_detail', pk=song.pk)
         
         # 失敗した曲のみ再生成可能
         if song.generation_status == 'failed':
@@ -1616,7 +934,7 @@ def retry_song_generation(request, pk):
                     return JsonResponse({
                         'success': True,
                         'message': msg,
-                        'redirect_url': reverse_lazy('songs:song_generating', kwargs={'pk': song.pk})
+                        'redirect_url': reverse_lazy('songs:song_detail', kwargs={'pk': song.pk})
                     })
                 
                 if app_language == 'en':
@@ -1625,21 +943,20 @@ def retry_song_generation(request, pk):
                     messages.success(request, '歌曲重新生成已开始。')
                 else:
                     messages.success(request, '楽曲の再生成を開始しました。')
-                return redirect('songs:song_generating', pk=song.pk)
+                return redirect('songs:song_detail', pk=song.pk)
                 
             except Exception as e:
-                logger.error(f"Retry generation error for song {song.pk}: {e}")
                 if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
                     return JsonResponse({
                         'success': False,
-                        'error': 'An error occurred. Please try again.'
+                        'error': str(e)
                     })
                 if app_language == 'en':
-                    messages.error(request, 'Regeneration failed. Please try again.')
+                    messages.error(request, f'Regeneration failed: {e}')
                 elif app_language == 'zh':
-                    messages.error(request, '重新生成失败。请重试。')
+                    messages.error(request, f'重新生成失败：{e}')
                 else:
-                    messages.error(request, '再生成に失敗しました。もう一度お試しください。')
+                    messages.error(request, f'再生成に失敗しました: {e}')
         else:
             if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
                 if app_language == 'en':
@@ -1666,2585 +983,12 @@ def retry_song_generation(request, pk):
 
 def set_language(request, lang):
     """アプリの言語を切り替える"""
-    supported_languages = {'ja', 'en', 'zh', 'es', 'de', 'pt'}
-    if lang in supported_languages:
-        # セッションに言語を保存
+    if lang in ['ja', 'en', 'zh']:
         request.session['app_language'] = lang
-        request.session.modified = True
-        
-        # セッションを確実に保存
-        try:
-            request.session.save()
-        except Exception as e:
-            logger.error(f"Session save error: {e}")
     
     # リファラーがあればそこに戻る、なければホームに
     referer = request.META.get('HTTP_REFERER')
     if referer:
-        # キャッシュ防止のためタイムスタンプを追加
-        from urllib.parse import urlparse, parse_qs, urlencode, urlunparse
-        import time
-        parsed = urlparse(referer)
-        query_params = parse_qs(parsed.query)
-        query_params['_t'] = [str(int(time.time() * 1000))]
-        query_params['_lang'] = [lang]  # 言語パラメータも追加
-        new_query = urlencode(query_params, doseq=True)
-        new_url = urlunparse((parsed.scheme, parsed.netloc, parsed.path, parsed.params, new_query, parsed.fragment))
-        response = redirect(new_url)
-    else:
-        response = redirect('songs:home')
-    
-    # キャッシュを無効化するヘッダーを追加
-    response['Cache-Control'] = 'no-cache, no-store, must-revalidate, private'
-    response['Pragma'] = 'no-cache'
-    response['Expires'] = '0'
-    response['Vary'] = 'Cookie'
-    return response
+        return redirect(referer)
+    return redirect('songs:home')
 
-
-@login_required
-def song_generating(request, pk):
-    """楽曲生成中のローディング画面"""
-    song = get_object_or_404(Song, pk=pk)
-    
-    # 本人の楽曲のみアクセス可能
-    if song.created_by != request.user:
-        return redirect('songs:song_detail', pk=pk)
-    
-    # 既に完了している場合はsong_detailへ
-    if song.generation_status == 'completed':
-        return redirect('songs:song_detail', pk=pk)
-    
-    # フラッシュカード同時作成された場合のデッキ情報
-    flashcard_deck_id = request.session.pop('created_flashcard_deck_id', None)
-    flashcard_deck = None
-    if flashcard_deck_id:
-        from .models import FlashcardDeck
-        try:
-            flashcard_deck = FlashcardDeck.objects.get(pk=flashcard_deck_id, user=request.user)
-        except FlashcardDeck.DoesNotExist:
-            pass
-    
-    return render(request, 'songs/song_generating.html', {
-        'song': song,
-        'flashcard_deck': flashcard_deck,
-    })
-
-
-def check_song_status(request, pk):
-    """楽曲の生成状態をチェックするAPIエンドポイント（言語を変更しない）"""
-    try:
-        song = Song.objects.get(pk=pk)
-        
-        # 生成フェーズに基づく進捗率を計算
-        progress = 0
-        phase = 'waiting'
-        
-        if song.generation_status == 'pending':
-            progress = 5
-            phase = 'pending'
-        elif song.generation_status == 'generating':
-            # started_atからの経過時間で進捗を推定
-            if song.started_at:
-                from django.utils import timezone
-                elapsed = (timezone.now() - song.started_at).total_seconds()
-                # 典型的な生成時間は60-120秒
-                # 0-10s: 歌詞処理(15-30%), 10-30s: API送信(30-50%), 30-90s: 生成中(50-85%), 90s+: 仕上げ(85-95%)
-                if elapsed < 10:
-                    progress = 15 + int(elapsed * 1.5)  # 15-30%
-                    phase = 'lyrics_processing'
-                elif elapsed < 30:
-                    progress = 30 + int((elapsed - 10) * 1.0)  # 30-50%
-                    phase = 'api_calling'
-                elif elapsed < 90:
-                    progress = 50 + int((elapsed - 30) * 0.58)  # 50-85%
-                    phase = 'generating'
-                else:
-                    progress = min(85 + int((elapsed - 90) * 0.1), 95)  # 85-95%
-                    phase = 'finalizing'
-            else:
-                progress = 20
-                phase = 'starting'
-        elif song.generation_status == 'completed':
-            progress = 100
-            phase = 'completed'
-        elif song.generation_status == 'failed':
-            progress = 0
-            phase = 'failed'
-        
-        return JsonResponse({
-            'success': True,
-            'status': song.generation_status,
-            'progress': progress,
-            'phase': phase,
-            'queue_position': song.queue_position,
-            'audio_url': song.audio_url if song.audio_url else None,
-            'completed': song.generation_status == 'completed',
-            'failed': song.generation_status == 'failed',
-            'error_message': song.error_message if song.generation_status == 'failed' else None
-        })
-    except Song.DoesNotExist:
-        return JsonResponse({
-            'success': False,
-            'error': 'Song not found'
-        }, status=404)
-
-
-# ========== クラス機能 ==========
-
-from .models import Classroom, ClassroomMembership, ClassroomSong
-import random
-import string
-
-
-def generate_classroom_code():
-    """ユニークなクラスコードを生成"""
-    while True:
-        code = ''.join(random.choices(string.ascii_uppercase + string.digits, k=6))
-        if not Classroom.objects.filter(code=code).exists():
-            return code
-
-
-@login_required
-def classroom_list(request):
-    """参加中のクラス一覧"""
-    app_language = request.session.get('app_language', 'ja')
-    is_english = app_language == 'en'
-    is_chinese = app_language == 'zh'
-    
-    # スクールプラン限定
-    if not request.user.is_school:
-        if is_english:
-            messages.warning(request, 'Classroom feature is available for School Plan subscribers only.')
-        elif is_chinese:
-            messages.warning(request, '教室功能仅限学校计划订阅者使用。')
-        else:
-            messages.warning(request, 'クラス機能はスクールプラン限定です。')
-        return redirect('users:upgrade')
-    
-    # ホストしているクラス
-    hosted_classrooms = Classroom.objects.filter(host=request.user, is_active=True)
-    # 参加しているクラス
-    joined_classrooms = request.user.joined_classrooms.filter(is_active=True).exclude(host=request.user)
-    
-    return render(request, 'songs/classroom_list.html', {
-        'hosted_classrooms': hosted_classrooms,
-        'joined_classrooms': joined_classrooms,
-        'is_english': is_english,
-        'is_chinese': is_chinese,
-    })
-
-
-@login_required
-def classroom_join(request):
-    """クラスに参加"""
-    app_language = request.session.get('app_language', 'ja')
-    is_english = app_language == 'en'
-    is_chinese = app_language == 'zh'
-    
-    # スクールプラン限定
-    if not request.user.is_school:
-        if is_english:
-            messages.warning(request, 'Classroom feature is available for School Plan subscribers only.')
-        elif is_chinese:
-            messages.warning(request, '教室功能仅限学校计划订阅者使用。')
-        else:
-            messages.warning(request, 'クラス機能はスクールプラン限定です。')
-        return redirect('users:upgrade')
-    
-    if request.method == 'POST':
-        code = request.POST.get('code', '').strip().upper()
-        
-        if not code:
-            if is_english:
-                messages.error(request, 'Please enter a class code.')
-            elif is_chinese:
-                messages.error(request, '请输入班级代码。')
-            else:
-                messages.error(request, 'クラスコードを入力してください。')
-            return redirect('songs:classroom_join')
-        
-        try:
-            classroom = Classroom.objects.get(code=code, is_active=True)
-            
-            # 既に参加しているか確認
-            if ClassroomMembership.objects.filter(user=request.user, classroom=classroom).exists():
-                if is_english:
-                    messages.info(request, 'You are already a member of this class.')
-                elif is_chinese:
-                    messages.info(request, '您已经是该班级的成员。')
-                else:
-                    messages.info(request, '既にこのクラスに参加しています。')
-            else:
-                ClassroomMembership.objects.create(user=request.user, classroom=classroom)
-                if is_english:
-                    messages.success(request, f'You have joined "{classroom.name}"!')
-                elif is_chinese:
-                    messages.success(request, f'已加入"{classroom.name}"！')
-                else:
-                    messages.success(request, f'「{classroom.name}」に参加しました！')
-            
-            return redirect('songs:classroom_detail', pk=classroom.pk)
-            
-        except Classroom.DoesNotExist:
-            if is_english:
-                messages.error(request, 'Invalid class code.')
-            elif is_chinese:
-                messages.error(request, '无效的班级代码。')
-            else:
-                messages.error(request, '無効なクラスコードです。')
-    
-    return render(request, 'songs/classroom_join.html', {
-        'is_english': is_english,
-        'is_chinese': is_chinese,
-    })
-
-
-@login_required
-def classroom_create(request):
-    """クラスを作成（スクールプラン契約者のみ）"""
-    app_language = request.session.get('app_language', 'ja')
-    is_english = app_language == 'en'
-    is_chinese = app_language == 'zh'
-    
-    # スクールプランのチェック
-    if not request.user.is_school:
-        if is_english:
-            messages.error(request, 'You need a School Plan to create classes.')
-        elif is_chinese:
-            messages.error(request, '创建班级需要订阅学校套餐。')
-        else:
-            messages.error(request, 'クラスを作成するにはスクールプランの契約が必要です。')
-        return redirect('users:upgrade')
-    
-    if request.method == 'POST':
-        name = request.POST.get('name', '').strip()
-        description = request.POST.get('description', '').strip()
-        
-        if not name:
-            if is_english:
-                messages.error(request, 'Please enter a class name.')
-            elif is_chinese:
-                messages.error(request, '请输入班级名称。')
-            else:
-                messages.error(request, 'クラス名を入力してください。')
-            return redirect('songs:classroom_create')
-        
-        # 卑語・不適切ワードチェック
-        name_check = check_name_for_inappropriate_content(name)
-        if name_check['is_inappropriate']:
-            if is_english:
-                messages.error(request, 'This class name contains inappropriate language. Please choose a different name.')
-            elif is_chinese:
-                messages.error(request, '此班级名称包含不当用语，请选择其他名称。')
-            else:
-                messages.error(request, 'このクラス名には不適切な言葉が含まれています。別の名前を入力してください。')
-            return redirect('songs:classroom_create')
-        
-        code = generate_classroom_code()
-        classroom = Classroom.objects.create(
-            name=name,
-            description=description,
-            code=code,
-            host=request.user
-        )
-        # ホスト自身もメンバーとして追加
-        ClassroomMembership.objects.create(user=request.user, classroom=classroom)
-        
-        if is_english:
-            messages.success(request, f'Class created! Share code: {code}')
-        elif is_chinese:
-            messages.success(request, f'班级已创建！分享代码：{code}')
-        else:
-            messages.success(request, f'クラスを作成しました！参加コード: {code}')
-        
-        return redirect('songs:classroom_detail', pk=classroom.pk)
-    
-    return render(request, 'songs/classroom_create.html', {
-        'is_english': is_english,
-        'is_chinese': is_chinese,
-    })
-
-
-@login_required
-def classroom_detail(request, pk):
-    """クラス詳細（楽曲一覧）"""
-    app_language = request.session.get('app_language', 'ja')
-    is_english = app_language == 'en'
-    is_chinese = app_language == 'zh'
-    
-    # スクールプラン限定
-    if not request.user.is_school:
-        if is_english:
-            messages.warning(request, 'Classroom feature is available for School Plan subscribers only.')
-        elif is_chinese:
-            messages.warning(request, '教室功能仅限学校计划订阅者使用。')
-        else:
-            messages.warning(request, 'クラス機能はスクールプラン限定です。')
-        return redirect('users:upgrade')
-    
-    classroom = get_object_or_404(Classroom, pk=pk, is_active=True)
-    
-    # メンバーかホストのみアクセス可能
-    is_member = ClassroomMembership.objects.filter(user=request.user, classroom=classroom).exists()
-    is_host = classroom.host == request.user
-    
-    if not is_member and not is_host:
-        if is_english:
-            messages.error(request, 'You do not have access to this class.')
-        elif is_chinese:
-            messages.error(request, '您没有访问该班级的权限。')
-        else:
-            messages.error(request, 'このクラスにアクセスする権限がありません。')
-        return redirect('songs:classroom_join')
-    
-    # クラス内の共有楽曲
-    shared_songs = ClassroomSong.objects.filter(classroom=classroom).select_related('song', 'shared_by')
-    
-    # メンバー一覧
-    members = ClassroomMembership.objects.filter(classroom=classroom).select_related('user')
-    
-    return render(request, 'songs/classroom_detail.html', {
-        'classroom': classroom,
-        'shared_songs': shared_songs,
-        'members': members,
-        'is_host': is_host,
-        'is_english': is_english,
-        'is_chinese': is_chinese,
-    })
-
-
-@login_required
-def classroom_share_song(request, pk):
-    """楽曲をクラスに共有"""
-    app_language = request.session.get('app_language', 'ja')
-    is_english = app_language == 'en'
-    is_chinese = app_language == 'zh'
-    
-    classroom = get_object_or_404(Classroom, pk=pk, is_active=True)
-    
-    # メンバーかホストのみ
-    is_member = ClassroomMembership.objects.filter(user=request.user, classroom=classroom).exists()
-    if not is_member:
-        if is_english:
-            messages.error(request, 'You are not a member of this class.')
-        elif is_chinese:
-            messages.error(request, '您不是该班级的成员。')
-        else:
-            messages.error(request, 'このクラスのメンバーではありません。')
-        return redirect('songs:classroom_list')
-    
-    if request.method == 'POST':
-        song_id = request.POST.get('song_id')
-        try:
-            song = Song.objects.get(pk=song_id, created_by=request.user)
-            
-            # 既に共有されているか確認
-            if ClassroomSong.objects.filter(classroom=classroom, song=song).exists():
-                if is_english:
-                    messages.info(request, 'This song is already shared.')
-                elif is_chinese:
-                    messages.info(request, '这首歌曲已被分享。')
-                else:
-                    messages.info(request, 'この楽曲は既に共有されています。')
-            else:
-                ClassroomSong.objects.create(
-                    classroom=classroom,
-                    song=song,
-                    shared_by=request.user
-                )
-                if is_english:
-                    messages.success(request, 'Song shared to class!')
-                elif is_chinese:
-                    messages.success(request, '歌曲已分享到班级！')
-                else:
-                    messages.success(request, 'クラスに楽曲を共有しました！')
-            
-            return redirect('songs:classroom_detail', pk=pk)
-            
-        except Song.DoesNotExist:
-            if is_english:
-                messages.error(request, 'Song not found.')
-            elif is_chinese:
-                messages.error(request, '歌曲未找到。')
-            else:
-                messages.error(request, '楽曲が見つかりません。')
-    
-    # 自分の楽曲一覧
-    my_songs = Song.objects.filter(
-        created_by=request.user, 
-        generation_status='completed'
-    ).exclude(
-        classroom_shares__classroom=classroom
-    )
-    
-    return render(request, 'songs/classroom_share_song.html', {
-        'classroom': classroom,
-        'my_songs': my_songs,
-        'is_english': is_english,
-        'is_chinese': is_chinese,
-    })
-
-
-@login_required
-def classroom_leave(request, pk):
-    """クラスから退出"""
-    app_language = request.session.get('app_language', 'ja')
-    is_english = app_language == 'en'
-    is_chinese = app_language == 'zh'
-    
-    classroom = get_object_or_404(Classroom, pk=pk)
-    
-    # ホストは退出できない
-    if classroom.host == request.user:
-        if is_english:
-            messages.error(request, 'Host cannot leave the class. Please delete the class instead.')
-        elif is_chinese:
-            messages.error(request, '主持人不能退出班级。请删除班级。')
-        else:
-            messages.error(request, 'ホストはクラスから退出できません。クラスを削除してください。')
-        return redirect('songs:classroom_detail', pk=pk)
-    
-    membership = ClassroomMembership.objects.filter(user=request.user, classroom=classroom).first()
-    if membership:
-        membership.delete()
-        if is_english:
-            messages.success(request, 'You have left the class.')
-        elif is_chinese:
-            messages.success(request, '您已退出班级。')
-        else:
-            messages.success(request, 'クラスから退出しました。')
-    
-    return redirect('songs:classroom_list')
-
-
-@login_required
-def classroom_delete(request, pk):
-    """クラスを削除（ホストのみ）"""
-    app_language = request.session.get('app_language', 'ja')
-    is_english = app_language == 'en'
-    is_chinese = app_language == 'zh'
-    
-    classroom = get_object_or_404(Classroom, pk=pk)
-    
-    if classroom.host != request.user:
-        if is_english:
-            messages.error(request, 'Only the host can delete the class.')
-        elif is_chinese:
-            messages.error(request, '只有主持人可以删除班级。')
-        else:
-            messages.error(request, 'ホストのみがクラスを削除できます。')
-        return redirect('songs:classroom_detail', pk=pk)
-    
-    if request.method == 'POST':
-        classroom.is_active = False
-        classroom.save()
-        if is_english:
-            messages.success(request, 'Class has been deleted.')
-        elif is_chinese:
-            messages.success(request, '班级已删除。')
-        else:
-            messages.success(request, 'クラスを削除しました。')
-        return redirect('songs:classroom_list')
-    
-    return redirect('songs:classroom_detail', pk=pk)
-
-
-def audio_proxy(request, pk):
-    """外部音声URLをプロキシして返す（CORS対策）"""
-    from django.http import StreamingHttpResponse, HttpResponse
-    from urllib.parse import urlparse
-    import requests as req
-    import time
-    
-    song = get_object_or_404(Song, pk=pk)
-    
-    # 非公開楽曲はオーナーのみアクセス可能
-    if not song.is_public:
-        if not request.user.is_authenticated:
-            return HttpResponse('Unauthorized', status=401)
-        if request.user != song.created_by and not request.user.is_staff:
-            logger.warning(f"Audio proxy access denied: user {request.user.id} tried to access private song {pk}")
-            return HttpResponse('Forbidden', status=403)
-    
-    # 音声URLを取得
-    audio_url = song.audio_url
-    if not audio_url:
-        return HttpResponse('No audio URL', status=404)
-    
-    # ドメインホワイトリスト（SSRF防止）
-    ALLOWED_AUDIO_DOMAINS = {
-        'cdn.mureka.ai',
-        'api.mureka.ai',
-        'mureka-public.s3.amazonaws.com',
-        'storage.googleapis.com',
-    }
-    parsed = urlparse(audio_url)
-    if parsed.hostname not in ALLOWED_AUDIO_DOMAINS:
-        logger.warning(f"Audio proxy blocked unauthorized domain: {parsed.hostname} for song {pk}")
-        return HttpResponse('Forbidden', status=403)
-    
-    # リトライロジック（最大3回）
-    max_retries = 3
-    last_error = None
-    
-    for attempt in range(max_retries):
-        try:
-            # ストリーミングで外部URLから音声を取得
-            response = req.get(
-                audio_url,
-                timeout=(10, 120),  # (connect_timeout, read_timeout)
-                stream=True,
-                headers={
-                    'User-Agent': 'Mozilla/5.0 (compatible; UtamemoProxy/1.0)',
-                    'Accept': 'audio/*,*/*',
-                }
-            )
-            response.raise_for_status()
-            
-            # レスポンスヘッダーを設定
-            content_type = response.headers.get('Content-Type', 'audio/mpeg')
-            content_length = response.headers.get('Content-Length')
-            
-            # ストリーミングレスポンスを作成
-            def stream_content():
-                try:
-                    for chunk in response.iter_content(chunk_size=8192):
-                        if chunk:
-                            yield chunk
-                finally:
-                    response.close()
-            
-            streaming_response = StreamingHttpResponse(
-                stream_content(),
-                content_type=content_type,
-            )
-            
-            # 必要なヘッダーを設定
-            if content_length:
-                streaming_response['Content-Length'] = content_length
-            streaming_response['Accept-Ranges'] = 'bytes'
-            streaming_response['Cache-Control'] = 'public, max-age=3600'
-            streaming_response['Access-Control-Allow-Origin'] = '*'
-            
-            return streaming_response
-            
-        except req.exceptions.Timeout as e:
-            last_error = e
-            logger.warning(f'Audio proxy timeout (attempt {attempt + 1}/{max_retries}): {e}')
-            if attempt < max_retries - 1:
-                time.sleep(1)
-        except req.exceptions.ConnectionError as e:
-            last_error = e
-            logger.warning(f'Audio proxy connection error (attempt {attempt + 1}/{max_retries}): {e}')
-            if attempt < max_retries - 1:
-                time.sleep(2)
-        except req.exceptions.HTTPError as e:
-            # HTTPエラー（404、403等）はリトライしない
-            logger.error(f'Audio proxy HTTP error: {e}')
-            status_code = e.response.status_code if e.response else 502
-            
-            # 音声URLが期限切れ・無効の場合のメッセージ
-            if status_code in (403, 404, 410, 424):
-                return HttpResponse(
-                    'Audio expired or unavailable',
-                    status=410  # Gone
-                )
-            return HttpResponse(
-                f'Audio source returned error: {status_code}',
-                status=502
-            )
-        except Exception as e:
-            last_error = e
-            logger.error(f'Audio proxy unexpected error (attempt {attempt + 1}/{max_retries}): {e}')
-            if attempt < max_retries - 1:
-                time.sleep(1)
-    
-    # 全リトライ失敗
-    logger.error(f'Audio proxy failed after {max_retries} retries for song {pk}: {last_error}')
-    return HttpResponse(
-        'Audio temporarily unavailable. Please try again.',
-        status=504
-    )
-
-
-@login_required
-def content_violation_view(request):
-    """利用規約違反ページ"""
-    app_language = request.session.get('app_language', 'ja')
-    
-    # セッションから違反情報を取得
-    is_violation = request.session.get('content_violation', False)
-    violation_message = request.session.get('violation_message', '')
-    detected_words = request.session.get('detected_words', [])
-    
-    # セッションをクリア
-    if 'content_violation' in request.session:
-        del request.session['content_violation']
-    if 'violation_message' in request.session:
-        del request.session['violation_message']
-    if 'detected_words' in request.session:
-        del request.session['detected_words']
-    if 'extracted_texts' in request.session:
-        del request.session['extracted_texts']
-    if 'uploaded_image_ids' in request.session:
-        del request.session['uploaded_image_ids']
-    
-    # 言語に応じたメッセージを設定
-    if app_language == 'en':
-        title = 'Terms of Service Violation'
-        default_message = (
-            'Content that violates our Terms of Service has been detected.\n\n'
-            'Content containing inappropriate expressions (insults, discriminatory language, '
-            'violent expressions, etc.) cannot be used for song generation.\n\n'
-            'Please review our Terms of Service and use appropriate content.'
-        )
-        terms_link_text = 'View Terms of Service'
-        back_link_text = 'Return to Upload Page'
-    elif app_language == 'zh':
-        title = '违反使用条款'
-        default_message = (
-            '检测到违反使用条款的内容。\n\n'
-            '包含不当表达（侮辱、歧视性语言、暴力表达等）的内容'
-            '不能用于歌曲生成。\n\n'
-            '请查看使用条款并使用适当的内容。'
-        )
-        terms_link_text = '查看使用条款'
-        back_link_text = '返回上传页面'
-    elif app_language == 'es':
-        title = 'Violación de los Términos de Servicio'
-        default_message = (
-            'Se ha detectado contenido que viola nuestros Términos de Servicio.\n\n'
-            'El contenido que contiene expresiones inapropiadas no se puede usar '
-            'para la generación de canciones.\n\n'
-            'Por favor, revise nuestros Términos de Servicio y use contenido apropiado.'
-        )
-        terms_link_text = 'Ver Términos de Servicio'
-        back_link_text = 'Volver a la página de carga'
-    elif app_language == 'de':
-        title = 'Verstoß gegen die Nutzungsbedingungen'
-        default_message = (
-            'Es wurde Inhalt erkannt, der gegen unsere Nutzungsbedingungen verstößt.\n\n'
-            'Inhalte mit unangemessenen Ausdrücken können nicht für die '
-            'Songgenerierung verwendet werden.\n\n'
-            'Bitte überprüfen Sie unsere Nutzungsbedingungen und verwenden Sie angemessene Inhalte.'
-        )
-        terms_link_text = 'Nutzungsbedingungen anzeigen'
-        back_link_text = 'Zurück zur Upload-Seite'
-    elif app_language == 'pt':
-        title = 'Violação dos Termos de Serviço'
-        default_message = (
-            'Foi detectado conteúdo que viola nossos Termos de Serviço.\n\n'
-            'Conteúdo contendo expressões inadequadas não pode ser usado '
-            'para geração de músicas.\n\n'
-            'Por favor, revise nossos Termos de Serviço e use conteúdo apropriado.'
-        )
-        terms_link_text = 'Ver Termos de Serviço'
-        back_link_text = 'Voltar à página de upload'
-    else:
-        title = '利用規約違反'
-        default_message = (
-            '利用規約に違反するコンテンツが検出されました。\n\n'
-            '不適切な表現（悪口、差別用語、暴力的な表現など）を含むコンテンツは'
-            '楽曲生成に使用できません。\n\n'
-            '利用規約をご確認の上、適切なコンテンツでご利用ください。'
-        )
-        terms_link_text = '利用規約を確認する'
-        back_link_text = 'アップロードページに戻る'
-    
-    context = {
-        'title': title,
-        'message': default_message,
-        'detected_words': detected_words,
-        'terms_link_text': terms_link_text,
-        'back_link_text': back_link_text,
-        'app_language': app_language,
-    }
-    
-    return render(request, 'songs/content_violation.html', context)
-
-
-@login_required
-def recreate_with_lyrics(request, pk):
-    """同じ歌詞で新しい楽曲を作成（歌詞をセッションに保存して作成画面へ遷移）"""
-    song = get_object_or_404(Song, pk=pk)
-    
-    # 歌詞を取得
-    lyrics = song.lyrics
-    if not lyrics:
-        app_language = request.session.get('app_language', 'ja')
-        if app_language == 'en':
-            messages.error(request, 'This song has no lyrics.')
-        elif app_language == 'zh':
-            messages.error(request, '这首歌曲没有歌词。')
-        else:
-            messages.error(request, 'この楽曲には歌詞がありません。')
-        return redirect('songs:song_detail', pk=pk)
-    
-    # 歌詞とプロンプトをセッションに保存
-    request.session['generated_lyrics'] = lyrics.content
-    request.session['extracted_text'] = ''  # 元テキストはクリア
-    request.session['prefill_music_prompt'] = song.music_prompt or ''
-    
-    # 楽曲作成画面にリダイレクト（歌詞確認画面をスキップ）
-    return redirect('songs:lyrics_confirmation')
-
-
-@staff_member_required
-def mureka_api_debug(request):
-    """Mureka APIのレスポンスフィールド調査用（スタッフのみ）"""
-    
-    from .ai_services import MurekaAIGenerator
-    
-    mureka = MurekaAIGenerator()
-    
-    action = request.GET.get('action', 'endpoints')
-    
-    if action == 'endpoints':
-        # 利用可能エンドポイントの調査
-        results = mureka.list_api_endpoints()
-        return JsonResponse({'action': 'endpoints', 'results': results})
-    
-    elif action == 'describe':
-        # 特定の曲を分析（song_id省略時は最新の公開曲を使用）
-        song_id = request.GET.get('song_id')
-        if song_id:
-            song = get_object_or_404(Song, pk=song_id)
-        else:
-            song = Song.objects.filter(audio_url__isnull=False).exclude(audio_url='').order_by('-created_at').first()
-            if not song:
-                return JsonResponse({'error': 'No song with audio found'}, status=400)
-        
-        audio_url = song.audio_url
-        if not audio_url:
-            return JsonResponse({'error': 'No audio URL'}, status=400)
-        
-        result = mureka.describe_song(audio_url)
-        return JsonResponse({
-            'action': 'describe',
-            'song_id': song.pk,
-            'song_title': str(song),
-            'audio_url': audio_url[:100],
-            'result': result
-        })
-    
-    elif action == 'query_task':
-        # タスクの全フィールドを確認（最近の生成タスクIDを指定）
-        task_id = request.GET.get('task_id')
-        if not task_id:
-            # 最新の曲のtrace_idを使用
-            return JsonResponse({'error': 'task_id required'}, status=400)
-        
-        import requests as req
-        headers = {
-            'Authorization': f'Bearer {mureka.api_key}',
-            'Content-Type': 'application/json'
-        }
-        try:
-            response = req.get(f"{mureka.base_url}/v1/song/query/{task_id}", headers=headers, timeout=30)
-            if response.status_code == 200:
-                data = response.json()
-                return JsonResponse({'action': 'query_task', 'task_id': task_id, 'result': data})
-            else:
-                return JsonResponse({'action': 'query_task', 'status': response.status_code, 'body': response.text[:1000]})
-        except Exception as e:
-            return JsonResponse({'error': str(e)}, status=500)
-    
-    elif action == 'list_songs':
-        # Mureka APIの曲リストを取得（GET & POST両方試す）
-        import requests as req
-        headers = {
-            'Authorization': f'Bearer {mureka.api_key}',
-            'Content-Type': 'application/json'
-        }
-        results = {}
-        try:
-            # GET
-            response = req.get(f"{mureka.base_url}/v1/song/list", headers=headers, timeout=30)
-            results['GET /v1/song/list'] = {'status': response.status_code, 'body': response.text[:500]}
-        except Exception as e:
-            results['GET /v1/song/list'] = {'error': str(e)}
-        try:
-            # POST
-            response = req.post(f"{mureka.base_url}/v1/song/list", headers=headers, json={}, timeout=30)
-            results['POST /v1/song/list'] = {'status': response.status_code, 'body': response.text[:500]}
-        except Exception as e:
-            results['POST /v1/song/list'] = {'error': str(e)}
-        try:
-            # POST with page
-            response = req.post(f"{mureka.base_url}/v1/song/list", headers=headers, json={"page": 1, "page_size": 5}, timeout=30)
-            results['POST /v1/song/list (paged)'] = {'status': response.status_code, 'body': response.text[:500]}
-        except Exception as e:
-            results['POST /v1/song/list (paged)'] = {'error': str(e)}
-        return JsonResponse({'action': 'list_songs', 'results': results})
-    
-    elif action == 'recent_songs':
-        # DB内の最近の曲とそのメタデータを一覧表示
-        recent = Song.objects.filter(audio_url__isnull=False).exclude(audio_url='').order_by('-created_at')[:10]
-        songs_data = []
-        for s in recent:
-            songs_data.append({
-                'id': s.pk,
-                'title': str(s),
-                'created': s.created_at.isoformat() if s.created_at else None,
-                'audio_url': s.audio_url[:80] if s.audio_url else None,
-                'generation_status': s.generation_status if hasattr(s, 'generation_status') else None,
-            })
-        return JsonResponse({'action': 'recent_songs', 'songs': songs_data})
-    
-    return JsonResponse({'error': 'Unknown action. Use: endpoints, describe, query_task, list_songs, recent_songs'}, status=400)
-
-
-# ===================================================
-# フラッシュカード機能
-# ===================================================
-
-@login_required
-def flashcard_list(request):
-    """フラッシュカード デッキ一覧"""
-    from .models import FlashcardDeck
-    decks = FlashcardDeck.objects.filter(user=request.user).select_related('source_song').prefetch_related('flashcards')
-    
-    # 各デッキの学習進捗を計算
-    for deck in decks:
-        selected = deck.flashcards.filter(is_selected=True)
-        deck.total_selected = selected.count()
-        deck.mastered_count = selected.filter(mastery_level=3).count()
-        if deck.total_selected > 0:
-            deck.progress_percent = int(deck.mastered_count / deck.total_selected * 100)
-        else:
-            deck.progress_percent = 0
-    
-    return render(request, 'songs/flashcard_list.html', {
-        'decks': decks,
-    })
-
-
-@login_required
-def flashcard_create_from_song(request, pk):
-    """楽曲から暗記カードを作成"""
-    from .models import FlashcardDeck, Flashcard, Song
-    from .ai_services import GeminiFlashcardExtractor, GeminiOCR
-    
-    song = get_object_or_404(Song, pk=pk, created_by=request.user)
-    
-    # 既にこの楽曲の暗記カードがある場合はそちらにリダイレクト
-    existing_deck = FlashcardDeck.objects.filter(source_song=song, user=request.user).first()
-    if existing_deck:
-        return redirect('songs:flashcard_select', pk=existing_deck.pk)
-    
-    if request.method != 'POST':
-        return redirect('songs:song_detail', pk=pk)
-    
-    extractor = GeminiFlashcardExtractor()
-    all_terms = []
-    source_image_obj = None
-    source_text = ''
-    
-    # 歌詞のオリジナルテキストを取得
-    try:
-        if hasattr(song, 'lyrics') and song.lyrics:
-            source_text = song.lyrics.original_text or ''
-    except Exception:
-        pass
-    
-    # 1. 元画像がある場合 → 画像から直接抽出
-    if song.source_image:
-        try:
-            source_image_obj = song.source_image
-            terms = extractor.extract_terms_from_image(song.source_image.image)
-            if terms:
-                all_terms.extend(terms)
-        except Exception as e:
-            logger.warning(f"Flashcard image extraction error: {e}")
-    
-    # 2. 画像から取れなかった場合 → テキストから抽出
-    if not all_terms and source_text:
-        terms = extractor.extract_terms_from_text(source_text)
-        if terms:
-            all_terms.extend(terms)
-    
-    if not all_terms:
-        app_language = request.session.get('app_language', 'ja')
-        if app_language == 'en':
-            messages.warning(request, 'Could not extract terms from this song.')
-        elif app_language == 'zh':
-            messages.warning(request, '无法从这首歌曲中提取术语。')
-        else:
-            messages.warning(request, 'この楽曲からキーワードを抽出できませんでした。')
-        return redirect('songs:song_detail', pk=pk)
-    
-    # 重複除去
-    seen = set()
-    unique_terms = []
-    for t in all_terms:
-        key = t['term'].strip().lower()
-        if key not in seen:
-            seen.add(key)
-            unique_terms.append(t)
-    
-    # デッキ作成
-    deck = FlashcardDeck.objects.create(
-        user=request.user,
-        title=f'{song.title} の暗記カード',
-        source_song=song,
-        source_image=source_image_obj,
-        source_text=source_text[:5000] if source_text else '',
-    )
-    
-    for i, t in enumerate(unique_terms):
-        importance = t.get('importance', 'normal')
-        Flashcard.objects.create(
-            deck=deck,
-            term=t['term'],
-            definition=t['definition'],
-            importance=importance,
-            is_selected=(importance == 'high'),
-            order=i,
-        )
-    
-    return redirect('songs:flashcard_select', pk=deck.pk)
-
-
-@login_required
-def flashcard_select(request, pk):
-    """用語の選択・厳選画面"""
-    from .models import FlashcardDeck, Flashcard
-    
-    deck = get_object_or_404(FlashcardDeck.objects.select_related('source_song'), pk=pk, user=request.user)
-    flashcards = deck.flashcards.all()
-    
-    if request.method == 'POST':
-        # 選択された用語のIDリストを取得
-        selected_ids = request.POST.getlist('selected_cards')
-        selected_ids = [int(x) for x in selected_ids if x.isdigit()]
-        
-        # 全カードの選択状態を更新
-        deck.flashcards.update(is_selected=False)
-        if selected_ids:
-            deck.flashcards.filter(id__in=selected_ids).update(is_selected=True)
-        
-        deck.update_card_count()
-        
-        if deck.card_count > 0:
-            messages.success(request, f'{deck.card_count}枚のカードでデッキを作成しました！')
-            return redirect('songs:flashcard_study', pk=deck.pk)
-        else:
-            messages.warning(request, 'カードを1枚以上選択してください。')
-    
-    return render(request, 'songs/flashcard_select.html', {
-        'deck': deck,
-        'flashcards': flashcards,
-    })
-
-
-@login_required
-def flashcard_study(request, pk):
-    """フラッシュカード学習画面"""
-    from .models import FlashcardDeck
-    
-    deck = get_object_or_404(FlashcardDeck, pk=pk, user=request.user)
-    cards = deck.flashcards.filter(is_selected=True)
-    
-    if not cards.exists():
-        messages.warning(request, 'このデッキにはカードがありません。')
-        return redirect('songs:flashcard_select', pk=deck.pk)
-    
-    # カードデータをJSON化（JSで使用）
-    cards_data = list(cards.values('id', 'term', 'definition', 'mastery_level', 'order'))
-    
-    return render(request, 'songs/flashcard_study.html', {
-        'deck': deck,
-        'cards': cards,
-        'cards_json': json.dumps(cards_data, ensure_ascii=False),
-        'total_cards': cards.count(),
-        'mastered_count': cards.filter(mastery_level=3).count(),
-    })
-
-
-@login_required
-@require_POST
-def flashcard_update_mastery(request, pk):
-    """カードの習熟度を更新（AJAX）"""
-    from .models import Flashcard
-    
-    try:
-        data = json.loads(request.body)
-        card_id = data.get('card_id')
-        mastery = data.get('mastery_level', 0)
-        
-        card = get_object_or_404(Flashcard, pk=card_id, deck__pk=pk, deck__user=request.user)
-        card.mastery_level = max(0, min(3, int(mastery)))
-        card.save(update_fields=['mastery_level'])
-        
-        # デッキ全体の進捗を返す
-        deck = card.deck
-        selected = deck.flashcards.filter(is_selected=True)
-        mastered = selected.filter(mastery_level=3).count()
-        total = selected.count()
-        
-        return JsonResponse({
-            'success': True,
-            'mastery_level': card.mastery_level,
-            'mastered_count': mastered,
-            'total_cards': total,
-            'progress_percent': int(mastered / total * 100) if total > 0 else 0,
-        })
-    except Exception as e:
-        logger.error(f"Flashcard mastery update error: {e}")
-        return JsonResponse({'success': False, 'error': 'An error occurred.'}, status=400)
-
-
-@login_required
-@require_POST
-def flashcard_deck_delete(request, pk):
-    """デッキを削除"""
-    from .models import FlashcardDeck
-    
-    deck = get_object_or_404(FlashcardDeck, pk=pk, user=request.user)
-    deck.delete()
-    messages.success(request, 'デッキを削除しました。')
-    return redirect('songs:flashcard_list')
-
-
-# =============================================================================
-# トレーニング監視ダッシュボード
-# =============================================================================
-
-@staff_member_required
-def training_data_viewer(request):
-    """学習データ確認・編集ページ（管理者のみ）"""
-    import json
-    import re
-    from django.utils import timezone as _tz
-    from users.models import StaffReviewObligation
-
-    # --- スタッフレビュー義務: 初回アクセス記録（スーパーユーザーは対象外） ---
-    today = _tz.localdate()
-    obligation = None
-    if request.user.is_superuser:
-        # スーパーユーザーの古いObligationレコードがあれば削除
-        StaffReviewObligation.objects.filter(user=request.user).delete()
-    else:
-        obligation, created = StaffReviewObligation.objects.get_or_create(
-            user=request.user,
-            defaults={
-                'first_access_date': today,
-                'pending_reviews': 0,
-                'last_checked_date': today,
-            },
-        )
-
-        # --- 日次ノルマ加算（Cron不要: アクセス時にチェック） ---
-        if not created and obligation.last_checked_date < today:
-            from django.db.models import F as _F_ob
-            days_missed = (today - obligation.last_checked_date).days
-            increment = days_missed * 5  # 1日あたり+5
-            StaffReviewObligation.objects.filter(pk=obligation.pk).update(
-                pending_reviews=_F_ob('pending_reviews') + increment,
-                last_checked_date=today,
-            )
-            obligation.refresh_from_db()
-            # 35以上でロック
-            if obligation.pending_reviews >= 35 and not obligation.is_review_locked:
-                obligation.is_review_locked = True
-                obligation.save(update_fields=['is_review_locked'])
-                logger.warning(
-                    f'Staff review lock: {request.user.username} '
-                    f'(pending={obligation.pending_reviews})'
-                )
-
-    from .models import TrainingData
-    data_records = TrainingData.objects.all()
-    records = [r.to_dict() for r in data_records]
-
-    # ジャンル抽出
-    genre_counts = {}
-    for r in records:
-        m = re.search(r'から(\w+)ジャンルの歌詞', r.get('instruction', ''))
-        g = m.group(1) if m else 'other'
-        genre_counts[g] = genre_counts.get(g, 0) + 1
-
-    # レビュー済みマップ生成: { data_hash: [username, ...] }
-    from users.models import TrainingDataReview, make_data_hash
-    reviews_qs = TrainingDataReview.objects.select_related('reviewer').all()
-    reviewed_map = {}  # hash -> [usernames]
-    trained_hashes = set()
-    for rv in reviews_qs:
-        key = rv.data_hash or str(rv.data_index)  # 旧データはdata_indexフォールバック
-        reviewed_map.setdefault(key, []).append(rv.reviewer.username)
-        if rv.trained_at is not None:
-            trained_hashes.add(key)
-
-    # 未レビュー件数を算出 (レビュー済みハッシュに含まれないレコード)
-    reviewed_hashes = set(reviewed_map.keys())
-    all_hashes = {r['_hash'] for r in records}
-    unreviewed_count = len(all_hashes - reviewed_hashes)
-
-    return render(request, 'songs/training_data_viewer.html', {
-        'records_json': json.dumps(records, ensure_ascii=False),
-        'total_count': len(records),
-        'genre_counts': json.dumps(genre_counts, ensure_ascii=False),
-        'page_title': '学習データ管理',
-        'pending_reviews': obligation.pending_reviews if obligation else 0,
-        'is_review_locked': obligation.is_review_locked if obligation else False,
-        'is_superuser': request.user.is_superuser,
-        'reviewed_map_json': json.dumps(reviewed_map, ensure_ascii=False),
-        'trained_hashes_json': json.dumps(sorted(trained_hashes)),
-        'current_username': request.user.username,
-        'unreviewed_count': unreviewed_count,
-        'reviewed_count': len(reviewed_hashes),
-    })
-
-
-@staff_member_required
-@require_POST
-def training_data_api(request):
-    """学習データの編集・削除・追加API（管理者のみ）"""
-    import json
-    from django.db.models import F as _F
-    from users.models import StaffReviewObligation
-    from .models import TrainingData
-
-    def _decrement_pending(user):
-        """編集/削除1回ごとに pending_reviews を -1（下限0）"""
-        updated = StaffReviewObligation.objects.filter(
-            user=user, pending_reviews__gt=0
-        ).update(pending_reviews=_F('pending_reviews') - 1)
-        if updated:
-            # ロック解除判定（35未満になったら解除）
-            StaffReviewObligation.objects.filter(
-                user=user, pending_reviews__lt=35, is_review_locked=True
-            ).update(is_review_locked=False)
-
-    try:
-        body = json.loads(request.body)
-    except json.JSONDecodeError:
-        return JsonResponse({'error': 'Invalid JSON'}, status=400)
-
-    action = body.get('action')
-
-    if action == 'update':
-        data_hash = body.get('data_hash')
-        index = body.get('index')
-        if not data_hash:
-            return JsonResponse({'error': 'data_hash required'}, status=400)
-
-        try:
-            record = TrainingData.objects.get(data_hash=data_hash)
-        except TrainingData.DoesNotExist:
-            return JsonResponse({'error': f'Record not found: {data_hash}'}, status=404)
-
-        new_input = body.get('input')
-        new_output = body.get('output')
-        new_instruction = body.get('instruction')
-
-        if new_input is not None:
-            record.input_text = new_input
-        if new_output is not None:
-            record.output_text = new_output
-        if new_instruction is not None:
-            record.instruction = new_instruction
-        record.save()
-
-        _decrement_pending(request.user)
-        obligation = StaffReviewObligation.objects.filter(user=request.user).first()
-        pending = obligation.pending_reviews if obligation else 0
-        display_idx = (index + 1) if isinstance(index, int) else '?'
-        return JsonResponse({'ok': True, 'message': f'#{display_idx} を更新しました', 'pending_reviews': pending})
-
-    elif action == 'delete':
-        data_hash = body.get('data_hash')
-        index = body.get('index')
-        if not data_hash:
-            return JsonResponse({'error': 'data_hash required'}, status=400)
-
-        deleted_count, _ = TrainingData.objects.filter(data_hash=data_hash).delete()
-        if deleted_count == 0:
-            return JsonResponse({'error': f'Record not found: {data_hash}'}, status=404)
-
-        _decrement_pending(request.user)
-        obligation = StaffReviewObligation.objects.filter(user=request.user).first()
-        pending = obligation.pending_reviews if obligation else 0
-        total = TrainingData.objects.count()
-        display_idx = (index + 1) if isinstance(index, int) else '?'
-        return JsonResponse({'ok': True, 'message': f'#{display_idx} を削除しました', 'total': total, 'pending_reviews': pending})
-
-    elif action == 'reload':
-        records = [r.to_dict() for r in TrainingData.objects.all()]
-        return JsonResponse({'ok': True, 'records': records, 'total': len(records)})
-
-    elif action == 'mark_reviewed':
-        data_hash = body.get('data_hash')
-        index = body.get('index')
-        if not data_hash:
-            return JsonResponse({'error': 'data_hash required'}, status=400)
-        from users.models import TrainingDataReview
-        # ソフトデリート済みのレコードがあれば復元、なければ新規作成
-        existing = TrainingDataReview.all_objects.filter(
-            data_hash=data_hash,
-            reviewer=request.user,
-        ).first()
-        if existing:
-            if existing.is_deleted:
-                existing.restore()
-                created = True
-            else:
-                created = False
-            if isinstance(index, int):
-                existing.data_index = index
-                existing.save(update_fields=['data_index'])
-        else:
-            TrainingDataReview.all_objects.create(
-                data_hash=data_hash,
-                reviewer=request.user,
-                data_index=index if isinstance(index, int) else 0,
-            )
-            created = True
-        _decrement_pending(request.user)
-        obligation = StaffReviewObligation.objects.filter(user=request.user).first()
-        pending = obligation.pending_reviews if obligation else 0
-        reviews = list(TrainingDataReview.objects.filter(data_hash=data_hash).select_related('reviewer').values_list('reviewer__username', flat=True))
-        display_idx = (index + 1) if isinstance(index, int) else '?'
-        return JsonResponse({
-            'ok': True,
-            'message': f'#{display_idx} を確認済みにしました' if created else f'#{display_idx} は既に確認済みです',
-            'pending_reviews': pending,
-            'reviewers': reviews,
-            'data_hash': data_hash,
-        })
-
-    elif action == 'unmark_reviewed':
-        data_hash = body.get('data_hash')
-        index = body.get('index')
-        if not data_hash:
-            return JsonResponse({'error': 'data_hash required'}, status=400)
-        from users.models import TrainingDataReview
-        # ソフトデリート（復元可能）
-        from django.utils import timezone as tz
-        soft_deleted = TrainingDataReview.objects.filter(
-            data_hash=data_hash,
-            reviewer=request.user,
-        ).update(is_deleted=True, deleted_at=tz.now())
-        reviews = list(TrainingDataReview.objects.filter(data_hash=data_hash).select_related('reviewer').values_list('reviewer__username', flat=True))
-        display_idx = (index + 1) if isinstance(index, int) else '?'
-        return JsonResponse({
-            'ok': True,
-            'message': f'#{display_idx} の確認を取り消しました',
-            'reviewers': reviews,
-            'data_hash': data_hash,
-        })
-
-    else:
-        return JsonResponse({'error': f'Unknown action: {action}'}, status=400)
-
-
-# ── プロンプト設定（DB管理） ──
-
-_DEFAULT_INSTRUCTION_TEMPLATE = (
-    "あなたは暗記学習用の歌詞作成の専門家です。以下の学習テキストから{genre}ジャンルの歌詞を作成してください。\n"
-    "\n"
-    "スタイルの参考: エグスプロージョンの「本能寺の変」のようなノリ。\n"
-    "ただし「本能寺の変」よりは学習内容の情報量を多めにしてください。\n"
-    "重要な用語・人物名・年号を歌詞に織り込みつつ、気楽に聞ける曲にしてください。\n"
-    "\n"
-    "【重要なルール】\n"
-    "- 「ぱっと気楽に聞ける」ことが最優先。聴いていて疲れる歌詞はNG。\n"
-    "- 1行は10〜20文字程度。自然に口ずさめるリズム感を大事に。\n"
-    "- 「○○は○○ ○○は○○ ○○は○○」のような事実の羅列は絶対にしない。ストーリーや流れを作る。\n"
-    "- 「暗記しよう」「覚えよう」「チェケラ」「Peace out」等のメタ的フレーズは入れない。\n"
-    "- (Hey!) (Ho!) (Yo!) (What's up?) 等の意味のない合いの手は使わない。\n"
-    "- 韻を踏んでキャッチーに。ユーモアもOK。\n"
-    "出力は [Verse 1], [Chorus], [Verse 2] 等のセクションラベル付きの歌詞のみにしてください。"
-)
-
-_GENRES = ["pop", "rock", "hip-hop", "EDM", "jazz", "R&B", "folk", "J-pop", "K-pop"]
-
-
-def _get_instruction_template():
-    """DB からプロンプトテンプレートを取得（なければデフォルト）"""
-    from .models import PromptTemplate
-    return PromptTemplate.get_template('lyrics_instruction', _DEFAULT_INSTRUCTION_TEMPLATE)
-
-
-def _get_instruction_template_with_meta():
-    """DB からプロンプトテンプレートと編集者情報を取得"""
-    from .models import PromptTemplate
-    try:
-        obj = PromptTemplate.objects.get(key='lyrics_instruction')
-        return {
-            'instruction_template': obj.content,
-            'updated_by': obj.updated_by.username if obj.updated_by else None,
-            'updated_at': obj.updated_at.isoformat() if obj.updated_at else None,
-        }
-    except PromptTemplate.DoesNotExist:
-        return {
-            'instruction_template': _DEFAULT_INSTRUCTION_TEMPLATE,
-            'updated_by': None,
-            'updated_at': None,
-        }
-
-
-@staff_member_required
-@require_POST
-def training_data_generate(request):
-    """Gemini APIで学習データを5件生成"""
-    from .models import TrainingData
-    try:
-        import google.generativeai as genai
-    except ImportError:
-        return JsonResponse({'error': 'google-generativeai がインストールされていません'}, status=500)
-
-    gemini_key = settings.GEMINI_API_KEY
-    if not gemini_key:
-        return JsonResponse({'error': 'GEMINI_API_KEY が未設定です'}, status=500)
-
-    records = [r.to_dict() for r in TrainingData.objects.all()]
-
-    # プロンプト設定をDBから読み込み
-    instruction_template = _get_instruction_template()
-
-    genai.configure(api_key=gemini_key)
-    model = genai.GenerativeModel("gemini-2.5-pro")
-
-    # 既存テーマリスト（重複回避）
-    existing_summaries = []
-    for r in records:
-        inp = r.get("input", "")
-        theme = inp.split(" ")[0] if inp else ""
-        if theme:
-            existing_summaries.append(theme)
-    existing_list = "、".join(existing_summaries[-80:])
-
-    subjects = [
-        "日本史", "世界史", "生物", "化学", "物理",
-        "地理", "数学", "英語文法", "公民", "地学",
-    ]
-
-    generated = []
-    errors = []
-    count = 5
-
-    for i in range(count):
-        genre = _GENRES[i % len(_GENRES)]
-        prompt = (
-            f"あなたは中学・高校の教育コンテンツと暗記用歌詞の生成AIです。\n"
-            f"以下の教科からランダムに1つのテーマを選んでください:\n"
-            f"教科: {', '.join(subjects)}\n\n"
-            f"以下のテーマは既に生成済みなので、これら以外の新しいテーマを選んでください:\n"
-            f"{existing_list}\n\n"
-            f"以下のJSON形式で出力してください（JSON以外は出力しないでください）:\n"
-            f'{{\n'
-            f'  "subject": "教科名",\n'
-            f'  "theme": "テーマ名（簡潔に）",\n'
-            f'  "input": "テーマの学習テキスト（200文字程度、重要な事実・年号・人物名・公式を含む詳細な説明）",\n'
-            f'  "keywords": ["重要キーワード1", "重要キーワード2", ...],\n'
-            f'  "output": "{genre}ジャンルの暗記用歌詞。エグスプロージョンの本能寺の変よりは情報量多めだが、ぱっと気楽に聞けることが最優先。'
-            f'1行10〜20文字。事実の羅列は絶対にしない。ストーリーや流れを作る。'
-            f'「暗記しよう」等のメタ的フレーズや(Hey!)(Yo!)等の無意味な合いの手は入れない。'
-            f'韻を踏んでキャッチーに。[Verse 1], [Chorus], [Verse 2]等のセクションラベル付き。"\n'
-            f'}}'
-        )
-        try:
-            response = model.generate_content(prompt, request_options={"timeout": 90})
-            text = response.text.strip()
-
-            if "```json" in text:
-                text = text.split("```json")[1].split("```")[0].strip()
-            elif "```" in text:
-                text = text.split("```")[1].split("```")[0].strip()
-
-            data = json.loads(text)
-            if not all(k in data for k in ("input", "output")):
-                errors.append(f"[{i+1}] 必須フィールドなし")
-                continue
-            if "[Verse" not in data["output"] and "[Chorus" not in data["output"]:
-                errors.append(f"[{i+1}] セクションラベルなし")
-                continue
-
-            instruction = instruction_template.format(genre=genre)
-            record = {
-                "instruction": instruction,
-                "input": data["input"],
-                "output": data["output"],
-            }
-            # DBに保存
-            td = TrainingData.objects.create(
-                instruction=instruction,
-                input_text=data["input"],
-                output_text=data["output"],
-            )
-            record['_hash'] = td.data_hash
-            records.append(record)
-            generated.append({
-                'subject': data.get('subject', '?'),
-                'theme': data.get('theme', data['input'][:30]),
-                'genre': genre,
-            })
-            # 既存リストに追加（次の生成時の重複回避）
-            existing_summaries.append(data["input"].split(" ")[0])
-            existing_list = "、".join(existing_summaries[-80:])
-
-        except Exception as e:
-            errors.append(f"[{i+1}] {str(e)[:100]}")
-
-    # 保存はDBに直接行われるため、ファイル書き込み不要
-
-    return JsonResponse({
-        'ok': True,
-        'generated': generated,
-        'generated_count': len(generated),
-        'total': len(records),
-        'errors': errors,
-        'records': records,
-    })
-
-
-@staff_member_required
-def training_prompt_api(request):
-    """プロンプト設定の取得・更新（DB管理）"""
-    from .models import PromptTemplate
-
-    if request.method == 'GET':
-        meta = _get_instruction_template_with_meta()
-        return JsonResponse({'ok': True, **meta})
-
-    elif request.method == 'POST':
-        try:
-            body = json.loads(request.body)
-        except json.JSONDecodeError:
-            return JsonResponse({'error': 'Invalid JSON'}, status=400)
-
-        instruction_template = body.get('instruction_template', '').strip()
-        if not instruction_template:
-            return JsonResponse({'error': 'プロンプトが空です'}, status=400)
-        if '{genre}' not in instruction_template:
-            return JsonResponse({'error': 'プロンプトに {genre} プレースホルダーが必要です'}, status=400)
-
-        # DBに保存（編集者情報も記録）
-        obj = PromptTemplate.set_template(
-            key='lyrics_instruction',
-            content=instruction_template,
-            user=request.user,
-        )
-
-        # generate_history_data.py のINSTRUCTION_TEMPLATEも同期（ローカル開発用）
-        _sync_prompt_to_script(instruction_template)
-
-        return JsonResponse({
-            'ok': True,
-            'message': 'プロンプトを保存しました',
-            'updated_by': request.user.username,
-            'updated_at': obj.updated_at.isoformat(),
-        })
-
-    return JsonResponse({'error': 'Method not allowed'}, status=405)
-
-
-def _sync_prompt_to_script(instruction_template):
-    """generate_history_data.pyのINSTRUCTION_TEMPLATEを同期更新"""
-    import re
-    script_path = Path(__file__).resolve().parent.parent.parent / 'training' / 'generate_history_data.py'
-    if not script_path.exists():
-        return
-    try:
-        content = script_path.read_text(encoding='utf-8')
-        # INSTRUCTION_TEMPLATE = ( ... ) のブロックを置換
-        pattern = r'INSTRUCTION_TEMPLATE\s*=\s*\(.*?\)\s*\n'
-        # エスケープしてPython文字列に
-        escaped = instruction_template.replace('\\', '\\\\').replace('"', '\\"').replace('\n', '\\n')
-        replacement = f'INSTRUCTION_TEMPLATE = (\n    "{escaped}"\n)\n'
-        new_content = re.sub(pattern, replacement, content, flags=re.DOTALL)
-        if new_content != content:
-            script_path.write_text(new_content, encoding='utf-8')
-    except Exception as e:
-        logger.warning(f"INSTRUCTION_TEMPLATE同期失敗: {e}")
-
-
-@staff_member_required
-def training_dashboard(request):
-    """LLMトレーニング監視ダッシュボード（管理者のみ）"""
-    from .models import TrainingSession
-
-    sessions = TrainingSession.objects.all()[:20]
-    active_sessions = [s for s in sessions if s.is_active]
-
-    return render(request, 'songs/training_dashboard.html', {
-        'sessions': sessions,
-        'active_sessions': active_sessions,
-        'page_title': 'LLM Training Monitor',
-    })
-
-
-@csrf_exempt
-@require_POST
-def training_api_update(request):
-    """トレーニングスクリプトから進捗を受信するAPIエンドポイント"""
-    from .models import TrainingSession
-    from django.utils import timezone
-    import hmac
-
-    api_key = request.headers.get('X-Training-Api-Key', '')
-    if not api_key:
-        return JsonResponse({'error': 'API key required'}, status=401)
-
-    try:
-        session = TrainingSession.objects.get(api_key=api_key)
-    except TrainingSession.DoesNotExist:
-        return JsonResponse({'error': 'Invalid API key'}, status=403)
-
-    try:
-        data = json.loads(request.body)
-    except json.JSONDecodeError:
-        return JsonResponse({'error': 'Invalid JSON'}, status=400)
-
-    allowed_fields = {
-        'status', 'machine_name', 'machine_ip', 'model_name',
-        'current_epoch', 'total_epochs', 'train_loss', 'eval_loss',
-        'accuracy', 'gpu_name', 'gpu_memory_used', 'gpu_memory_total',
-        'training_config', 'log_tail', 'error_message', 'training_type',
-        'current_step', 'total_steps', 'tunnel_url', 'eta_seconds',
-    }
-
-    for field, value in data.items():
-        if field in allowed_fields:
-            setattr(session, field, value)
-
-    # エラーでないステータスに変わったらerror_messageを自動クリア
-    if data.get('status') in ('idle', 'training', 'generating', 'completed'):
-        if 'error_message' not in data:
-            session.error_message = ''
-
-    # idle/completed/failedではETAをクリア
-    if data.get('status') in ('idle', 'completed', 'failed'):
-        session.eta_seconds = None
-
-    if data.get('status') == 'training' and not session.started_at:
-        session.started_at = timezone.now()
-    if data.get('status') in ('completed', 'failed') and not session.completed_at:
-        session.completed_at = timezone.now()
-
-    session.save()
-
-    # コマンドがあれば返して消す（poll=Trueの場合のみ = エージェントからのポーリング）
-    command = 'none'
-    if data.get('poll'):
-        command = session.pending_command
-        if command != 'none':
-            session.pending_command = 'none'
-            session.save(update_fields=['pending_command'])
-
-    return JsonResponse({'ok': True, 'session_id': session.id, 'command': command, 'training_type': session.training_type})
-
-
-@csrf_exempt
-@require_http_methods(["GET", "POST"])
-def training_reviewed_indices(request):
-    """レビュー済み（未学習）データインデックスを返すAPIエンドポイント（APIキー認証）
-
-    trained_at が null のもののみ返す → 二重学習防止。
-    POST で indices を送ると学習済みマークを付ける (mark_trained)。
-    """
-    from .models import TrainingSession
-    from users.models import TrainingDataReview
-
-    api_key = request.headers.get('X-Training-Api-Key', '')
-    if not api_key:
-        return JsonResponse({'error': 'API key required'}, status=401)
-
-    try:
-        TrainingSession.objects.get(api_key=api_key)
-    except TrainingSession.DoesNotExist:
-        return JsonResponse({'error': 'Invalid API key'}, status=403)
-
-    # POST: 学習完了後に trained_at をセット
-    if request.method == 'POST':
-        import json as _json
-        from django.utils import timezone
-        try:
-            body = _json.loads(request.body)
-        except (ValueError, TypeError):
-            return JsonResponse({'error': 'Invalid JSON'}, status=400)
-
-        # リセットモード: trained_at を null に戻す
-        if body.get('action') == 'reset':
-            reset_count = TrainingDataReview.objects.filter(
-                trained_at__isnull=False,
-            ).update(trained_at=None)
-            logger.info('学習済みマーク全リセット: %d 件', reset_count)
-            return JsonResponse({'ok': True, 'reset': reset_count})
-
-        # ハッシュベース (推奨)
-        trained_hashes = body.get('trained_hashes', [])
-        if trained_hashes and isinstance(trained_hashes, list):
-            now = timezone.now()
-            updated = TrainingDataReview.objects.filter(
-                data_hash__in=trained_hashes,
-                trained_at__isnull=True,
-            ).update(trained_at=now)
-            logger.info('学習済みマーク(hash): %d 件 (hashes=%s)', updated, trained_hashes)
-            return JsonResponse({'ok': True, 'marked': updated})
-
-        # 後方互換: インデックスベース (非推奨)
-        indices = body.get('trained_indices', [])
-        if isinstance(indices, list) and indices:
-            now = timezone.now()
-            updated = TrainingDataReview.objects.filter(
-                data_index__in=indices,
-                trained_at__isnull=True,
-            ).update(trained_at=now)
-            logger.info('学習済みマーク(index, 非推奨): %d 件 (indices=%s)', updated, indices)
-            return JsonResponse({'ok': True, 'marked': updated})
-
-        return JsonResponse({'error': 'trained_hashes or trained_indices required'}, status=400)
-
-    # GET: レビュー済み かつ 未学習 のハッシュ+インデックスを返す
-    reviewed_qs = TrainingDataReview.objects.filter(
-        trained_at__isnull=True,
-    ).values('data_hash', 'data_index').distinct()
-    reviewed_hashes = sorted(set(r['data_hash'] for r in reviewed_qs if r['data_hash']))
-    reviewed_indices = sorted(set(r['data_index'] for r in reviewed_qs))
-    return JsonResponse({
-        'ok': True,
-        'reviewed_hashes': reviewed_hashes,
-        'reviewed_indices': reviewed_indices,  # 後方互換
-    })
-
-
-@csrf_exempt
-@require_http_methods(["GET"])
-def training_data_download(request):
-    """学習データJSON全件をダウンロードするAPI（APIキー認証）
-
-    学校PC / 自宅PC から学習前に最新データを取得するためのエンドポイント。
-    GET /api/training/data/download/
-    Header: X-Training-Api-Key: <api_key>
-    Response: 学習データJSON配列 + プロンプトテンプレート
-    """
-    from .models import TrainingSession, PromptTemplate, TrainingData
-
-    api_key = request.headers.get('X-Training-Api-Key', '')
-    if not api_key:
-        return JsonResponse({'error': 'API key required'}, status=401)
-
-    try:
-        TrainingSession.objects.get(api_key=api_key)
-    except TrainingSession.DoesNotExist:
-        return JsonResponse({'error': 'Invalid API key'}, status=403)
-
-    records = [r.to_dict() for r in TrainingData.objects.all()]
-
-    # プロンプトテンプレートも返す
-    prompt = PromptTemplate.get_template('lyrics_instruction')
-
-    return JsonResponse({
-        'ok': True,
-        'total': len(records),
-        'records': records,
-        'prompt_template': prompt or '',
-    })
-
-
-@csrf_exempt
-@require_POST
-def training_data_upload(request):
-    """GPUマシンからサーバーへ学習データをアップロード（マージ）するAPI
-
-    POST /api/training/data/upload/
-    Header: X-Training-Api-Key: <api_key>
-    Body: {"records": [...], "mode": "merge"|"replace"}
-
-    mode:
-      - "merge" (デフォルト): 新規レコードのみ追加（input の先頭50文字で重複判定）
-      - "replace": サーバー側を完全に置き換え（危険 - 管理者専用）
-    """
-    from .models import TrainingSession, TrainingData
-    from users.models import make_data_hash
-    from django.db import transaction
-
-    api_key = request.headers.get('X-Training-Api-Key', '')
-    if not api_key:
-        return JsonResponse({'error': 'API key required'}, status=401)
-
-    try:
-        session = TrainingSession.objects.get(api_key=api_key)
-    except TrainingSession.DoesNotExist:
-        return JsonResponse({'error': 'Invalid API key'}, status=403)
-
-    try:
-        body = json.loads(request.body)
-    except json.JSONDecodeError:
-        return JsonResponse({'error': 'Invalid JSON'}, status=400)
-
-    upload_records = body.get('records', [])
-    mode = body.get('mode', 'merge')
-
-    if not isinstance(upload_records, list):
-        return JsonResponse({'error': 'records must be a list'}, status=400)
-
-    if not upload_records:
-        return JsonResponse({'error': 'records is empty'}, status=400)
-
-    # バリデーション: 各レコードに必須キーがあるか
-    for i, rec in enumerate(upload_records):
-        if not isinstance(rec, dict):
-            return JsonResponse({'error': f'records[{i}] is not an object'}, status=400)
-        if 'input' not in rec or 'output' not in rec:
-            return JsonResponse({'error': f'records[{i}] に input/output がありません'}, status=400)
-
-    if mode == 'replace':
-        # 完全置き換え
-        with transaction.atomic():
-            TrainingData.objects.all().delete()
-            for rec in upload_records:
-                TrainingData.objects.create(
-                    instruction=rec.get('instruction', ''),
-                    input_text=rec.get('input', ''),
-                    output_text=rec.get('output', ''),
-                )
-        added = len(upload_records)
-        total = added
-        logger.info('学習データ置換: %d 件 (by session %s)', added, session.machine_name)
-    else:
-        # マージ: data_hash で重複判定
-        existing_hashes = set(TrainingData.objects.values_list('data_hash', flat=True))
-        new_records = []
-        for rec in upload_records:
-            h = make_data_hash(rec.get('input', ''))
-            if h not in existing_hashes:
-                new_records.append(rec)
-                existing_hashes.add(h)
-
-        added = len(new_records)
-        if added == 0:
-            total = TrainingData.objects.count()
-            return JsonResponse({
-                'ok': True,
-                'message': '新規データなし（すべて既存と重複）',
-                'added': 0,
-                'total': total,
-            })
-
-        with transaction.atomic():
-            for rec in new_records:
-                TrainingData.objects.create(
-                    instruction=rec.get('instruction', ''),
-                    input_text=rec.get('input', ''),
-                    output_text=rec.get('output', ''),
-                )
-        total = TrainingData.objects.count()
-        logger.info('学習データマージ: +%d 件 (合計 %d, by session %s)',
-                     added, total, session.machine_name)
-
-    return JsonResponse({
-        'ok': True,
-        'message': f'{added} 件追加しました',
-        'added': added,
-        'total': total,
-    })
-
-
-@staff_member_required
-@require_POST
-def training_send_command(request):
-    """ダッシュボードからトレーニングコマンドを送信"""
-    from .models import TrainingSession
-
-    session_id = request.POST.get('session_id')
-    command = request.POST.get('command', '')
-    if command not in ('start', 'stop', 'start_serve', 'wol'):
-        return JsonResponse({'error': 'Invalid command'}, status=400)
-
-    try:
-        session = TrainingSession.objects.get(id=session_id)
-    except TrainingSession.DoesNotExist:
-        return JsonResponse({'error': 'Session not found'}, status=404)
-
-    # WoLコマンド: マジックパケット送信してPCを起こす
-    if command == 'wol':
-        result = _send_wol_packet(session)
-        return JsonResponse(result)
-
-    session.pending_command = command
-    if command == 'start':
-        training_type = request.POST.get('training_type', 'lyrics')
-        if training_type in ('lyrics', 'importance'):
-            session.training_type = training_type
-            session.save(update_fields=['pending_command', 'training_type'])
-        else:
-            session.save(update_fields=['pending_command'])
-    else:
-        session.save(update_fields=['pending_command'])
-    return JsonResponse({'ok': True, 'command': command})
-
-
-def _send_wol_packet(session):
-    """Wake-on-LANマジックパケットを送信"""
-    import re as re_mod
-    import socket
-    import struct
-
-    mac = session.wol_mac_address.strip()
-    target = session.wol_target_host.strip()
-
-    if not mac:
-        return {'ok': False, 'error': 'MACアドレスが未設定です (Adminで設定してください)'}
-
-    # MACアドレスの検証・正規化
-    mac_clean = re_mod.sub(r'[:\-]', '', mac)
-    if not re_mod.match(r'^[0-9A-Fa-f]{12}$', mac_clean):
-        return {'ok': False, 'error': f'無効なMACアドレス: {mac}'}
-
-    # マジックパケット構築: FF x 6 + MAC x 16
-    mac_bytes = bytes.fromhex(mac_clean)
-    magic_packet = b'\xff' * 6 + mac_bytes * 16
-
-    try:
-        # ブロードキャスト送信 (ローカルネットワーク or ルーター経由)
-        sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
-        sock.setsockopt(socket.SOL_SOCKET, socket.SO_BROADCAST, 1)
-        sock.settimeout(5)
-
-        if target:
-            # DDNSホスト名/グローバルIP → ルーターのWoLポートフォワード先へ送信
-            dest = (target, 9)
-        else:
-            # ローカルブロードキャスト
-            dest = ('255.255.255.255', 9)
-
-        sock.sendto(magic_packet, dest)
-        sock.close()
-
-        logger.info(f"WoL packet sent to {mac} via {dest[0]}:{dest[1]}")
-        return {'ok': True, 'message': f'WoLパケットを {mac} に送信しました'}
-    except Exception as e:
-        logger.error(f"WoL send failed: {e}")
-        return {'ok': False, 'error': f'送信失敗: {str(e)}'}
-
-
-@staff_member_required
-def training_api_status_json(request):
-    """ダッシュボードのAuto-refresh用 JSON API"""
-    from .models import TrainingSession
-
-    sessions = TrainingSession.objects.all()[:20]
-    result = []
-    for s in sessions:
-        result.append({
-            'id': s.id,
-            'machine_name': s.machine_name,
-            'status': s.status,
-            'model_name': s.model_name,
-            'current_epoch': s.current_epoch,
-            'total_epochs': s.total_epochs,
-            'current_step': s.current_step,
-            'total_steps': s.total_steps,
-            'progress_percent': s.progress_percent,
-            'train_loss': s.train_loss,
-            'eval_loss': s.eval_loss,
-            'accuracy': s.accuracy,
-            'gpu_name': s.gpu_name,
-            'gpu_memory_used': s.gpu_memory_used,
-            'gpu_memory_total': s.gpu_memory_total,
-            'log_tail': s.log_tail,
-            'error_message': s.error_message,
-            'eta_seconds': s.eta_seconds,
-            'is_active': s.is_active,
-            'pending_command': s.pending_command,
-            'training_type': s.training_type,
-            'wol_mac_address': s.wol_mac_address,
-            'started_at': s.started_at.isoformat() if s.started_at else None,
-            'completed_at': s.completed_at.isoformat() if s.completed_at else None,
-            'updated_at': s.updated_at.isoformat(),
-        })
-    return JsonResponse({'sessions': result})
-
-
-@staff_member_required
-def quality_check(request):
-    """曲のクオリティチェック用スタッフページ"""
-    from django.db.models import Avg
-
-    songs = Song.objects.filter(
-        generation_status='completed',
-    ).select_related('created_by', 'lyrics').prefetch_related('tags').order_by('-created_at')
-
-    # フィルタ
-    genre = request.GET.get('genre', '')
-    vocal = request.GET.get('vocal', '')
-    sort = request.GET.get('sort', '-created_at')
-    q = request.GET.get('q', '')
-
-    if genre:
-        songs = songs.filter(genre__icontains=genre)
-    if vocal:
-        songs = songs.filter(vocal_style=vocal)
-    if q:
-        songs = songs.filter(
-            Q(title__icontains=q) | Q(created_by__username__icontains=q)
-        )
-
-    allowed_sorts = {
-        '-created_at': '-created_at',
-        'created_at': 'created_at',
-        '-total_plays': '-total_plays',
-        '-likes_count': '-likes_count',
-    }
-    songs = songs.order_by(allowed_sorts.get(sort, '-created_at'))
-
-    # 統計情報
-    stats = Song.objects.filter(generation_status='completed').aggregate(
-        total=Count('id'),
-        avg_plays=Avg('total_plays'),
-        avg_likes=Avg('likes_count'),
-    )
-
-    # ジャンル一覧（フィルタ用）
-    genres = (
-        Song.objects.filter(generation_status='completed')
-        .exclude(genre='')
-        .values_list('genre', flat=True)
-        .distinct()
-        .order_by('genre')
-    )
-
-    # ページネーション
-    from django.core.paginator import Paginator
-    paginator = Paginator(songs, 20)
-    page = request.GET.get('page', 1)
-    songs_page = paginator.get_page(page)
-
-    context = {
-        'songs': songs_page,
-        'stats': stats,
-        'genres': list(genres),
-        'current_genre': genre,
-        'current_vocal': vocal,
-        'current_sort': sort,
-        'current_q': q,
-    }
-    return render(request, 'songs/quality_check.html', context)
-
-
-@staff_member_required
-def llm_guide(request):
-    """ローカルLLM学習プラットフォームの使い方ガイド（スタッフのみ）"""
-    # ロック中のスタッフはレビューページに強制リダイレクト
-    if not request.user.is_superuser:
-        from users.models import StaffReviewObligation
-        ob = StaffReviewObligation.objects.filter(
-            user=request.user, is_review_locked=True
-        ).first()
-        if ob:
-            from django.shortcuts import redirect
-            return redirect('songs:training_data_viewer')
-    return render(request, 'songs/llm_guide.html')
-
-
-def _get_llm_base_url():
-    """推論サーバーのベースURLをDBまたはsettingsから取得"""
-    from .models import TrainingSession
-    session = TrainingSession.objects.filter(tunnel_url__gt='').order_by('-updated_at').first()
-    if session and session.tunnel_url:
-        return session.tunnel_url.rstrip('/')
-    return (getattr(settings, 'LOCAL_LLM_URL', '') or '').rstrip('/')
-
-
-@staff_member_required
-def test_llm_page(request):
-    """AI楽曲テストページ（LLM歌詞生成 + Mureka楽曲生成を統合）"""
-    from .models import TrainingSession
-    from .ai_services import MurekaAIGenerator
-    inference_url = _get_llm_base_url()
-    # トレーニング中かどうか確認
-    active_training = TrainingSession.objects.filter(
-        status__in=['training', 'generating']
-    ).first()
-    # Mureka API 設定確認
-    generator = MurekaAIGenerator()
-    api_configured = bool(generator.use_real_api and generator.api_key)
-    return render(request, 'songs/test_llm.html', {
-        'inference_url': inference_url,
-        'is_training': bool(active_training),
-        'training_status': active_training.status if active_training else None,
-        'api_configured': api_configured,
-    })
-
-
-@staff_member_required
-def test_llm_health(request):
-    """推論サーバーのヘルスチェック（プロキシ）"""
-    import requests as http_requests
-    from .models import TrainingSession
-
-    # トレーニング中かどうかチェック
-    active_training = TrainingSession.objects.filter(
-        status__in=['training', 'generating']
-    ).first()
-
-    # start_serve コマンドが既に送信済みかチェック
-    serve_starting = TrainingSession.objects.filter(
-        pending_command='start_serve'
-    ).exists()
-
-    def _auto_request_serve():
-        """オフライン＆学習中でない場合、自動で start_serve コマンドを送信"""
-        if active_training or serve_starting:
-            return False
-        session = TrainingSession.objects.filter(
-            pending_command='none',
-            status__in=['idle', 'completed', 'failed'],
-        ).first()
-        if session:
-            session.pending_command = 'start_serve'
-            session.save(update_fields=['pending_command'])
-            return True
-        return False
-
-    base_url = _get_llm_base_url()
-    if not base_url:
-        if active_training:
-            return JsonResponse({
-                'online': False, 'training': True,
-                'training_status': active_training.status,
-                'error': 'GPU学習中のため推論サーバーは停止中',
-            })
-        requested = _auto_request_serve() or serve_starting
-        return JsonResponse({
-            'online': False,
-            'starting': requested,
-            'error': '推論サーバー起動リクエスト送信済み' if requested else '推論サーバーURL が未設定',
-        })
-    try:
-        resp = http_requests.get(f"{base_url}/health", timeout=5)
-        if resp.status_code == 200:
-            data = resp.json()
-            data['online'] = True
-            return JsonResponse(data)
-        if active_training:
-            return JsonResponse({
-                'online': False, 'training': True,
-                'training_status': active_training.status,
-                'error': 'GPU学習中のため推論サーバーは停止中',
-            })
-        requested = _auto_request_serve() or serve_starting
-        return JsonResponse({
-            'online': False,
-            'starting': requested,
-            'error': f'Status {resp.status_code}',
-        })
-    except Exception as e:
-        if active_training:
-            return JsonResponse({
-                'online': False, 'training': True,
-                'training_status': active_training.status,
-                'error': 'GPU学習中のため推論サーバーは停止中',
-            })
-        requested = _auto_request_serve() or serve_starting
-        return JsonResponse({
-            'online': False,
-            'starting': requested,
-            'error': str(e),
-        })
-
-
-@staff_member_required
-@require_POST
-def test_llm_generate(request):
-    """推論テスト: ローカルLLM or Gemini で歌詞生成"""
-    import requests as http_requests
-    import time
-
-    try:
-        data = json.loads(request.body)
-    except (json.JSONDecodeError, ValueError):
-        return JsonResponse({'success': False, 'error': 'Invalid JSON'}, status=400)
-
-    text = data.get('text', '').strip()
-    if not text:
-        return JsonResponse({'success': False, 'error': 'テキストが空です'}, status=400)
-
-    genre = data.get('genre', 'pop')
-    language_mode = data.get('language_mode', 'japanese')
-    custom_request = data.get('custom_request', '')
-    backend = data.get('backend', 'local')
-
-    start_time = time.time()
-
-    if backend == 'gemini':
-        # Gemini で比較生成
-        try:
-            generator = GeminiLyricsGenerator()
-            lyrics = generator.generate_lyrics(
-                text, title='', genre=genre,
-                language_mode=language_mode,
-                custom_request=custom_request,
-            )
-            elapsed = round(time.time() - start_time, 1)
-            return JsonResponse({
-                'success': True,
-                'lyrics': lyrics,
-                'generation_time': elapsed,
-                'backend': 'Gemini',
-            })
-        except Exception as e:
-            logger.error(f"Test LLM (Gemini) error: {e}")
-            return JsonResponse({'success': False, 'error': str(e)})
-    else:
-        # ローカルLLM
-        base_url = _get_llm_base_url()
-        api_key = getattr(settings, 'LOCAL_LLM_API_KEY', '')
-        timeout = getattr(settings, 'LOCAL_LLM_TIMEOUT', 120)
-
-        if not base_url:
-            return JsonResponse({'success': False, 'error': '推論サーバーURL が未設定です'})
-
-        headers = {'Content-Type': 'application/json'}
-        if api_key:
-            headers['Authorization'] = f'Bearer {api_key}'
-
-        payload = {
-            'text': text,
-            'genre': genre,
-            'language_mode': language_mode,
-            'custom_request': custom_request,
-        }
-
-        try:
-            resp = http_requests.post(
-                f"{base_url}/generate",
-                json=payload,
-                headers=headers,
-                timeout=timeout,
-            )
-            resp.raise_for_status()
-            result = resp.json()
-            elapsed = round(time.time() - start_time, 1)
-
-            if result.get('status') == 'success':
-                return JsonResponse({
-                    'success': True,
-                    'lyrics': result.get('lyrics', ''),
-                    'generation_time': elapsed,
-                    'backend': 'Local LLM',
-                })
-            else:
-                return JsonResponse({
-                    'success': False,
-                    'error': result.get('error', 'Unknown error'),
-                })
-        except http_requests.exceptions.Timeout:
-            return JsonResponse({'success': False, 'error': f'タイムアウト ({timeout}秒)'})
-        except http_requests.exceptions.ConnectionError:
-            return JsonResponse({'success': False, 'error': '推論サーバーに接続できません'})
-        except Exception as e:
-            logger.error(f"Test LLM (Local) error: {e}")
-            return JsonResponse({'success': False, 'error': str(e)})
-
-
-# ═══════════════════════════════════════════════════════════════════
-# Mureka 楽曲生成テストページ（スタッフのみ）
-# ═══════════════════════════════════════════════════════════════════
-
-@staff_member_required
-def test_mureka_page(request):
-    """旧Murekaテストページ → 統合テストページにリダイレクト"""
-    from django.shortcuts import redirect
-    return redirect('songs:test_llm')
-
-
-@staff_member_required
-@require_POST
-def test_mureka_submit(request):
-    """Mureka API へ楽曲生成リクエストを送信（タスクID返却）"""
-    import requests as http_requests
-
-    try:
-        data = json.loads(request.body)
-    except (json.JSONDecodeError, ValueError):
-        return JsonResponse({'success': False, 'error': 'Invalid JSON'}, status=400)
-
-    lyrics = data.get('lyrics', '').strip()
-    if not lyrics or len(lyrics) < 30:
-        return JsonResponse({'success': False, 'error': '歌詞が短すぎます（30文字以上）'}, status=400)
-
-    genre = data.get('genre', 'pop')
-    vocal_style = data.get('vocal_style', 'female')
-    music_prompt = data.get('music_prompt', '')
-    title = data.get('title', 'Test Song')
-
-    api_key = getattr(settings, 'MUREKA_API_KEY', None)
-    base_url = getattr(settings, 'MUREKA_API_URL', 'https://api.mureka.ai')
-    use_api = getattr(settings, 'USE_MUREKA_API', False)
-
-    if not use_api or not api_key:
-        return JsonResponse({'success': False, 'error': 'Mureka API が未設定です'})
-
-    from .ai_services import MurekaAIGenerator
-    generator = MurekaAIGenerator()
-
-    # プロンプト構築（_generate_with_mureka_api と同じロジックの一部）
-    import random
-    is_auto_genre = not genre or genre.strip().lower() in ('', 'auto', 'おまかせ')
-    genre_en = genre if not is_auto_genre else ''
-
-    prompt_parts = []
-    if genre_en:
-        prompt_parts.append(genre_en)
-    if vocal_style:
-        prompt_parts.append(f'{vocal_style} vocal')
-    if music_prompt:
-        translated = generator._translate_prompt_to_english(music_prompt)
-        prompt_parts.append(translated)
-
-    full_prompt = ', '.join(prompt_parts)
-    full_prompt += ', short intro under 10 seconds, short outro under 10 seconds, start singing quickly'
-
-    # Mureka API に送信
-    headers = {
-        'Authorization': f'Bearer {api_key}',
-        'Content-Type': 'application/json',
-    }
-    payload = {
-        'lyrics': lyrics[:2500],
-        'model': 'auto',
-        'prompt': full_prompt,
-    }
-
-    try:
-        resp = http_requests.post(
-            f'{base_url}/v1/song/generate',
-            headers=headers,
-            json=payload,
-            timeout=60,
-        )
-        logger.info(f'[TEST-MUREKA] Submit status={resp.status_code} body={resp.text[:300]}')
-
-        if resp.status_code == 200:
-            result = resp.json()
-            task_id = result.get('id')
-            if task_id:
-                return JsonResponse({
-                    'success': True,
-                    'task_id': task_id,
-                    'prompt_used': full_prompt,
-                })
-            return JsonResponse({'success': False, 'error': 'タスクIDが返りませんでした'})
-        elif resp.status_code == 429:
-            return JsonResponse({'success': False, 'error': 'レート制限中です。しばらく待ってください。'})
-        else:
-            return JsonResponse({'success': False, 'error': f'API Error {resp.status_code}: {resp.text[:200]}'})
-
-    except http_requests.exceptions.Timeout:
-        return JsonResponse({'success': False, 'error': 'Mureka API タイムアウト（60秒）'})
-    except Exception as e:
-        logger.error(f'[TEST-MUREKA] Submit error: {e}')
-        return JsonResponse({'success': False, 'error': str(e)})
-
-
-@staff_member_required
-def test_mureka_poll(request):
-    """Mureka タスクステータスをポーリング"""
-    import requests as http_requests
-
-    task_id = request.GET.get('task_id')
-    if not task_id:
-        return JsonResponse({'error': 'task_id required'}, status=400)
-
-    api_key = getattr(settings, 'MUREKA_API_KEY', None)
-    base_url = getattr(settings, 'MUREKA_API_URL', 'https://api.mureka.ai')
-
-    headers = {
-        'Authorization': f'Bearer {api_key}',
-        'Content-Type': 'application/json',
-    }
-
-    try:
-        resp = http_requests.get(
-            f'{base_url}/v1/song/query/{task_id}',
-            headers=headers,
-            timeout=15,
-        )
-        if resp.status_code == 200:
-            result = resp.json()
-            status = result.get('status', 'unknown')
-
-            if status in ('completed', 'succeeded'):
-                choices = result.get('choices', [])
-                if choices:
-                    choice = choices[0]
-                    return JsonResponse({
-                        'status': 'completed',
-                        'audio_url': choice.get('url'),
-                        'duration': choice.get('duration'),
-                        'image_url': choice.get('image_url'),
-                    })
-                return JsonResponse({'status': 'failed', 'error': '楽曲データがありません'})
-
-            elif status in ('failed', 'error', 'cancelled'):
-                return JsonResponse({
-                    'status': 'failed',
-                    'error': result.get('error', result.get('message', status)),
-                })
-            else:
-                return JsonResponse({'status': status})
-        elif resp.status_code == 404:
-            return JsonResponse({'status': 'failed', 'error': 'タスクが見つかりません'})
-        else:
-            return JsonResponse({'status': 'error', 'error': f'HTTP {resp.status_code}'})
-
-    except Exception as e:
-        logger.error(f'[TEST-MUREKA] Poll error: {e}')
-        return JsonResponse({'status': 'error', 'error': str(e)})
-
-
-# =============================================================================
-# スタッフ活動監視（スーパーユーザー専用）
-# =============================================================================
-
-def superuser_required(view_func):
-    """スーパーユーザーのみアクセス可能"""
-    from functools import wraps
-    @wraps(view_func)
-    def wrapper(request, *args, **kwargs):
-        if not request.user.is_authenticated or not request.user.is_superuser:
-            from django.http import Http404
-            raise Http404
-        return view_func(request, *args, **kwargs)
-    return wrapper
-
-
-@superuser_required
-def staff_monitor(request):
-    """スタッフの学習データ活動を監視するページ（スーパーユーザー専用）"""
-    from users.models import (
-        User, StaffReviewObligation, TrainingDataReview,
-        TrainingDataEditLog,
-    )
-    from django.db.models import Max, Count, F as _F_mon
-    from django.utils import timezone as _tz_mon
-
-    today = _tz_mon.localdate()
-
-    # --- 全スタッフのノルマを最新化（表示用に計算するだけ、DBは更新しない） ---
-    # 実際の加算は各スタッフがtraining-dataにアクセスした時のみ行う
-
-    staff_users = User.objects.filter(is_staff=True).exclude(is_superuser=True)
-
-    staff_data = []
-    for user in staff_users:
-        obligation = StaffReviewObligation.objects.filter(user=user).first()
-        review_count = TrainingDataReview.objects.filter(reviewer=user).count()
-        edit_count = TrainingDataEditLog.objects.filter(editor=user).count()
-        last_review = TrainingDataReview.objects.filter(reviewer=user).aggregate(
-            last=Max('reviewed_at'))['last']
-        last_edit = TrainingDataEditLog.objects.filter(editor=user).aggregate(
-            last=Max('edited_at'))['last']
-
-        last_activity = None
-        if last_review and last_edit:
-            last_activity = max(last_review, last_edit)
-        else:
-            last_activity = last_review or last_edit
-
-        # 表示用: まだ加算されてない分を計算
-        projected_pending = 0
-        pending_extra = 0
-        if obligation:
-            projected_pending = obligation.pending_reviews
-            if obligation.last_checked_date < today:
-                days_missed = (today - obligation.last_checked_date).days
-                pending_extra = days_missed * 5
-                projected_pending += pending_extra
-
-        staff_data.append({
-            'user': user,
-            'obligation': obligation,
-            'review_count': review_count,
-            'edit_count': edit_count,
-            'last_activity': last_activity,
-            'projected_pending': projected_pending,
-            'pending_extra': pending_extra,
-        })
-
-    # 非スタッフユーザー一覧（スタッフ昇格用）
-    non_staff_users = User.objects.filter(
-        is_staff=False, is_active=True
-    ).exclude(is_superuser=True).order_by('username')
-
-    return render(request, 'songs/staff_monitor.html', {
-        'staff_data': staff_data,
-        'non_staff_users': non_staff_users,
-        'page_title': 'スタッフ活動監視',
-    })
-
-
-@superuser_required
-@require_POST
-def staff_monitor_api(request):
-    """スタッフのノルマ調整・ロック解除API（スーパーユーザー専用）"""
-    import json
-    from users.models import User, StaffReviewObligation
-
-    try:
-        body = json.loads(request.body)
-    except (json.JSONDecodeError, ValueError):
-        return JsonResponse({'ok': False, 'error': 'Invalid JSON'}, status=400)
-
-    action = body.get('action')
-    username = body.get('username')
-
-    # reset_all はusername不要
-    if action == 'reset_all':
-        from django.utils import timezone as _tz_api
-        today_api = _tz_api.localdate()
-        updated = StaffReviewObligation.objects.filter(
-            user__is_staff=True, user__is_active=True
-        ).update(
-            pending_reviews=0,
-            is_review_locked=False,
-            last_checked_date=today_api,
-        )
-        logger.info(f'[STAFF-MONITOR] Reset ALL ({updated} records) by {request.user.username}')
-        return JsonResponse({
-            'ok': True,
-            'message': f'全スタッフ（{updated}名）のノルマをリセットしました',
-        })
-
-    if not username:
-        return JsonResponse({'ok': False, 'error': 'username required'}, status=400)
-
-    try:
-        user = User.objects.get(username=username, is_staff=True)
-    except User.DoesNotExist:
-        return JsonResponse({'ok': False, 'error': 'User not found'}, status=404)
-
-    ob = StaffReviewObligation.objects.filter(user=user).first()
-    if not ob:
-        return JsonResponse({'ok': False, 'error': 'Obligation not found'}, status=404)
-
-    if action == 'unlock':
-        ob.is_review_locked = False
-        ob.save(update_fields=['is_review_locked'])
-        logger.info(f'[STAFF-MONITOR] Unlocked {username} by {request.user.username}')
-        return JsonResponse({
-            'ok': True,
-            'message': f'{username} のロックを解除しました',
-            'is_locked': False,
-            'pending': ob.pending_reviews,
-        })
-
-    elif action == 'set_pending':
-        value = body.get('value')
-        if value is None:
-            return JsonResponse({'ok': False, 'error': 'value required'}, status=400)
-        try:
-            value = int(value)
-        except (ValueError, TypeError):
-            return JsonResponse({'ok': False, 'error': 'value must be integer'}, status=400)
-        if value < 0:
-            value = 0
-        ob.pending_reviews = value
-        # 35未満になったらロック解除
-        if value < 35 and ob.is_review_locked:
-            ob.is_review_locked = False
-        # 35以上になったらロック
-        if value >= 35 and not ob.is_review_locked:
-            ob.is_review_locked = True
-        ob.save(update_fields=['pending_reviews', 'is_review_locked'])
-        logger.info(
-            f'[STAFF-MONITOR] Set {username} pending={value} '
-            f'locked={ob.is_review_locked} by {request.user.username}'
-        )
-        return JsonResponse({
-            'ok': True,
-            'message': f'{username} のノルマを {value} に設定しました',
-            'is_locked': ob.is_review_locked,
-            'pending': ob.pending_reviews,
-        })
-
-    elif action == 'reset':
-        ob.pending_reviews = 0
-        ob.is_review_locked = False
-        ob.save(update_fields=['pending_reviews', 'is_review_locked'])
-        logger.info(f'[STAFF-MONITOR] Reset {username} by {request.user.username}')
-        return JsonResponse({
-            'ok': True,
-            'message': f'{username} のノルマをリセットしました',
-            'is_locked': False,
-            'pending': 0,
-        })
-
-    else:
-        return JsonResponse({'ok': False, 'error': f'Unknown action: {action}'}, status=400)
-
-
-@superuser_required
-@require_http_methods(["GET"])
-def staff_monitor_refresh(request):
-    """スタッフ監視データをJSONで返す（リアルタイム更新用）"""
-    from users.models import (
-        User, StaffReviewObligation, TrainingDataReview,
-        TrainingDataEditLog,
-    )
-    from django.db.models import Max
-    from django.utils import timezone as _tz_ref
-
-    today = _tz_ref.localdate()
-    staff_users = User.objects.filter(is_staff=True).exclude(is_superuser=True)
-
-    staff_list = []
-    locked_count = 0
-    total_reviews = 0
-
-    for user in staff_users:
-        obligation = StaffReviewObligation.objects.filter(user=user).first()
-        review_count = TrainingDataReview.objects.filter(reviewer=user).count()
-        edit_count = TrainingDataEditLog.objects.filter(editor=user).count()
-        last_review = TrainingDataReview.objects.filter(reviewer=user).aggregate(
-            last=Max('reviewed_at'))['last']
-        last_edit = TrainingDataEditLog.objects.filter(editor=user).aggregate(
-            last=Max('edited_at'))['last']
-
-        last_activity = None
-        if last_review and last_edit:
-            last_activity = max(last_review, last_edit)
-        else:
-            last_activity = last_review or last_edit
-
-        projected_pending = 0
-        pending_extra = 0
-        is_locked = False
-        has_obligation = False
-
-        if obligation:
-            has_obligation = True
-            projected_pending = obligation.pending_reviews
-            is_locked = obligation.is_review_locked
-            if obligation.last_checked_date < today:
-                days_missed = (today - obligation.last_checked_date).days
-                pending_extra = days_missed * 5
-                projected_pending += pending_extra
-
-        if is_locked:
-            locked_count += 1
-        total_reviews += review_count
-
-        staff_list.append({
-            'username': user.username,
-            'has_obligation': has_obligation,
-            'pending': obligation.pending_reviews if obligation else 0,
-            'projected_pending': projected_pending,
-            'pending_extra': pending_extra,
-            'is_locked': is_locked,
-            'review_count': review_count,
-            'edit_count': edit_count,
-            'last_activity': last_activity.isoformat() if last_activity else None,
-        })
-
-    return JsonResponse({
-        'ok': True,
-        'staff': staff_list,
-        'locked_count': locked_count,
-        'total_reviews': total_reviews,
-    })

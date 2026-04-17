@@ -3,6 +3,7 @@ from django.contrib.auth import get_user_model
 from django.urls import reverse
 from django.utils import timezone
 from datetime import timedelta
+from unittest.mock import patch, MagicMock
 
 User = get_user_model()
 
@@ -162,3 +163,72 @@ class UserRegistrationTest(TestCase):
             'password': 'wrongpassword',
         })
         self.assertEqual(response.status_code, 200)
+
+
+class StripeWebhookTest(TestCase):
+    """Stripe Webhook処理のテスト（モック使用）"""
+
+    def setUp(self):
+        self.client = Client()
+        self.user = User.objects.create_user(username='paiduser', password='testpass123')
+
+    @patch('stripe.Webhook.construct_event')
+    def test_checkout_completed_upgrades_plan(self, mock_construct):
+        """checkout.session.completed でプランがアップグレードされること"""
+        mock_construct.return_value = {
+            'type': 'checkout.session.completed',
+            'data': {
+                'object': {
+                    'metadata': {'user_id': str(self.user.id), 'plan': 'starter'},
+                    'subscription': 'sub_test123',
+                }
+            }
+        }
+        response = self.client.post(
+            reverse('users:stripe_webhook'),
+            data=b'{}',
+            content_type='application/json',
+            HTTP_STRIPE_SIGNATURE='test_sig',
+        )
+        self.assertEqual(response.status_code, 200)
+        self.user.refresh_from_db()
+        self.assertEqual(self.user.plan, 'starter')
+        self.assertEqual(self.user.stripe_subscription_id, 'sub_test123')
+
+    @patch('stripe.Webhook.construct_event')
+    def test_subscription_deleted_downgrades_to_free(self, mock_construct):
+        """customer.subscription.deleted でfreeに戻ること"""
+        self.user.plan = 'pro'
+        self.user.stripe_subscription_id = 'sub_cancel123'
+        self.user.plan_expires_at = timezone.now() + timedelta(days=30)
+        self.user.save()
+
+        mock_construct.return_value = {
+            'type': 'customer.subscription.deleted',
+            'data': {
+                'object': {'id': 'sub_cancel123'}
+            }
+        }
+        response = self.client.post(
+            reverse('users:stripe_webhook'),
+            data=b'{}',
+            content_type='application/json',
+            HTTP_STRIPE_SIGNATURE='test_sig',
+        )
+        self.assertEqual(response.status_code, 200)
+        self.user.refresh_from_db()
+        self.assertEqual(self.user.plan, 'free')
+        self.assertIsNone(self.user.stripe_subscription_id)
+
+    @patch('stripe.Webhook.construct_event')
+    def test_invalid_signature_returns_400(self, mock_construct):
+        """署名検証失敗で400を返すこと"""
+        import stripe
+        mock_construct.side_effect = stripe.error.SignatureVerificationError('bad sig', 'sig_header')
+        response = self.client.post(
+            reverse('users:stripe_webhook'),
+            data=b'{}',
+            content_type='application/json',
+            HTTP_STRIPE_SIGNATURE='invalid',
+        )
+        self.assertEqual(response.status_code, 400)

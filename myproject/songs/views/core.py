@@ -1,0 +1,2140 @@
+from django.shortcuts import render, get_object_or_404, redirect
+from django.views.generic import ListView, DetailView, CreateView, TemplateView
+from django.views.generic.edit import FormView
+from django.contrib.auth.decorators import login_required
+from django.contrib.auth.mixins import LoginRequiredMixin
+from django.contrib import messages
+from django.http import JsonResponse
+from django.urls import reverse_lazy
+from django.contrib.admin.views.decorators import staff_member_required
+from django.views.decorators.http import require_POST, require_http_methods
+from django.views.decorators.csrf import csrf_exempt
+from django.db.models import Q, Count, F
+from django.conf import settings
+import json
+import logging
+from pathlib import Path
+
+from ..models import Song, Like, Favorite, Comment, UploadedImage, Lyrics, PlayHistory, Tag
+from ..forms import SongCreateForm, ImageUploadForm, CommentForm, SongPrivacyForm
+from ..ai_services import GeminiLyricsGenerator, GeminiOCR, MurekaAIGenerator, get_lyrics_generator
+from ..content_filter import check_text_for_inappropriate_content, check_name_for_inappropriate_content
+
+# ロガー設定
+logger = logging.getLogger(__name__)
+
+
+def hiragana_to_katakana(text):
+    """ひらがなをカタカナに変換"""
+    return ''.join(
+        chr(ord(char) + 96) if 'ぁ' <= char <= 'ゖ' else char
+        for char in text
+    )
+
+def katakana_to_hiragana(text):
+    """カタカナをひらがなに変換"""
+    return ''.join(
+        chr(ord(char) - 96) if 'ァ' <= char <= 'ヶ' else char
+        for char in text
+    )
+
+
+class HomeView(TemplateView):
+    """ホームページビュー"""
+    template_name = 'songs/home.html'
+    
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        # 公開楽曲一覧は著作権保護のため無効化
+        context['recent_songs'] = []
+        context['popular_songs'] = []
+        return context
+
+
+class SongListView(ListView):
+    """楽曲一覧ビュー（著作権保護のため公開一覧を無効化 — ホームにリダイレクト）"""
+    model = Song
+    template_name = 'songs/song_list.html'
+    context_object_name = 'songs'
+    paginate_by = 12
+
+    def get(self, request, *args, **kwargs):
+        return redirect('songs:home')
+
+
+def song_share_redirect(request, share_id):
+    """シェアURL（/s/<share_id>/）から曲詳細ページにリダイレクト"""
+    song = get_object_or_404(Song, share_id=share_id)
+    return redirect('songs:song_detail', pk=song.pk)
+
+
+class SongDetailView(DetailView):
+    """楽曲詳細ビュー"""
+    model = Song
+    template_name = 'songs/song_detail.html'
+    context_object_name = 'song'
+    
+    def get_queryset(self):
+        return Song.objects.select_related('created_by', 'lyrics').prefetch_related('tags')
+    
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        song = self.object
+        
+        # 歌詞情報の安全な取得
+        try:
+            if hasattr(song, 'lyrics') and song.lyrics:
+                context['lyrics_content'] = song.lyrics.content or ''
+                context['decrypted_lyrics'] = song.lyrics.content or ''
+                context['original_text'] = song.lyrics.original_text or ''
+                context['decrypted_original_text'] = song.lyrics.original_text or ''
+            else:
+                context['lyrics_content'] = ''
+                context['original_text'] = ''
+                context['decrypted_lyrics'] = ''
+                context['decrypted_original_text'] = ''
+        except Exception:
+            context['lyrics_content'] = ''
+            context['original_text'] = ''
+            context['decrypted_lyrics'] = ''
+            context['decrypted_original_text'] = ''
+        
+        # 認証ユーザーの情報
+        if self.request.user.is_authenticated:
+            context['is_liked'] = Like.objects.filter(
+                user=self.request.user, song=song
+            ).exists()
+            context['is_favorited'] = Favorite.objects.filter(
+                user=self.request.user, song=song
+            ).exists()
+            # ユーザーの再生回数を取得
+            try:
+                play_history = PlayHistory.objects.get(user=self.request.user, song=song)
+                context['my_play_count'] = play_history.play_count
+            except PlayHistory.DoesNotExist:
+                context['my_play_count'] = 0
+        else:
+            context['is_liked'] = False
+            context['is_favorited'] = False
+            context['my_play_count'] = 0
+            
+        context['comments'] = Comment.objects.filter(song=song).select_related('user')
+        context['comment_form'] = CommentForm()
+        
+        # 関連楽曲を取得（同じタグまたは似た名前の公開楽曲）
+        try:
+            context['related_songs'] = self._get_related_songs(song)
+        except Exception:
+            context['related_songs'] = []
+        
+        # この楽曲の暗記カードデッキ
+        if self.request.user.is_authenticated and self.request.user == song.created_by:
+            from ..models import FlashcardDeck
+            context['flashcard_deck'] = FlashcardDeck.objects.filter(
+                source_song=song, user=self.request.user
+            ).first()
+        
+        # シェア用URL
+        context['share_url'] = self.request.build_absolute_uri(song.get_share_url())
+        
+        return context
+    
+    def _get_related_songs(self, song):
+        """関連楽曲を取得 - ジャンル、タグ、作成者で関連性を計算"""
+        from django.db.models import Case, When, IntegerField, Value
+        
+        # 自分自身を除外し、公開済みの楽曲のみ
+        related = Song.objects.filter(
+            is_public=True,
+            generation_status='completed'
+        ).exclude(pk=song.pk)
+        
+        # スコアリングで関連度を計算
+        song_tags = song.tags.all()
+        tag_ids = list(song_tags.values_list('id', flat=True)) if song_tags.exists() else []
+        
+        # 同じジャンルかどうか
+        genre_match = Case(
+            When(genre=song.genre, then=Value(10)) if song.genre else When(pk__isnull=True, then=Value(0)),
+            default=Value(0),
+            output_field=IntegerField()
+        )
+        
+        # 同じ作成者かどうか
+        creator_match = Case(
+            When(created_by=song.created_by, then=Value(5)),
+            default=Value(0),
+            output_field=IntegerField()
+        )
+        
+        # タグの一致数
+        if tag_ids:
+            related = related.annotate(
+                matching_tags=Count('tags', filter=Q(tags__id__in=tag_ids)),
+                genre_score=genre_match,
+                creator_score=creator_match
+            ).annotate(
+                relevance_score=F('matching_tags') * 3 + F('genre_score') + F('creator_score')
+            ).order_by('-relevance_score', '-likes_count', '-created_at')
+        else:
+            # タグがない場合はジャンルと作成者でスコアリング
+            related = related.annotate(
+                genre_score=genre_match,
+                creator_score=creator_match
+            ).annotate(
+                relevance_score=F('genre_score') + F('creator_score')
+            ).order_by('-relevance_score', '-likes_count', '-created_at')
+        
+        return related.select_related('created_by')[:5]
+
+
+class CreateSongView(LoginRequiredMixin, CreateView):
+
+    """楽曲作成ビュー"""
+    model = Song
+    form_class = SongCreateForm
+    template_name = 'songs/create_song.html'
+    success_url = reverse_lazy('songs:my_songs')
+    
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        # モデル別の残り使用可能回数を取得
+        model_remaining = self.request.user.get_remaining_model_usage()
+        context['model_remaining'] = model_remaining
+        
+        # 次月1日のリセット日を計算
+        from django.utils import timezone
+        import calendar
+        now = timezone.now()
+        _, last_day = calendar.monthrange(now.year, now.month)
+        if now.month == 12:
+            next_reset = now.replace(year=now.year + 1, month=1, day=1)
+        else:
+            next_reset = now.replace(month=now.month + 1, day=1)
+        days_until_reset = (next_reset.date() - now.date()).days
+        context['next_reset_date'] = next_reset
+        context['days_until_reset'] = days_until_reset
+        
+        user = self.request.user
+        # V8の残りで判定（全プラン共通）
+        v8_remaining = model_remaining.get('v8', 0)
+        context['free_plan_remaining'] = v8_remaining
+        context['free_plan_limit_reached'] = v8_remaining == 0
+        context['paid_plan_all_exhausted'] = v8_remaining == 0
+        
+        # セッションからプリフィルデータを取得（再生成時）
+        context['prefill_music_prompt'] = self.request.session.pop('prefill_music_prompt', '')
+        
+        return context
+    
+    def get_form_kwargs(self):
+        kwargs = super().get_form_kwargs()
+        
+        extracted_text = self.request.session.get('extracted_text', '')
+        
+        if self.request.method == 'POST':
+            generated_lyrics = self.request.POST.get('generated_lyrics', '')
+            if not generated_lyrics:
+                generated_lyrics = self.request.session.get('generated_lyrics', '')
+            if generated_lyrics:
+                kwargs['generated_lyrics'] = generated_lyrics
+        
+        kwargs['extracted_text'] = extracted_text
+        return kwargs
+    
+    def form_valid(self, form):
+        form.instance.created_by = self.request.user
+        form.instance.artist = self.request.user.username  # アーティスト名をユーザー名に設定
+        form.instance.is_public = False
+        form.instance.is_encrypted = False
+        form.instance.generation_status = 'pending'
+        
+        generating_count = Song.objects.filter(
+            generation_status__in=['pending', 'generating']
+        ).count()
+        form.instance.queue_position = generating_count + 1
+        
+        original_text = form.cleaned_data.get('original_text', '')
+        title = form.cleaned_data.get('title', '')
+        genre = form.cleaned_data.get('genre', 'ポップ')
+        vocal_style = form.cleaned_data.get('vocal_style', 'female')
+        
+        # タイトルの不適切コンテンツチェック
+        title_check = check_text_for_inappropriate_content(title)
+        if title_check['is_inappropriate']:
+            app_language = self.request.session.get('app_language', 'ja')
+            self.request.session['content_violation'] = True
+            self.request.session['violation_message'] = title_check['message']
+            self.request.session['detected_words'] = title_check['detected_words']
+            logger.warning(f"Inappropriate title detected for user {self.request.user.id}: {title_check['detected_words']}")
+            return redirect('songs:content_violation')
+        
+        # カスタム音楽プロンプトを取得
+        music_prompt = self.request.POST.get('music_prompt', '').strip()
+        form.instance.music_prompt = music_prompt
+        
+        # AIモデルはV8（プレミアム）に固定
+        mureka_model = 'mureka-v8'
+        
+        # 使用制限のチェック
+        if not self.request.user.can_use_model('v8'):
+            app_language = self.request.session.get('app_language', 'ja')
+            if app_language == 'en':
+                messages.error(self.request, 'You have reached your monthly song creation limit.')
+            elif app_language == 'zh':
+                messages.error(self.request, '您已达到本月歌曲创建上限。')
+            else:
+                messages.error(self.request, '今月の楽曲作成上限に達しました。')
+            return redirect('users:upgrade')
+        
+        form.instance.mureka_model = mureka_model
+        
+        generated_lyrics = self.request.POST.get('generated_lyrics', '')
+        if not generated_lyrics:
+            generated_lyrics = self.request.session.get('generated_lyrics', '')
+        
+        # 歌詞をそのまま使用（AI変換しない）
+        if not generated_lyrics or len(generated_lyrics.strip()) == 0:
+            app_language = self.request.session.get('app_language', 'ja')
+            if app_language == 'en':
+                messages.error(self.request, 'Lyrics are empty.')
+            elif app_language == 'zh':
+                messages.error(self.request, '歌词为空。')
+            elif app_language == 'es':
+                messages.error(self.request, 'Las letras están vacías.')
+            elif app_language == 'de':
+                messages.error(self.request, 'Der Liedtext ist leer.')
+            else:
+                messages.error(self.request, '歌詞が入力されていません。')
+            return redirect('songs:lyrics_confirmation')
+        
+        # 歌詞の不適切コンテンツチェック
+        content_check = check_text_for_inappropriate_content(generated_lyrics)
+        if content_check['is_inappropriate']:
+            app_language = self.request.session.get('app_language', 'ja')
+            self.request.session['content_violation'] = True
+            self.request.session['violation_message'] = content_check['message']
+            self.request.session['detected_words'] = content_check['detected_words']
+            logger.warning(f"Inappropriate lyrics detected for user {self.request.user.id}: {content_check['detected_words']}")
+            return redirect('songs:content_violation')
+        
+        lyrics_content = generated_lyrics
+        
+        response = super().form_valid(form)
+        
+        Lyrics.objects.create(
+            song=self.object,
+            content=lyrics_content,
+            original_text=original_text or ''
+        )
+        
+        # アップロード画像をSongに関連付け（生成完了後に削除するため）
+        uploaded_image_id = self.request.session.get('uploaded_image_id')
+        if uploaded_image_id:
+            try:
+                uploaded_image = UploadedImage.objects.get(id=uploaded_image_id, user=self.request.user)
+                self.object.source_image = uploaded_image
+                self.object.save(update_fields=['source_image'])
+            except UploadedImage.DoesNotExist:
+                pass
+        
+        from .queue_manager import queue_manager
+        
+        queue_manager.add_to_queue(
+            song_id=self.object.pk,
+            lyrics_content=lyrics_content,
+            title=title,
+            genre=genre,
+            vocal_style=vocal_style
+        )
+        
+        # フラッシュカード同時作成
+        create_flashcards = self.request.POST.get('create_flashcards') == 'true'
+        if create_flashcards:
+            self._create_flashcards_from_session(original_text, title)
+        
+        app_language = self.request.session.get('app_language', 'ja')
+        
+        if self.object.queue_position and self.object.queue_position > 1:
+            if app_language == 'en':
+                messages.success(
+                    self.request, 
+                    f'Song added to queue. Currently {self.object.queue_position - 1} people ahead. Will be generated in order.'
+                )
+            elif app_language == 'zh':
+                messages.success(
+                    self.request, 
+                    f'歌曲已加入队列。当前排在第{self.object.queue_position - 1}位。将按顺序生成。'
+                )
+            elif app_language == 'es':
+                messages.success(
+                    self.request, 
+                    f'Canción añadida a la cola. Actualmente hay {self.object.queue_position - 1} personas delante. Se generará en orden.'
+                )
+            elif app_language == 'de':
+                messages.success(
+                    self.request, 
+                    f'Lied zur Warteschlange hinzugefügt. Derzeit {self.object.queue_position - 1} Personen vor Ihnen. Wird der Reihe nach generiert.'
+                )
+            else:
+                messages.success(
+                    self.request, 
+                    f'楽曲をキューに追加しました。現在{self.object.queue_position - 1}人待っています。順番に生成されます。'
+                )
+        else:
+            if app_language == 'en':
+                messages.success(self.request, 'Song generation started. Will be ready in 1-2 minutes.')
+            elif app_language == 'zh':
+                messages.success(self.request, '歌曲生成已开始。1-2分钟后完成。')
+            elif app_language == 'es':
+                messages.success(self.request, 'La generación de la canción ha comenzado. Estará lista en 1-2 minutos.')
+            elif app_language == 'de':
+                messages.success(self.request, 'Liederstellung gestartet. In 1-2 Minuten fertig.')
+            else:
+                messages.success(self.request, '楽曲の生成を開始しました。1〜2分で完成します。')
+        
+        # セッションから楽曲作成関連データをすべてクリア
+        keys_to_clear = [
+            'extracted_text', 'extracted_texts', 'generated_lyrics',
+            'uploaded_image_id', 'uploaded_image_ids', 'custom_request',
+        ]
+        for key in keys_to_clear:
+            self.request.session.pop(key, None)
+        
+        return response
+    
+    def get_success_url(self):
+        return reverse_lazy('songs:song_generating', kwargs={'pk': self.object.pk})
+    
+    def _create_flashcards_from_session(self, original_text, song_title):
+        """セッションの画像/テキストからフラッシュカードデッキを作成"""
+        from ..models import FlashcardDeck, Flashcard, UploadedImage as UImage
+        from ..ai_services import GeminiFlashcardExtractor, GeminiOCR
+        
+        try:
+            extractor = GeminiFlashcardExtractor()
+            all_terms = []
+            source_image_obj = None
+            source_text = original_text or ''
+            
+            # 1. 画像がある場合 → 画像から直接抽出を試みる
+            uploaded_image_ids = self.request.session.get('uploaded_image_ids', [])
+            if uploaded_image_ids:
+                for img_id in uploaded_image_ids:
+                    try:
+                        uploaded = UImage.objects.get(id=img_id, user=self.request.user)
+                        if source_image_obj is None:
+                            source_image_obj = uploaded
+                        terms = extractor.extract_terms_from_image(uploaded.image)
+                        if terms:
+                            all_terms.extend(terms)
+                    except Exception as img_err:
+                        logger.warning(f"Flashcard image extraction error: {img_err}")
+            
+            # 画像ID が1つの場合のフォールバック
+            if not uploaded_image_ids:
+                single_id = self.request.session.get('uploaded_image_id')
+                if single_id:
+                    try:
+                        uploaded = UImage.objects.get(id=single_id, user=self.request.user)
+                        source_image_obj = uploaded
+                        terms = extractor.extract_terms_from_image(uploaded.image)
+                        if terms:
+                            all_terms.extend(terms)
+                    except Exception as img_err:
+                        logger.warning(f"Flashcard single image error: {img_err}")
+            
+            # 2. 画像から取れなかった場合 → テキストから抽出
+            if not all_terms and source_text:
+                terms = extractor.extract_terms_from_text(source_text)
+                if terms:
+                    all_terms.extend(terms)
+            
+            if not all_terms:
+                logger.info("Flashcard: No terms extracted, skipping deck creation")
+                return
+            
+            # 重複除去
+            seen = set()
+            unique_terms = []
+            for t in all_terms:
+                key = t['term'].strip().lower()
+                if key not in seen:
+                    seen.add(key)
+                    unique_terms.append(t)
+            
+            # デッキ作成
+            deck_title = f'{song_title} の暗記カード' if song_title else 'テスト対策カード'
+            deck = FlashcardDeck.objects.create(
+                user=self.request.user,
+                title=deck_title,
+                source_song=self.object,
+                source_image=source_image_obj,
+                source_text=source_text[:5000] if source_text else '',
+            )
+            
+            # カードを作成（highはデフォルト選択、選択画面へ誘導）
+            for i, t in enumerate(unique_terms):
+                importance = t.get('importance', 'normal')
+                Flashcard.objects.create(
+                    deck=deck,
+                    term=t['term'],
+                    definition=t['definition'],
+                    importance=importance,
+                    is_selected=(importance == 'high'),
+                    order=i,
+                )
+            
+            deck.update_card_count()
+            
+            # セッションにデッキIDを保存（song_generating画面で選択画面へのリンク表示用）
+            self.request.session['created_flashcard_deck_id'] = deck.pk
+            
+            logger.info(f"Flashcard deck created: '{deck_title}' with {deck.card_count} cards for user {self.request.user.id}")
+            
+        except Exception as e:
+            logger.error(f"Flashcard creation error: {e}", exc_info=True)
+            # フラッシュカード作成失敗しても楽曲生成は続行
+
+
+def validate_uploaded_file(file, app_language='ja'):
+    """アップロードされたファイルを検証"""
+    errors = []
+    file_name = file.name.lower()
+    
+    # ファイルタイプの確認
+    is_pdf = file_name.endswith('.pdf')
+    is_image = any(file_name.endswith(ext) for ext in ['.jpg', '.jpeg', '.png', '.gif', '.webp', '.heic', '.heif'])
+    
+    if not is_pdf and not is_image:
+        if app_language == 'en':
+            errors.append(f'{file.name}: Unsupported file format')
+        elif app_language == 'zh':
+            errors.append(f'{file.name}：不支持的文件格式')
+        else:
+            errors.append(f'{file.name}: 対応していないファイル形式です')
+        return errors
+    
+    # ファイルサイズの確認
+    max_size = getattr(settings, 'MAX_PDF_SIZE', 25 * 1024 * 1024) if is_pdf else getattr(settings, 'MAX_IMAGE_SIZE', 10 * 1024 * 1024)
+    max_size_mb = max_size // (1024 * 1024)
+    
+    if file.size > max_size:
+        if app_language == 'en':
+            errors.append(f'{file.name}: File too large (max {max_size_mb}MB)')
+        elif app_language == 'zh':
+            errors.append(f'{file.name}：文件过大（最大{max_size_mb}MB）')
+        else:
+            errors.append(f'{file.name}: ファイルサイズが大きすぎます（最大{max_size_mb}MB）')
+    
+    # MIMEタイプの確認（追加のセキュリティ）
+    content_type = file.content_type
+    allowed_image_types = getattr(settings, 'ALLOWED_IMAGE_TYPES', ['image/jpeg', 'image/png', 'image/gif', 'image/webp', 'image/heic', 'image/heif'])
+    allowed_doc_types = getattr(settings, 'ALLOWED_DOCUMENT_TYPES', ['application/pdf'])
+    
+    if is_pdf and content_type not in allowed_doc_types:
+        if app_language == 'en':
+            errors.append(f'{file.name}: Invalid PDF file')
+        elif app_language == 'zh':
+            errors.append(f'{file.name}：无效的PDF文件')
+        else:
+            errors.append(f'{file.name}: 無効なPDFファイルです')
+    elif is_image and content_type not in allowed_image_types:
+        # スマホ（iOS Safari等）ではHEIC画像のMIMEタイプが空や
+        # application/octet-streamで送信されることがあるため、
+        # 拡張子で画像と判定済みの場合はMIMEタイプチェックをスキップ
+        if content_type and content_type != 'application/octet-stream':
+            if app_language == 'en':
+                errors.append(f'{file.name}: Invalid image file')
+            elif app_language == 'zh':
+                errors.append(f'{file.name}：无效的图片文件')
+            else:
+                errors.append(f'{file.name}: 無効な画像ファイルです')
+    
+    return errors
+
+
+class UploadImageView(LoginRequiredMixin, FormView):
+    template_name = 'songs/upload_image.html'
+    form_class = ImageUploadForm
+
+    def get(self, request, *args, **kwargs):
+        # ?new=true で明示的に新規作成する場合はセッションをクリアしてそのまま表示
+        if request.GET.get('new') == 'true':
+            for key in ['extracted_texts', 'extracted_text', 'generated_lyrics',
+                        'uploaded_image_ids', 'uploaded_image_id', 'custom_request']:
+                request.session.pop(key, None)
+            return super().get(request, *args, **kwargs)
+
+        # 生成中の楽曲がある場合はその生成画面にリダイレクト
+        in_progress_song = Song.objects.filter(
+            created_by=request.user,
+            generation_status__in=['pending', 'generating']
+        ).order_by('-created_at').first()
+        if in_progress_song:
+            return redirect('songs:song_generating', pk=in_progress_song.pk)
+
+        # 歌詞が既に生成済みでセッションにある場合は確認画面へ
+        if request.session.get('generated_lyrics'):
+            return redirect('songs:lyrics_confirmation')
+
+        # 歌詞生成中（テキスト抽出済み）の場合は歌詞生成画面へ
+        if request.session.get('extracted_texts'):
+            return redirect('songs:lyrics_generating')
+
+        return super().get(request, *args, **kwargs)
+
+    def form_valid(self, form):
+        files = self.request.FILES.getlist('images')
+        
+        app_language = self.request.session.get('app_language', 'ja')
+        
+        if not files:
+            if app_language == 'en':
+                messages.error(self.request, 'No file selected.')
+            elif app_language == 'zh':
+                messages.error(self.request, '未选择文件。')
+            else:
+                messages.error(self.request, 'ファイルが選択されていません。')
+            return redirect('songs:upload_image')
+        
+        # 10ファイル制限
+        MAX_FILES = 10
+        if len(files) > MAX_FILES:
+            if app_language == 'en':
+                messages.error(self.request, f'You can upload up to {MAX_FILES} files at a time.')
+            elif app_language == 'zh':
+                messages.error(self.request, f'一次最多可上传{MAX_FILES}个文件。')
+            elif app_language == 'es':
+                messages.error(self.request, f'Puedes subir hasta {MAX_FILES} archivos a la vez.')
+            elif app_language == 'de':
+                messages.error(self.request, f'Sie können maximal {MAX_FILES} Dateien gleichzeitig hochladen.')
+            elif app_language == 'pt':
+                messages.error(self.request, f'Você pode enviar até {MAX_FILES} arquivos por vez.')
+            else:
+                messages.error(self.request, f'一度にアップロードできるのは最大{MAX_FILES}ファイルです。')
+            return redirect('songs:upload_image')
+        
+        # ファイルの検証
+        validation_errors = []
+        valid_files = []
+        for file in files:
+            file_errors = validate_uploaded_file(file, app_language)
+            if file_errors:
+                validation_errors.extend(file_errors)
+            else:
+                valid_files.append(file)
+        
+        if validation_errors:
+            for error in validation_errors:
+                messages.error(self.request, error)
+        
+        if not valid_files:
+            return redirect('songs:upload_image')
+        
+        user = self.request.user
+        extracted_texts = []
+        uploaded_image_ids = []
+        errors = []
+        
+        # 言語モードをセッションに保存
+        # フォームからの選択がある場合はそれを使用、なければアプリ言語から自動設定
+        language_mode = self.request.POST.get('language_mode', '')
+        if not language_mode:
+            # アプリ言語設定から自動的に言語モードを設定
+            app_language = self.request.session.get('app_language', 'ja')
+            if app_language == 'zh':
+                language_mode = 'chinese'
+            elif app_language == 'en':
+                language_mode = 'english'
+            else:
+                language_mode = 'japanese'
+        self.request.session['language_mode'] = language_mode
+        
+        # カスタムリクエストをセッションに保存
+        custom_request = self.request.POST.get('custom_request', '').strip()
+        self.request.session['custom_request'] = custom_request
+        
+        from ..ai_services import PDFTextExtractor
+        
+        for file in valid_files:
+            file_name = file.name.lower()
+            
+            try:
+                if file_name.endswith('.pdf'):
+                    # PDFファイルの処理
+                    pdf_extractor = PDFTextExtractor()
+                    extracted_text = pdf_extractor.extract_text_from_pdf(file)
+                    if extracted_text:
+                        extracted_texts.append(extracted_text)
+                    else:
+                        logger.warning(f"PDF extraction returned empty for {file.name}")
+                else:
+                    # 画像ファイルの処理
+                    uploaded = UploadedImage.objects.create(user=user, image=file)
+                    try:
+                        ocr_processor = GeminiOCR()
+                        logger.info(f"OCR starting for {file.name} (size={file.size}, type={file.content_type}, model={ocr_processor.model})")
+                        extracted_text = ocr_processor.extract_text_from_image(uploaded.image)
+                        uploaded.extracted_text = extracted_text or ''
+                        uploaded.processed = True
+                        uploaded.save()
+                        if extracted_text:
+                            extracted_texts.append(extracted_text)
+                            logger.info(f"OCR success for {file.name}: {len(extracted_text)} chars")
+                        else:
+                            logger.warning(f"OCR returned empty for {file.name} (language_mode={language_mode})")
+                        uploaded_image_ids.append(uploaded.id)
+                    except Exception as e:
+                        errors.append(f'{file.name}: OCR処理に失敗しました')
+                        logger.error(f"OCR error for {file.name} (language_mode={language_mode}): {e}")
+            except Exception as e:
+                errors.append(f'{file.name}: 処理に失敗しました')
+                logger.error(f"File processing error for {file.name}: {e}")
+        
+        self.request.session['extracted_texts'] = extracted_texts
+        self.request.session['uploaded_image_ids'] = uploaded_image_ids
+        
+        # 不適切コンテンツのチェック
+        combined_text = '\n'.join(extracted_texts)
+        content_check = check_text_for_inappropriate_content(combined_text)
+        
+        if content_check['is_inappropriate']:
+            # 不適切なコンテンツが検出された場合
+            self.request.session['content_violation'] = True
+            self.request.session['violation_message'] = content_check['message']
+            self.request.session['detected_words'] = content_check['detected_words']
+            logger.warning(f"Inappropriate content detected for user {user.id}: {content_check['detected_words']}")
+            return redirect('songs:content_violation')
+        
+        if not extracted_texts:
+            logger.warning(f"No text extracted from {len(valid_files)} files for user {user.id} (language_mode={language_mode})")
+            if app_language == 'en':
+                messages.warning(self.request, 'Could not extract text from the uploaded file. You can enter lyrics manually.')
+            elif app_language == 'zh':
+                messages.warning(self.request, '无法从上传的文件中提取文字。您可以手动输入歌词。')
+            else:
+                messages.warning(self.request, 'アップロードされたファイルからテキストを抽出できませんでした。手動で歌詞を入力できます。')
+            return redirect(f"{reverse_lazy('songs:lyrics_confirmation')}?manual=true&lang={language_mode}")
+        
+        pdf_count = sum(1 for f in valid_files if f.name.lower().endswith('.pdf'))
+        image_count = len(valid_files) - pdf_count
+        
+        if errors:
+            if app_language == 'en':
+                messages.warning(self.request, f'Some files had errors: {", ".join(errors)}')
+            elif app_language == 'zh':
+                messages.warning(self.request, f'部分文件出错：{", ".join(errors)}')
+            else:
+                messages.warning(self.request, f'一部のファイルでエラーが発生しました: {", ".join(errors)}')
+        
+        if pdf_count > 0 and image_count > 0:
+            if app_language == 'en':
+                messages.success(self.request, f'Text extracted from {image_count} images and {pdf_count} PDFs')
+            elif app_language == 'zh':
+                messages.success(self.request, f'从{image_count}张图片和{pdf_count}个PDF中提取了文字')
+            else:
+                messages.success(self.request, f'{image_count}枚の画像と{pdf_count}件のPDFからテキストを抽出しました')
+        elif pdf_count > 0:
+            if app_language == 'en':
+                messages.success(self.request, f'Text extracted from {pdf_count} PDFs')
+            elif app_language == 'zh':
+                messages.success(self.request, f'从{pdf_count}个PDF中提取了文字')
+            else:
+                messages.success(self.request, f'{pdf_count}件のPDFからテキストを抽出しました')
+        else:
+            if app_language == 'en':
+                messages.success(self.request, f'Text extracted from {image_count} images')
+            elif app_language == 'zh':
+                messages.success(self.request, f'从{image_count}张图片中提取了文字')
+            else:
+                messages.success(self.request, f'{image_count}枚の画像からテキストを抽出しました')
+        
+        return super().form_valid(form)
+
+    def get_success_url(self):
+        return reverse_lazy('songs:lyrics_generating')
+
+
+class TextExtractionResultView(LoginRequiredMixin, TemplateView):
+    """テキスト抽出結果表示ビュー"""
+    template_name = 'songs/text_extraction_result.html'
+    
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        
+        extracted_text = self.request.session.get('extracted_text', '')
+        uploaded_image_id = self.request.session.get('uploaded_image_id', None)
+        
+        context['extracted_text'] = extracted_text
+        
+        if uploaded_image_id:
+            try:
+                uploaded_image = UploadedImage.objects.get(id=uploaded_image_id, user=self.request.user)
+                context['uploaded_image'] = uploaded_image
+            except UploadedImage.DoesNotExist:
+                pass
+        
+        return context
+
+
+class LyricsGeneratingView(LoginRequiredMixin, TemplateView):
+    """歌詞生成中のローディング画面"""
+    template_name = 'songs/lyrics_generating.html'
+    
+    def get(self, request, *args, **kwargs):
+        # セッションに抽出テキストも生成済み歌詞もない場合はアップロード画面へ
+        extracted_texts = request.session.get('extracted_texts', [])
+        generated_lyrics = request.session.get('generated_lyrics')
+        if not extracted_texts and not generated_lyrics:
+            return redirect('songs:upload_image')
+        return super().get(request, *args, **kwargs)
+    
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        language_mode = self.request.session.get('language_mode', 'japanese')
+        context['language_mode'] = language_mode
+        
+        # 歌詞が既に生成済みかどうかをテンプレートに渡す（JS側で即遷移用）
+        context['lyrics_already_generated'] = bool(self.request.session.get('generated_lyrics'))
+        
+        extracted_texts = self.request.session.get('extracted_texts', [])
+        if extracted_texts and isinstance(extracted_texts, list):
+            text_length = sum(len(t) for t in extracted_texts)
+        else:
+            text_length = 0
+        context['text_length'] = text_length
+        return context
+
+
+@login_required
+def generate_lyrics_api(request):
+    """歌詞生成API（AJAXで呼ばれる）
+    
+    画像がアップロードされている場合:
+      → 画像+テキストを直接Geminiに渡して一発で歌詞生成（高品質）
+    テキストのみの場合:
+      → 従来のテキストベース歌詞生成
+    """
+    if request.method != 'POST':
+        return JsonResponse({'success': False, 'error': 'POST only'}, status=405)
+    
+    extracted_texts = request.session.get('extracted_texts', [])
+    if extracted_texts and isinstance(extracted_texts, list):
+        extracted_text = '\n\n'.join(extracted_texts)
+    else:
+        extracted_text = request.session.get('extracted_text', '')
+    
+    if not extracted_text:
+        return JsonResponse({'success': False, 'error': 'No text found'})
+    
+    language_mode = request.session.get('language_mode', 'japanese')
+    custom_request = request.session.get('custom_request', '')
+    
+    try:
+        lyrics_generator = get_lyrics_generator()
+        
+        # 画像がある場合 → 画像直接生成パス（OCRの情報ロスを回避）
+        uploaded_image_ids = request.session.get('uploaded_image_ids', [])
+        generated_lyrics = None
+        
+        if uploaded_image_ids:
+            try:
+                from PIL import Image as PILImage
+                from ..models import UploadedImage
+                images = []
+                for img_id in uploaded_image_ids:
+                    try:
+                        uploaded = UploadedImage.objects.get(id=img_id, user=request.user)
+                        img = PILImage.open(uploaded.image.path)
+                        if img.mode != 'RGB':
+                            img = img.convert('RGB')
+                        images.append(img)
+                    except Exception as img_err:
+                        logger.warning(f"Could not load image {img_id}: {img_err}")
+                
+                if images:
+                    logger.info(f"Using direct image-to-lyrics generation with {len(images)} image(s)")
+                    generated_lyrics = lyrics_generator.generate_lyrics_from_images(
+                        images,
+                        language_mode=language_mode,
+                        custom_request=custom_request,
+                        extracted_text=extracted_text,
+                    )
+            except Exception as img_gen_err:
+                logger.warning(f"Image-based generation failed, falling back to text: {img_gen_err}")
+                generated_lyrics = None
+        
+        # 画像パスが使えない場合 → 従来のテキストベース生成
+        if not generated_lyrics:
+            generated_lyrics = lyrics_generator.generate_lyrics(
+                extracted_text, 
+                language_mode=language_mode, 
+                custom_request=custom_request
+            )
+        
+        if generated_lyrics:
+            # セッションに保存（LyricsConfirmationViewで使う）
+            request.session['generated_lyrics'] = generated_lyrics
+            request.session['extracted_text'] = extracted_text
+            logger.info(f"Lyrics generated via API: {len(generated_lyrics)} chars for user {request.user.id}")
+            return JsonResponse({'success': True, 'length': len(generated_lyrics)})
+        else:
+            logger.warning(f"Lyrics generation returned empty for user {request.user.id}")
+            return JsonResponse({'success': False, 'error': 'Generated lyrics was empty'})
+    except Exception as e:
+        logger.error(f"Lyrics generation API error: {e}", exc_info=True)
+        return JsonResponse({'success': False, 'error': 'An error occurred during lyrics generation. Please try again.'})
+
+
+@login_required
+def reset_lyrics_session(request):
+    """歌詞セッションデータをクリアしてアップロード画面に戻る"""
+    keys_to_clear = [
+        'generated_lyrics', 'extracted_text', 'extracted_texts',
+        'uploaded_image_ids', 'custom_request',
+    ]
+    for key in keys_to_clear:
+        request.session.pop(key, None)
+    return redirect('songs:upload_image')
+
+
+class LyricsConfirmationView(LoginRequiredMixin, TemplateView):
+    """歌詞確認ビュー（AI生成または手動入力）"""
+    template_name = 'songs/lyrics_confirmation.html'
+    
+    def get(self, request, *args, **kwargs):
+        """セッションに歌詞データがない場合はアップロード画面へリダイレクト"""
+        manual_mode = request.GET.get('manual', 'false') == 'true'
+        if not manual_mode:
+            has_lyrics = request.session.get('generated_lyrics')
+            has_texts = request.session.get('extracted_texts') or request.session.get('extracted_text')
+            if not has_lyrics and not has_texts:
+                return redirect('songs:upload_image')
+        return super().get(request, *args, **kwargs)
+    
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        
+        manual_mode = self.request.GET.get('manual', 'false') == 'true'
+        
+        # 言語モードを取得（URLパラメータ > セッション > デフォルト）
+        language_mode = self.request.GET.get('lang', self.request.session.get('language_mode', 'japanese'))
+        self.request.session['language_mode'] = language_mode
+        context['language_mode'] = language_mode
+        
+        # カスタムリクエストを取得
+        custom_request = self.request.session.get('custom_request', '')
+        context['custom_request'] = custom_request
+        
+        # セッションから既存の歌詞を確認（再生成機能で保存されたもの）
+        existing_lyrics = self.request.session.get('generated_lyrics', '')
+        
+        # セッションから抽出されたテキストを取得（複数画像対応）
+        extracted_texts = self.request.session.get('extracted_texts', [])
+        if extracted_texts and isinstance(extracted_texts, list):
+            extracted_text = '\n\n'.join(extracted_texts)
+        else:
+            extracted_text = self.request.session.get('extracted_text', '')
+        
+        if manual_mode:
+            generated_lyrics = ""
+            context['manual_mode'] = True
+            context['extracted_text'] = ""
+        elif existing_lyrics:
+            # ローディング画面や再生成機能でセッションに保存された歌詞をそのまま使用
+            generated_lyrics = existing_lyrics
+            context['manual_mode'] = False
+            context['extracted_text'] = extracted_text
+        elif extracted_text:
+            # セッションに歌詞がない場合のみ歌詞生成呼び出し（直接アクセス時のフォールバック）
+            try:
+                lyrics_generator = get_lyrics_generator()
+                generated_lyrics = lyrics_generator.generate_lyrics(extracted_text, language_mode=language_mode, custom_request=custom_request)
+                context['manual_mode'] = False
+                context['extracted_text'] = extracted_text
+                self.request.session['generated_lyrics'] = generated_lyrics
+                self.request.session['extracted_text'] = extracted_text
+            except Exception as e:
+                # AI生成失敗時は手動モードにフォールバック
+                logger.error(f"Lyrics generation error: {e}")
+                generated_lyrics = ""
+                context['manual_mode'] = True
+                context['extracted_text'] = extracted_text
+                context['generation_error'] = '歌詞の自動生成に失敗しました。手動で入力してください。'
+        else:
+            generated_lyrics = ""
+            context['manual_mode'] = True
+            context['extracted_text'] = ""
+        
+        context['generated_lyrics'] = generated_lyrics
+        
+        return context
+    
+    def post(self, request, *args, **kwargs):
+        """POST処理: 歌詞再生成やフォーム送信"""
+        action = request.POST.get('action')
+        
+        if action == 'regenerate':
+            extracted_texts = request.session.get('extracted_texts', [])
+            if extracted_texts and isinstance(extracted_texts, list):
+                extracted_text = '\n\n'.join(extracted_texts)
+            else:
+                extracted_text = request.session.get('extracted_text', '')
+            
+            language_mode = request.session.get('language_mode', 'japanese')
+            custom_request = request.session.get('custom_request', '')
+            
+            if extracted_text:
+                try:
+                    lyrics_generator = get_lyrics_generator()
+                    new_lyrics = None
+                    
+                    # 画像がある場合 → 画像直接生成パス
+                    uploaded_image_ids = request.session.get('uploaded_image_ids', [])
+                    if uploaded_image_ids:
+                        try:
+                            from PIL import Image as PILImage
+                            from ..models import UploadedImage
+                            images = []
+                            for img_id in uploaded_image_ids:
+                                try:
+                                    uploaded = UploadedImage.objects.get(id=img_id, user=request.user)
+                                    img = PILImage.open(uploaded.image.path)
+                                    if img.mode != 'RGB':
+                                        img = img.convert('RGB')
+                                    images.append(img)
+                                except Exception:
+                                    pass
+                            
+                            if images:
+                                new_lyrics = lyrics_generator.generate_lyrics_from_images(
+                                    images,
+                                    language_mode=language_mode,
+                                    custom_request=custom_request,
+                                    extracted_text=extracted_text,
+                                )
+                        except Exception as img_err:
+                            logger.warning(f"Regenerate image-based failed: {img_err}")
+                            new_lyrics = None
+                    
+                    # フォールバック: テキストベース
+                    if not new_lyrics:
+                        new_lyrics = lyrics_generator.generate_lyrics(extracted_text, language_mode=language_mode, custom_request=custom_request)
+                    
+                    request.session['generated_lyrics'] = new_lyrics
+                    return JsonResponse({
+                        'success': True,
+                        'lyrics': new_lyrics
+                    })
+                except Exception as e:
+                    logger.error(f"Lyrics regeneration error: {e}", exc_info=True)
+                    return JsonResponse({
+                        'success': False,
+                        'error': '歌詞生成に失敗しました。もう一度お試しください。'
+                    })
+            else:
+                return JsonResponse({
+                    'success': False,
+                    'error': 'テキストが見つかりません'
+                })
+        
+        return self.get(request, *args, **kwargs)
+
+
+@login_required
+@require_POST
+def like_song(request, pk):
+    """楽曲いいね機能"""
+    from django.db import transaction
+    
+    song = get_object_or_404(Song, pk=pk)
+    
+    with transaction.atomic():
+        # select_for_updateでデッドロック防止
+        song = Song.objects.select_for_update().get(pk=pk)
+        like, created = Like.objects.get_or_create(user=request.user, song=song)
+        
+        if not created:
+            like.delete()
+            song.likes_count = max(0, song.likes_count - 1)
+            liked = False
+        else:
+            song.likes_count += 1
+            liked = True
+        
+        song.save()
+    
+    if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
+        return JsonResponse({
+            'liked': liked,
+            'likes_count': song.likes_count
+        })
+    
+    return redirect('songs:song_detail', pk=pk)
+
+
+@login_required
+@require_POST
+def favorite_song(request, pk):
+    """楽曲お気に入り機能"""
+    from django.db import transaction
+
+    song = get_object_or_404(Song, pk=pk)
+    
+    with transaction.atomic():
+        favorite, created = Favorite.objects.get_or_create(user=request.user, song=song)
+        
+        if not created:
+            favorite.delete()
+            favorited = False
+        else:
+            favorited = True
+    
+    if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
+        return JsonResponse({'favorited': favorited})
+    
+    return redirect('songs:song_detail', pk=pk)
+
+
+@login_required
+@require_POST
+def delete_song(request, pk):
+    """楽曲削除機能"""
+    song = get_object_or_404(Song, pk=pk)
+    
+    # 作成者のみ削除可能
+    if song.created_by != request.user:
+        if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
+            return JsonResponse({'success': False, 'error': '削除権限がありません'}, status=403)
+        messages.error(request, '削除権限がありません')
+        return redirect('songs:my_songs')
+    
+    try:
+        song_title = song.title
+        song.delete()
+        
+        if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
+            return JsonResponse({'success': True})
+        
+        messages.success(request, f'「{song_title}」を削除しました')
+        return redirect('songs:my_songs')
+    except Exception as e:
+        logger.error(f"Song delete error: {e}")
+        if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
+            return JsonResponse({'success': False, 'error': '削除に失敗しました'}, status=500)
+        messages.error(request, '削除に失敗しました')
+        return redirect('songs:my_songs')
+
+
+@require_POST
+def record_play(request, pk):
+    """再生回数を記録するAPI"""
+    from django.db.models import F
+
+    song = get_object_or_404(Song, pk=pk)
+    
+    # F()式でレースコンディション防止
+    Song.objects.filter(pk=pk).update(total_plays=F('total_plays') + 1)
+    song.refresh_from_db()
+    
+    # ログインユーザーの場合は個人の再生履歴も更新
+    my_play_count = 0
+    if request.user.is_authenticated:
+        play_history, created = PlayHistory.objects.get_or_create(
+            user=request.user,
+            song=song,
+            defaults={'play_count': 1}
+        )
+        
+        if not created:
+            PlayHistory.objects.filter(pk=play_history.pk).update(play_count=F('play_count') + 1)
+            play_history.refresh_from_db()
+        
+        my_play_count = play_history.play_count
+    
+    return JsonResponse({
+        'success': True,
+        'total_plays': song.total_plays,
+        'my_play_count': my_play_count
+    })
+
+
+@login_required
+def add_comment(request, pk):
+    """コメント追加機能"""
+    song = get_object_or_404(Song, pk=pk)
+    
+    if request.method == 'POST':
+        form = CommentForm(request.POST)
+        if form.is_valid():
+            comment = form.save(commit=False)
+            comment.user = request.user
+            comment.song = song
+            comment.save()
+            app_language = request.session.get('app_language', 'ja')
+            if app_language == 'en':
+                messages.success(request, 'Comment posted!')
+            elif app_language == 'zh':
+                messages.success(request, '评论已发布！')
+            else:
+                messages.success(request, 'コメントを投稿しました！')
+    
+    return redirect('songs:song_detail', pk=pk)
+
+
+class MySongsView(LoginRequiredMixin, ListView):
+    """MY楽曲一覧ビュー"""
+    model = Song
+    template_name = 'songs/my_songs.html'
+    context_object_name = 'songs'
+    paginate_by = 12
+    
+    def get_queryset(self):
+        return Song.objects.filter(
+            created_by=self.request.user
+        ).exclude(
+            generation_status='failed'
+        ).select_related('created_by').prefetch_related('tags').order_by('-created_at')
+    
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        
+        # 一度のクエリで統計情報を取得（最適化）
+        from django.db.models import Count, Sum, Q
+        
+        stats = Song.objects.filter(
+            created_by=self.request.user
+        ).exclude(
+            generation_status='failed'
+        ).aggregate(
+            total_count=Count('id'),
+            public_count=Count('id', filter=Q(is_public=True)),
+            private_count=Count('id', filter=Q(is_public=False))
+        )
+        
+        context['total_count'] = stats['total_count']
+        context['public_count'] = stats['public_count']
+        context['private_count'] = stats['private_count']
+        
+        # 再生履歴を辞書として取得（一度のクエリ、必要なフィールドのみ）
+        play_histories = {
+            h.song_id: {'play_count': h.play_count, 'last_played_at': h.last_played_at}
+            for h in PlayHistory.objects.filter(user=self.request.user).only('song_id', 'play_count', 'last_played_at')
+        }
+        context['play_histories'] = play_histories
+        
+        # 総再生回数
+        total_plays = PlayHistory.objects.filter(user=self.request.user).aggregate(total=Sum('play_count'))
+        context['total_play_count'] = total_plays['total'] or 0
+        
+        return context
+
+
+@login_required
+def toggle_song_privacy(request, pk):
+    """楽曲の公開/非公開を切り替え"""
+    song = get_object_or_404(Song, pk=pk, created_by=request.user)
+    app_language = request.session.get('app_language', 'ja')
+    
+    if request.method == 'POST':
+        import json
+        if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
+            try:
+                data = json.loads(request.body)
+                new_is_public = data.get('is_public', not song.is_public)
+                
+                # 無料ユーザーは公開設定を許可しない
+                if new_is_public and not request.user.is_starter:
+                    return JsonResponse({
+                        'success': False,
+                        'error': 'Public sharing is available for paid plans only.'
+                    }, status=403)
+                
+                song.is_public = new_is_public
+                song.save()
+                if app_language == 'en':
+                    status = "public" if song.is_public else "private"
+                    msg = f'Song "{song.title}" set to {status}.'
+                elif app_language == 'zh':
+                    status = "公开" if song.is_public else "私密"
+                    msg = f'歌曲「{song.title}」已设为{status}。'
+                else:
+                    status = "公開" if song.is_public else "プライベート"
+                    msg = f'楽曲「{song.title}」を{status}に設定しました。'
+                return JsonResponse({
+                    'success': True,
+                    'is_public': song.is_public,
+                    'message': msg
+                })
+            except Exception as e:
+                logger.error(f"Toggle privacy error for song {song.pk}: {e}")
+                return JsonResponse({
+                    'success': False,
+                    'error': 'An error occurred. Please try again.'
+                })
+        else:
+            new_is_public = not song.is_public
+            
+            # 無料ユーザーは公開設定を許可しない
+            if new_is_public and not request.user.is_starter:
+                if app_language == 'en':
+                    messages.error(request, 'Public sharing is available for paid plans only.')
+                elif app_language == 'zh':
+                    messages.error(request, '公开分享仅限付费用户使用。')
+                else:
+                    messages.error(request, '楽曲の公開は有料プラン限定の機能です。')
+                return redirect('songs:my_songs')
+            
+            song.is_public = new_is_public
+            song.save()
+            if app_language == 'en':
+                messages.success(request, f'Privacy settings for "{song.title}" updated.')
+            elif app_language == 'zh':
+                messages.success(request, f'「{song.title}」的隐私设置已更改。')
+            else:
+                messages.success(request, f'楽曲「{song.title}」の公開設定を変更しました。')
+    return redirect('songs:my_songs')
+
+
+class SongPrivacyView(LoginRequiredMixin, TemplateView):
+    """楽曲プライバシー設定ビュー"""
+    template_name = 'songs/song_privacy.html'
+    
+    def get_object(self):
+        return get_object_or_404(Song, pk=self.kwargs['pk'], created_by=self.request.user)
+    
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        song = self.get_object()
+        context['song'] = song
+        context['form'] = SongPrivacyForm(instance=song)
+        return context
+    
+    def post(self, request, *args, **kwargs):
+        song = self.get_object()
+        form = SongPrivacyForm(request.POST, instance=song)
+        if form.is_valid():
+            form.save()
+            app_language = request.session.get('app_language', 'ja')
+            if app_language == 'en':
+                messages.success(request, 'Song settings updated.')
+            elif app_language == 'zh':
+                messages.success(request, '歌曲设置已更新。')
+            else:
+                messages.success(request, f'楽曲の設定を更新しました。')
+            return redirect('songs:song_detail', pk=song.pk)
+        context = self.get_context_data(**kwargs)
+        context['form'] = form
+        return self.render_to_response(context)
+
+
+@staff_member_required
+def api_status_view(request):
+    """API統合状態を確認する管理者用ビュー（ヘルスチェック機能付き）"""
+    import time
+    from django.db.models import Count, Avg
+    from django.utils import timezone
+    from datetime import timedelta
+    
+    # Gemini OCRステータス
+    ocr_gen = GeminiOCR()
+    gemini_ocr_status = {
+        'available': bool(ocr_gen.model),
+        'api_key_set': bool(ocr_gen.api_key),
+        'status': '有効' if ocr_gen.model else '未設定',
+        'health': 'unknown'
+    }
+    
+    # Gemini歌詞生成ステータス
+    lyrics_gen = GeminiLyricsGenerator()
+    gemini_lyrics_status = {
+        'available': bool(lyrics_gen.model),
+        'api_key_set': bool(lyrics_gen.api_key),
+        'status': '有効' if lyrics_gen.model else '未設定',
+        'health': 'unknown'
+    }
+    
+    # ローカルLLMステータス
+    from ..ai_services import LocalLLMLyricsGenerator, CloudLLMLyricsGenerator
+    local_llm = LocalLLMLyricsGenerator()
+    lyrics_backend = getattr(settings, 'LYRICS_BACKEND', 'gemini')
+    local_llm_status = {
+        'available': local_llm.is_available,
+        'url': local_llm.base_url or '未設定',
+        'backend': lyrics_backend,
+        'status': '接続OK' if local_llm.is_available else ('未設定' if not local_llm.base_url else '接続不可'),
+    }
+
+    # クラウドLLMステータス
+    cloud_llm = CloudLLMLyricsGenerator()
+    cloud_llm_status = {
+        'available': cloud_llm.is_available,
+        'provider': cloud_llm.provider or '未設定',
+        'model': cloud_llm.model_name or '未設定',
+        'url': cloud_llm.api_url or '未設定',
+        'api_key_set': bool(cloud_llm.api_key),
+        'status': '有効' if cloud_llm.is_available else '未設定',
+    }
+    
+    # Murekaステータス
+    mureka_gen = MurekaAIGenerator()
+    mureka_status = {
+        'available': mureka_gen.use_real_api,
+        'api_key_set': bool(mureka_gen.api_key),
+        'api_url': mureka_gen.base_url,
+        'status': '有効' if mureka_gen.use_real_api else '未設定',
+        'health': 'unknown'
+    }
+    
+    # キュー統計
+    now = timezone.now()
+    last_24h = now - timedelta(hours=24)
+    last_7d = now - timedelta(days=7)
+    
+    queue_stats = {
+        'pending': Song.objects.filter(generation_status='pending').count(),
+        'generating': Song.objects.filter(generation_status='generating').count(),
+        'completed_24h': Song.objects.filter(
+            generation_status='completed',
+            completed_at__gte=last_24h
+        ).count(),
+        'failed_24h': Song.objects.filter(
+            generation_status='failed',
+            updated_at__gte=last_24h
+        ).count(),
+        'total_completed': Song.objects.filter(generation_status='completed').count(),
+        'total_failed': Song.objects.filter(generation_status='failed').count(),
+    }
+    
+    # 最近のエラー
+    recent_errors = Song.objects.filter(
+        generation_status='failed',
+        error_message__isnull=False
+    ).exclude(error_message='').order_by('-updated_at')[:10].values(
+        'id', 'title', 'error_message', 'updated_at', 'retry_count'
+    )
+    
+    # スタックしたジョブの検出（30分以上生成中のもの）
+    stuck_threshold = now - timedelta(minutes=30)
+    stuck_jobs = Song.objects.filter(
+        generation_status='generating',
+        started_at__lt=stuck_threshold
+    ).values('id', 'title', 'started_at')
+    
+    context = {
+        'gemini_ocr_status': gemini_ocr_status,
+        'gemini_lyrics_status': gemini_lyrics_status,
+        'local_llm_status': local_llm_status,
+        'cloud_llm_status': cloud_llm_status,
+        'mureka_status': mureka_status,
+        'queue_stats': queue_stats,
+        'recent_errors': list(recent_errors),
+        'stuck_jobs': list(stuck_jobs),
+        'page_title': 'API統合状態 & システムヘルス'
+    }
+    
+    return render(request, 'songs/api_status.html', context)
+
+
+@login_required
+def add_tag_to_song(request, pk):
+    """楽曲にタグを追加"""
+    import html
+    import re
+    
+    if request.method != 'POST':
+        return JsonResponse({'success': False, 'error': 'Invalid method'}, status=400)
+    
+    song = get_object_or_404(Song, pk=pk)
+    
+    if request.user != song.created_by:
+        return JsonResponse({'success': False, 'error': 'Permission denied'}, status=403)
+    
+    try:
+        data = json.loads(request.body)
+    except json.JSONDecodeError:
+        return JsonResponse({'success': False, 'error': 'Invalid JSON'}, status=400)
+    
+    try:
+        tag_name = data.get('tag_name', '').strip()
+        
+        if not tag_name:
+            return JsonResponse({'success': False, 'error': 'Tag name is required'})
+        
+        # サニタイズ：HTMLエスケープ、危険な文字を削除
+        tag_name = html.escape(tag_name)
+        tag_name = re.sub(r'[<>"\'/\\;]', '', tag_name)
+        
+        # 長さ制限
+        if len(tag_name) > 50:
+            return JsonResponse({'success': False, 'error': 'Tag name too long (max 50 characters)'})
+        
+        tag, created = Tag.objects.get_or_create(name=tag_name)
+        
+        song.tags.add(tag)
+        
+        return JsonResponse({
+            'success': True,
+            'tag_id': tag.id,
+            'tag_name': tag.name
+        })
+    
+    except Exception as e:
+        logger.error(f"Error adding tag to song {pk}: {e}")
+        return JsonResponse({'success': False, 'error': 'An error occurred.'}, status=500)
+
+
+@login_required
+def remove_tag_from_song(request, pk):
+    """楽曲からタグを削除"""
+    if request.method != 'POST':
+        return JsonResponse({'success': False, 'error': 'Invalid method'}, status=400)
+    
+    song = get_object_or_404(Song, pk=pk)
+    
+    if request.user != song.created_by:
+        return JsonResponse({'success': False, 'error': 'Permission denied'}, status=403)
+    
+    try:
+        data = json.loads(request.body)
+        tag_id = data.get('tag_id')
+        
+        if not tag_id:
+            return JsonResponse({'success': False, 'error': 'Tag ID is required'})
+        
+        tag = get_object_or_404(Tag, id=tag_id)
+        song.tags.remove(tag)
+        
+        return JsonResponse({'success': True})
+    
+    except Exception as e:
+        logger.error(f"Error removing tag from song {pk}: {e}")
+        return JsonResponse({'success': False, 'error': 'An error occurred.'}, status=500)
+
+
+@login_required
+def update_song_title(request, pk):
+    """楽曲のタイトルを更新"""
+    import html
+    import re
+    
+    if request.method != 'POST':
+        return JsonResponse({'success': False, 'error': 'Invalid method'}, status=400)
+    
+    song = get_object_or_404(Song, pk=pk)
+    
+    if request.user != song.created_by:
+        return JsonResponse({'success': False, 'error': 'Permission denied'}, status=403)
+    
+    try:
+        data = json.loads(request.body)
+    except json.JSONDecodeError:
+        return JsonResponse({'success': False, 'error': 'Invalid JSON'}, status=400)
+    
+    try:
+        new_title = data.get('title', '').strip()
+        
+        if not new_title:
+            return JsonResponse({'success': False, 'error': 'Title is required'})
+        
+        if len(new_title) > 200:
+            return JsonResponse({'success': False, 'error': 'Title is too long (max 200 characters)'})
+        
+        # サニタイズ：HTMLエスケープ、危険な文字を削除
+        new_title = html.escape(new_title)
+        new_title = re.sub(r'[<>\"\\;]', '', new_title)
+        
+        song.title = new_title
+        song.save()
+        
+        return JsonResponse({
+            'success': True,
+            'title': new_title
+        })
+    
+    except Exception as e:
+        logger.error(f"Error updating title for song {pk}: {e}")
+        return JsonResponse({'success': False, 'error': 'An error occurred.'}, status=500)
+
+
+@login_required
+def retry_song_generation(request, pk):
+    """失敗した楽曲の再生成（1回目は無料、2回目以降は月間生成回数を消費）"""
+    from django.conf import settings
+    
+    song = get_object_or_404(Song, pk=pk, created_by=request.user)
+    app_language = request.session.get('app_language', 'ja')
+    user = request.user
+    
+    if request.method == 'POST':
+        # 2回目以降の再生成は月間生成回数を消費
+        if song.retry_count >= 1:
+            # モデルの残り回数をチェック
+            # V8（プレミアム）としてカウント
+            if not user.can_use_model('v8'):
+                if app_language == 'en':
+                    error_msg = 'Monthly generation limit reached. Upgrade your plan for more.'
+                elif app_language == 'zh':
+                    error_msg = '本月生成次数已用完。升级计划获取更多。'
+                else:
+                    error_msg = '今月の生成回数の上限に達しました。プランをアップグレードしてください。'
+                if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
+                    return JsonResponse({'success': False, 'error': error_msg})
+                messages.error(request, error_msg)
+                return redirect('songs:song_detail', pk=song.pk)
+        
+        # 失敗した曲のみ再生成可能
+        if song.generation_status == 'failed':
+            try:
+                # ステータスをpendingに戻し、再生成回数を増やす
+                song.generation_status = 'pending'
+                song.queue_position = None
+                song.retry_count += 1
+                song.error_message = None  # エラーメッセージをクリア
+                song.started_at = None
+                song.completed_at = None
+                song.save()
+                
+                # キューに追加
+                from .queue_manager import queue_manager
+                queue_manager.add_to_queue(
+                    song_id=song.id,
+                    lyrics_content=song.lyrics.content if song.lyrics else '',
+                    title=song.title,
+                    genre=song.genre,
+                    vocal_style=song.vocal_style
+                )
+                
+                if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
+                    if app_language == 'en':
+                        msg = 'Song regeneration started'
+                    elif app_language == 'zh':
+                        msg = '歌曲重新生成已开始'
+                    else:
+                        msg = '楽曲の再生成を開始しました'
+                    return JsonResponse({
+                        'success': True,
+                        'message': msg,
+                        'redirect_url': reverse_lazy('songs:song_generating', kwargs={'pk': song.pk})
+                    })
+                
+                if app_language == 'en':
+                    messages.success(request, 'Song regeneration started.')
+                elif app_language == 'zh':
+                    messages.success(request, '歌曲重新生成已开始。')
+                else:
+                    messages.success(request, '楽曲の再生成を開始しました。')
+                return redirect('songs:song_generating', pk=song.pk)
+                
+            except Exception as e:
+                logger.error(f"Retry generation error for song {song.pk}: {e}")
+                if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
+                    return JsonResponse({
+                        'success': False,
+                        'error': 'An error occurred. Please try again.'
+                    })
+                if app_language == 'en':
+                    messages.error(request, 'Regeneration failed. Please try again.')
+                elif app_language == 'zh':
+                    messages.error(request, '重新生成失败。请重试。')
+                else:
+                    messages.error(request, '再生成に失敗しました。もう一度お試しください。')
+        else:
+            if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
+                if app_language == 'en':
+                    error_msg = 'This song cannot be regenerated'
+                elif app_language == 'zh':
+                    error_msg = '此歌曲无法重新生成'
+                else:
+                    error_msg = 'この楽曲は再生成できません'
+                return JsonResponse({
+                    'success': False,
+                    'error': error_msg
+                })
+            if app_language == 'en':
+                messages.error(request, 'This song cannot be regenerated.')
+            elif app_language == 'zh':
+                messages.error(request, '此歌曲无法重新生成。')
+            else:
+                messages.error(request, 'この楽曲は再生成できません。')
+    
+    return redirect('songs:song_detail', pk=song.pk)
+
+
+
+
+def set_language(request, lang):
+    """アプリの言語を切り替える"""
+    supported_languages = {'ja', 'en', 'zh', 'es', 'de', 'pt'}
+    if lang in supported_languages:
+        # セッションに言語を保存
+        request.session['app_language'] = lang
+        request.session.modified = True
+        
+        # セッションを確実に保存
+        try:
+            request.session.save()
+        except Exception as e:
+            logger.error(f"Session save error: {e}")
+    
+    # リファラーがあればそこに戻る、なければホームに
+    referer = request.META.get('HTTP_REFERER')
+    if referer:
+        # キャッシュ防止のためタイムスタンプを追加
+        from urllib.parse import urlparse, parse_qs, urlencode, urlunparse
+        import time
+        parsed = urlparse(referer)
+        query_params = parse_qs(parsed.query)
+        query_params['_t'] = [str(int(time.time() * 1000))]
+        query_params['_lang'] = [lang]  # 言語パラメータも追加
+        new_query = urlencode(query_params, doseq=True)
+        new_url = urlunparse((parsed.scheme, parsed.netloc, parsed.path, parsed.params, new_query, parsed.fragment))
+        response = redirect(new_url)
+    else:
+        response = redirect('songs:home')
+    
+    # キャッシュを無効化するヘッダーを追加
+    response['Cache-Control'] = 'no-cache, no-store, must-revalidate, private'
+    response['Pragma'] = 'no-cache'
+    response['Expires'] = '0'
+    response['Vary'] = 'Cookie'
+    return response
+
+
+@login_required
+def song_generating(request, pk):
+    """楽曲生成中のローディング画面"""
+    song = get_object_or_404(Song, pk=pk)
+    
+    # 本人の楽曲のみアクセス可能
+    if song.created_by != request.user:
+        return redirect('songs:song_detail', pk=pk)
+    
+    # 既に完了している場合はsong_detailへ
+    if song.generation_status == 'completed':
+        return redirect('songs:song_detail', pk=pk)
+    
+    # フラッシュカード同時作成された場合のデッキ情報
+    flashcard_deck_id = request.session.pop('created_flashcard_deck_id', None)
+    flashcard_deck = None
+    if flashcard_deck_id:
+        from ..models import FlashcardDeck
+        try:
+            flashcard_deck = FlashcardDeck.objects.get(pk=flashcard_deck_id, user=request.user)
+        except FlashcardDeck.DoesNotExist:
+            pass
+    
+    return render(request, 'songs/song_generating.html', {
+        'song': song,
+        'flashcard_deck': flashcard_deck,
+    })
+
+
+def check_song_status(request, pk):
+    """楽曲の生成状態をチェックするAPIエンドポイント（言語を変更しない）"""
+    try:
+        song = Song.objects.get(pk=pk)
+        
+        # 生成フェーズに基づく進捗率を計算
+        progress = 0
+        phase = 'waiting'
+        
+        if song.generation_status == 'pending':
+            progress = 5
+            phase = 'pending'
+        elif song.generation_status == 'generating':
+            # started_atからの経過時間で進捗を推定
+            if song.started_at:
+                from django.utils import timezone
+                elapsed = (timezone.now() - song.started_at).total_seconds()
+                # 典型的な生成時間は60-120秒
+                # 0-10s: 歌詞処理(15-30%), 10-30s: API送信(30-50%), 30-90s: 生成中(50-85%), 90s+: 仕上げ(85-95%)
+                if elapsed < 10:
+                    progress = 15 + int(elapsed * 1.5)  # 15-30%
+                    phase = 'lyrics_processing'
+                elif elapsed < 30:
+                    progress = 30 + int((elapsed - 10) * 1.0)  # 30-50%
+                    phase = 'api_calling'
+                elif elapsed < 90:
+                    progress = 50 + int((elapsed - 30) * 0.58)  # 50-85%
+                    phase = 'generating'
+                else:
+                    progress = min(85 + int((elapsed - 90) * 0.1), 95)  # 85-95%
+                    phase = 'finalizing'
+            else:
+                progress = 20
+                phase = 'starting'
+        elif song.generation_status == 'completed':
+            progress = 100
+            phase = 'completed'
+        elif song.generation_status == 'failed':
+            progress = 0
+            phase = 'failed'
+        
+        return JsonResponse({
+            'success': True,
+            'status': song.generation_status,
+            'progress': progress,
+            'phase': phase,
+            'queue_position': song.queue_position,
+            'audio_url': song.audio_url if song.audio_url else None,
+            'completed': song.generation_status == 'completed',
+            'failed': song.generation_status == 'failed',
+            'error_message': song.error_message if song.generation_status == 'failed' else None
+        })
+    except Song.DoesNotExist:
+        return JsonResponse({
+            'success': False,
+            'error': 'Song not found'
+        }, status=404)
+
+
+# ========== クラス機能 ==========
+
+
+def audio_proxy(request, pk):
+    """外部音声URLをプロキシして返す（CORS対策）"""
+    from django.http import StreamingHttpResponse, HttpResponse
+    from urllib.parse import urlparse
+    import requests as req
+    import time
+    
+    song = get_object_or_404(Song, pk=pk)
+    
+    # 非公開楽曲はオーナーのみアクセス可能
+    if not song.is_public:
+        if not request.user.is_authenticated:
+            return HttpResponse('Unauthorized', status=401)
+        if request.user != song.created_by and not request.user.is_staff:
+            logger.warning(f"Audio proxy access denied: user {request.user.id} tried to access private song {pk}")
+            return HttpResponse('Forbidden', status=403)
+    
+    # 音声URLを取得
+    audio_url = song.audio_url
+    if not audio_url:
+        return HttpResponse('No audio URL', status=404)
+    
+    # ドメインホワイトリスト（SSRF防止）
+    ALLOWED_AUDIO_DOMAINS = {
+        'cdn.mureka.ai',
+        'api.mureka.ai',
+        'mureka-public.s3.amazonaws.com',
+        'storage.googleapis.com',
+    }
+    parsed = urlparse(audio_url)
+    if parsed.hostname not in ALLOWED_AUDIO_DOMAINS:
+        logger.warning(f"Audio proxy blocked unauthorized domain: {parsed.hostname} for song {pk}")
+        return HttpResponse('Forbidden', status=403)
+    
+    # リトライロジック（最大3回）
+    max_retries = 3
+    last_error = None
+    
+    for attempt in range(max_retries):
+        try:
+            # ストリーミングで外部URLから音声を取得
+            response = req.get(
+                audio_url,
+                timeout=(10, 120),  # (connect_timeout, read_timeout)
+                stream=True,
+                headers={
+                    'User-Agent': 'Mozilla/5.0 (compatible; UtamemoProxy/1.0)',
+                    'Accept': 'audio/*,*/*',
+                }
+            )
+            response.raise_for_status()
+            
+            # レスポンスヘッダーを設定
+            content_type = response.headers.get('Content-Type', 'audio/mpeg')
+            content_length = response.headers.get('Content-Length')
+            
+            # ストリーミングレスポンスを作成
+            def stream_content():
+                try:
+                    for chunk in response.iter_content(chunk_size=8192):
+                        if chunk:
+                            yield chunk
+                finally:
+                    response.close()
+            
+            streaming_response = StreamingHttpResponse(
+                stream_content(),
+                content_type=content_type,
+            )
+            
+            # 必要なヘッダーを設定
+            if content_length:
+                streaming_response['Content-Length'] = content_length
+            streaming_response['Accept-Ranges'] = 'bytes'
+            streaming_response['Cache-Control'] = 'public, max-age=3600'
+            streaming_response['Access-Control-Allow-Origin'] = '*'
+            
+            return streaming_response
+            
+        except req.exceptions.Timeout as e:
+            last_error = e
+            logger.warning(f'Audio proxy timeout (attempt {attempt + 1}/{max_retries}): {e}')
+            if attempt < max_retries - 1:
+                time.sleep(1)
+        except req.exceptions.ConnectionError as e:
+            last_error = e
+            logger.warning(f'Audio proxy connection error (attempt {attempt + 1}/{max_retries}): {e}')
+            if attempt < max_retries - 1:
+                time.sleep(2)
+        except req.exceptions.HTTPError as e:
+            # HTTPエラー（404、403等）はリトライしない
+            logger.error(f'Audio proxy HTTP error: {e}')
+            status_code = e.response.status_code if e.response else 502
+            
+            # 音声URLが期限切れ・無効の場合のメッセージ
+            if status_code in (403, 404, 410, 424):
+                return HttpResponse(
+                    'Audio expired or unavailable',
+                    status=410  # Gone
+                )
+            return HttpResponse(
+                f'Audio source returned error: {status_code}',
+                status=502
+            )
+        except Exception as e:
+            last_error = e
+            logger.error(f'Audio proxy unexpected error (attempt {attempt + 1}/{max_retries}): {e}')
+            if attempt < max_retries - 1:
+                time.sleep(1)
+    
+    # 全リトライ失敗
+    logger.error(f'Audio proxy failed after {max_retries} retries for song {pk}: {last_error}')
+    return HttpResponse(
+        'Audio temporarily unavailable. Please try again.',
+        status=504
+    )
+
+
+@login_required
+def content_violation_view(request):
+    """利用規約違反ページ"""
+    app_language = request.session.get('app_language', 'ja')
+    
+    # セッションから違反情報を取得
+    is_violation = request.session.get('content_violation', False)
+    violation_message = request.session.get('violation_message', '')
+    detected_words = request.session.get('detected_words', [])
+    
+    # セッションをクリア
+    if 'content_violation' in request.session:
+        del request.session['content_violation']
+    if 'violation_message' in request.session:
+        del request.session['violation_message']
+    if 'detected_words' in request.session:
+        del request.session['detected_words']
+    if 'extracted_texts' in request.session:
+        del request.session['extracted_texts']
+    if 'uploaded_image_ids' in request.session:
+        del request.session['uploaded_image_ids']
+    
+    # 言語に応じたメッセージを設定
+    if app_language == 'en':
+        title = 'Terms of Service Violation'
+        default_message = (
+            'Content that violates our Terms of Service has been detected.\n\n'
+            'Content containing inappropriate expressions (insults, discriminatory language, '
+            'violent expressions, etc.) cannot be used for song generation.\n\n'
+            'Please review our Terms of Service and use appropriate content.'
+        )
+        terms_link_text = 'View Terms of Service'
+        back_link_text = 'Return to Upload Page'
+    elif app_language == 'zh':
+        title = '违反使用条款'
+        default_message = (
+            '检测到违反使用条款的内容。\n\n'
+            '包含不当表达（侮辱、歧视性语言、暴力表达等）的内容'
+            '不能用于歌曲生成。\n\n'
+            '请查看使用条款并使用适当的内容。'
+        )
+        terms_link_text = '查看使用条款'
+        back_link_text = '返回上传页面'
+    elif app_language == 'es':
+        title = 'Violación de los Términos de Servicio'
+        default_message = (
+            'Se ha detectado contenido que viola nuestros Términos de Servicio.\n\n'
+            'El contenido que contiene expresiones inapropiadas no se puede usar '
+            'para la generación de canciones.\n\n'
+            'Por favor, revise nuestros Términos de Servicio y use contenido apropiado.'
+        )
+        terms_link_text = 'Ver Términos de Servicio'
+        back_link_text = 'Volver a la página de carga'
+    elif app_language == 'de':
+        title = 'Verstoß gegen die Nutzungsbedingungen'
+        default_message = (
+            'Es wurde Inhalt erkannt, der gegen unsere Nutzungsbedingungen verstößt.\n\n'
+            'Inhalte mit unangemessenen Ausdrücken können nicht für die '
+            'Songgenerierung verwendet werden.\n\n'
+            'Bitte überprüfen Sie unsere Nutzungsbedingungen und verwenden Sie angemessene Inhalte.'
+        )
+        terms_link_text = 'Nutzungsbedingungen anzeigen'
+        back_link_text = 'Zurück zur Upload-Seite'
+    elif app_language == 'pt':
+        title = 'Violação dos Termos de Serviço'
+        default_message = (
+            'Foi detectado conteúdo que viola nossos Termos de Serviço.\n\n'
+            'Conteúdo contendo expressões inadequadas não pode ser usado '
+            'para geração de músicas.\n\n'
+            'Por favor, revise nossos Termos de Serviço e use conteúdo apropriado.'
+        )
+        terms_link_text = 'Ver Termos de Serviço'
+        back_link_text = 'Voltar à página de upload'
+    else:
+        title = '利用規約違反'
+        default_message = (
+            '利用規約に違反するコンテンツが検出されました。\n\n'
+            '不適切な表現（悪口、差別用語、暴力的な表現など）を含むコンテンツは'
+            '楽曲生成に使用できません。\n\n'
+            '利用規約をご確認の上、適切なコンテンツでご利用ください。'
+        )
+        terms_link_text = '利用規約を確認する'
+        back_link_text = 'アップロードページに戻る'
+    
+    context = {
+        'title': title,
+        'message': default_message,
+        'detected_words': detected_words,
+        'terms_link_text': terms_link_text,
+        'back_link_text': back_link_text,
+        'app_language': app_language,
+    }
+    
+    return render(request, 'songs/content_violation.html', context)
+
+
+@login_required
+def recreate_with_lyrics(request, pk):
+    """同じ歌詞で新しい楽曲を作成（歌詞をセッションに保存して作成画面へ遷移）"""
+    song = get_object_or_404(Song, pk=pk)
+    
+    # 歌詞を取得
+    lyrics = song.lyrics
+    if not lyrics:
+        app_language = request.session.get('app_language', 'ja')
+        if app_language == 'en':
+            messages.error(request, 'This song has no lyrics.')
+        elif app_language == 'zh':
+            messages.error(request, '这首歌曲没有歌词。')
+        else:
+            messages.error(request, 'この楽曲には歌詞がありません。')
+        return redirect('songs:song_detail', pk=pk)
+    
+    # 歌詞とプロンプトをセッションに保存
+    request.session['generated_lyrics'] = lyrics.content
+    request.session['extracted_text'] = ''  # 元テキストはクリア
+    request.session['prefill_music_prompt'] = song.music_prompt or ''
+    
+    # 楽曲作成画面にリダイレクト（歌詞確認画面をスキップ）
+    return redirect('songs:lyrics_confirmation')
+
+
+@staff_member_required
+def mureka_api_debug(request):
+    """Mureka APIのレスポンスフィールド調査用（スタッフのみ）"""
+    
+    from ..ai_services import MurekaAIGenerator
+    
+    mureka = MurekaAIGenerator()
+    
+    action = request.GET.get('action', 'endpoints')
+    
+    if action == 'endpoints':
+        # 利用可能エンドポイントの調査
+        results = mureka.list_api_endpoints()
+        return JsonResponse({'action': 'endpoints', 'results': results})
+    
+    elif action == 'describe':
+        # 特定の曲を分析（song_id省略時は最新の公開曲を使用）
+        song_id = request.GET.get('song_id')
+        if song_id:
+            song = get_object_or_404(Song, pk=song_id)
+        else:
+            song = Song.objects.filter(audio_url__isnull=False).exclude(audio_url='').order_by('-created_at').first()
+            if not song:
+                return JsonResponse({'error': 'No song with audio found'}, status=400)
+        
+        audio_url = song.audio_url
+        if not audio_url:
+            return JsonResponse({'error': 'No audio URL'}, status=400)
+        
+        result = mureka.describe_song(audio_url)
+        return JsonResponse({
+            'action': 'describe',
+            'song_id': song.pk,
+            'song_title': str(song),
+            'audio_url': audio_url[:100],
+            'result': result
+        })
+    
+    elif action == 'query_task':
+        # タスクの全フィールドを確認（最近の生成タスクIDを指定）
+        task_id = request.GET.get('task_id')
+        if not task_id:
+            # 最新の曲のtrace_idを使用
+            return JsonResponse({'error': 'task_id required'}, status=400)
+        
+        import requests as req
+        headers = {
+            'Authorization': f'Bearer {mureka.api_key}',
+            'Content-Type': 'application/json'
+        }
+        try:
+            response = req.get(f"{mureka.base_url}/v1/song/query/{task_id}", headers=headers, timeout=30)
+            if response.status_code == 200:
+                data = response.json()
+                return JsonResponse({'action': 'query_task', 'task_id': task_id, 'result': data})
+            else:
+                return JsonResponse({'action': 'query_task', 'status': response.status_code, 'body': response.text[:1000]})
+        except Exception as e:
+            return JsonResponse({'error': str(e)}, status=500)
+    
+    elif action == 'list_songs':
+        # Mureka APIの曲リストを取得（GET & POST両方試す）
+        import requests as req
+        headers = {
+            'Authorization': f'Bearer {mureka.api_key}',
+            'Content-Type': 'application/json'
+        }
+        results = {}
+        try:
+            # GET
+            response = req.get(f"{mureka.base_url}/v1/song/list", headers=headers, timeout=30)
+            results['GET /v1/song/list'] = {'status': response.status_code, 'body': response.text[:500]}
+        except Exception as e:
+            results['GET /v1/song/list'] = {'error': str(e)}
+        try:
+            # POST
+            response = req.post(f"{mureka.base_url}/v1/song/list", headers=headers, json={}, timeout=30)
+            results['POST /v1/song/list'] = {'status': response.status_code, 'body': response.text[:500]}
+        except Exception as e:
+            results['POST /v1/song/list'] = {'error': str(e)}
+        try:
+            # POST with page
+            response = req.post(f"{mureka.base_url}/v1/song/list", headers=headers, json={"page": 1, "page_size": 5}, timeout=30)
+            results['POST /v1/song/list (paged)'] = {'status': response.status_code, 'body': response.text[:500]}
+        except Exception as e:
+            results['POST /v1/song/list (paged)'] = {'error': str(e)}
+        return JsonResponse({'action': 'list_songs', 'results': results})
+    
+    elif action == 'recent_songs':
+        # DB内の最近の曲とそのメタデータを一覧表示
+        recent = Song.objects.filter(audio_url__isnull=False).exclude(audio_url='').order_by('-created_at')[:10]
+        songs_data = []
+        for s in recent:
+            songs_data.append({
+                'id': s.pk,
+                'title': str(s),
+                'created': s.created_at.isoformat() if s.created_at else None,
+                'audio_url': s.audio_url[:80] if s.audio_url else None,
+                'generation_status': s.generation_status if hasattr(s, 'generation_status') else None,
+            })
+        return JsonResponse({'action': 'recent_songs', 'songs': songs_data})
+    
+    return JsonResponse({'error': 'Unknown action. Use: endpoints, describe, query_task, list_songs, recent_songs'}, status=400)
+
+

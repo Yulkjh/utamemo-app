@@ -2,7 +2,7 @@ from django.test import TestCase, Client
 from django.contrib.auth import get_user_model
 from django.urls import reverse
 from django.db import IntegrityError
-from .models import Song, Lyrics, Tag, Like, Favorite
+from .models import Song, Lyrics, Tag, Like, Favorite, Classroom, ClassroomMembership, FlashcardDeck, Flashcard
 from .content_filter import check_text_for_inappropriate_content
 
 User = get_user_model()
@@ -313,3 +313,194 @@ class AudioProxyDomainTest(TestCase):
         )
         response = self.client.get(reverse('songs:audio_proxy', args=[song.pk]))
         self.assertEqual(response.status_code, 404)
+
+
+class ClassroomTest(TestCase):
+    """クラス機能のテスト"""
+
+    def setUp(self):
+        self.client = Client()
+        self.teacher = User.objects.create_user(username='teacher', password='testpass123')
+        self.student = User.objects.create_user(username='student', password='testpass123')
+        # スクールプラン設定（クラス機能はスクールプラン限定）
+        self.teacher.plan = 'school'
+        self.teacher.save()
+        self.student.plan = 'school'
+        self.student.save()
+
+    def test_classroom_creation(self):
+        """クラスが正しく作成されること"""
+        classroom = Classroom.objects.create(
+            name='テストクラス', code='ABC123', host=self.teacher
+        )
+        self.assertEqual(classroom.name, 'テストクラス')
+        self.assertEqual(classroom.host, self.teacher)
+
+    def test_classroom_code_unique(self):
+        """クラスコードがユニークであること"""
+        Classroom.objects.create(name='クラスA', code='UNQ001', host=self.teacher)
+        with self.assertRaises(IntegrityError):
+            Classroom.objects.create(name='クラスB', code='UNQ001', host=self.teacher)
+
+    def test_classroom_membership(self):
+        """生徒がクラスに参加できること"""
+        classroom = Classroom.objects.create(
+            name='テストクラス', code='JON001', host=self.teacher
+        )
+        membership = ClassroomMembership.objects.create(
+            user=self.student, classroom=classroom
+        )
+        self.assertEqual(classroom.members.count(), 1)
+        self.assertEqual(classroom.members.first(), self.student)
+
+    def test_classroom_list_requires_login(self):
+        """クラス一覧がログインを要求すること"""
+        response = self.client.get(reverse('songs:classroom_list'))
+        self.assertEqual(response.status_code, 302)
+
+    def test_classroom_list_loads(self):
+        """ログイン時にクラス一覧が読み込めること"""
+        self.client.login(username='teacher', password='testpass123')
+        response = self.client.get(reverse('songs:classroom_list'))
+        # 無効コードの場合、テンプレートでエラー表示（200）
+        self.assertIn(response.status_code, [200, 302])
+
+    def test_classroom_join_with_valid_code(self):
+        """有効なコードでクラスに参加できること"""
+        classroom = Classroom.objects.create(
+            name='テストクラス', code='VAL001', host=self.teacher
+        )
+        self.client.login(username='student', password='testpass123')
+        response = self.client.post(reverse('songs:classroom_join'), {'code': 'VAL001'})
+        self.assertEqual(response.status_code, 302)
+        self.assertTrue(ClassroomMembership.objects.filter(
+            user=self.student, classroom=classroom
+        ).exists())
+
+    def test_classroom_join_with_invalid_code(self):
+        """無効なコードでクラスに参加できないこと"""
+        self.client.login(username='student', password='testpass123')
+        response = self.client.post(reverse('songs:classroom_join'), {'code': 'INVALID'})
+        # 無効コードの場合、エラー表示で再レンダリング（200）
+        self.assertIn(response.status_code, [200, 302])
+        self.assertEqual(ClassroomMembership.objects.filter(user=self.student).count(), 0)
+
+    def test_classroom_leave(self):
+        """クラスから退出できること"""
+        classroom = Classroom.objects.create(
+            name='テストクラス', code='LEV001', host=self.teacher
+        )
+        ClassroomMembership.objects.create(user=self.student, classroom=classroom)
+        self.client.login(username='student', password='testpass123')
+        response = self.client.post(reverse('songs:classroom_leave', args=[classroom.pk]))
+        self.assertEqual(response.status_code, 302)
+        self.assertFalse(ClassroomMembership.objects.filter(
+            user=self.student, classroom=classroom
+        ).exists())
+
+    def test_host_can_delete_classroom(self):
+        """ホストがクラスを削除できること"""
+        classroom = Classroom.objects.create(
+            name='テストクラス', code='DEL001', host=self.teacher
+        )
+        self.client.login(username='teacher', password='testpass123')
+        response = self.client.post(reverse('songs:classroom_delete', args=[classroom.pk]))
+        self.assertEqual(response.status_code, 302)
+        # ソフトデリート: is_active=False になる（物理削除ではない）
+        classroom.refresh_from_db()
+        self.assertFalse(classroom.is_active)
+
+    def test_non_host_cannot_delete_classroom(self):
+        """非ホストがクラスを削除できないこと"""
+        classroom = Classroom.objects.create(
+            name='テストクラス', code='NDL001', host=self.teacher
+        )
+        ClassroomMembership.objects.create(user=self.student, classroom=classroom)
+        self.client.login(username='student', password='testpass123')
+        response = self.client.post(reverse('songs:classroom_delete', args=[classroom.pk]))
+        classroom.refresh_from_db()
+        self.assertTrue(classroom.is_active)
+
+
+class FlashcardTest(TestCase):
+    """フラッシュカード機能のテスト"""
+
+    def setUp(self):
+        self.client = Client()
+        self.user = User.objects.create_user(username='testuser', password='testpass123')
+        self.song = Song.objects.create(
+            title='テスト曲', created_by=self.user, generation_status='completed'
+        )
+
+    def test_flashcard_deck_creation(self):
+        """デッキが正しく作成されること"""
+        deck = FlashcardDeck.objects.create(
+            user=self.user, title='テストデッキ', source_song=self.song
+        )
+        self.assertEqual(deck.title, 'テストデッキ')
+        self.assertEqual(deck.card_count, 0)
+
+    def test_flashcard_creation(self):
+        """カードが正しく作成されること"""
+        deck = FlashcardDeck.objects.create(user=self.user, title='テストデッキ')
+        card = Flashcard.objects.create(
+            deck=deck, term='織田信長', definition='戦国時代の武将'
+        )
+        self.assertEqual(card.term, '織田信長')
+        self.assertEqual(card.mastery_level, 0)
+
+    def test_flashcard_mastery_update(self):
+        """カードの習熟度が更新できること"""
+        deck = FlashcardDeck.objects.create(user=self.user, title='テストデッキ')
+        card = Flashcard.objects.create(
+            deck=deck, term='本能寺の変', definition='1582年', is_selected=True
+        )
+        card.mastery_level = 3
+        card.save()
+        card.refresh_from_db()
+        self.assertEqual(card.mastery_level, 3)
+
+    def test_deck_card_count_update(self):
+        """デッキのカード数が正しく更新されること"""
+        deck = FlashcardDeck.objects.create(user=self.user, title='テストデッキ')
+        Flashcard.objects.create(deck=deck, term='用語1', definition='定義1', is_selected=True)
+        Flashcard.objects.create(deck=deck, term='用語2', definition='定義2', is_selected=True)
+        Flashcard.objects.create(deck=deck, term='用語3', definition='定義3', is_selected=False)
+        deck.update_card_count()
+        self.assertEqual(deck.card_count, 2)
+
+    def test_flashcard_list_requires_login(self):
+        """フラッシュカード一覧がログインを要求すること"""
+        response = self.client.get(reverse('songs:flashcard_list'))
+        self.assertEqual(response.status_code, 302)
+
+    def test_flashcard_list_loads(self):
+        """ログイン時にフラッシュカード一覧が読み込めること"""
+        self.client.login(username='testuser', password='testpass123')
+        response = self.client.get(reverse('songs:flashcard_list'))
+        self.assertEqual(response.status_code, 200)
+
+    def test_flashcard_study_loads(self):
+        """学習ページが読み込めること"""
+        deck = FlashcardDeck.objects.create(user=self.user, title='テストデッキ')
+        Flashcard.objects.create(deck=deck, term='用語', definition='定義', is_selected=True)
+        deck.update_card_count()
+        self.client.login(username='testuser', password='testpass123')
+        response = self.client.get(reverse('songs:flashcard_study', args=[deck.pk]))
+        self.assertEqual(response.status_code, 200)
+
+    def test_flashcard_deck_delete(self):
+        """デッキが削除できること"""
+        deck = FlashcardDeck.objects.create(user=self.user, title='テストデッキ')
+        self.client.login(username='testuser', password='testpass123')
+        response = self.client.post(reverse('songs:flashcard_deck_delete', args=[deck.pk]))
+        self.assertEqual(response.status_code, 302)
+        self.assertFalse(FlashcardDeck.objects.filter(pk=deck.pk).exists())
+
+    def test_other_user_cannot_delete_deck(self):
+        """他ユーザーのデッキを削除できないこと"""
+        deck = FlashcardDeck.objects.create(user=self.user, title='テストデッキ')
+        other = User.objects.create_user(username='other', password='testpass123')
+        self.client.login(username='other', password='testpass123')
+        response = self.client.post(reverse('songs:flashcard_deck_delete', args=[deck.pk]))
+        self.assertTrue(FlashcardDeck.objects.filter(pk=deck.pk).exists())
