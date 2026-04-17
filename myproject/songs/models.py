@@ -327,6 +327,9 @@ class Like(models.Model):
         verbose_name = 'いいね'
         verbose_name_plural = 'いいね'
         unique_together = ('user', 'song')
+        indexes = [
+            models.Index(fields=['song', 'created_at']),
+        ]
 
     def __str__(self):
         return f"{self.user.username} likes {self.song.title}"
@@ -355,6 +358,9 @@ class Favorite(models.Model):
         verbose_name = 'お気に入り'
         verbose_name_plural = 'お気に入り'
         unique_together = ('user', 'song')
+        indexes = [
+            models.Index(fields=['user', '-created_at']),
+        ]
 
     def __str__(self):
         return f"{self.user.username} favorites {self.song.title}"
@@ -392,6 +398,9 @@ class Comment(models.Model):
         verbose_name = 'コメント'
         verbose_name_plural = 'コメント'
         ordering = ['-created_at']
+        indexes = [
+            models.Index(fields=['song', '-created_at']),
+        ]
 
     def __str__(self):
         return f"{self.user.username}: {self.content[:50]}..."
@@ -463,6 +472,10 @@ class PlayHistory(models.Model):
         verbose_name_plural = '再生履歴'
         unique_together = ('user', 'song')
         ordering = ['-last_played_at']
+        indexes = [
+            models.Index(fields=['user', '-last_played_at']),
+            models.Index(fields=['song', '-play_count']),
+        ]
 
     def __str__(self):
         return f"{self.user.username} - {self.song.title} ({self.play_count}回)"
