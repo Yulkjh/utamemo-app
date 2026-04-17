@@ -59,6 +59,7 @@ User (users.User - AbstractUser拡張)
  └── N:M ── Classroom (参加クラス)
 
 TrainingSession (LLM学習監視 - 独立)
+TrainingData (学習データレコード - PostgreSQL永続化)
 PromptTemplate (プロンプトテンプレート - 独立)
 ```
 

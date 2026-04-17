@@ -7,7 +7,7 @@ from django.db import migrations, models
 class Migration(migrations.Migration):
 
     dependencies = [
-        ('songs', '0037_add_prompt_template'),
+        ('songs', '0038_trainingdata'),
         migrations.swappable_dependency(settings.AUTH_USER_MODEL),
     ]
 
