@@ -338,7 +338,7 @@ class CreateSongView(LoginRequiredMixin, CreateView):
             except UploadedImage.DoesNotExist:
                 pass
         
-        from .queue_manager import queue_manager
+        from ..queue_manager import queue_manager
         
         queue_manager.add_to_queue(
             song_id=self.object.pk,
@@ -1597,7 +1597,7 @@ def retry_song_generation(request, pk):
                 song.save()
                 
                 # キューに追加
-                from .queue_manager import queue_manager
+                from ..queue_manager import queue_manager
                 queue_manager.add_to_queue(
                     song_id=song.id,
                     lyrics_content=song.lyrics.content if song.lyrics else '',
