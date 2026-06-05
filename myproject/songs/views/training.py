@@ -152,11 +152,8 @@ def training_data_api(request):
             record.instruction = new_instruction
         record.save()
 
-        _decrement_pending(request.user)
-        obligation = StaffReviewObligation.objects.filter(user=request.user).first()
-        pending = obligation.pending_reviews if obligation else 0
         display_idx = (index + 1) if isinstance(index, int) else '?'
-        return JsonResponse({'ok': True, 'message': f'#{display_idx} を更新しました', 'pending_reviews': pending})
+        return JsonResponse({'ok': True, 'message': f'#{display_idx} を更新しました'})
 
     elif action == 'delete':
         data_hash = body.get('data_hash')
@@ -168,12 +165,9 @@ def training_data_api(request):
         if deleted_count == 0:
             return JsonResponse({'error': f'Record not found: {data_hash}'}, status=404)
 
-        _decrement_pending(request.user)
-        obligation = StaffReviewObligation.objects.filter(user=request.user).first()
-        pending = obligation.pending_reviews if obligation else 0
         total = TrainingData.objects.count()
         display_idx = (index + 1) if isinstance(index, int) else '?'
-        return JsonResponse({'ok': True, 'message': f'#{display_idx} を削除しました', 'total': total, 'pending_reviews': pending})
+        return JsonResponse({'ok': True, 'message': f'#{display_idx} を削除しました', 'total': total})
 
     elif action == 'reload':
         records = [r.to_dict() for r in TrainingData.objects.all()]
@@ -266,28 +260,24 @@ _DEFAULT_INSTRUCTION_TEMPLATE = (
 _GENRES = ["pop", "rock", "hip-hop", "EDM", "jazz", "R&B", "folk", "J-pop", "K-pop"]
 
 
-def _get_instruction_template():
-    """DB からプロンプトテンプレートを取得（なければデフォルト）"""
+def _get_instruction_template(user=None):
+    """DB からプロンプトテンプレートを取得（ユーザー個別 → 共有デフォルト → ハードコード）"""
     from ..models import PromptTemplate
-    return PromptTemplate.get_template('lyrics_instruction', _DEFAULT_INSTRUCTION_TEMPLATE)
+    return PromptTemplate.get_template('lyrics_instruction', _DEFAULT_INSTRUCTION_TEMPLATE, user=user)
 
 
-def _get_instruction_template_with_meta():
+def _get_instruction_template_with_meta(user=None):
     """DB からプロンプトテンプレートと編集者情報を取得"""
     from ..models import PromptTemplate
-    try:
-        obj = PromptTemplate.objects.get(key='lyrics_instruction')
-        return {
-            'instruction_template': obj.content,
-            'updated_by': obj.updated_by.username if obj.updated_by else None,
-            'updated_at': obj.updated_at.isoformat() if obj.updated_at else None,
-        }
-    except PromptTemplate.DoesNotExist:
-        return {
-            'instruction_template': _DEFAULT_INSTRUCTION_TEMPLATE,
-            'updated_by': None,
-            'updated_at': None,
-        }
+    meta = PromptTemplate.get_template_with_meta(
+        'lyrics_instruction', _DEFAULT_INSTRUCTION_TEMPLATE, user=user
+    )
+    return {
+        'instruction_template': meta['content'],
+        'updated_by': meta['updated_by'],
+        'updated_at': meta['updated_at'],
+        'is_personal': meta['is_personal'],
+    }
 
 
 @staff_member_required
@@ -306,8 +296,8 @@ def training_data_generate(request):
 
     records = [r.to_dict() for r in TrainingData.objects.all()]
 
-    # プロンプト設定をDBから読み込み
-    instruction_template = _get_instruction_template()
+    # プロンプト設定をDBから読み込み（ユーザー個別）
+    instruction_template = _get_instruction_template(user=request.user)
 
     genai.configure(api_key=gemini_key)
     model = genai.GenerativeModel("gemini-2.5-pro")

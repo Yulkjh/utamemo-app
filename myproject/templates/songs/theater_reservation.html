@@ -1,0 +1,110 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>座席予約 | UNITE CINEMA MINATO</title>
+  <style>
+    * { box-sizing: border-box; }
+    body { margin: 0; background: #070a0f; font-family: "Hiragino Kaku Gothic ProN", "Yu Gothic", Meiryo, sans-serif; color: #202832; }
+    a { color: inherit; text-decoration: none; }
+    .page { width: 960px; min-height: 100vh; margin: 0 auto; background: #eef1f6; }
+    .header { background: #fff; padding: 18px 24px; border-bottom: 4px solid #e00000; }
+    .back-link { display: inline-flex; color: #21314d; font-size: 13px; font-weight: 800; }
+    .brand { margin-top: 14px; color: #22304f; font-size: 22px; font-weight: 700; letter-spacing: 5px; }
+    .content { padding: 30px 24px 70px; }
+    .panel { background: #fff; border: 1px solid #d3d8e4; box-shadow: 0 16px 40px rgba(13,21,35,0.12); }
+    .panel-title { background: repeating-linear-gradient(135deg,#2d3035 0,#2d3035 2px,#22252a 2px,#22252a 5px); color: #fff; padding: 16px 20px; font-size: 21px; font-weight: 900; letter-spacing: 2px; border-bottom: 4px solid #1499ff; }
+    .show-info { padding: 18px 22px; border-bottom: 1px solid #d7dce7; font-size: 15px; font-weight: 800; line-height: 1.8; }
+    .booking { display: grid; grid-template-columns: 1fr 300px; gap: 24px; padding: 24px; }
+    .screen { text-align: center; color: #999; font-size: 15px; letter-spacing: 2px; margin-bottom: 14px; }
+    .screen-line { width: 70%; height: 22px; margin: 0 auto 22px; border-top: 4px solid #9b9b9b; border-radius: 50% 50% 0 0; }
+    .seat-stage { background: #f4f4f4; border: 1px solid #d6d6d6; padding: 26px 22px 30px; }
+    .seat-row { display: flex; justify-content: center; margin-top: 18px; }
+    .front-row .seat-group { display: grid; grid-template-columns: repeat(3, 64px); gap: 10px; justify-content: center; }
+    .middle-row .seat-group { display: grid; grid-template-columns: repeat(4, 64px); gap: 10px; justify-content: center; transform: translateX(-37px); }
+    .back-row .seat-group { display: grid; grid-template-columns: repeat(3, 64px); gap: 10px; justify-content: center; }
+    .seat-option input { position: absolute; opacity: 0; pointer-events: none; }
+    .seat-box { height: 50px; border: 2px solid #9ea1a4; border-radius: 6px 6px 10px 10px; background: #fff; color: #6a6f75; display: flex; align-items: center; justify-content: center; font-size: 13px; font-weight: 900; cursor: pointer; box-shadow: inset 0 -8px 0 rgba(0,0,0,0.08); }
+    .seat-option input:checked + .seat-box { background: #1f2734; color: #fff; border-color: #1f2734; }
+    .seat-option.reserved .seat-box { background: #8d9196; color: #fff; border-color: #8d9196; cursor: not-allowed; }
+    .aisle-note { margin: 14px auto 0; max-width: 460px; color: #777; font-size: 12px; font-weight: 700; text-align: center; }
+    .form-card { border: 1px solid #ccd4e1; background: #f9fbff; padding: 18px; align-self: start; }
+    .form-card h2 { margin: 0 0 14px; font-size: 18px; color: #22304f; }
+    .field { margin-bottom: 14px; }
+    label { display: block; margin-bottom: 7px; font-size: 13px; font-weight: 900; color: #425066; }
+    input[type="text"] { width: 100%; border: 1px solid #b9c3d2; border-radius: 4px; padding: 12px 11px; font-size: 16px; }
+    .submit-button { width: 100%; border: 0; border-radius: 4px; background: linear-gradient(#ff9f72,#f26428); color: #fff; padding: 13px 16px; font-size: 16px; font-weight: 900; cursor: pointer; }
+    .errors, .success { margin-bottom: 14px; padding: 12px 14px; font-size: 13px; font-weight: 800; line-height: 1.6; }
+    .errors { background: #fff0f0; color: #b00000; border: 1px solid #f0b6b6; }
+    .success { background: #eef9f2; color: #12622f; border: 1px solid #a7dcbc; }
+    .legend { display: flex; gap: 12px; flex-wrap: wrap; margin-top: 16px; color: #646b74; font-size: 12px; font-weight: 800; }
+    .legend span::before { content: ""; display: inline-block; width: 14px; height: 14px; margin-right: 6px; vertical-align: -2px; border: 2px solid #9ea1a4; background: #fff; }
+    .legend .selected::before { background: #1f2734; border-color: #1f2734; }
+    .legend .reserved::before { background: #8d9196; border-color: #8d9196; }
+    @media (max-width: 980px) {
+      .page { width: 100%; }
+      .booking { grid-template-columns: 1fr; }
+      .middle-row { margin-left: 0; }
+    }
+  </style>
+</head>
+<body>
+  <div class="page">
+    <header class="header">
+      <a class="back-link" href="{% url 'songs:unite_cinema_minato' %}">‹ 上映スケジュールへ戻る</a>
+      <div class="brand">UNITE CINEMA MINATO</div>
+    </header>
+
+    <main class="content">
+      <section class="panel">
+        <div class="panel-title">座席予約</div>
+        <div class="show-info">
+          {{ show.title }}<br>
+          {{ show_date_label }}上映 {{ show.time }}〜{{ show.end_time }} / {{ total_seats }}席限定 / 支払いなし
+        </div>
+
+        <form class="booking" method="post">
+          {% csrf_token %}
+          <input type="hidden" name="date" value="{{ show_date_query }}">
+          <input type="hidden" name="show" value="{{ show_key }}">
+          <div class="seat-stage">
+            <div class="screen">SCREEN</div>
+            <div class="screen-line"></div>
+
+            {% for row in seat_rows %}
+              <div class="seat-row {{ row.class }}">
+                <div class="seat-group">
+                  {% for seat in row.seats %}
+                    <label class="seat-option {{ seat.type }}{% if seat.reserved %} reserved{% endif %}">
+                      <input type="radio" name="seat_id" value="{{ seat.id }}" {% if seat.reserved %}disabled{% endif %} {% if selected_seat_id == seat.id and not seat.reserved %}checked{% endif %}>
+                      <span class="seat-box">{% if seat.reserved %}予約済{% else %}{{ seat.label }}{% endif %}</span>
+                    </label>
+                  {% endfor %}
+                </div>
+              </div>
+            {% endfor %}
+
+            <div class="legend"><span>空席</span><span class="selected">選択中</span><span class="reserved">予約済</span></div>
+          </div>
+
+          <aside class="form-card">
+            <h2>名前だけで予約</h2>
+            {% if success_message %}<div class="success">{{ success_message }}</div>{% endif %}
+            {% if errors %}
+              <div class="errors">
+                {% for error in errors %}{{ error }}<br>{% endfor %}
+              </div>
+            {% endif %}
+            <div class="field">
+              <label for="guest_name">予約名</label>
+              <input id="guest_name" type="text" name="guest_name" value="{{ guest_name }}" placeholder="名前を入力" maxlength="80" autocomplete="name">
+            </div>
+            <button class="submit-button" type="submit">この席で予約する</button>
+          </aside>
+        </form>
+      </section>
+    </main>
+  </div>
+</body>
+</html>

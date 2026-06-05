@@ -1,0 +1,297 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>UNITED CINEMA MINATO | 上映スケジュール</title>
+  <style>
+    * { box-sizing: border-box; }
+    body { margin: 0; background: #070a0f; font-family: "Hiragino Kaku Gothic ProN", "Yu Gothic", Meiryo, sans-serif; color: #1f2734; }
+    a { color: inherit; text-decoration: none; }
+    .page { width: 960px; margin: 0 auto; background: #fff; min-height: 100vh; }
+
+    .top-header { height: 84px; padding: 10px 18px; position: relative; background: #fff; }
+    .logo-area { display: flex; align-items: center; gap: 14px; }
+    .logo-mark { width: 118px; height: 66px; display: block; object-fit: contain; }
+    .brand-main { font-size: 21px; letter-spacing: 6px; color: #22304f; font-weight: 600; line-height: 1; }
+    .brand-sub { margin-top: 7px; font-size: 18px; letter-spacing: 3px; font-weight: 700; }
+    .top-links { position: absolute; top: 10px; right: 22px; display: flex; gap: 18px; font-size: 11px; font-weight: 700; }
+    .top-links a::before { content: "●"; font-size: 10px; margin-right: 6px; color: #33435b; }
+    .header-ad { position: absolute; right: 22px; bottom: 12px; width: 380px; height: 42px; border: 1px solid #d7dde8; background: linear-gradient(90deg,#f7f9fd,#fff); display: flex; align-items: center; justify-content: center; color: #1a6b8c; font-size: 12px; font-weight: 700; }
+
+    .main-nav { height: 54px; background: #0f1115; display: flex; padding: 0 18px; }
+    .nav-item { position: relative; width: 20%; height: 54px; color: #fff; display: flex; align-items: center; justify-content: center; font-size: 17px; font-weight: 800; letter-spacing: 2px; border-left: 1px solid #3a3f48; border-right: 1px solid #080a0d; border-bottom: 4px solid #1499ff; background: repeating-linear-gradient(135deg,#2d3035 0,#2d3035 2px,#22252a 2px,#22252a 5px); text-shadow: 0 0 6px rgba(255,255,255,0.35); cursor: pointer; }
+    .nav-item.active, .nav-item.red-line { border-bottom: 4px solid #e00000; }
+    .nav-item:hover { background: repeating-linear-gradient(135deg,#363a40 0,#363a40 2px,#282c31 2px,#282c31 5px); }
+    .dropdown { display: none; position: absolute; top: 54px; left: 0; width: 260px; background: rgba(28,38,56,0.97); z-index: 50; color: #fff; font-size: 15px; font-weight: 600; }
+    .nav-item:hover .dropdown, .nav-item.open .dropdown { display: block; }
+    .dropdown a { display: block; padding: 13px 16px; border-bottom: 1px solid #445269; }
+    .dropdown a::before { content: "▶"; font-size: 11px; margin-right: 14px; color: #c7d1e4; }
+    .dropdown a:hover { background: #364866; }
+
+    .notice-bar { margin: 14px 18px; height: 38px; background: linear-gradient(#5fa8dd,#408ac4); color: #fff; display: flex; align-items: center; justify-content: center; font-weight: 700; letter-spacing: 1px; }
+    .notice-bar::before { content: "▼"; margin-right: 12px; font-size: 14px; }
+    .notice-panel { margin: 0 18px 18px; background: #fff; border: 1px solid #d3d8e4; }
+    .notice-link-row { padding: 12px 16px; border-bottom: 1px dotted #8aa1c4; }
+    .notice-link-row:last-child { border-bottom: 0; }
+    .notice-link { color: #0057d8; font-size: 15px; font-weight: 700; text-decoration: underline; display: inline-flex; align-items: center; gap: 8px; }
+    .notice-link::before { content: "▶"; color: #1a4fb8; font-size: 11px; }
+    .survey-box { margin: 18px 0 10px; background: #fff; border: 1px solid #ccd4e1; box-shadow: 0 10px 26px rgba(13,21,35,0.08); }
+    .survey-head { padding: 14px 16px; background: linear-gradient(90deg,#0f4a81,#1f78d1); color: #fff; font-size: 18px; font-weight: 800; }
+    .survey-body { padding: 16px; }
+    .survey-copy { margin: 0 0 14px; color: #22304f; font-size: 14px; line-height: 1.7; font-weight: 700; }
+    .survey-grid { display: grid; gap: 12px; }
+    .survey-field label { display: block; margin-bottom: 6px; font-size: 13px; font-weight: 800; color: #415166; }
+    .survey-field input, .survey-field textarea { width: 100%; border: 1px solid #b7c3d7; border-radius: 4px; padding: 12px 12px; font-size: 15px; font-family: inherit; }
+    .survey-field textarea { min-height: 120px; resize: vertical; }
+    .survey-actions { margin-top: 14px; display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }
+    .survey-submit { border: 0; border-radius: 4px; background: linear-gradient(#ff9f72,#f26428); color: #fff; padding: 12px 18px; font-size: 15px; font-weight: 900; cursor: pointer; }
+    .survey-note { color: #657185; font-size: 12px; font-weight: 700; }
+    .survey-errors, .survey-success { margin-bottom: 12px; padding: 12px 14px; font-size: 13px; font-weight: 800; line-height: 1.6; }
+    .survey-errors { background: #fff0f0; color: #b00000; border: 1px solid #f0b6b6; }
+    .survey-success { background: #eef9f2; color: #12622f; border: 1px solid #a7dcbc; }
+
+    .content { padding: 0 18px 30px; background: #eef1f6; }
+    h2.section-title { font-size: 16px; margin: 14px 0 12px; color: #2d3a52; }
+
+    .date-tabs { display: grid; grid-template-columns: 52px repeat(7, 1fr) 48px; height: 66px; border: 1px solid #8bb7d8; margin-bottom: 22px; }
+    .date-tab,.date-nav { background: linear-gradient(#65a7db,#3d86bf); color: #fff; border-right: 1px solid #a7cbe5; display: flex; align-items: center; justify-content: center; flex-direction: column; cursor: pointer; }
+    .date-tab.active { background: linear-gradient(#7cb8e4,#3174af); }
+    .date-num { font-size: 23px; font-weight: 800; letter-spacing: 2px; line-height: 1; }
+    .date-month { font-size: 12px; margin-right: 3px; }
+    .date-week { margin-top: 6px; font-size: 13px; font-weight: 700; }
+    .date-week.red { color: #de0707; }
+    .date-week.blue { color: #0022be; }
+    .date-nav { color: rgba(0,0,0,0.24); font-weight: 700; }
+
+    .schedule-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 8px; font-size: 13px; }
+    .tabs { display: flex; margin-bottom: 8px; }
+    .tab { background: #fff; border: 1px solid #ccd4e1; padding: 12px 22px; font-size: 15px; font-weight: 700; cursor: pointer; }
+    .tab.active { color: #f06337; background: #f8fbff; }
+
+    .day-title { background: #111723; color: #fff; height: 58px; border: 4px solid #111723; display: flex; align-items: center; padding: 0 10px; margin-bottom: 14px; }
+    .day-arrow { background: #273349; width: 42px; height: 48px; display: flex; align-items: center; justify-content: center; color: #aeb9cb; font-size: 12px; }
+    .day-date { margin-left: 18px; font-size: 30px; letter-spacing: 1px; }
+    .open-time { margin-left: 16px; font-size: 14px; }
+    .day-spacer { flex: 1; }
+    .day-next { width: 42px; height: 48px; background: #edf2f9; color: #6d7f9a; display: flex; align-items: center; justify-content: center; font-size: 12px; }
+
+    .info-boxes { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-bottom: 10px; }
+    .info-box { background: #fff; border: 1px solid #ccd4e1; border-radius: 3px; padding: 7px 10px; font-size: 13px; font-weight: 700; }
+    .info-box.blue { color: #0b64cc; }
+    .info-box.red { color: #e00000; }
+
+    .legend { background: #fff; padding: 12px 14px; margin-bottom: 12px; display: flex; gap: 14px; align-items: center; font-size: 12px; font-weight: 700; }
+    .icon { display: inline-block; width: 20px; height: 20px; margin-right: 4px; vertical-align: middle; border-radius: 2px; }
+    .icon.ok { background: #0f4a81; border: 4px solid #3673b1; }
+    .icon.warn { background: #7f8d20; border: 4px solid #b8c63b; }
+    .icon.full { background: #9f1b1b; border: 4px solid #cf3e3e; }
+
+    .movie { background: #fff; margin-bottom: 16px; border: 1px solid #d3d8e4; }
+    .movie-title { background: repeating-linear-gradient(135deg,#1b263a 0,#1b263a 2px,#141d2e 2px,#141d2e 5px); color: #fff; padding: 12px 14px; font-size: 17px; font-weight: 800; letter-spacing: 1px; border-left: 6px solid #2892ce; }
+    .movie-meta { padding: 8px 10px; font-size: 12px; font-weight: 700; border-bottom: 1px solid #d7dbe6; }
+    .show-table { display: grid; grid-template-columns: 1fr; min-height: 66px; }
+    .show-cell { border-bottom: 1px solid #d7dbe6; padding: 10px 12px; min-height: 66px; }
+    .screen { display: flex; align-items: center; gap: 12px; font-size: 12px; font-weight: 700; color: #556176; }
+    .screen strong { display: inline-block; font-size: 18px; color: #243247; min-width: 22px; text-align: center; }
+    .time { font-size: 18px; font-weight: 900; line-height: 1.1; }
+    .end-time { font-size: 11px; color: #2f3950; margin-top: 3px; }
+    .reserved { border: 2px solid #2f3f58; font-size: 12px; padding: 1px 4px; margin-left: 6px; }
+    .buy-row { display: flex; gap: 6px; align-items: center; margin-top: 8px; cursor: pointer; text-decoration: none; }
+    .buy-icon { width: 18px; height: 18px; background: #0f4a81; border-radius: 50%; border: 4px solid #3673b1; }
+    .buy-btn { background: linear-gradient(#ff9f72,#f26428); color: #fff; border: 1px solid #ff8144; border-radius: 4px; padding: 2px 8px; font-weight: 800; font-size: 13px; }
+
+    footer { background: #0a101a; color: #b4bed0; padding: 55px 0 70px; text-align: center; border-top: 1px dotted #3f4e67; }
+    .footer-links { margin-bottom: 22px; font-size: 14px; letter-spacing: 1px; }
+    .footer-links a { margin: 0 8px; }
+    .copyright { font-size: 12px; color: #8e9aaf; }
+
+    @media (max-width: 1220px) {
+      .page { width: 100%; }
+      .show-table { grid-template-columns: 1fr; }
+    }
+
+    @media (max-width: 820px) {
+      .top-header { height: auto; padding-bottom: 14px; }
+      .top-links, .header-ad { position: static; margin-top: 10px; }
+      .main-nav { display: grid; grid-template-columns: 1fr 1fr; height: auto; padding: 0; }
+      .nav-item { width: 100%; }
+      .date-tabs { grid-template-columns: repeat(3, 1fr); height: auto; }
+      .date-nav { display: none; }
+      .show-table { grid-template-columns: 1fr; }
+    }
+  </style>
+</head>
+
+<body>
+  <div class="page">
+    <header class="top-header">
+      <div class="logo-area">
+        <img class="logo-mark" src="{% static 'images/cinema-minato-logo.svg' %}" alt="UNITE CINEMA MINATO">
+        <div>
+          <div class="brand-main">UNITED CINEMA MINATO</div>
+          <div class="brand-sub">ユナイテッド・シネマみなと</div>
+        </div>
+      </div>
+      <div class="top-links">
+        <a href="#">HOME</a>
+        <a href="#">他の劇場を探す</a>
+        <a href="#">サイト案内</a>
+      </div>
+      <div class="header-ad">HOME THEATER 実験ページ・案内エリア</div>
+    </header>
+
+    <nav class="main-nav">
+      <div class="nav-item active">上映スケジュール</div>
+      <div class="nav-item red-line">上映作品<div class="dropdown"><a href="#">上映中作品</a><a href="#">公開予定作品</a><a href="#">前売情報</a></div></div>
+      <div class="nav-item">劇場案内<div class="dropdown"><a href="{% url 'songs:unite_cinema_minato_guide' %}">劇場案内</a><a href="{% url 'songs:unite_cinema_minato_guide' %}#usage">ご利用案内</a></div></div>
+      <div class="nav-item">交通・料金<div class="dropdown"><a href="{% url 'songs:unite_cinema_minato_access' %}">アクセス</a><a href="{% url 'songs:unite_cinema_minato_price' %}">料金</a></div></div>
+      <div class="nav-item">お知らせ</div>
+    </nav>
+
+    <div class="notice-bar">劇場からのお知らせ</div>
+    <div class="notice-panel">
+      <div class="notice-link-row">
+        <a class="notice-link" href="{% url 'songs:unite_cinema_minato_survey' %}">アンケートのお願い　日曜日の上映会で見たい作品を教えてください</a>
+      </div>
+    </div>
+
+    <main class="content">
+      <section>
+        <h2 class="section-title">鑑賞日を選ぶ</h2>
+        <div class="date-tabs">
+          <a class="date-nav" href="{% url 'songs:unite_cinema_minato' %}?date={{ prev_date_query }}">前へ</a>
+          {% for tab in date_tabs %}
+            <a class="date-tab{% if tab.active %} active{% endif %}" href="{% url 'songs:unite_cinema_minato' %}?date={{ tab.query }}"><div><span class="date-month">{{ tab.month }}</span><span class="date-num">{{ tab.day }}</span></div><div class="date-week {{ tab.week_class }}">{{ tab.week }}</div></a>
+          {% endfor %}
+          <a class="date-nav" href="{% url 'songs:unite_cinema_minato' %}?date={{ next_date_query }}">次へ</a>
+        </div>
+
+        <div class="schedule-header"><strong>上映スケジュール</strong><span>表示切替: ● 本日　● 週間</span></div>
+        <div class="tabs"><div class="tab">すべて表示</div><div class="tab active">特別上映</div></div>
+        <div class="day-title"><a class="day-arrow" href="{% url 'songs:unite_cinema_minato' %}?date={{ prev_date_query }}">‹ 前日</a><div class="day-date">{{ selected_date_label }}</div><div class="open-time">[8:45開場]</div><div class="day-spacer"></div><a class="day-next" href="{% url 'songs:unite_cinema_minato' %}?date={{ next_date_query }}">翌日 ›</a></div>
+
+        <div class="info-boxes">
+          <a class="info-box" id="price-info" href="{% url 'songs:unite_cinema_minato_price' %}">料金ページを見る</a>
+          <div class="info-box blue">● 入場特典配布作品の案内</div>
+          <div class="info-box">⚠ 小さなお子様連れ鑑賞可能作品について</div>
+          <div class="info-box red">⚠ 夜間上映の入場年齢に関する案内</div>
+        </div>
+
+        <section class="survey-box" id="survey-form">
+          <div class="survey-head">アンケートのお願い</div>
+          <div class="survey-body">
+            <p class="survey-copy">日曜日の上映会で見たい作品を教えてください。気になる作品名をそのまま入力してOKです。</p>
+            {% if survey_success_message %}<div class="survey-success">{{ survey_success_message }}</div>{% endif %}
+            {% if survey_errors %}
+              <div class="survey-errors">
+                {% for error in survey_errors %}{{ error }}<br>{% endfor %}
+              </div>
+            {% endif %}
+            <form method="post" action="{% url 'songs:unite_cinema_minato_survey' %}">
+              {% csrf_token %}
+              <div class="survey-grid">
+                <div class="survey-field">
+                  <label for="survey_name">お名前（任意）</label>
+                  <input id="survey_name" name="survey_name" type="text" value="{{ survey_name }}" maxlength="80" placeholder="空欄でもOKです">
+                </div>
+                <div class="survey-field">
+                  <label for="survey_show">見たい作品</label>
+                  <input id="survey_show" name="survey_show" type="text" value="{{ survey_show }}" maxlength="120" placeholder="例: もののけ姫 4Kリマスター">
+                </div>
+                <div class="survey-field">
+                  <label for="survey_memo">ひとこと（任意）</label>
+                  <textarea id="survey_memo" name="survey_memo" maxlength="300" placeholder="理由や希望があれば書いてください">{{ survey_memo }}</textarea>
+                </div>
+              </div>
+              <div class="survey-actions">
+                <button class="survey-submit" type="submit">アンケートを送る</button>
+                <div class="survey-note">送信内容は管理画面で確認できます。</div>
+              </div>
+            </form>
+          </div>
+        </section>
+
+        <div class="legend">
+          <span><span class="icon ok"></span>空席あり</span>
+          <span><span class="icon warn"></span>残りわずか</span>
+          <span><span class="icon full"></span>満席</span>
+          <span>□ 販売対象外</span>
+        </div>
+
+        {% for movie in schedule_movies %}
+          <article class="movie">
+            <div class="movie-title">{{ movie.title }}</div>
+            <div class="show-table">
+              <div class="show-cell screen"><strong>{{ movie.screen }}</strong>screen</div>
+              {% for show in movie.shows %}
+                <div class="show-cell"><div class="time">{{ show.time }} <span class="reserved">指</span></div><div class="end-time">〜{{ show.end_time }}</div><a class="buy-row" href="{% url 'songs:unite_cinema_minato_reserve' %}?date={{ selected_date_query }}&show={{ show.show_key }}"><span class="buy-icon"></span><span class="buy-btn">予約</span></a></div>
+              {% endfor %}
+            </div>
+          </article>
+        {% endfor %}
+      </section>
+
+    </main>
+
+    <footer>
+      <div class="footer-links"><a href="#">会社案内</a> | <a href="#">プレスリリース</a> | <a href="#">採用情報</a> | <a href="#">個人情報</a> | <a href="#">利用方針</a></div>
+      <div class="copyright">© UNITED CINEMA MINATO.</div>
+    </footer>
+  </div>
+  <script>
+    document.addEventListener('DOMContentLoaded', function () {
+      const dayDate = document.querySelector('.day-date');
+
+      document.querySelectorAll('.date-tab').forEach(function (tab) {
+        tab.addEventListener('click', function () {
+          document.querySelectorAll('.date-tab').forEach(function (item) {
+            item.classList.remove('active');
+          });
+          tab.classList.add('active');
+          const month = tab.querySelector('.date-month')?.textContent || '';
+          const day = tab.querySelector('.date-num')?.textContent || '';
+          const week = tab.querySelector('.date-week')?.textContent || '';
+          if (dayDate) dayDate.textContent = month + day + '(' + week + ')';
+        });
+      });
+
+      document.querySelectorAll('.tab').forEach(function (tab) {
+        tab.addEventListener('click', function () {
+          document.querySelectorAll('.tab').forEach(function (item) {
+            item.classList.remove('active');
+          });
+          tab.classList.add('active');
+        });
+      });
+
+      document.querySelectorAll('.nav-item').forEach(function (item) {
+        item.addEventListener('click', function (event) {
+          if (event.target.closest('.dropdown a')) return;
+          document.querySelectorAll('.nav-item').forEach(function (navItem) {
+            if (navItem !== item) navItem.classList.remove('open');
+          });
+          item.classList.toggle('open');
+        });
+      });
+
+      document.querySelectorAll('a[href="#"]').forEach(function (link) {
+        link.addEventListener('click', function (event) {
+          const text = link.textContent.trim();
+          event.preventDefault();
+          alert(text + ' は準備中です。');
+        });
+      });
+
+      document.addEventListener('click', function (event) {
+        if (!event.target.closest('.nav-item')) {
+          document.querySelectorAll('.nav-item').forEach(function (item) {
+            item.classList.remove('open');
+          });
+        }
+      });
+    });
+  </script>
+</body>
+</html>

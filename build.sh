@@ -8,11 +8,13 @@ cd myproject
 python manage.py collectstatic --no-input
 python manage.py migrate --run-syncdb
 
-# 非公開かつ2ヶ月以上再生されていない楽曲を自動クリーンアップ
-python manage.py cleanup_inactive_songs
+if [ "${SKIP_POST_DEPLOY_TASKS:-false}" != "true" ]; then
+	# 非公開かつ2ヶ月以上再生されていない楽曲を自動クリーンアップ
+	python manage.py cleanup_inactive_songs
 
-# レビューデータの自動バックアップ
-python manage.py backup_reviews || true
+	# レビューデータの自動バックアップ
+	python manage.py backup_reviews || true
 
-# 学習データをJSONからDBにインポート（初回デプロイ用、冪等）
-python manage.py import_training_data || true
+	# 学習データをJSONからDBにインポート（初回デプロイ用、冪等）
+	python manage.py import_training_data || true
+fi

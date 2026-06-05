@@ -1,0 +1,69 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>劇場案内 | UNITE CINEMA MINATO</title>
+  <style>
+    * { box-sizing: border-box; }
+    body { margin: 0; background: #070a0f; font-family: "Hiragino Kaku Gothic ProN", "Yu Gothic", Meiryo, sans-serif; color: #1f2734; }
+    a { color: inherit; text-decoration: none; }
+    .page { width: 960px; min-height: 100vh; margin: 0 auto; background: #eef1f6; }
+    .header { background: #fff; padding: 18px 24px; border-bottom: 4px solid #1288cb; }
+    .back-link { display: inline-flex; align-items: center; gap: 8px; color: #21314d; font-size: 13px; font-weight: 800; }
+    .brand { margin-top: 14px; color: #22304f; font-size: 22px; font-weight: 700; letter-spacing: 5px; }
+    .content { padding: 32px 24px 70px; }
+    .hero { background: #fff; border: 1px solid #d3d8e4; box-shadow: 0 16px 40px rgba(13,21,35,0.12); }
+    .hero-title { background: repeating-linear-gradient(135deg,#1b263a 0,#1b263a 2px,#141d2e 2px,#141d2e 5px); color: #fff; padding: 17px 22px; font-size: 22px; font-weight: 900; letter-spacing: 2px; border-left: 6px solid #2892ce; }
+    .hero-body { padding: 24px; }
+    .lead { margin: 0; color: #22304f; font-size: 18px; font-weight: 800; line-height: 1.9; }
+    .spec-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 12px; margin-top: 18px; }
+    .spec { background: #fff; border: 1px solid #ccd4e1; padding: 14px 16px; min-height: 110px; }
+    .spec strong { display: block; color: #0c5187; font-size: 17px; margin-bottom: 8px; }
+    .spec span { color: #4b5667; font-size: 13px; font-weight: 700; line-height: 1.7; }
+    .section { margin-top: 22px; background: #fff; border: 1px solid #d3d8e4; }
+    .section-title { background: #111723; color: #fff; padding: 13px 18px; font-size: 18px; font-weight: 900; letter-spacing: 1px; border-left: 6px solid #ff7346; }
+    .section-body { padding: 18px; font-size: 15px; font-weight: 700; line-height: 1.9; color: #334056; }
+    .notice-list { margin: 0; padding-left: 1.2em; }
+    .notice-list li { margin: 6px 0; }
+    @media (max-width: 980px) {
+      .page { width: 100%; }
+      .spec-grid { grid-template-columns: 1fr; }
+    }
+  </style>
+</head>
+<body>
+  <div class="page">
+    <header class="header">
+      <a class="back-link" href="{% url 'songs:unite_cinema_minato' %}">‹ 上映スケジュールへ戻る</a>
+      <div class="brand">UNITE CINEMA MINATO</div>
+    </header>
+
+    <main class="content">
+      <section class="hero">
+        <div class="hero-title">劇場案内</div>
+        <div class="hero-body">
+          <p class="lead">音の高さ、奥行き、色の広がりまで楽しめる小さな特別劇場です。7.2.4chの立体音響と、BT.2020に対応したプロジェクターで、暗い場面の階調から鮮やかな光まで丁寧に映します。</p>
+        </div>
+      </section>
+
+      <div class="spec-grid">
+        <div class="spec"><strong>7.2.4ch 音響</strong><span>前後左右に加えて天井方向にも音を配置し、雨音や空間の広がりまで自然に包み込みます。</span></div>
+        <div class="spec"><strong>BT.2020 対応</strong><span>広い色域に対応したプロジェクターで、夕焼け、ネオン、深い青を鮮やかに再現します。</span></div>
+      </div>
+
+      <section class="section" id="usage">
+        <div class="section-title">ご利用案内</div>
+        <div class="section-body">
+          <ul class="notice-list">
+            <li>上映開始の10分前までにお越しください。</li>
+            <li>飲み物と軽いお菓子は持ち込みできます。</li>
+            <li>大きな音が苦手な方は、後方席がおすすめです。</li>
+            <li>機材調整のため、上映前に短い映像確認を行う場合があります。</li>
+          </ul>
+        </div>
+      </section>
+    </main>
+  </div>
+</body>
+</html>

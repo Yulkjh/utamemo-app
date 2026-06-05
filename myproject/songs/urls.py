@@ -5,6 +5,13 @@ app_name = 'songs'
 
 urlpatterns = [
     path('', views.HomeView.as_view(), name='home'),
+    path('unite-cinema-minato/', views.TheaterArchiveView.as_view(), name='unite_cinema_minato'),
+    path('unite-cinema-minato/survey/', views.TheaterArchiveView.as_view(), name='unite_cinema_minato_survey'),
+    path('unite-cinema-minato/guide/', views.TheaterGuideView.as_view(), name='unite_cinema_minato_guide'),
+    path('unite-cinema-minato/access/', views.TheaterAccessView.as_view(), name='unite_cinema_minato_access'),
+    path('unite-cinema-minato/price/', views.TheaterPriceView.as_view(), name='unite_cinema_minato_price'),
+    path('unite-cinema-minato/reserve/', views.TheaterReservationView.as_view(), name='unite_cinema_minato_reserve'),
+    path('theater-archive/', views.TheaterArchiveView.as_view(), name='theater_archive'),
     path('songs/', views.SongListView.as_view(), name='song_list'),
     path('songs/<int:pk>/', views.SongDetailView.as_view(), name='song_detail'),
     path('s/<str:share_id>/', views.song_share_redirect, name='song_share'),

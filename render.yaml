@@ -1,0 +1,17 @@
+services:
+  - type: web
+    name: utamemo-staging
+    env: python
+    plan: starter
+    buildCommand: ./build.sh
+    startCommand: cd myproject && gunicorn myproject.wsgi:application --bind 0.0.0.0:$PORT --timeout 120 --workers 4 --threads 2 --worker-class gthread --max-requests 1000 --max-requests-jitter 100 --limit-request-line 8190
+    autoDeploy: true
+    envVars:
+      - key: DEBUG
+        value: false
+      - key: SKIP_POST_DEPLOY_TASKS
+        value: true
+      - key: SITE_BASE_URL
+        sync: false
+      - key: PUBLIC_ALLOWED_HOSTS
+        sync: false

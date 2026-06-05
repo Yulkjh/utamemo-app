@@ -4,7 +4,7 @@ from .models import (
     Song, Lyrics, Like, Favorite, Comment, UploadedImage,
     Tag, PlayHistory, Classroom, ClassroomMembership, ClassroomSong,
     FlashcardDeck, Flashcard, TrainingSession, PromptTemplate,
-    TrainingData,
+    TrainingData, TheaterSurveyResponse,
 )
 
 
@@ -243,6 +243,20 @@ class FlashcardAdmin(admin.ModelAdmin):
     def definition_short(self, obj):
         return obj.definition[:80] + '...' if len(obj.definition) > 80 else obj.definition
     definition_short.short_description = '定義'
+
+
+@admin.register(TheaterSurveyResponse)
+class TheaterSurveyResponseAdmin(admin.ModelAdmin):
+    list_display = ('id', 'visitor_name', 'desired_show', 'memo_short', 'created_at')
+    list_filter = ('created_at',)
+    search_fields = ('visitor_name', 'desired_show', 'memo')
+    ordering = ('-created_at',)
+    list_per_page = 50
+    readonly_fields = ('created_at',)
+
+    def memo_short(self, obj):
+        return obj.memo[:60] + '...' if len(obj.memo) > 60 else obj.memo
+    memo_short.short_description = 'ひとこと'
 
 
 @admin.register(TrainingSession)

@@ -48,8 +48,15 @@ if os.getenv('RENDER'):
     if RENDER_EXTERNAL_HOSTNAME:
         ALLOWED_HOSTS.append(RENDER_EXTERNAL_HOSTNAME)
 
-# カスタムドメインを追加
-ALLOWED_HOSTS.extend(['utamemo.com', 'www.utamemo.com'])
+# 公開サイトのホストを必要に応じて追加（Render の分離デプロイで干渉しないよう環境変数化）
+PUBLIC_ALLOWED_HOSTS_STR = os.getenv('PUBLIC_ALLOWED_HOSTS', '')
+if PUBLIC_ALLOWED_HOSTS_STR:
+    ALLOWED_HOSTS.extend([
+        h.strip() for h in PUBLIC_ALLOWED_HOSTS_STR.split(',') if h.strip()
+    ])
+
+# 公開URL（robots.txt や外部リンク生成に使用）
+SITE_BASE_URL = os.getenv('SITE_BASE_URL', 'https://utamemo.com').rstrip('/')
 
 
 # アプリケーション定義

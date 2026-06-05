@@ -481,6 +481,81 @@ class PlayHistory(models.Model):
         return f"{self.user.username} - {self.song.title} ({self.play_count}回)"
 
 
+class TheaterReservation(models.Model):
+    """映画館風ページの簡易座席予約"""
+    show_key = models.CharField(
+        max_length=80,
+        verbose_name='上映キー'
+    )
+    show_title = models.CharField(
+        max_length=200,
+        verbose_name='上映作品'
+    )
+    show_time = models.CharField(
+        max_length=20,
+        verbose_name='上映時間'
+    )
+    seat_id = models.CharField(
+        max_length=10,
+        verbose_name='座席番号'
+    )
+    guest_name = models.CharField(
+        max_length=80,
+        verbose_name='予約名'
+    )
+    created_at = models.DateTimeField(
+        auto_now_add=True,
+        verbose_name='予約日時'
+    )
+
+    class Meta:
+        verbose_name = '劇場予約'
+        verbose_name_plural = '劇場予約'
+        ordering = ['show_key', 'seat_id']
+        constraints = [
+            models.UniqueConstraint(
+                fields=['show_key', 'seat_id'],
+                name='unique_theater_reservation_seat'
+            ),
+        ]
+
+    def __str__(self):
+        return f"{self.show_title} {self.show_time} {self.seat_id} - {self.guest_name}"
+
+
+class TheaterSurveyResponse(models.Model):
+    """劇場からのお知らせ用アンケート回答"""
+    visitor_name = models.CharField(
+        max_length=80,
+        blank=True,
+        verbose_name='お名前',
+        help_text='任意で入力できます'
+    )
+    desired_show = models.CharField(
+        max_length=120,
+        verbose_name='日曜日の上映会で見たい作品'
+    )
+    memo = models.TextField(
+        blank=True,
+        verbose_name='ひとこと',
+        help_text='補足があれば入力できます'
+    )
+    created_at = models.DateTimeField(
+        auto_now_add=True,
+        verbose_name='回答日時'
+    )
+
+    class Meta:
+        verbose_name = '劇場アンケート'
+        verbose_name_plural = '劇場アンケート'
+        ordering = ['-created_at']
+
+    def __str__(self):
+        if self.visitor_name:
+            return f"{self.visitor_name}: {self.desired_show}"
+        return self.desired_show
+
+
 class Classroom(models.Model):
     """クラス（教室）モデル"""
     name = models.CharField(
@@ -821,9 +896,17 @@ class PromptTemplate(models.Model):
 
     key = models.CharField(
         max_length=50,
-        unique=True,
         choices=TEMPLATE_KEYS,
         verbose_name='テンプレートキー'
+    )
+    user = models.ForeignKey(
+        User,
+        on_delete=models.CASCADE,
+        null=True,
+        blank=True,
+        related_name='prompt_templates',
+        verbose_name='所有ユーザー',
+        help_text='NULLの場合は共有デフォルトテンプレート',
     )
     content = models.TextField(
         verbose_name='テンプレート本文'
@@ -849,23 +932,71 @@ class PromptTemplate(models.Model):
         verbose_name = 'プロンプトテンプレート'
         verbose_name_plural = 'プロンプトテンプレート'
         ordering = ['key']
+        constraints = [
+            models.UniqueConstraint(
+                fields=['key', 'user'],
+                name='unique_prompt_per_user',
+            ),
+            models.UniqueConstraint(
+                fields=['key'],
+                condition=models.Q(user__isnull=True),
+                name='unique_shared_prompt',
+            ),
+        ]
 
     def __str__(self):
         return self.get_key_display()
 
     @classmethod
-    def get_template(cls, key, default=''):
-        """テンプレートを取得。存在しない場合はdefaultを返す"""
+    def get_template(cls, key, default='', user=None):
+        """テンプレートを取得。ユーザー個別 → 共有デフォルト → default の優先順位"""
+        if user:
+            try:
+                return cls.objects.get(key=key, user=user).content
+            except cls.DoesNotExist:
+                pass
+        # 共有デフォルト (user=NULL)
         try:
-            return cls.objects.get(key=key).content
+            return cls.objects.get(key=key, user__isnull=True).content
         except cls.DoesNotExist:
             return default
 
     @classmethod
+    def get_template_with_meta(cls, key, default='', user=None):
+        """テンプレートとメタ情報を取得（ユーザー個別優先）"""
+        if user:
+            try:
+                obj = cls.objects.get(key=key, user=user)
+                return {
+                    'content': obj.content,
+                    'updated_by': obj.updated_by.username if obj.updated_by else None,
+                    'updated_at': obj.updated_at.isoformat() if obj.updated_at else None,
+                    'is_personal': True,
+                }
+            except cls.DoesNotExist:
+                pass
+        try:
+            obj = cls.objects.get(key=key, user__isnull=True)
+            return {
+                'content': obj.content,
+                'updated_by': obj.updated_by.username if obj.updated_by else None,
+                'updated_at': obj.updated_at.isoformat() if obj.updated_at else None,
+                'is_personal': False,
+            }
+        except cls.DoesNotExist:
+            return {
+                'content': default,
+                'updated_by': None,
+                'updated_at': None,
+                'is_personal': False,
+            }
+
+    @classmethod
     def set_template(cls, key, content, user=None):
-        """テンプレートを保存（なければ作成）"""
+        """ユーザー個別のテンプレートを保存（なければ作成）"""
         obj, created = cls.objects.update_or_create(
             key=key,
+            user=user,
             defaults={
                 'content': content,
                 'updated_by': user,

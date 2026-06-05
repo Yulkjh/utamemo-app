@@ -32,13 +32,14 @@ sitemaps = {
 
 @cache_page(60 * 60 * 24)
 def robots_txt(request):
+    site_base_url = getattr(settings, 'SITE_BASE_URL', 'https://utamemo.com').rstrip('/')
     lines = [
         "User-agent: *",
         "Allow: /",
         "Disallow: /songs/",
         "Disallow: /s/",
         "",
-        "Sitemap: https://utamemo.com/sitemap.xml",
+        f"Sitemap: {site_base_url}/sitemap.xml",
     ]
     return HttpResponse("\n".join(lines), content_type="text/plain")
 
