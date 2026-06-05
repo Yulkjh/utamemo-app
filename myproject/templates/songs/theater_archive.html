@@ -14,8 +14,28 @@
     .top-header { height: 84px; padding: 10px 18px; position: relative; background: #fff; }
     .logo-area { display: flex; align-items: center; gap: 14px; }
     .logo-mark { width: 118px; height: 66px; display: block; object-fit: contain; }
-    .brand-main { font-size: 21px; letter-spacing: 6px; color: #22304f; font-weight: 600; line-height: 1; }
-    .brand-sub { margin-top: 7px; font-size: 18px; letter-spacing: 3px; font-weight: 700; }
+    .brand-main {
+      font-size: 20px;
+      letter-spacing: 0.34em;
+      color: #22304f;
+      font-weight: 300;
+      line-height: 0.95;
+      text-transform: uppercase;
+      font-family: "Arial Narrow", "Avenir Next Condensed", "Helvetica Neue Condensed", "DIN Condensed", "Oswald", sans-serif;
+      transform: scaleX(0.96);
+      transform-origin: left center;
+    }
+    .brand-sub {
+      margin-top: 6px;
+      font-size: 12px;
+      letter-spacing: 0.22em;
+      font-weight: 700;
+      color: #22304f;
+      text-transform: uppercase;
+      font-family: "Arial Narrow", "Avenir Next Condensed", "Helvetica Neue Condensed", "DIN Condensed", "Oswald", sans-serif;
+      transform: scaleX(0.98);
+      transform-origin: left center;
+    }
     .top-links { position: absolute; top: 10px; right: 22px; display: flex; gap: 18px; font-size: 11px; font-weight: 700; }
     .top-links a::before { content: "●"; font-size: 10px; margin-right: 6px; color: #33435b; }
     .header-ad { position: absolute; right: 22px; bottom: 12px; width: 380px; height: 42px; border: 1px solid #d7dde8; background: linear-gradient(90deg,#f7f9fd,#fff); display: flex; align-items: center; justify-content: center; color: #1a6b8c; font-size: 12px; font-weight: 700; }
@@ -37,20 +57,6 @@
     .notice-link-row:last-child { border-bottom: 0; }
     .notice-link { color: #0057d8; font-size: 15px; font-weight: 700; text-decoration: underline; display: inline-flex; align-items: center; gap: 8px; }
     .notice-link::before { content: "▶"; color: #1a4fb8; font-size: 11px; }
-    .survey-box { margin: 18px 0 10px; background: #fff; border: 1px solid #ccd4e1; box-shadow: 0 10px 26px rgba(13,21,35,0.08); }
-    .survey-head { padding: 14px 16px; background: linear-gradient(90deg,#0f4a81,#1f78d1); color: #fff; font-size: 18px; font-weight: 800; }
-    .survey-body { padding: 16px; }
-    .survey-copy { margin: 0 0 14px; color: #22304f; font-size: 14px; line-height: 1.7; font-weight: 700; }
-    .survey-grid { display: grid; gap: 12px; }
-    .survey-field label { display: block; margin-bottom: 6px; font-size: 13px; font-weight: 800; color: #415166; }
-    .survey-field input, .survey-field textarea { width: 100%; border: 1px solid #b7c3d7; border-radius: 4px; padding: 12px 12px; font-size: 15px; font-family: inherit; }
-    .survey-field textarea { min-height: 120px; resize: vertical; }
-    .survey-actions { margin-top: 14px; display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }
-    .survey-submit { border: 0; border-radius: 4px; background: linear-gradient(#ff9f72,#f26428); color: #fff; padding: 12px 18px; font-size: 15px; font-weight: 900; cursor: pointer; }
-    .survey-note { color: #657185; font-size: 12px; font-weight: 700; }
-    .survey-errors, .survey-success { margin-bottom: 12px; padding: 12px 14px; font-size: 13px; font-weight: 800; line-height: 1.6; }
-    .survey-errors { background: #fff0f0; color: #b00000; border: 1px solid #f0b6b6; }
-    .survey-success { background: #eef9f2; color: #12622f; border: 1px solid #a7dcbc; }
 
     .content { padding: 0 18px 30px; background: #eef1f6; }
     h2.section-title { font-size: 16px; margin: 14px 0 12px; color: #2d3a52; }
@@ -178,40 +184,6 @@
           <div class="info-box">⚠ 小さなお子様連れ鑑賞可能作品について</div>
           <div class="info-box red">⚠ 夜間上映の入場年齢に関する案内</div>
         </div>
-
-        <section class="survey-box" id="survey-form">
-          <div class="survey-head">アンケートのお願い</div>
-          <div class="survey-body">
-            <p class="survey-copy">日曜日の上映会で見たい作品を教えてください。気になる作品名をそのまま入力してOKです。</p>
-            {% if survey_success_message %}<div class="survey-success">{{ survey_success_message }}</div>{% endif %}
-            {% if survey_errors %}
-              <div class="survey-errors">
-                {% for error in survey_errors %}{{ error }}<br>{% endfor %}
-              </div>
-            {% endif %}
-            <form method="post" action="{% url 'songs:unite_cinema_minato_survey' %}">
-              {% csrf_token %}
-              <div class="survey-grid">
-                <div class="survey-field">
-                  <label for="survey_name">お名前（任意）</label>
-                  <input id="survey_name" name="survey_name" type="text" value="{{ survey_name }}" maxlength="80" placeholder="空欄でもOKです">
-                </div>
-                <div class="survey-field">
-                  <label for="survey_show">見たい作品</label>
-                  <input id="survey_show" name="survey_show" type="text" value="{{ survey_show }}" maxlength="120" placeholder="例: もののけ姫 4Kリマスター">
-                </div>
-                <div class="survey-field">
-                  <label for="survey_memo">ひとこと（任意）</label>
-                  <textarea id="survey_memo" name="survey_memo" maxlength="300" placeholder="理由や希望があれば書いてください">{{ survey_memo }}</textarea>
-                </div>
-              </div>
-              <div class="survey-actions">
-                <button class="survey-submit" type="submit">アンケートを送る</button>
-                <div class="survey-note">送信内容は管理画面で確認できます。</div>
-              </div>
-            </form>
-          </div>
-        </section>
 
         <div class="legend">
           <span><span class="icon ok"></span>空席あり</span>

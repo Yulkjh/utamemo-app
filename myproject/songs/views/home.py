@@ -120,6 +120,23 @@ def _flatten_theater_schedule(selected_date):
     }
 
 
+def _validate_theater_survey_input(survey_name, survey_show, survey_memo):
+    errors = []
+
+    if not survey_show:
+        errors.append('日曜日の上映会で見たい作品を入力してください。')
+    elif len(survey_show) > 120:
+        errors.append('見たい作品は120文字以内で入力してください。')
+
+    if len(survey_name) > 80:
+        errors.append('お名前は80文字以内で入力してください。')
+
+    if len(survey_memo) > 300:
+        errors.append('ひとことは300文字以内で入力してください。')
+
+    return errors
+
+
 class HomeView(TemplateView):
     """ホームページビュー"""
     template_name = 'songs/home.html'
@@ -159,6 +176,15 @@ class TheaterArchiveView(TemplateView):
         context['next_date_query'] = (selected_date + timedelta(days=1)).isoformat()
         context['date_tabs'] = date_tabs
         context['schedule_movies'] = _build_theater_schedule(selected_date)
+        return context
+
+
+class TheaterSurveyView(TemplateView):
+    """映画館風ページのアンケート専用ページ"""
+    template_name = 'songs/theater_survey.html'
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
         context['survey_name'] = kwargs.get('survey_name', '')
         context['survey_show'] = kwargs.get('survey_show', '')
         context['survey_memo'] = kwargs.get('survey_memo', '')
@@ -170,18 +196,7 @@ class TheaterArchiveView(TemplateView):
         survey_name = request.POST.get('survey_name', '').strip()
         survey_show = request.POST.get('survey_show', '').strip()
         survey_memo = request.POST.get('survey_memo', '').strip()
-        survey_errors = []
-
-        if not survey_show:
-            survey_errors.append('日曜日の上映会で見たい作品を入力してください。')
-        elif len(survey_show) > 120:
-            survey_errors.append('見たい作品は120文字以内で入力してください。')
-
-        if len(survey_name) > 80:
-            survey_errors.append('お名前は80文字以内で入力してください。')
-
-        if len(survey_memo) > 300:
-            survey_errors.append('ひとことは300文字以内で入力してください。')
+        survey_errors = _validate_theater_survey_input(survey_name, survey_show, survey_memo)
 
         if survey_errors:
             context = self.get_context_data(

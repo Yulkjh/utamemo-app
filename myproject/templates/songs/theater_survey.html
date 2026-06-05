@@ -1,0 +1,157 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>UNITED CINEMA MINATO | アンケート</title>
+  <style>
+    * { box-sizing: border-box; }
+    body { margin: 0; background: #070a0f; font-family: "Hiragino Kaku Gothic ProN", "Yu Gothic", Meiryo, sans-serif; color: #1f2734; }
+    a { color: inherit; text-decoration: none; }
+    .page { width: 960px; margin: 0 auto; background: #fff; min-height: 100vh; }
+
+    .top-header { height: 84px; padding: 10px 18px; position: relative; background: #fff; }
+    .logo-area { display: flex; align-items: center; gap: 14px; }
+    .logo-mark { width: 118px; height: 66px; display: block; object-fit: contain; }
+    .brand-main {
+      font-size: 20px;
+      letter-spacing: 0.34em;
+      color: #22304f;
+      font-weight: 300;
+      line-height: 0.95;
+      text-transform: uppercase;
+      font-family: "Arial Narrow", "Avenir Next Condensed", "Helvetica Neue Condensed", "DIN Condensed", "Oswald", sans-serif;
+      transform: scaleX(0.96);
+      transform-origin: left center;
+    }
+    .brand-sub {
+      margin-top: 6px;
+      font-size: 12px;
+      letter-spacing: 0.22em;
+      font-weight: 700;
+      color: #22304f;
+      text-transform: uppercase;
+      font-family: "Arial Narrow", "Avenir Next Condensed", "Helvetica Neue Condensed", "DIN Condensed", "Oswald", sans-serif;
+      transform: scaleX(0.98);
+      transform-origin: left center;
+    }
+    .top-links { position: absolute; top: 10px; right: 22px; display: flex; gap: 18px; font-size: 11px; font-weight: 700; }
+    .top-links a::before { content: "●"; font-size: 10px; margin-right: 6px; color: #33435b; }
+    .header-ad { position: absolute; right: 22px; bottom: 12px; width: 380px; height: 42px; border: 1px solid #d7dde8; background: linear-gradient(90deg,#f7f9fd,#fff); display: flex; align-items: center; justify-content: center; color: #1a6b8c; font-size: 12px; font-weight: 700; }
+
+    .main-nav { height: 54px; background: #0f1115; display: flex; padding: 0 18px; }
+    .nav-item { position: relative; width: 20%; height: 54px; color: #fff; display: flex; align-items: center; justify-content: center; font-size: 17px; font-weight: 800; letter-spacing: 2px; border-left: 1px solid #3a3f48; border-right: 1px solid #080a0d; border-bottom: 4px solid #1499ff; background: repeating-linear-gradient(135deg,#2d3035 0,#2d3035 2px,#22252a 2px,#22252a 5px); text-shadow: 0 0 6px rgba(255,255,255,0.35); }
+    .nav-item.active { border-bottom: 4px solid #e00000; }
+
+    .notice-panel { margin: 18px; background: #fff; border: 1px solid #d3d8e4; }
+    .notice-link-row { padding: 12px 16px; border-bottom: 1px dotted #8aa1c4; }
+    .notice-link { color: #0057d8; font-size: 15px; font-weight: 700; text-decoration: underline; display: inline-flex; align-items: center; gap: 8px; }
+    .notice-link::before { content: "▶"; color: #1a4fb8; font-size: 11px; }
+
+    .content { padding: 0 18px 30px; background: #eef1f6; }
+    .survey-box { margin: 18px 0 10px; background: #fff; border: 1px solid #ccd4e1; box-shadow: 0 10px 26px rgba(13,21,35,0.08); }
+    .survey-head { padding: 14px 16px; background: linear-gradient(90deg,#0f4a81,#1f78d1); color: #fff; font-size: 18px; font-weight: 800; }
+    .survey-body { padding: 16px; }
+    .survey-copy { margin: 0 0 14px; color: #22304f; font-size: 14px; line-height: 1.7; font-weight: 700; }
+    .survey-grid { display: grid; gap: 12px; }
+    .survey-field label { display: block; margin-bottom: 6px; font-size: 13px; font-weight: 800; color: #415166; }
+    .survey-field input, .survey-field textarea { width: 100%; border: 1px solid #b7c3d7; border-radius: 4px; padding: 12px 12px; font-size: 15px; font-family: inherit; }
+    .survey-field textarea { min-height: 120px; resize: vertical; }
+    .survey-actions { margin-top: 14px; display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }
+    .survey-submit { border: 0; border-radius: 4px; background: linear-gradient(#ff9f72,#f26428); color: #fff; padding: 12px 18px; font-size: 15px; font-weight: 900; cursor: pointer; }
+    .survey-errors, .survey-success { margin-bottom: 12px; padding: 12px 14px; font-size: 13px; font-weight: 800; line-height: 1.6; }
+    .survey-errors { background: #fff0f0; color: #b00000; border: 1px solid #f0b6b6; }
+    .survey-success { background: #eef9f2; color: #12622f; border: 1px solid #a7dcbc; }
+
+    footer { background: #0a101a; color: #b4bed0; padding: 55px 0 70px; text-align: center; border-top: 1px dotted #3f4e67; }
+    .footer-links { margin-bottom: 22px; font-size: 14px; letter-spacing: 1px; }
+    .footer-links a { margin: 0 8px; }
+    .copyright { font-size: 12px; color: #8e9aaf; }
+
+    @media (max-width: 1220px) {
+      .page { width: 100%; }
+    }
+
+    @media (max-width: 820px) {
+      .top-header { height: auto; padding-bottom: 14px; }
+      .top-links, .header-ad { position: static; margin-top: 10px; }
+      .main-nav { display: grid; grid-template-columns: 1fr 1fr; height: auto; padding: 0; }
+      .nav-item { width: 100%; }
+    }
+  </style>
+</head>
+<body>
+  <div class="page">
+    <header class="top-header">
+      <div class="logo-area">
+        <img class="logo-mark" src="{% static 'images/cinema-minato-logo.svg' %}" alt="UNITE CINEMA MINATO">
+        <div>
+          <div class="brand-main">UNITED CINEMA MINATO</div>
+          <div class="brand-sub">ユナイテッド・シネマみなと</div>
+        </div>
+      </div>
+      <div class="top-links">
+        <a href="#">HOME</a>
+        <a href="#">他の劇場を探す</a>
+        <a href="#">サイト案内</a>
+      </div>
+      <div class="header-ad">HOME THEATER 実験ページ・案内エリア</div>
+    </header>
+
+    <nav class="main-nav">
+      <a class="nav-item" href="{% url 'songs:unite_cinema_minato' %}">上映スケジュール</a>
+      <div class="nav-item">上映作品</div>
+      <a class="nav-item" href="{% url 'songs:unite_cinema_minato_guide' %}">劇場案内</a>
+      <a class="nav-item" href="{% url 'songs:unite_cinema_minato_price' %}">交通・料金</a>
+      <div class="nav-item active">お知らせ</div>
+    </nav>
+
+    <div class="notice-panel">
+      <div class="notice-link-row">
+        <a class="notice-link" href="{% url 'songs:unite_cinema_minato_survey' %}">アンケートのお願い　日曜日の上映会で見たい作品を教えてください</a>
+      </div>
+    </div>
+
+    <main class="content">
+      <section class="survey-box" id="survey-form">
+        <div class="survey-head">アンケートのお願い</div>
+        <div class="survey-body">
+          <p class="survey-copy">日曜日の上映会で見たい作品を教えてください。気になる作品名をそのまま入力してOKです。</p>
+          {% if survey_success_message %}<div class="survey-success">{{ survey_success_message }}</div>{% endif %}
+          {% if survey_errors %}
+            <div class="survey-errors">
+              {% for error in survey_errors %}{{ error }}<br>{% endfor %}
+            </div>
+          {% endif %}
+          <form method="post" action="{% url 'songs:unite_cinema_minato_survey' %}">
+            {% csrf_token %}
+            <div class="survey-grid">
+              <div class="survey-field">
+                <label for="survey_name">お名前（任意）</label>
+                <input id="survey_name" name="survey_name" type="text" value="{{ survey_name }}" maxlength="80" placeholder="空欄でもOKです">
+              </div>
+              <div class="survey-field">
+                <label for="survey_show">見たい作品</label>
+                <input id="survey_show" name="survey_show" type="text" value="{{ survey_show }}" maxlength="120" placeholder="例: もののけ姫 4Kリマスター">
+              </div>
+              <div class="survey-field">
+                <label for="survey_memo">ひとこと（任意）</label>
+                <textarea id="survey_memo" name="survey_memo" maxlength="300" placeholder="理由や希望があれば書いてください">{{ survey_memo }}</textarea>
+              </div>
+            </div>
+            <div class="survey-actions">
+              <button class="survey-submit" type="submit">アンケートを送る</button>
+            </div>
+          </form>
+        </div>
+      </section>
+    </main>
+
+    <footer>
+      <div class="footer-links"><a href="#">会社案内</a> | <a href="#">プレスリリース</a> | <a href="#">採用情報</a> | <a href="#">個人情報</a> | <a href="#">利用方針</a></div>
+      <div class="copyright">© UNITED CINEMA MINATO.</div>
+    </footer>
+  </div>
+</body>
+</html>
