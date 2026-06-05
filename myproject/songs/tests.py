@@ -2,7 +2,7 @@ from django.test import TestCase, Client
 from django.contrib.auth import get_user_model
 from django.urls import reverse
 from django.db import IntegrityError
-from .models import Song, Lyrics, Tag, Like, Favorite, Classroom, ClassroomMembership, FlashcardDeck, Flashcard
+from .models import Song, Lyrics, Tag, Like, Favorite, Classroom, ClassroomMembership, FlashcardDeck, Flashcard, TheaterReservation
 from .content_filter import check_text_for_inappropriate_content
 
 User = get_user_model()
@@ -357,6 +357,70 @@ class ClassroomTest(TestCase):
         """クラス一覧がログインを要求すること"""
         response = self.client.get(reverse('songs:classroom_list'))
         self.assertEqual(response.status_code, 302)
+
+
+class TheaterBackendTest(TestCase):
+    """UNITE CINEMA MINATO関連バックエンドのテスト"""
+
+    def setUp(self):
+        self.client = Client()
+
+    def test_now_showing_page_loads(self):
+        response = self.client.get(reverse('songs:unite_cinema_minato_now_showing'))
+        self.assertEqual(response.status_code, 200)
+
+    def test_coming_soon_page_loads(self):
+        response = self.client.get(reverse('songs:unite_cinema_minato_coming_soon'))
+        self.assertEqual(response.status_code, 200)
+
+    def test_advance_tickets_page_loads(self):
+        response = self.client.get(reverse('songs:unite_cinema_minato_advance_tickets'))
+        self.assertEqual(response.status_code, 200)
+
+    def test_schedule_api_returns_movies(self):
+        response = self.client.get(reverse('songs:unite_cinema_minato_schedule_api'), {'date': '2026-06-05'})
+        self.assertEqual(response.status_code, 200)
+        payload = response.json()
+        self.assertIn('movies', payload)
+        self.assertTrue(len(payload['movies']) > 0)
+
+    def test_reservation_api_returns_seat_status(self):
+        date_query = '2026-06-05'
+        schedule = self.client.get(reverse('songs:unite_cinema_minato_schedule_api'), {'date': date_query}).json()
+        first_show = schedule['movies'][0]['shows'][0]
+        show_key = first_show['show_key']
+        TheaterReservation.objects.create(
+            show_key=show_key,
+            show_title=schedule['movies'][0]['title'],
+            show_time=first_show['time'],
+            seat_id='B1',
+            guest_name='テスト',
+        )
+
+        response = self.client.get(
+            reverse('songs:unite_cinema_minato_reservation_api'),
+            {'date': date_query, 'show': show_key},
+        )
+        self.assertEqual(response.status_code, 200)
+        payload = response.json()
+        self.assertTrue(payload['success'])
+        self.assertIn('B1', payload['reserved_seat_ids'])
+
+    def test_reservation_api_returns_400_for_invalid_show(self):
+        response = self.client.get(
+            reverse('songs:unite_cinema_minato_reservation_api'),
+            {'date': '2026-06-05', 'show': 'invalid-show-key'},
+        )
+        self.assertEqual(response.status_code, 400)
+
+
+class ClassroomTest(TestCase):
+    """クラス機能のテスト"""
+
+    def setUp(self):
+        self.client = Client()
+        self.teacher = User.objects.create_user(username='teacher', password='testpass123')
+        self.student = User.objects.create_user(username='student', password='testpass123')
 
     def test_classroom_list_loads(self):
         """ログイン時にクラス一覧が読み込めること"""

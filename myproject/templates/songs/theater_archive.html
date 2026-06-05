@@ -55,8 +55,10 @@
     .notice-panel { margin: 0 18px 18px; background: #fff; border: 1px solid #d3d8e4; }
     .notice-link-row { padding: 12px 16px; border-bottom: 1px dotted #8aa1c4; }
     .notice-link-row:last-child { border-bottom: 0; }
+    .notice-item { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
     .notice-link { color: #0057d8; font-size: 15px; font-weight: 700; text-decoration: underline; display: inline-flex; align-items: center; gap: 8px; }
     .notice-link::before { content: "▶"; color: #1a4fb8; font-size: 11px; }
+    .notice-date { flex-shrink: 0; color: #4e5d75; font-size: 12px; font-weight: 700; letter-spacing: 0.03em; }
 
     .content { padding: 0 18px 30px; background: #eef1f6; }
     h2.section-title { font-size: 16px; margin: 14px 0 12px; color: #2d3a52; }
@@ -119,12 +121,27 @@
     }
 
     @media (max-width: 820px) {
-      .top-header { height: auto; padding-bottom: 14px; }
+      .top-header { height: auto; padding: 10px 12px 14px; }
+      .logo-area { justify-content: center; text-align: center; }
       .top-links, .header-ad { position: static; margin-top: 10px; }
-      .main-nav { display: grid; grid-template-columns: 1fr 1fr; height: auto; padding: 0; }
+      .top-links { justify-content: center; }
+      .header-ad { width: 100%; max-width: 420px; margin-left: auto; margin-right: auto; }
+      .main-nav { display: grid; grid-template-columns: 1fr 1fr; height: auto; padding: 0 12px; }
       .nav-item { width: 100%; }
+      .main-nav .nav-item:last-child { grid-column: 1 / -1; }
+      .notice-bar { margin-left: 12px; margin-right: 12px; }
+      .notice-panel { margin-left: 12px; margin-right: 12px; }
+      .notice-item { align-items: flex-start; flex-direction: column; gap: 6px; }
+      .notice-date { align-self: flex-end; }
+      .content { padding: 0 12px 24px; }
       .date-tabs { grid-template-columns: repeat(3, 1fr); height: auto; }
       .date-nav { display: none; }
+      .schedule-header { flex-direction: column; align-items: center; gap: 6px; text-align: center; }
+      .day-title { height: auto; min-height: 58px; padding: 8px; }
+      .day-date { margin-left: 10px; font-size: 24px; }
+      .open-time { margin-left: 10px; }
+      .info-boxes { grid-template-columns: 1fr; }
+      .legend { flex-wrap: wrap; justify-content: center; }
       .show-table { grid-template-columns: 1fr; }
     }
   </style>
@@ -141,25 +158,28 @@
         </div>
       </div>
       <div class="top-links">
-        <a href="#">HOME</a>
-        <a href="#">他の劇場を探す</a>
-        <a href="#">サイト案内</a>
+        <a href="{% url 'songs:unite_cinema_minato' %}">HOME</a>
+        <a href="{% url 'songs:theater_archive' %}">他の劇場を探す</a>
+        <a href="{% url 'songs:unite_cinema_minato_guide' %}">サイト案内</a>
       </div>
       <div class="header-ad">HOME THEATER 実験ページ・案内エリア</div>
     </header>
 
     <nav class="main-nav">
       <div class="nav-item active">上映スケジュール</div>
-      <div class="nav-item red-line">上映作品<div class="dropdown"><a href="#">上映中作品</a><a href="#">公開予定作品</a><a href="#">前売情報</a></div></div>
+      <div class="nav-item red-line">上映作品<div class="dropdown"><a href="{% url 'songs:unite_cinema_minato_now_showing' %}">上映中作品</a><a href="{% url 'songs:unite_cinema_minato_coming_soon' %}">公開予定作品</a><a href="{% url 'songs:unite_cinema_minato_advance_tickets' %}">前売情報</a></div></div>
       <div class="nav-item">劇場案内<div class="dropdown"><a href="{% url 'songs:unite_cinema_minato_guide' %}">劇場案内</a><a href="{% url 'songs:unite_cinema_minato_guide' %}#usage">ご利用案内</a></div></div>
-      <div class="nav-item">交通・料金<div class="dropdown"><a href="{% url 'songs:unite_cinema_minato_access' %}">アクセス</a><a href="{% url 'songs:unite_cinema_minato_price' %}">料金</a></div></div>
+      <div class="nav-item">アクセス・料金<div class="dropdown"><a href="{% url 'songs:unite_cinema_minato_access' %}">アクセス</a><a href="{% url 'songs:unite_cinema_minato_price' %}">料金</a></div></div>
       <div class="nav-item">お知らせ</div>
     </nav>
 
     <div class="notice-bar">劇場からのお知らせ</div>
     <div class="notice-panel">
       <div class="notice-link-row">
-        <a class="notice-link" href="{% url 'songs:unite_cinema_minato_survey' %}">アンケートのお願い　日曜日の上映会で見たい作品を教えてください</a>
+        <div class="notice-item">
+          <a class="notice-link" href="{% url 'songs:unite_cinema_minato_survey' %}">アンケートのお願い　日曜日の上映会で見たい作品を教えてください</a>
+          <span class="notice-date">{% now "Y.m.d" %}</span>
+        </div>
       </div>
     </div>
 
@@ -208,7 +228,7 @@
     </main>
 
     <footer>
-      <div class="footer-links"><a href="#">会社案内</a> | <a href="#">プレスリリース</a> | <a href="#">採用情報</a> | <a href="#">個人情報</a> | <a href="#">利用方針</a></div>
+      <div class="footer-links"><a href="{% url 'contact' %}">会社案内</a> | <a href="{% url 'songs:unite_cinema_minato_coming_soon' %}">プレスリリース</a> | <a href="{% url 'songs:unite_cinema_minato_advance_tickets' %}">採用情報</a> | <a href="{% url 'privacy' %}">個人情報</a> | <a href="{% url 'terms' %}">利用方針</a></div>
       <div class="copyright">© UNITED CINEMA MINATO.</div>
     </footer>
   </div>
@@ -245,14 +265,6 @@
             if (navItem !== item) navItem.classList.remove('open');
           });
           item.classList.toggle('open');
-        });
-      });
-
-      document.querySelectorAll('a[href="#"]').forEach(function (link) {
-        link.addEventListener('click', function (event) {
-          const text = link.textContent.trim();
-          event.preventDefault();
-          alert(text + ' は準備中です。');
         });
       });
 

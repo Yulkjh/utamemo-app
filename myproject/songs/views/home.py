@@ -1,10 +1,12 @@
 """ホーム・一覧・詳細系ビュー"""
 from django.shortcuts import get_object_or_404, redirect
+from django.http import JsonResponse
 from django.views.generic import ListView, DetailView, TemplateView
 from django.db import IntegrityError, transaction
 from django.db.models import Q, Count, F, Case, When, IntegerField, Value
 from django.conf import settings
 from django.core.mail import send_mail
+from django.views.decorators.http import require_http_methods
 from datetime import date, datetime, timedelta
 import random
 import logging
@@ -120,6 +122,27 @@ def _flatten_theater_schedule(selected_date):
     }
 
 
+def _serialize_theater_schedule_for_api(schedule_movies):
+    serialized = []
+    for movie in schedule_movies:
+        serialized.append({
+            'slug': movie['slug'],
+            'title': movie['title'],
+            'minutes': movie['minutes'],
+            'screen': movie['screen'],
+            'shows': [
+                {
+                    'time': show['time'],
+                    'end_time': show['end_time'],
+                    'show_key': show['show_key'],
+                    'slug': show['slug'],
+                }
+                for show in movie['shows']
+            ],
+        })
+    return serialized
+
+
 def _validate_theater_survey_input(survey_name, survey_show, survey_memo):
     errors = []
 
@@ -177,6 +200,103 @@ class TheaterArchiveView(TemplateView):
         context['date_tabs'] = date_tabs
         context['schedule_movies'] = _build_theater_schedule(selected_date)
         return context
+
+
+class TheaterNowShowingView(TemplateView):
+    """上映中作品ページ"""
+    template_name = 'songs/theater_now_showing.html'
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        selected_date = _parse_theater_date(self.request.GET.get('date'))
+        schedule = _build_theater_schedule(selected_date)
+        context['selected_date'] = selected_date
+        context['selected_date_query'] = selected_date.isoformat()
+        context['selected_date_label'] = _format_theater_date(selected_date)
+        context['now_showing_movies'] = schedule
+        return context
+
+
+class TheaterComingSoonView(TemplateView):
+    """公開予定作品ページ"""
+    template_name = 'songs/theater_coming_soon.html'
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        selected_date = _parse_theater_date(self.request.GET.get('date'))
+        upcoming_movies = []
+        for index, movie in enumerate(THEATER_MOVIES):
+            release_date = selected_date + timedelta(days=(index + 1) * 7)
+            upcoming_movies.append({
+                'title': movie['title'],
+                'release_date': release_date,
+                'release_date_label': _format_theater_date(release_date),
+                'minutes': movie['minutes'],
+            })
+        context['upcoming_movies'] = upcoming_movies[:8]
+        return context
+
+
+class TheaterAdvanceTicketsView(TemplateView):
+    """前売情報ページ"""
+    template_name = 'songs/theater_advance_tickets.html'
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        selected_date = _parse_theater_date(self.request.GET.get('date'))
+        ticket_items = []
+        for index, movie in enumerate(THEATER_MOVIES[:6]):
+            release_date = selected_date + timedelta(days=(index + 1) * 7)
+            sales_end = release_date - timedelta(days=1)
+            ticket_items.append({
+                'title': movie['title'],
+                'price': 1400 + (index % 3) * 200,
+                'sales_end_label': _format_theater_date(sales_end),
+                'release_date_label': _format_theater_date(release_date),
+            })
+        context['ticket_items'] = ticket_items
+        return context
+
+
+@require_http_methods(['GET'])
+def theater_schedule_api(request):
+    """上映スケジュールJSON API"""
+    selected_date = _parse_theater_date(request.GET.get('date'))
+    schedule = _build_theater_schedule(selected_date)
+    return JsonResponse({
+        'date': selected_date.isoformat(),
+        'date_label': _format_theater_date(selected_date),
+        'movies': _serialize_theater_schedule_for_api(schedule),
+    })
+
+
+@require_http_methods(['GET'])
+def theater_reservation_status_api(request):
+    """指定上映回の予約状況JSON API"""
+    selected_date = _parse_theater_date(request.GET.get('date'))
+    schedule = _flatten_theater_schedule(selected_date)
+    show_key = request.GET.get('show', '').strip()
+    show = schedule.get(show_key)
+
+    if not show:
+        return JsonResponse({'success': False, 'error': 'show が不正です。'}, status=400)
+
+    reserved_seat_ids = list(
+        TheaterReservation.objects.filter(show_key=show_key).values_list('seat_id', flat=True)
+    )
+    total_seats = sum(len(row['seats']) for row in THEATER_SEAT_ROWS)
+
+    return JsonResponse({
+        'success': True,
+        'date': selected_date.isoformat(),
+        'show_key': show_key,
+        'show_title': show['title'],
+        'show_time': show['time'],
+        'reserved_count': len(reserved_seat_ids),
+        'total_seats': total_seats,
+        'available_count': max(total_seats - len(reserved_seat_ids), 0),
+        'reserved_seat_ids': reserved_seat_ids,
+    })
 
 
 class TheaterSurveyView(TemplateView):
