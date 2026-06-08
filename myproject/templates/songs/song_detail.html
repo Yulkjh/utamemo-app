@@ -3540,6 +3540,15 @@ function executeDeleteSong() {
             btn.disabled = false;
             btn.textContent = '{% if is_english %}Delete{% elif is_spanish %}Eliminar{% elif is_german %}Löschen{% elif is_portuguese %}Excluir{% elif is_chinese %}删除{% else %}削除{% endif %}';
         }
-    });</script>
+    });
+}
+
+document.addEventListener('click', function(e) {
+    const modal = document.getElementById('deleteSongModal');
+    if (modal && e.target === modal) {
+        closeDeleteSongModal();
+    }
+});
+</script>
 
 {% endblock %}
