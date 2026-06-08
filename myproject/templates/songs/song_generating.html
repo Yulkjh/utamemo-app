@@ -10,7 +10,13 @@
             <div class="music-icon-wrapper" id="music-icon-wrapper">
                 <div class="music-pulse"></div>
                 <div class="music-pulse music-pulse-2"></div>
-                <i class="bi bi-music-note-beamed" id="main-icon"></i>
+                <div class="music-icon-svg" id="main-icon">
+                    <svg width="44" height="44" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+                        <path d="M9 18V5l12-2v13"/>
+                        <circle cx="6" cy="18" r="3"/>
+                        <circle cx="18" cy="16" r="3"/>
+                    </svg>
+                </div>
             </div>
         </div>
 
@@ -144,7 +150,7 @@
     position: relative;
     overflow: hidden;
     padding: 2rem 1rem;
-    background: linear-gradient(135deg, #fff4f0 0%, #ffe6d9 50%, #ffd4c4 100%);
+    background: var(--surface);
 }
 
 /* メインコンテナ */
@@ -170,11 +176,15 @@
     height: 100px;
 }
 
-.music-icon-wrapper i {
-    font-size: 3rem;
-    color: #ff7940;
+.music-icon-svg {
     z-index: 2;
+    color: #ff7940;
     animation: bounce-icon 2s ease-in-out infinite;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 48px;
+    height: 48px;
 }
 
 .music-pulse {
@@ -410,7 +420,7 @@
 }
 
 /* 完了アニメーション */
-.generating-page.completed .music-icon-wrapper i {
+.generating-page.completed .music-icon-svg {
     color: #10b981;
     animation: none;
 }
@@ -425,7 +435,7 @@
 }
 
 /* 失敗状態 */
-.generating-page.failed .music-icon-wrapper i {
+.generating-page.failed .music-icon-svg {
     color: #ef4444;
     animation: none;
 }
@@ -511,8 +521,9 @@
         height: 80px;
     }
     
-    .music-icon-wrapper i {
-        font-size: 2.5rem;
+    .music-icon-svg {
+        width: 38px;
+        height: 38px;
     }
 }
 </style>
