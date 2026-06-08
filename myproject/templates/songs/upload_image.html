@@ -26,7 +26,6 @@
           <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
           {% if is_english %}Choose files{% elif is_spanish %}Elegir archivos{% elif is_german %}Dateien auswählen{% elif is_portuguese %}Escolher arquivos{% elif is_chinese %}选择文件{% else %}ファイルを選択{% endif %}
         </button>
-        <p class="up-drop-meta">JPG · PNG · PDF — {% if is_english %}10 files max{% elif is_chinese %}最多10个{% elif is_spanish %}Máx 10{% elif is_german %}Max 10{% elif is_portuguese %}Máx 10{% else %}最大10ファイル{% endif %}</p>
         <button type="button" class="up-drop-camera mobile-only" id="camera-btn">
           <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/><circle cx="12" cy="13" r="4"/></svg>
           {% if is_english %}Camera{% elif is_chinese %}拍照{% elif is_spanish %}Cámara{% elif is_german %}Kamera{% elif is_portuguese %}Câmera{% else %}撮影{% endif %}
