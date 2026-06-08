@@ -26,11 +26,11 @@
                 <div class="hm-desc-group">
                     <p class="hm-description" id="hmDesc">
                         {% if is_english %}
-                        <span class="sc-el">Upload your study material — AI analyzes it and generates a custom song. What you need to remember becomes music that stays with you.</span>
+                        <span class="sc-desc">Upload your study material — AI analyzes it and generates a custom song. What you need to remember becomes music that stays with you.</span>
                         {% elif is_chinese %}
-                        <span class="sc-el">上传学习资料，AI分析内容并生成专属歌曲。需要记忆的内容，化为绕梁的旋律。</span>
+                        <span class="sc-desc">上传学习资料，AI分析内容并生成专属歌曲。需要记忆的内容，化为绕梁的旋律。</span>
                         {% else %}
-                        <span class="sc-el">教材画像を送信すると、AIが要点を解析して楽曲を生成します。<br>覚えたい内容を、耳に残る学びへ変換します。</span>
+                        <span class="sc-desc">教材画像を送信すると、AIが要点を解析して楽曲を生成します。<br>覚えたい内容を、耳に残る学びへ変換します。</span>
                         {% endif %}
                     </p>
                 </div>
@@ -118,9 +118,7 @@
     --dx: 0px;
     --dy: 0px;
 }
-#hmDesc .sc-el {
-    display: block;
-}
+
 .sc-el.entered {
     animation: letterIn 2s cubic-bezier(0.22, 0.97, 0.36, 1) forwards;
     will-change: transform, opacity;
@@ -626,8 +624,28 @@ document.addEventListener('DOMContentLoaded', function() {
         });
     });
 
-    // ── Description: no char/line splitting, animate as a whole block ──
-    // (keeps natural browser line-wrapping)
+    // ── Description: split into individual characters ──
+    document.querySelectorAll('.sc-desc').forEach(desc => {
+        const html = desc.innerHTML;
+        const parts = [];
+        // Split on <br> first to preserve line breaks
+        const lines = html.split(/(<br\s*\/?>)/i);
+        lines.forEach(line => {
+            if (/^<br/i.test(line)) {
+                parts.push(document.createElement('br'));
+            } else {
+                for (const ch of line) {
+                    if (ch === ' ') { parts.push(' '); continue; }
+                    const span = document.createElement('span');
+                    span.className = 'sc-el';
+                    span.textContent = ch;
+                    parts.push(span);
+                }
+            }
+        });
+        desc.innerHTML = '';
+        parts.forEach(p => desc.appendChild(typeof p === 'string' ? document.createTextNode(p) : p));
+    });
 
     // ── Scatter-in: 1文字ずつランダムタイミングで飛来 ──
     const scatterEls = [...document.querySelectorAll('.hl, .sc-el')];
