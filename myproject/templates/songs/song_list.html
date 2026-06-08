@@ -193,12 +193,12 @@
 
 /* Apple Music風のスタイル */
 .music-library {
-    background: #f5f5f7;
+    background: var(--surface);
     min-height: 100vh;
 }
 
 .library-header {
-    background: linear-gradient(135deg, #ff7940 0%, #ff6b35 100%);
+    background: var(--secondary-color);
     color: white;
     padding: 2rem 0 3rem 0;
     position: relative;
@@ -270,7 +270,7 @@
 }
 
 .search-button {
-    background: linear-gradient(135deg, #ff7940 0%, #ff6b35 100%);
+    background: var(--primary-color);
     border: none;
     color: white;
     cursor: pointer;
@@ -280,7 +280,7 @@
     gap: 6px;
     border-radius: 20px;
     padding: 10px 18px;
-    transition: all 0.3s ease;
+    transition: background 0.2s ease;
     font-size: 0.9rem;
     font-weight: 500;
     flex-shrink: 0;
@@ -658,41 +658,20 @@
 .empty-state {
     text-align: center;
     padding: 4rem 2rem;
-    background: white;
-    border-radius: 20px;
-    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.1);
-}
-
-.empty-icon {
-    font-size: 4rem;
-    color: #ddd;
-    margin-bottom: 1rem;
-}
-
-.empty-state h3 {
-    color: #333;
-    margin-bottom: 0.5rem;
-}
-
-.empty-state p {
-    color: #666;
-    margin-bottom: 2rem;
 }
 
 .btn-primary {
-    background: linear-gradient(135deg, #ff7940 0%, #ff6b35 100%);
+    background: var(--primary-color);
     color: white;
     padding: 12px 24px;
-    border-radius: 25px;
     text-decoration: none;
     font-weight: 600;
     display: inline-block;
-    transition: all 0.2s ease;
+    transition: background 0.2s ease;
 }
 
 .btn-primary:hover {
-    transform: translateY(-2px);
-    box-shadow: 0 4px 15px rgba(255, 121, 64, 0.3);
+    background: var(--primary-dark);
     color: white;
     text-decoration: none;
 }
@@ -856,15 +835,15 @@
 }
 
 .sort-tab.active {
-    background: linear-gradient(135deg, #ff7940 0%, #ff6b35 100%);
+    background: var(--primary-color);
     color: white;
-    border-color: transparent;
-    box-shadow: 0 3px 10px rgba(255, 121, 64, 0.3);
+    border-color: var(--primary-color);
 }
 
 .sort-tab.active:hover {
     color: white;
-    background: linear-gradient(135deg, #ff8a55 0%, #ff7940 100%);
+    background: var(--primary-dark);
+    border-color: var(--primary-dark);
 }
 
 .sort-tab i {
@@ -935,10 +914,9 @@
 }
 
 .page-link-custom.active {
-    background: linear-gradient(135deg, #ff7940 0%, #ff6b35 100%);
+    background: var(--primary-color);
     color: white;
-    border-color: transparent;
-    box-shadow: 0 3px 10px rgba(255, 121, 64, 0.3);
+    border-color: var(--primary-color);
 }
 
 @media (max-width: 480px) {

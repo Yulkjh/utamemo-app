@@ -1,4 +1,3 @@
-
 <!DOCTYPE html>
 <html lang="ja">
 <head>
@@ -7,70 +6,67 @@
 <title>Staff Monitor - UTAMEMO</title>
 <style>
 *{margin:0;padding:0;box-sizing:border-box}
-body{background:#0d0d0d;color:#e0e0e0;font-family:Inter,-apple-system,sans-serif;min-height:100vh}
-.container{max-width:1100px;margin:0 auto;padding:24px 16px}
-h1{font-size:1.5rem;font-weight:700;margin-bottom:24px;color:#ff7940}
-.back-link{color:#888;text-decoration:none;font-size:.85rem;display:inline-block;margin-bottom:16px}
-.back-link:hover{color:#ff7940}
+body{background:oklch(98% 0.004 240);color:oklch(20% 0.02 240);font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',system-ui,sans-serif;min-height:100vh}
+.container{max-width:1100px;margin:0 auto;padding:32px 20px}
+h1{font-size:1.35rem;font-weight:700;margin-bottom:24px;color:oklch(20% 0.02 240);letter-spacing:-0.02em}
+.back-link{color:oklch(50% 0.018 240);text-decoration:none;font-size:.85rem;display:inline-block;margin-bottom:16px;transition:color .15s}
+.back-link:hover{color:oklch(20% 0.02 240)}
 
 .staff-table{width:100%;border-collapse:collapse;margin-bottom:32px}
-.staff-table th{text-align:left;padding:10px 12px;border-bottom:2px solid #333;color:#888;font-size:.8rem;font-weight:600;text-transform:uppercase;letter-spacing:.5px}
-.staff-table td{padding:10px 12px;border-bottom:1px solid #1a1a1a;font-size:.9rem;vertical-align:middle}
-.staff-table tr:hover td{background:#111}
+.staff-table th{text-align:left;padding:10px 14px;border-bottom:1.5px solid oklch(90% 0.006 240);color:oklch(50% 0.018 240);font-size:.78rem;font-weight:600;letter-spacing:.04em}
+.staff-table td{padding:10px 14px;border-bottom:1px solid oklch(94% 0.004 240);font-size:.88rem;vertical-align:middle}
+.staff-table tr:hover td{background:oklch(96% 0.004 240)}
 
-.username{font-weight:600;color:#fff}
-.stat{color:#aaa}
-.stat-warn{color:#f59e0b;font-weight:600}
-.stat-danger{color:#ef4444;font-weight:600}
-.stat-ok{color:#22c55e}
+.username{font-weight:600;color:oklch(20% 0.02 240)}
+.stat{color:oklch(50% 0.018 240)}
+.stat-warn{color:#d97706;font-weight:600}
+.stat-danger{color:#dc2626;font-weight:600}
+.stat-ok{color:#16a34a}
 
-.badge{display:inline-block;padding:2px 8px;border-radius:4px;font-size:.75rem;font-weight:600}
-.badge-locked{background:#ef444420;color:#ef4444;border:1px solid #ef444440}
-.badge-ok{background:#22c55e15;color:#22c55e;border:1px solid #22c55e30}
-.badge-warn{background:#f59e0b20;color:#f59e0b;border:1px solid #f59e0b40}
-.badge-inactive{background:#66666620;color:#666}
+.badge{display:inline-block;padding:2px 10px;border-radius:4px;font-size:.75rem;font-weight:600}
+.badge-locked{background:rgba(239,68,68,0.08);color:#dc2626;border:1px solid rgba(239,68,68,0.2)}
+.badge-ok{background:rgba(34,197,94,0.06);color:#16a34a;border:1px solid rgba(34,197,94,0.15)}
+.badge-warn{background:rgba(245,158,11,0.08);color:#d97706;border:1px solid rgba(245,158,11,0.2)}
+.badge-inactive{background:oklch(94% 0.004 240);color:oklch(55% 0.012 240)}
 
-.time-ago{color:#666;font-size:.8rem}
+.time-ago{color:oklch(55% 0.012 240);font-size:.82rem}
 
-.summary{display:flex;gap:24px;margin-bottom:24px;flex-wrap:wrap;align-items:stretch}
-.summary-card{background:#141414;border:1px solid #222;border-radius:8px;padding:14px 20px;min-width:180px;min-height:92px;display:flex;flex-direction:column;justify-content:center;align-items:center;text-align:center;flex:1 1 180px}
-.summary-card .num{font-size:1.5rem;font-weight:700;color:#ff7940}
-.summary-card .label{font-size:.75rem;color:#888;margin-top:2px}
+.summary{display:flex;gap:16px;margin-bottom:24px;flex-wrap:wrap}
+.summary-card{background:oklch(100% 0 0);border:1px solid oklch(90% 0.006 240);border-radius:10px;padding:16px 24px;min-width:170px;min-height:80px;display:flex;flex-direction:column;justify-content:center;align-items:center;text-align:center;flex:1 1 170px}
+.summary-card .num{font-size:1.5rem;font-weight:700;color:oklch(20% 0.02 240)}
+.summary-card .label{font-size:.75rem;color:oklch(50% 0.018 240);margin-top:4px;letter-spacing:.04em}
 
-.note{background:#1a1a1a;border:1px solid #222;border-radius:8px;padding:14px 18px;margin-bottom:24px;font-size:.85rem;color:#888;line-height:1.6}
-.note strong{color:#e0e0e0}
+.note{background:oklch(96% 0.004 240);border:1px solid oklch(90% 0.006 240);border-radius:8px;padding:14px 18px;margin-bottom:24px;font-size:.85rem;color:oklch(50% 0.018 240);line-height:1.7}
+.note strong{color:oklch(20% 0.02 240)}
 
-/* 操作ボタン */
-.act-btn{background:none;border:1px solid #333;color:#aaa;padding:3px 8px;border-radius:4px;cursor:pointer;font-size:.75rem;transition:all .15s;margin-right:4px;min-width:72px;min-height:28px}
-.act-btn:hover{border-color:#ff7940;color:#ff7940}
-.act-btn.danger{border-color:#ef444460;color:#ef4444}
-.act-btn.danger:hover{border-color:#ef4444;background:#ef444415}
-.act-btn.success{border-color:#22c55e60;color:#22c55e}
-.act-btn.success:hover{border-color:#22c55e;background:#22c55e15}
+.act-btn{background:none;border:1px solid oklch(88% 0.004 240);color:oklch(50% 0.018 240);padding:4px 10px;border-radius:6px;cursor:pointer;font-size:.78rem;transition:all .15s;margin-right:4px;min-width:64px;min-height:30px;font-family:inherit}
+.act-btn:hover{border-color:oklch(20% 0.02 240);color:oklch(20% 0.02 240);background:oklch(96% 0.004 240)}
+.act-btn.danger{border-color:rgba(239,68,68,0.3);color:#dc2626}
+.act-btn.danger:hover{border-color:#dc2626;background:rgba(239,68,68,0.04)}
+.act-btn.success{border-color:rgba(34,197,94,0.3);color:#16a34a}
+.act-btn.success:hover{border-color:#16a34a;background:rgba(34,197,94,0.04)}
 
-/* ノルマ調整インライン */
 .pending-edit{display:inline-flex;align-items:center;gap:4px}
-.pending-input{width:50px;background:#111;border:1px solid #333;border-radius:4px;color:#e0e0e0;padding:2px 6px;font-size:.85rem;text-align:center}
-.pending-input:focus{outline:none;border-color:#ff7940}
+.pending-input{width:50px;background:oklch(100% 0 0);border:1px solid oklch(88% 0.004 240);border-radius:4px;color:oklch(20% 0.02 240);padding:2px 6px;font-size:.85rem;text-align:center;font-family:inherit}
+.pending-input:focus{outline:none;border-color:oklch(56% 0.12 170)}
 
-/* トースト */
-.toast{position:fixed;top:20px;right:20px;background:#22c55e;color:#fff;padding:10px 20px;border-radius:8px;font-size:.9rem;z-index:2000;display:none;font-weight:600;animation:toastIn .3s ease}
-.toast.error{background:#ef4444}
+.toast{position:fixed;top:20px;right:20px;background:oklch(20% 0.02 240);color:oklch(100% 0 0);padding:10px 20px;border-radius:8px;font-size:.88rem;z-index:2000;display:none;font-weight:600;animation:toastIn .3s ease}
+.toast.error{background:#dc2626}
 @keyframes toastIn{from{opacity:0;transform:translateY(-10px)}to{opacity:1;transform:translateY(0)}}
 
 @media(max-width:700px){
-  .staff-table{font-size:.8rem}
-  .staff-table th,.staff-table td{padding:8px 6px}
+  .staff-table{font-size:.82rem}
+  .staff-table th,.staff-table td{padding:8px 8px}
   .summary{gap:12px}
   .summary-card{min-width:0;flex:1 1 calc(33.333% - 12px)}
-  .act-btn{min-width:64px}
+  .act-btn{min-width:60px}
 }
 </style>
 </head>
 <body>
 <div class="container">
   <a href="{% url 'songs:llm_guide' %}" class="back-link">← Portal</a>
-  <h1>🔍 Staff Monitor</h1>
+  <h1>Staff Monitor</h1>
 
   <div class="note">
     <strong>スタッフの学習データレビュー活動を確認するページです。</strong><br>
@@ -115,7 +111,7 @@ h1{font-size:1.5rem;font-weight:700;margin-bottom:24px;color:#ff7940}
                      value="{{ s.obligation.pending_reviews }}" min="0" max="99">
               <button class="act-btn" onclick="setPending('{{ s.user.username }}')">設定</button>
               {% if s.pending_extra > 0 %}
-                <span style="color:#f59e0b;font-size:.7rem;margin-left:4px" title="次回アクセス時に+{{ s.pending_extra }}加算予定">→{{ s.projected_pending }}</span>
+                <span style="color:#d97706;font-size:.72rem;margin-left:4px" title="次回アクセス時に+{{ s.pending_extra }}加算予定">→{{ s.projected_pending }}</span>
               {% endif %}
             {% else %}
               <span class="stat">-</span>
@@ -124,13 +120,13 @@ h1{font-size:1.5rem;font-weight:700;margin-bottom:24px;color:#ff7940}
         </td>
         <td id="status-{{ s.user.username }}">
           {% if s.obligation and s.obligation.is_review_locked %}
-            <span class="badge badge-locked">🔒 LOCKED</span>
+            <span class="badge badge-locked">LOCKED</span>
           {% elif s.projected_pending >= 35 %}
-            <span class="badge badge-locked">🔒 次回ロック</span>
+            <span class="badge badge-locked">次回ロック</span>
           {% elif s.projected_pending >= 20 %}
-            <span class="badge badge-warn">⚠️ 要注意</span>
+            <span class="badge badge-warn">要注意</span>
           {% elif s.obligation %}
-            <span class="badge badge-ok">✅ OK</span>
+            <span class="badge badge-ok">OK</span>
           {% else %}
             <span class="badge badge-inactive">未登録</span>
           {% endif %}
@@ -147,22 +143,22 @@ h1{font-size:1.5rem;font-weight:700;margin-bottom:24px;color:#ff7940}
         <td>
           {% if s.obligation %}
             {% if s.obligation.is_review_locked %}
-              <button class="act-btn success" onclick="doAction('{{ s.user.username }}','unlock')">🔓 解除</button>
+              <button class="act-btn success" onclick="doAction('{{ s.user.username }}','unlock')">解除</button>
             {% endif %}
-            <button class="act-btn" onclick="doAction('{{ s.user.username }}','reset')">🔄 リセット</button>
+            <button class="act-btn" onclick="doAction('{{ s.user.username }}','reset')">リセット</button>
           {% else %}
             <span class="stat">-</span>
           {% endif %}
         </td>
       </tr>
       {% empty %}
-      <tr><td colspan="7" style="text-align:center;color:#666;padding:32px">スタッフユーザーがいません</td></tr>
+      <tr><td colspan="7" style="text-align:center;color:oklch(55% 0.012 240);padding:40px">スタッフユーザーがいません</td></tr>
       {% endfor %}
     </tbody>
   </table>
 
   <div style="text-align:right;margin-bottom:32px">
-    <button class="act-btn danger" style="padding:8px 16px;font-size:.85rem" onclick="resetAll()">⚠️ 全員リセット</button>
+    <button class="act-btn danger" style="padding:8px 20px;font-size:.85rem" onclick="resetAll()">全員リセット</button>
   </div>
 </div>
 
@@ -173,7 +169,6 @@ const API_URL = '{% url "songs:staff_monitor_api" %}';
 const REFRESH_URL = '{% url "songs:staff_monitor_refresh" %}';
 const CSRF = '{{ csrf_token }}';
 
-// 集計
 let lockedCount = 0, totalReviews = 0;
 {% for s in staff_data %}
   {% if s.obligation and s.obligation.is_review_locked %}lockedCount++;{% endif %}
@@ -182,7 +177,6 @@ let lockedCount = 0, totalReviews = 0;
 document.getElementById('locked-count').textContent = lockedCount;
 document.getElementById('total-reviews').textContent = totalReviews;
 
-// 時間表示ユーティリティ
 function formatTimeAgo(isoStr) {
   if (!isoStr) return '未活動';
   const ts = new Date(isoStr);
@@ -193,7 +187,6 @@ function formatTimeAgo(isoStr) {
   return Math.floor(diff/86400) + '日前';
 }
 
-// 初期時間表示
 document.querySelectorAll('.time-ago').forEach(el => {
   el.textContent = formatTimeAgo(el.dataset.ts);
 });
@@ -207,10 +200,10 @@ function showToast(msg, isError) {
 }
 
 function buildStatusBadge(s) {
-  if (s.is_locked) return '<span class="badge badge-locked">🔒 LOCKED</span>';
-  if (s.projected_pending >= 35) return '<span class="badge badge-locked">🔒 次回ロック</span>';
-  if (s.projected_pending >= 20) return '<span class="badge badge-warn">⚠️ 要注意</span>';
-  if (s.has_obligation) return '<span class="badge badge-ok">✅ OK</span>';
+  if (s.is_locked) return '<span class="badge badge-locked">LOCKED</span>';
+  if (s.projected_pending >= 35) return '<span class="badge badge-locked">次回ロック</span>';
+  if (s.projected_pending >= 20) return '<span class="badge badge-warn">要注意</span>';
+  if (s.has_obligation) return '<span class="badge badge-ok">OK</span>';
   return '<span class="badge badge-inactive">未登録</span>';
 }
 
@@ -220,7 +213,7 @@ function buildPendingCell(s) {
   html += `<input type="number" class="pending-input" id="pending-${s.username}" value="${s.pending}" min="0" max="99">`;
   html += `<button class="act-btn" onclick="setPending('${s.username}')">設定</button>`;
   if (s.pending_extra > 0) {
-    html += `<span style="color:#f59e0b;font-size:.7rem;margin-left:4px" title="次回アクセス時に+${s.pending_extra}加算予定">→${s.projected_pending}</span>`;
+    html += `<span style="color:#d97706;font-size:.72rem;margin-left:4px" title="次回アクセス時に+${s.pending_extra}加算予定">→${s.projected_pending}</span>`;
   }
   html += '</div>';
   return html;
@@ -230,9 +223,9 @@ function buildActionCell(s) {
   if (!s.has_obligation) return '<span class="stat">-</span>';
   let html = '';
   if (s.is_locked) {
-    html += `<button class="act-btn success" onclick="doAction('${s.username}','unlock')">🔓 解除</button>`;
+    html += `<button class="act-btn success" onclick="doAction('${s.username}','unlock')">解除</button>`;
   }
-  html += `<button class="act-btn" onclick="doAction('${s.username}','reset')">🔄 リセット</button>`;
+  html += `<button class="act-btn" onclick="doAction('${s.username}','reset')">リセット</button>`;
   return html;
 }
 
@@ -241,29 +234,21 @@ function refreshData() {
     .then(r => r.json())
     .then(data => {
       if (!data.ok) return;
-
-      // サマリー更新
       document.getElementById('locked-count').textContent = data.locked_count;
       document.getElementById('total-reviews').textContent = data.total_reviews;
-
-      // 各行を更新
       const tbody = document.querySelector('.staff-table tbody');
-      // 既存行のユーザー名セットを作成
       const existingRows = {};
       tbody.querySelectorAll('tr[id^="row-"]').forEach(tr => {
         const un = tr.id.replace('row-', '');
         existingRows[un] = tr;
       });
-
       data.staff.forEach(s => {
         let row = existingRows[s.username];
         if (!row) {
-          // 新しいスタッフ行を追加
           row = document.createElement('tr');
           row.id = 'row-' + s.username;
           tbody.appendChild(row);
         }
-
         row.innerHTML =
           `<td class="username">${s.username}</td>` +
           `<td>${buildPendingCell(s)}</td>` +
@@ -272,17 +257,13 @@ function refreshData() {
           `<td class="stat">${s.edit_count}</td>` +
           `<td><span class="time-ago">${formatTimeAgo(s.last_activity)}</span></td>` +
           `<td>${buildActionCell(s)}</td>`;
-
         delete existingRows[s.username];
       });
-
-      // サーバーから返ってこなかった行は削除（スタッフ解除された等）
       Object.values(existingRows).forEach(tr => tr.remove());
     })
-    .catch(() => {});  // サイレント失敗
+    .catch(() => {});
 }
 
-// 10秒ごとに自動更新
 setInterval(refreshData, 10000);
 
 function updateRow(username, data) {
@@ -291,11 +272,11 @@ function updateRow(username, data) {
   const st = document.getElementById('status-' + username);
   if (st) {
     if (data.is_locked) {
-      st.innerHTML = '<span class="badge badge-locked">🔒 LOCKED</span>';
+      st.innerHTML = '<span class="badge badge-locked">LOCKED</span>';
     } else if (data.pending >= 20) {
-      st.innerHTML = '<span class="badge badge-warn">⚠️ 要注意</span>';
+      st.innerHTML = '<span class="badge badge-warn">要注意</span>';
     } else {
-      st.innerHTML = '<span class="badge badge-ok">✅ OK</span>';
+      st.innerHTML = '<span class="badge badge-ok">OK</span>';
     }
   }
 }
@@ -310,7 +291,7 @@ async function doAction(username, action) {
     const data = await res.json();
     if (data.ok) {
       showToast(data.message, false);
-      refreshData();  // 即座に全体更新
+      refreshData();
     } else {
       showToast(data.error || 'エラー', true);
     }
@@ -336,7 +317,7 @@ async function setPending(username) {
     const data = await res.json();
     if (data.ok) {
       showToast(data.message, false);
-      refreshData();  // 即座に全体更新
+      refreshData();
     } else {
       showToast(data.error || 'エラー', true);
     }
@@ -356,7 +337,7 @@ async function resetAll() {
     const data = await res.json();
     if (data.ok) {
       showToast(data.message, false);
-      refreshData();  // 即座に全体更新
+      refreshData();
     } else {
       showToast(data.error || 'エラー', true);
     }

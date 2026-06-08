@@ -15,9 +15,8 @@
     
     /* メインカード - 中央配置で大きく */
     .classroom-main-card {
-        background: white;
-        border-radius: 32px;
-        box-shadow: 0 25px 60px rgba(45, 27, 19, 0.15);
+        background: var(--surface-elevated);
+        border: 1px solid var(--border-color);
         padding: 3.5rem;
         max-width: 700px;
         margin: 0 auto;
@@ -25,15 +24,14 @@
     }
     
     .classroom-icon {
-        width: 120px;
-        height: 120px;
-        background: linear-gradient(135deg, #ff7940 0%, #ff6b35 100%);
+        width: 100px;
+        height: 100px;
+        background: var(--primary-color);
         border-radius: 50%;
         display: flex;
         align-items: center;
         justify-content: center;
         margin: 0 auto 2rem;
-        box-shadow: 0 20px 40px rgba(255, 107, 53, 0.35);
     }
     .classroom-icon i {
         font-size: 3.5rem;
@@ -78,13 +76,11 @@
     }
     
     .btn-primary-large {
-        background: linear-gradient(135deg, #ff7940 0%, #ff6b35 100%);
+        background: var(--primary-color);
         color: white;
-        box-shadow: 0 8px 25px rgba(255, 107, 53, 0.35);
     }
     .btn-primary-large:hover {
-        transform: translateY(-3px);
-        box-shadow: 0 15px 35px rgba(255, 107, 53, 0.45);
+        background: var(--primary-dark);
         color: white;
     }
     
@@ -123,22 +119,19 @@
     }
     
     .classroom-item {
-        background: #fef9f7;
-        border: 2px solid #f0e6e0;
-        border-radius: 16px;
+        background: var(--surface-elevated);
+        border: 1px solid var(--border-color);
         padding: 1.25rem 1.5rem;
         display: flex;
         align-items: center;
         justify-content: space-between;
         gap: 1rem;
-        transition: all 0.3s ease;
+        transition: border-color 0.2s ease;
         text-decoration: none;
         color: inherit;
     }
     .classroom-item:hover {
-        border-color: #ff7940;
-        transform: translateX(8px);
-        box-shadow: 0 8px 25px rgba(0,0,0,0.08);
+        border-color: var(--primary-color);
     }
     
     .classroom-item-info {
@@ -168,15 +161,17 @@
     }
     
     .classroom-item-arrow {
-        width: 45px;
-        height: 45px;
-        background: linear-gradient(135deg, #ff7940 0%, #ff6b35 100%);
-        border-radius: 12px;
+        width: 40px;
+        height: 40px;
+        background: var(--surface-muted);
+        border-radius: 8px;
         display: flex;
         align-items: center;
         justify-content: center;
-        color: white;
+        color: var(--text-muted);
         font-size: 1.1rem;
+        flex-shrink: 0;
+    }
         flex-shrink: 0;
         transition: all 0.3s ease;
     }
@@ -194,12 +189,11 @@
     
     .host-badge {
         display: inline-block;
-        background: linear-gradient(135deg, #ff7940 0%, #ff6b35 100%);
+        background: var(--primary-color);
         color: white;
         font-size: 0.7rem;
         font-weight: 700;
         padding: 0.2rem 0.6rem;
-        border-radius: 20px;
         margin-left: 0.5rem;
         vertical-align: middle;
     }

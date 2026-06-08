@@ -1,938 +1,544 @@
 {% extends 'base.html' %}
-
 {% block title %}{% if is_english %}Upload Image{% elif is_spanish %}Subir Imagen{% elif is_german %}Bild hochladen{% elif is_portuguese %}Enviar Imagem{% elif is_chinese %}上传图片{% else %}テキスト抽出{% endif %} - UTAMEMO{% endblock %}
-
 {% block content %}
-<div class="container py-5">
-    <div class="row justify-content-center">
-        <div class="col-lg-8">
-            <!-- ヘッダーセクション -->
-            <div class="text-center mb-5 fade-in">
-                <h1 class="display-6 fw-bold mb-3">{% if is_english %}Scan Your Materials{% elif is_spanish %}Escanea tus Materiales{% elif is_german %}Scanne deine Materialien{% elif is_portuguese %}Escaneie seu Material{% elif is_chinese %}扫描教材{% else %}教材をスキャン{% endif %}</h1>
-            </div>
+<div class="up-page">
+  <form method="post" enctype="multipart/form-data" id="upload-form" novalidate>
+    {% csrf_token %}
 
-            <!-- アップロードエリア -->
-            <div class="upload-area-container fade-in">
-                <form method="post" enctype="multipart/form-data" id="upload-form" novalidate>
-                    {% csrf_token %}
-                    
-                    <div class="upload-area" id="upload-area">
-                        <div class="upload-content text-center">
-                            <div class="upload-icon mb-3">
-                                <i class="bi bi-cloud-upload" style="font-size: 3rem; color: var(--primary-color);"></i>
-                            </div>
-                            <h5 class="fw-bold mb-2">{% if is_english %}Drag and drop files here{% elif is_spanish %}Arrastra y suelta archivos aquí{% elif is_german %}Dateien hier ablegen{% elif is_portuguese %}Arraste e solte arquivos aqui{% elif is_chinese %}拖放文件到这里{% else %}ファイルをドラッグ＆ドロップ{% endif %}</h5>
-                            
-                            <!-- 複数ファイル入力（非表示） -->
-                            {{ form.images }}
-                            
-                            <div class="d-flex gap-2 justify-content-center flex-wrap text-center">
-                                <button type="button" class="btn-gradient-primary mobile-only" id="camera-btn">
-                                    {% if is_english %}Take Photo{% elif is_spanish %}Tomar Foto{% elif is_german %}Foto aufnehmen{% elif is_portuguese %}Tirar Foto{% elif is_chinese %}拍照{% else %}カメラで撮影{% endif %}
-                                </button>
-                                <button type="button" class="btn-gradient-primary" id="file-select-btn">
-                                    {% if is_english %}Select Photo{% elif is_spanish %}Seleccionar Foto{% elif is_german %}Foto auswählen{% elif is_portuguese %}Selecionar Foto{% elif is_chinese %}选择照片{% else %}写真を選択{% endif %}
-                                </button>
-                            </div>
-                            
-                            <div class="mt-3">
-                                <small class="text-muted">
-                                    {% if is_english %}JPG, PNG, JPEG, PDF formats • Max 10MB • Up to 10 files{% elif is_spanish %}Formatos JPG, PNG, JPEG, PDF • Máx 10MB • Hasta 10 archivos{% elif is_german %}JPG, PNG, JPEG, PDF Formate • Max 10MB • Bis zu 10 Dateien{% elif is_portuguese %}Formatos JPG, PNG, JPEG, PDF • Máx 10MB • Até 10 arquivos{% elif is_chinese %}JPG、PNG、JPEG、PDF格式 • 最大10MB • 最多10个文件{% else %}JPG、PNG、JPEG、PDF形式 • 最大10MB • 最大10ファイル{% endif %}
-                                </small>
-                            </div>
-                        </div>
-                        
-                        <!-- プレビューエリア -->
-                        <div class="upload-preview text-center" id="upload-preview" style="display: none;">
-                            <div class="preview-container">
-                                <!-- 単一ファイルプレビュー -->
-                                <div id="single-preview" class="d-flex justify-content-center align-items-center flex-column" style="position: relative;">
-                                    <img id="preview-image" alt="{% if is_english %}Preview{% elif is_spanish %}Vista previa{% elif is_german %}Vorschau{% elif is_portuguese %}Visualização{% elif is_chinese %}预览{% else %}プレビュー{% endif %}" class="preview-image mx-auto">
-                                    <button type="button" class="single-preview-remove" id="single-remove-btn" title="{% if is_english %}Remove{% elif is_spanish %}Eliminar{% elif is_german %}Entfernen{% elif is_portuguese %}Remover{% elif is_chinese %}删除{% else %}削除{% endif %}">
-                                        <i class="bi bi-x"></i>
-                                    </button>
-                                </div>
-                                <!-- 複数ファイルプレビュー -->
-                                <div id="multi-preview" class="multi-preview-grid" style="display: none;"></div>
-                                <div class="preview-overlay">
-                                    <div class="d-flex gap-2 justify-content-center">
-                                        <button type="button" class="btn-outline-modern btn-sm mobile-only" id="change-camera-btn">
-                                            {% if is_english %}Camera{% elif is_spanish %}Cámara{% elif is_german %}Kamera{% elif is_portuguese %}Câmera{% elif is_chinese %}相机{% else %}カメラ{% endif %}
-                                        </button>
-                                        <button type="button" class="btn-outline-modern btn-sm" id="change-file-btn">
-                                            {% if is_english %}Add More{% elif is_spanish %}Añadir Más{% elif is_german %}Mehr hinzufügen{% elif is_portuguese %}Adicionar Mais{% elif is_chinese %}添加更多{% else %}追加{% endif %}
-                                        </button>
-                                    </div>
-                                </div>
-                            </div>
-                            <div class="preview-info mt-3">
-                                <div class="d-flex justify-content-between align-items-center">
-                                    <div>
-                                        <small class="text-muted" id="file-size"></small>
-                                    </div>
-                                    <div class="text-success">
-                                        <i class="bi bi-check-circle-fill"></i> {% if is_english %}Ready{% elif is_spanish %}Listo{% elif is_german %}Bereit{% elif is_portuguese %}Pronto{% elif is_chinese %}准备就绪{% else %}準備完了{% endif %}
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                    
-                    <!-- カスタマイズリクエスト入力欄 -->
-                    <div class="custom-request-section mb-4" id="custom-request-section" style="display: none;">
-                        <label class="form-label fw-bold mb-2">
-                            <i class="bi bi-chat-dots me-2"></i>{% if is_english %}Custom Request (Optional){% elif is_spanish %}Solicitud Personalizada (Opcional){% elif is_german %}Individuelle Anfrage (Optional){% elif is_portuguese %}Solicitação Personalizada (Opcional){% elif is_chinese %}自定义要求（可选）{% else %}カスタマイズ（任意）{% endif %}
-                        </label>
-                        <textarea name="custom_request" class="form-control custom-request-input" rows="2" 
-                            placeholder="{% if is_english %}e.g. 'Include more examples', 'Make it rhyme', 'Focus on grammar rules'{% elif is_spanish %}ej. 'Incluir más ejemplos', 'Que rime', 'Enfocarse en las reglas gramaticales'{% elif is_german %}z.B. 'Mehr Beispiele einfügen', 'Reimen lassen', 'Auf Grammatikregeln konzentrieren'{% elif is_portuguese %}ex. 'Incluir mais exemplos', 'Rimar', 'Focar nas regras gramaticais'{% elif is_chinese %}例如：'多加例句'、'要押韵'、'重点讲语法'{% else %}例：「例文を多めに」「韻を踏んで」「文法ルールを強調して」{% endif %}"></textarea>
-                        <small class="text-muted">
-                            {% if is_english %}Tell AI how you want your lyrics to be generated{% elif is_spanish %}Dile a la IA cómo quieres que se generen tus letras{% elif is_german %}Teile der KI mit, wie deine Texte generiert werden sollen{% elif is_portuguese %}Diga à IA como você quer que suas letras sejam geradas{% elif is_chinese %}告诉AI你想要什么样的歌词{% else %}AIにどのような歌詞を作ってほしいか伝えられます{% endif %}
-                        </small>
-                    </div>
-                    
-                    <!-- アクションボタン（画像選択時のみ表示） -->
-                    <div class="text-center mt-4" id="action-buttons" style="display: none;">
-                        <button type="submit" class="btn-gradient-secondary btn-lg">
-                            <i class="bi bi-magic"></i> {% if is_english %}Generate Lyrics{% elif is_spanish %}Generar Letra{% elif is_german %}Text generieren{% elif is_portuguese %}Gerar Letra{% elif is_chinese %}生成歌词{% else %}歌詞を生成{% endif %}
-                        </button>
-                    </div>
-                </form>
-            </div>
-
-            <!-- フルスクリーンローディングオーバーレイ -->
-            <div id="loading-overlay" style="display:none;">
-                <div class="loading-overlay-bg"></div>
-                <div class="loading-overlay-content">
-                    <div class="loading-spinner-ring">
-                        <div></div><div></div><div></div><div></div>
-                    </div>
-                    <h2 class="loading-title" id="loading-title">
-                        {% if is_english %}Scanning your file...{% elif is_spanish %}Escaneando tu archivo...{% elif is_german %}Datei wird gescannt...{% elif is_portuguese %}Escaneando seu arquivo...{% elif is_chinese %}正在扫描文件...{% else %}ファイルを読み取り中...{% endif %}
-                    </h2>
-                    <p class="loading-subtitle" id="loading-subtitle">
-                        {% if is_english %}Extracting text with AI. This may take a moment.{% elif is_spanish %}Extrayendo texto con IA. Esto puede tardar un momento.{% elif is_german %}Text wird mit KI extrahiert. Dies kann einen Moment dauern.{% elif is_portuguese %}Extraindo texto com IA. Isso pode levar um momento.{% elif is_chinese %}AI正在提取文字，请稍候...{% else %}AIがテキストを抽出しています。少々お待ちください...{% endif %}
-                    </p>
-                    <div class="loading-progress-bar">
-                        <div class="loading-progress-fill" id="loading-progress-fill"></div>
-                    </div>
-                    <div class="loading-steps">
-                        <div class="loading-step active" id="step-upload">
-                            <i class="bi bi-cloud-arrow-up"></i>
-                            <span>{% if is_english %}Uploading{% elif is_chinese %}上传中{% else %}アップロード{% endif %}</span>
-                        </div>
-                        <div class="loading-step" id="step-ocr">
-                            <i class="bi bi-eye"></i>
-                            <span>{% if is_english %}Reading text{% elif is_chinese %}读取文字{% else %}テキスト読取{% endif %}</span>
-                        </div>
-                        <div class="loading-step" id="step-check">
-                            <i class="bi bi-check-circle"></i>
-                            <span>{% if is_english %}Checking{% elif is_chinese %}检查中{% else %}チェック中{% endif %}</span>
-                        </div>
-                    </div>
-                </div>
-            </div>
-
-            <!-- 手動入力ボタン（常に表示） -->
-            <div class="text-center mt-4 fade-in">
-                <div class="divider-with-text mb-4">
-                    <span>{% if is_english %}or{% elif is_spanish %}o{% elif is_german %}oder{% elif is_portuguese %}ou{% elif is_chinese %}或者{% else %}または{% endif %}</span>
-                </div>
-                <div class="manual-input-options">
-                    {% if is_english %}
-                    <!-- 英語版：Englishモードのみ -->
-                    <a href="{% url 'songs:lyrics_confirmation' %}?manual=true&lang=english" class="btn-outline-modern btn-lg">
-                        <i class="bi bi-pencil-square"></i> Manual Input
-                    </a>
-                    {% elif is_spanish %}
-                    <!-- スペイン語版 -->
-                    <a href="{% url 'songs:lyrics_confirmation' %}?manual=true&lang=spanish" class="btn-outline-modern btn-lg">
-                        <i class="bi bi-pencil-square"></i> Entrada Manual
-                    </a>
-                    {% elif is_german %}
-                    <!-- ドイツ語版 -->
-                    <a href="{% url 'songs:lyrics_confirmation' %}?manual=true&lang=german" class="btn-outline-modern btn-lg">
-                        <i class="bi bi-pencil-square"></i> Manuelle Eingabe
-                    </a>
-                    {% elif is_portuguese %}
-                    <!-- ポルトガル語版 -->
-                    <a href="{% url 'songs:lyrics_confirmation' %}?manual=true&lang=portuguese" class="btn-outline-modern btn-lg">
-                        <i class="bi bi-pencil-square"></i> Entrada Manual
-                    </a>
-                    {% elif is_chinese %}
-                    <!-- 中国語版 -->
-                    <a href="{% url 'songs:lyrics_confirmation' %}?manual=true&lang=chinese" class="btn-outline-modern btn-lg">
-                        <i class="bi bi-pencil-square"></i> 手动输入歌词（中文）
-                    </a>
-                    {% else %}
-                    <!-- 日本語版 -->
-                    <a href="{% url 'songs:lyrics_confirmation' %}?manual=true&lang=japanese" class="btn-outline-modern btn-lg">
-                        <i class="bi bi-pencil-square"></i> 手動で歌詞を入力
-                    </a>
-                    {% endif %}
-                </div>
-            </div>
-
-            <!-- 撮影ガイド -->
+    <!-- ─── Drop zone ─── -->
+    <div class="up-drop" id="upload-zone">
+      <input type="file" name="images" id="id_images" multiple accept="image/*,.pdf" hidden>
+      <div class="up-drop-body" id="drop-body">
+        <div class="up-drop-icon">
+          <svg width="64" height="64" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" opacity="0.4"/>
+            <polyline points="17 8 12 3 7 8"/>
+            <line x1="12" y1="3" x2="12" y2="15"/>
+          </svg>
         </div>
+        <h2 class="up-drop-title">
+          {% if is_english %}Upload your materials{% elif is_spanish %}Sube tus materiales{% elif is_german %}Materialien hochladen{% elif is_portuguese %}Envie seus materiais{% elif is_chinese %}上传教材{% else %}教材を取り込む{% endif %}
+        </h2>
+        <p class="up-drop-desc">
+          {% if is_english %}Drop files here, or click to browse{% elif is_spanish %}Arrastra archivos aquí, o haz clic para explorar{% elif is_german %}Dateien hierher ziehen oder klicken zum Durchsuchen{% elif is_portuguese %}Arraste arquivos aqui ou clique para procurar{% elif is_chinese %}拖放文件，或点击浏览{% else %}ファイルをドラッグ&ドロップ、またはクリックして選択{% endif %}
+        </p>
+        <button type="button" class="up-drop-btn" id="file-select-btn">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
+          {% if is_english %}Choose files{% elif is_spanish %}Elegir archivos{% elif is_german %}Dateien auswählen{% elif is_portuguese %}Escolher arquivos{% elif is_chinese %}选择文件{% else %}ファイルを選択{% endif %}
+        </button>
+        <p class="up-drop-meta">JPG · PNG · PDF — {% if is_english %}10 files max{% elif is_chinese %}最多10个{% elif is_spanish %}Máx 10{% elif is_german %}Max 10{% elif is_portuguese %}Máx 10{% else %}最大10ファイル{% endif %}</p>
+        <button type="button" class="up-drop-camera mobile-only" id="camera-btn">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/><circle cx="12" cy="13" r="4"/></svg>
+          {% if is_english %}Camera{% elif is_chinese %}拍照{% elif is_spanish %}Cámara{% elif is_german %}Kamera{% elif is_portuguese %}Câmera{% else %}撮影{% endif %}
+        </button>
+      </div>
+
+      <!-- ─── Preview ─── -->
+      <div class="up-preview hidden" id="preview-area">
+        <div class="up-preview-bar">
+          <span class="up-preview-info" id="file-info"></span>
+          <div class="up-preview-actions">
+            <button type="button" class="up-preview-clear" id="clear-btn" title="{% if is_english %}Clear all{% elif is_chinese %}清除{% else %}クリア{% endif %}">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg>
+            </button>
+            <button type="button" class="up-preview-add" id="add-btn" title="{% if is_english %}Add more{% elif is_chinese %}添加{% else %}追加{% endif %}">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+            </button>
+          </div>
+        </div>
+        <div id="single-preview" class="up-preview-frame-wrap hidden">
+          <div class="up-preview-frame">
+            <img id="preview-img" alt="">
+            <button type="button" class="up-preview-remove" id="remove-btn">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+            </button>
+          </div>
+        </div>
+        <div id="multi-preview" class="up-preview-grid hidden"></div>
+      </div>
     </div>
+
+    <!-- ─── Customize ─── -->
+    <div class="up-section hidden" id="custom-section">
+      <button type="button" class="up-toggle" id="options-toggle" aria-expanded="false">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
+        <span>{% if is_english %}Customize output{% elif is_spanish %}Personalizar salida{% elif is_german %}Ausgabe anpassen{% elif is_portuguese %}Personalizar saída{% elif is_chinese %}自定义输出{% else %}出力をカスタマイズ{% endif %}</span>
+        <svg class="up-toggle-chevron" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><polyline points="6 9 12 15 18 9"/></svg>
+      </button>
+      <div class="up-toggle-body hidden" id="options-panel">
+        <textarea name="custom_request" class="up-textarea" rows="3"
+          placeholder="{% if is_english %}e.g. Make it rhyme, include more examples…{% elif is_spanish %}ej. Que rime, incluir más ejemplos…{% elif is_german %}z.B. Reimen, mehr Beispiele…{% elif is_portuguese %}ex. Fazer rimar, incluir mais exemplos…{% elif is_chinese %}例如：要押韵、多加例句…{% else %}例：韻を踏んで、例文を多めに…{% endif %}"></textarea>
+      </div>
+    </div>
+
+    <!-- ─── Submit ─── -->
+    <div class="up-section hidden" id="action-section">
+      <button type="submit" class="up-submit" id="submit-btn">
+        {% if is_english %}Generate Lyrics{% elif is_spanish %}Generar Letra{% elif is_german %}Text generieren{% elif is_portuguese %}Gerar Letra{% elif is_chinese %}生成歌词{% else %}歌詞を生成{% endif %}
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14"/><path d="M12 5l7 7-7 7"/></svg>
+      </button>
+      <a href="{% url 'songs:lyrics_confirmation' %}?manual=true{% if is_english %}&lang=english{% elif is_spanish %}&lang=spanish{% elif is_german %}&lang=german{% elif is_portuguese %}&lang=portuguese{% elif is_chinese %}&lang=chinese{% else %}&lang=japanese{% endif %}" class="up-alt">
+        {% if is_english %}Type lyrics manually{% elif is_spanish %}Escribir letra manualmente{% elif is_german %}Text manuell eingeben{% elif is_portuguese %}Digitar letra manualmente{% elif is_chinese %}手动输入歌词{% else %}手動で歌詞を入力{% endif %}
+        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M5 12h14"/><path d="M12 5l7 7-7 7"/></svg>
+      </a>
+    </div>
+  </form>
 </div>
 
 <style>
-/* Upload page refresh */
-.upload-area-container {
-    margin-bottom: 2rem;
+/* ───────────── Page ───────────── */
+.up-page {
+  max-width: 600px;
+  margin: 0 auto;
+  padding: 3rem 1.5rem 5rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
 }
 
-.upload-area-container form {
-    background: rgba(255, 255, 255, 0.86);
-    border: 1px solid rgba(233, 226, 220, 0.95);
-    border-radius: 24px;
-    box-shadow: 0 20px 44px rgba(31, 27, 23, 0.08);
-    padding: 2rem;
-}
+.hidden { display: none !important; }
 
-.upload-area {
-    border: 2px dashed rgba(255, 121, 64, 0.45);
-    border-radius: 20px;
-    padding: 3rem 2rem;
-    background: linear-gradient(180deg, #fffdfa 0%, #fff6f1 100%);
-    transition: border-color 0.2s ease, box-shadow 0.2s ease, transform 0.2s ease;
+/* ─── Drop zone ─── */
+.up-drop {
+  border: 2px dashed var(--border-color);
+  border-radius: 20px;
+  background: var(--surface);
+  cursor: pointer;
+  transition: border-color 0.25s, background 0.25s;
+  position: relative;
+  overflow: hidden;
 }
+.up-drop::before {
+  content: '';
+  position: absolute;
+  inset: -1px;
+  border-radius: 20px;
+  opacity: 0;
+  transition: opacity 0.25s;
+  pointer-events: none;
+}
+.up-drop:hover { border-color: var(--primary-color); }
+.up-drop.drag-over {
+  border-color: var(--primary-color);
+  background: color-mix(in oklab, var(--primary-color) 5%, var(--surface));
+}
+.up-drop-body {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 3.5rem 1.5rem;
+  text-align: center;
+}
+.up-drop-icon {
+  color: var(--text-tertiary);
+  margin-bottom: 0.25rem;
+  transition: color 0.25s;
+}
+.up-drop:hover .up-drop-icon { color: var(--text-secondary); }
+.up-drop-title {
+  font-size: clamp(1.15rem, 2.5vw, 1.35rem);
+  font-weight: 700;
+  color: var(--text-primary);
+  margin: 0;
+  letter-spacing: -0.015em;
+}
+.up-drop-desc {
+  font-size: 0.88rem;
+  color: var(--text-tertiary);
+  margin: 0;
+  max-width: 320px;
+}
+.up-drop-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  padding: 0.55rem 1.5rem;
+  border: none;
+  border-radius: var(--radius-pill);
+  background: var(--primary-color);
+  color: #fff;
+  font-weight: 650;
+  font-size: 0.88rem;
+  cursor: pointer;
+  transition: opacity 0.2s, transform 0.15s;
+  margin-top: 0.5rem;
+}
+.up-drop-btn:hover { opacity: 0.88; transform: translateY(-1px); }
+.up-drop-btn:active { transform: scale(0.97); }
+.up-drop-meta {
+  font-size: 0.78rem;
+  color: var(--text-tertiary);
+  margin: 0.15rem 0 0;
+}
+.up-drop-camera {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.3rem;
+  margin-top: 0.5rem;
+  padding: 0.4rem 1rem;
+  border-radius: var(--radius-pill);
+  border: 1.5px solid var(--border-color);
+  background: var(--surface);
+  color: var(--text-secondary);
+  font-size: 0.82rem;
+  font-weight: 550;
+  cursor: pointer;
+  transition: border-color 0.2s, color 0.2s;
+}
+.up-drop-camera:hover {
+  border-color: var(--primary-color);
+  color: var(--primary-color);
+}
+@media (min-width: 641px) { .mobile-only { display: none !important; } }
 
-.upload-area:hover,
-.upload-area.drag-over {
-    border-color: rgba(255, 121, 64, 0.85);
-    box-shadow: 0 16px 34px rgba(255, 121, 64, 0.15);
-    transform: translateY(-2px);
+/* ─── Preview ─── */
+.up-preview {
+  padding: 1.25rem;
 }
+.up-preview-bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 0.75rem;
+}
+.up-preview-info {
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: var(--text-secondary);
+}
+.up-preview-actions {
+  display: flex;
+  gap: 0.35rem;
+}
+.up-preview-clear, .up-preview-add {
+  width: 30px; height: 30px;
+  border-radius: 50%;
+  border: 1.5px solid var(--border-color);
+  background: var(--surface);
+  color: var(--text-tertiary);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: border-color 0.2s, color 0.2s;
+}
+.up-preview-clear:hover { border-color: var(--danger); color: var(--danger); }
+.up-preview-add:hover { border-color: var(--primary-color); color: var(--primary-color); }
+.up-preview-frame-wrap { display: flex; justify-content: center; }
+.up-preview-frame { position: relative; display: inline-block; max-width: 100%; }
+.up-preview-frame img {
+  max-width: 100%;
+  max-height: 280px;
+  border-radius: 12px;
+  border: 1px solid var(--border-light);
+  background: var(--surface-muted);
+  display: block;
+}
+.up-preview-remove {
+  position: absolute;
+  top: 6px; right: 6px;
+  width: 28px; height: 28px;
+  border-radius: 50%;
+  border: none;
+  background: rgba(0,0,0,0.55);
+  color: #fff;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: background 0.2s, transform 0.15s;
+}
+.up-preview-remove:hover { background: var(--danger); transform: scale(1.08); }
+.up-preview-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(80px, 1fr));
+  gap: 0.5rem;
+}
+.up-preview-grid-item {
+  position: relative;
+  aspect-ratio: 1;
+  border-radius: 10px;
+  overflow: hidden;
+  background: var(--surface-muted);
+  border: 1px solid var(--border-light);
+}
+.up-preview-grid-item img { width: 100%; height: 100%; object-fit: cover; }
+.up-preview-grid-item .pdf-badge {
+  width: 100%; height: 100%;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 0.2rem;
+  background: var(--surface-muted);
+  color: var(--danger);
+  font-size: 0.62rem;
+  font-weight: 600;
+}
+.up-preview-grid-item .pdf-badge svg { width: 22px; height: 22px; }
+.up-preview-grid-item .remove-btn {
+  position: absolute;
+  top: 2px; right: 2px;
+  width: 20px; height: 20px;
+  border-radius: 50%;
+  border: none;
+  background: rgba(0,0,0,0.5);
+  color: #fff;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  font-size: 9px;
+  transition: background 0.2s, transform 0.15s;
+}
+.up-preview-grid-item .remove-btn:hover { background: var(--danger); transform: scale(1.1); }
 
-.upload-content h5 {
-    font-weight: 700;
-    color: #2a241f;
+/* ─── Customize section ─── */
+.up-section {
+  border: 1.5px solid var(--border-color);
+  border-radius: 14px;
+  overflow: hidden;
+  background: var(--surface);
 }
+.up-toggle {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  width: 100%;
+  padding: 0.8rem 1rem;
+  border: none;
+  background: none;
+  color: var(--text-secondary);
+  font-size: 0.85rem;
+  font-weight: 550;
+  cursor: pointer;
+  transition: color 0.2s;
+}
+.up-toggle:hover { color: var(--primary-color); }
+.up-toggle svg:first-child { flex-shrink: 0; color: var(--text-tertiary); }
+.up-toggle span { flex: 1; text-align: left; }
+.up-toggle-chevron { transition: transform 0.25s; flex-shrink: 0; }
+.up-toggle[aria-expanded="true"] .up-toggle-chevron { transform: rotate(180deg); }
+.up-toggle-body { padding: 0 1rem 1rem; }
+.up-textarea {
+  width: 100%;
+  border: 1.5px solid var(--border-color);
+  border-radius: 10px;
+  padding: 0.65rem 0.85rem;
+  font-size: 0.85rem;
+  background: var(--surface);
+  color: var(--text-primary);
+  resize: vertical;
+  min-height: 65px;
+  transition: border-color 0.2s, box-shadow 0.2s;
+}
+.up-textarea:focus {
+  border-color: var(--primary-color);
+  outline: none;
+}
+.up-textarea::placeholder { color: var(--text-tertiary); }
 
-.upload-preview {
-    text-align: center;
+/* ─── Actions ─── */
+.up-submit {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  padding: 0.7rem 2rem;
+  border: none;
+  border-radius: var(--radius-pill);
+  background: var(--primary-color);
+  color: #fff;
+  font-weight: 680;
+  font-size: 0.9rem;
+  cursor: pointer;
+  transition: opacity 0.2s, transform 0.15s;
 }
+.up-submit:hover { opacity: 0.88; transform: translateY(-1px); }
+.up-submit:active { transform: scale(0.97); }
+#action-section {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.7rem;
+  padding: 0.5rem 0;
+  border: none;
+}
+.up-alt {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.25rem;
+  font-size: 0.82rem;
+  color: var(--text-tertiary);
+  text-decoration: none;
+  transition: color 0.2s;
+}
+.up-alt:hover { color: var(--primary-color); }
 
-.preview-container {
-    position: relative;
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    border-radius: 18px;
-    overflow: hidden;
-    width: 100%;
-    background: rgba(255, 255, 255, 0.7);
-    border: 1px solid rgba(233, 226, 220, 0.95);
-    padding: 1rem;
-}
-
-.preview-image {
-    max-width: 100%;
-    max-height: 300px;
-    border-radius: 12px;
-    box-shadow: 0 12px 26px rgba(31, 27, 23, 0.12);
-}
-
-.preview-overlay {
-    position: relative;
-    background: transparent;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    padding: 1rem 0 0.25rem;
-    width: 100%;
-}
-
-.multi-preview-grid {
-    display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(90px, 1fr));
-    gap: 0.75rem;
-    padding: 0.25rem;
-    width: 100%;
-    max-width: 460px;
-}
-
-.multi-preview-item {
-    position: relative;
-    aspect-ratio: 1;
-    border-radius: 12px;
-    overflow: hidden;
-    background: #f5f2ef;
-    border: 1px solid rgba(233, 226, 220, 0.95);
-}
-
-.multi-preview-item img {
-    width: 100%;
-    height: 100%;
-    object-fit: cover;
-}
-
-.multi-preview-item .pdf-icon {
-    width: 100%;
-    height: 100%;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    background: #fff3f2;
-}
-
-.multi-preview-item .pdf-icon i {
-    font-size: 1.8rem;
-    color: #c0392b;
-}
-
-.single-preview-remove,
-.multi-preview-item .remove-btn {
-    position: absolute;
-    top: 6px;
-    right: 6px;
-    width: 28px;
-    height: 28px;
-    border-radius: 50%;
-    background: rgba(192, 57, 43, 0.94);
-    color: #fff;
-    border: none;
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    font-size: 13px;
-    cursor: pointer;
-    transition: transform 0.2s ease, background 0.2s ease;
-    z-index: 2;
-}
-
-.single-preview-remove {
-    top: 10px;
-    right: 10px;
-    width: 32px;
-    height: 32px;
-    font-size: 16px;
-}
-
-.single-preview-remove:hover,
-.multi-preview-item .remove-btn:hover {
-    transform: scale(1.08);
-    background: rgba(174, 43, 30, 1);
-}
-
-.custom-request-section {
-    background: rgba(255, 255, 255, 0.9);
-    border: 1px solid rgba(233, 226, 220, 0.95);
-    border-radius: 16px;
-    padding: 1.25rem;
-    margin-top: 1.25rem;
-}
-
-.custom-request-input {
-    resize: none;
-}
-
-.manual-input-options {
-    display: flex;
-    flex-direction: column;
-    gap: 0.5rem;
-    align-items: center;
-}
-
-.manual-input-options .btn-outline-modern {
-    width: 100%;
-    max-width: 340px;
-}
-
-.divider-with-text {
-    position: relative;
-    text-align: center;
-    margin: 2rem 0;
-}
-
-.divider-with-text::before {
-    content: '';
-    position: absolute;
-    top: 50%;
-    left: 0;
-    right: 0;
-    height: 1px;
-    background: rgba(142, 131, 121, 0.25);
-}
-
-.divider-with-text span {
-    position: relative;
-    display: inline-block;
-    padding: 0 1rem;
-    background: #fff8f3;
-    color: #8e8379;
-    font-size: 0.9rem;
-    font-weight: 600;
-}
-
-.mobile-only {
-    display: none;
-}
-
-@media (max-width: 768px) {
-    .upload-area-container form {
-        padding: 1.25rem;
-        border-radius: 18px;
-    }
-
-    .upload-area {
-        padding: 2rem 1rem;
-    }
-
-    .mobile-only {
-        display: inline-flex;
-    }
-
-    .btn-lg {
-        width: 100%;
-        margin-bottom: 0.5rem !important;
-    }
-
-    .d-flex.gap-2.justify-content-center {
-        flex-direction: column;
-        width: 100%;
-    }
-
-    .d-flex.gap-2.justify-content-center .btn-gradient-primary {
-        width: 100%;
-    }
-}
-
-/* ローディングオーバーレイ */
-.loading-overlay-bg {
-    position: fixed;
-    top: 0; left: 0; right: 0; bottom: 0;
-    background: rgba(255, 250, 245, 0.97);
-    z-index: 9998;
-}
-.loading-overlay-content {
-    position: fixed;
-    top: 50%; left: 50%;
-    transform: translate(-50%, -50%);
-    z-index: 9999;
-    text-align: center;
-    width: 90%;
-    max-width: 420px;
-}
-.loading-title {
-    font-size: 1.5rem;
-    font-weight: 700;
-    color: #2a241f;
-    margin-bottom: 0.5rem;
-}
-.loading-subtitle {
-    font-size: 0.95rem;
-    color: #8e8379;
-    margin-bottom: 2rem;
-}
-.loading-progress-bar {
-    width: 100%;
-    height: 6px;
-    background: #eee6df;
-    border-radius: 3px;
-    overflow: hidden;
-    margin-bottom: 2rem;
-}
-.loading-progress-fill {
-    height: 100%;
-    width: 0%;
-    background: linear-gradient(90deg, #ff7940, #ff9a6c);
-    border-radius: 3px;
-    transition: width 0.5s ease;
-}
-.loading-steps {
-    display: flex;
-    justify-content: center;
-    gap: 2rem;
-}
-.loading-step {
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    gap: 0.4rem;
-    color: #baafa5;
-    font-size: 0.8rem;
-    font-weight: 500;
-    transition: all 0.4s ease;
-}
-.loading-step i {
-    font-size: 1.4rem;
-}
-.loading-step.active {
-    color: #e56e35;
-}
-.loading-step.done {
-    color: #28a745;
-}
-/* スピナーリング */
-.loading-spinner-ring {
-    display: inline-block;
-    position: relative;
-    width: 64px;
-    height: 64px;
-    margin-bottom: 1.5rem;
-}
-.loading-spinner-ring div {
-    box-sizing: border-box;
-    display: block;
-    position: absolute;
-    width: 52px;
-    height: 52px;
-    margin: 6px;
-    border: 5px solid #ff7940;
-    border-radius: 50%;
-    animation: spinner-ring 1.2s cubic-bezier(0.5, 0, 0.5, 1) infinite;
-    border-color: #ff7940 transparent transparent transparent;
-}
-.loading-spinner-ring div:nth-child(1) { animation-delay: -0.45s; }
-.loading-spinner-ring div:nth-child(2) { animation-delay: -0.3s; }
-.loading-spinner-ring div:nth-child(3) { animation-delay: -0.15s; }
-@keyframes spinner-ring {
-    0% { transform: rotate(0deg); }
-    100% { transform: rotate(360deg); }
+/* ─── Mobile ─── */
+@media (max-width: 640px) {
+  .up-page { padding: 2rem 1rem 3rem; gap: 0.5rem; }
+  .up-drop-body { padding: 2.5rem 1rem; }
+  .up-preview { padding: 0.85rem; }
+  .up-preview-grid { grid-template-columns: repeat(auto-fill, minmax(68px, 1fr)); gap: 0.4rem; }
 }
 </style>
 
 <script>
 document.addEventListener('DOMContentLoaded', function() {
-    const uploadArea = document.getElementById('upload-area');
-    const fileInput = document.getElementById('id_images');
-    const cameraBtn = document.getElementById('camera-btn');
-    const fileSelectBtn = document.getElementById('file-select-btn');
-    const changeCameraBtn = document.getElementById('change-camera-btn');
-    const changeFileBtn = document.getElementById('change-file-btn');
-    const singleRemoveBtn = document.getElementById('single-remove-btn');
-    const uploadContent = document.querySelector('.upload-content');
-    const uploadPreview = document.getElementById('upload-preview');
-    const actionButtons = document.getElementById('action-buttons');
-    const previewImage = document.getElementById('preview-image');
-    const singlePreview = document.getElementById('single-preview');
-    const multiPreview = document.getElementById('multi-preview');
-    const fileSize = document.getElementById('file-size');
+  const zone = document.getElementById('upload-zone');
+  const fileInput = document.getElementById('id_images');
+  const dropBody = document.getElementById('drop-body');
+  const previewArea = document.getElementById('preview-area');
+  const customSection = document.getElementById('custom-section');
+  const actionSection = document.getElementById('action-section');
+  const previewImg = document.getElementById('preview-img');
+  const singlePreview = document.getElementById('single-preview');
+  const multiPreview = document.getElementById('multi-preview');
+  const fileInfo = document.getElementById('file-info');
+  const toggleBtn = document.getElementById('options-toggle');
+  const togglePanel = document.getElementById('options-panel');
 
-    // 選択されたファイルを保持
-    let selectedFiles = [];
-    
-    // 追加モードフラグ（「追加」ボタン経由の場合のみtrue）
-    let isAddingMore = false;
+  let files = [];
 
-    // ファイル入力にmultiple属性を追加
-    if (fileInput) {
-        fileInput.setAttribute('multiple', 'multiple');
-    }
+  const imgExts = ['.jpg','.jpeg','.png','.gif','.webp','.heic','.heif'];
+  function isImg(f) { return f.type?.match('image.*') || imgExts.some(e => f.name.toLowerCase().endsWith(e)); }
+  function isPDF(f) { return f.type==='application/pdf' || f.name.toLowerCase().endsWith('.pdf'); }
+  function sz(b) {
+    if(!b) return '0 B';
+    const k=1024,s=['B','KB','MB','GB'],i=Math.floor(Math.log(b)/Math.log(k));
+    return (b/Math.pow(k,i)).toFixed(i<2?0:1)+' '+s[i];
+  }
 
-    // ============================
-    // ヘルパー関数（グローバルスコープ）
-    // ============================
-    const imageExtensions = ['.jpg', '.jpeg', '.png', '.gif', '.webp', '.heic', '.heif'];
-    
-    function isImageFile(file) {
-        if (file.type && file.type.match('image.*')) return true;
-        const name = file.name.toLowerCase();
-        return imageExtensions.some(ext => name.endsWith(ext));
-    }
-    
-    function isPDFFile(file) {
-        if (file.type === 'application/pdf') return true;
-        return file.name.toLowerCase().endsWith('.pdf');
-    }
+  function syncInput() {
+    try{ const dt=new DataTransfer(); files.forEach(f=>dt.items.add(f)); fileInput.files=dt.files; }catch(e){}
+  }
 
-    function formatFileSize(bytes) {
-        if (bytes === 0) return '0 Bytes';
-        const k = 1024;
-        const sizes = ['Bytes', 'KB', 'MB', 'GB'];
-        const i = Math.floor(Math.log(bytes) / Math.log(k));
-        return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
-    }
+  function showPreview() {
+    if(!files.length) return;
+    dropBody.classList.add('hidden');
+    previewArea.classList.remove('hidden');
+    customSection.classList.remove('hidden');
+    actionSection.classList.remove('hidden');
 
-    // ============================
-    // UI状態管理
-    // ============================
+    const total = files.reduce((s,f)=>s+f.size,0);
+    const ic = files.filter(isImg).length;
+    const pc = files.length - ic;
+    let info;
+    {% if is_english %}
+    if(ic&&pc) info=`${ic} image${ic>1?'s':''} + ${pc} PDF${pc>1?'s':''} · ${sz(total)}`;
+    else if(ic) info=`${ic} image${ic>1?'s':''} · ${sz(total)}`;
+    else info=`${pc} PDF${pc>1?'s':''} · ${sz(total)}`;
+    {% elif is_chinese %}
+    if(ic&&pc) info=`${ic}张图片 + ${pc}个PDF · ${sz(total)}`;
+    else if(ic) info=`${ic}张图片 · ${sz(total)}`;
+    else info=`${pc}个PDF · ${sz(total)}`;
+    {% else %}
+    if(ic&&pc) info=`${ic}枚の画像 + ${pc}件のPDF · ${sz(total)}`;
+    else if(ic) info=`${ic}枚の画像 · ${sz(total)}`;
+    else info=`${pc}件のPDF · ${sz(total)}`;
+    {% endif %}
+    fileInfo.textContent = info;
 
-    // 単一ファイル削除ボタン
-    if (singleRemoveBtn) {
-        singleRemoveBtn.addEventListener('click', (e) => {
-            e.preventDefault();
-            e.stopPropagation();
-            selectedFiles = [];
-            syncFileInput();
-            resetToUploadState();
+    if(files.length===1){
+      singlePreview.classList.remove('hidden');
+      multiPreview.classList.add('hidden');
+      const f=files[0];
+      if(isPDF(f)){
+        previewImg.src='data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSI5NiIgaGVpZ2h0PSI5NiIgdmlld0JveD0iMCAwIDI0IDI0IiBmaWxsPSJub25lIiBzdHJva2U9IiNkYzM1NDUiIHN0cm9rZS13aWR0aD0iMS41IiBzdHJva2UtbGluZWNhcD0icm91bmQiIHN0cm9rZS1saW5lam9pbj0icm91bmQiPjxwYXRoIGQ9Ik0xNCAySDZhMiAyIDAgMCAwLTIgMnYxNmEyIDIgMCAwIDAgMiAyaDEyYTIgMiAwIDAgMCAyLTJWOHoiLz48cG9seWxpbmUgcG9pbnRzPSIxNCAyIDE0IDggMjAgOCIvPjxsaW5lIHgxPSIxNiIgeTE9IjEzIiB4Mj0iOCIgeTI9IjEzIi8+PGxpbmUgeDE9IjE2IiB5MT0iMTciIHgyPSI4IiB5Mj0iMTciLz48L3N2Zz4=';
+      }else{
+        const r=new FileReader();
+        r.onload=e=>previewImg.src=e.target.result;
+        r.readAsDataURL(f);
+      }
+    }else{
+      singlePreview.classList.add('hidden');
+      multiPreview.classList.remove('hidden');
+      multiPreview.innerHTML='';
+      files.forEach((f,i)=>{
+        const item=document.createElement('div');
+        item.className='up-preview-grid-item';
+        if(isPDF(f)){
+          item.innerHTML=`<div class="pdf-badge"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg>PDF</div><button type="button" class="remove-btn" data-i="${i}"><svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg></button>`;
+        }else{
+          const img=document.createElement('img');
+          const r=new FileReader();
+          r.onload=e=>img.src=e.target.result;
+          r.readAsDataURL(f);
+          item.appendChild(img);
+          const rb=document.createElement('button');
+          rb.type='button'; rb.className='remove-btn'; rb.dataset.i=i;
+          rb.innerHTML='<svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>';
+          item.appendChild(rb);
+        }
+        multiPreview.appendChild(item);
+      });
+      multiPreview.querySelectorAll('.remove-btn').forEach(btn=>{
+        btn.addEventListener('click',e=>{
+          e.preventDefault(); e.stopPropagation();
+          const idx=parseInt(btn.dataset.i);
+          if(idx>=0&&idx<files.length){
+            files.splice(idx,1);
+            syncInput();
+            files.length?showPreview():resetAll();
+          }
         });
+      });
     }
+  }
 
-    // アップロード状態にリセット
-    function resetToUploadState() {
-        uploadContent.style.display = 'block';
-        uploadPreview.style.display = 'none';
-        actionButtons.style.display = 'none';
-        document.getElementById('custom-request-section').style.display = 'none';
-        previewImage.src = '';
-        multiPreview.innerHTML = '';
-        // 同じファイルを再選択できるようにリセット
-        fileInput.value = '';
+  function resetAll() {
+    files=[];
+    syncInput();
+    dropBody.classList.remove('hidden');
+    previewArea.classList.add('hidden');
+    customSection.classList.add('hidden');
+    actionSection.classList.add('hidden');
+    previewImg.src='';
+    multiPreview.innerHTML='';
+  }
+
+  function process(incoming, append) {
+    const valid = Array.from(incoming).filter(f => (isImg(f)||isPDF(f)) && f.size<=(isPDF(f)?25*1024*1024:10*1024*1024));
+    if(!valid.length){
+      alert({% if is_english %}'Please select valid image files or PDFs (max 10MB for images, 25MB for PDFs).'{% elif is_chinese %}'请选择有效的图片或PDF文件（图片最大10MB，PDF最大25MB）。'{% else %}'有効な画像またはPDFを選択してください（画像: 最大10MB、PDF: 最大25MB）。'{% endif %});
+      return;
     }
+    files = (append&&files.length) ? [...files, ...valid] : valid;
+    if(files.length>10){ files=files.slice(0,10); alert({% if is_english %}'Max 10 files.'{% elif is_chinese %}'最多10个文件。'{% else %}'最大10ファイルです。'{% endif %}); }
+    syncInput();
+    showPreview();
+  }
 
-    // ============================
-    // ファイル選択トリガー
-    // ============================
+  document.getElementById('file-select-btn').addEventListener('click',e=>{e.preventDefault(); fileInput.click();});
+  document.getElementById('camera-btn')?.addEventListener('click',()=>{ fileInput.removeAttribute('multiple'); fileInput.setAttribute('capture','environment'); fileInput.click(); fileInput.removeAttribute('capture'); fileInput.setAttribute('multiple','multiple'); });
+  document.getElementById('clear-btn').addEventListener('click',e=>{e.preventDefault(); e.stopPropagation(); resetAll();});
+  document.getElementById('add-btn').addEventListener('click',()=>{ fileInput.click(); });
+  document.getElementById('remove-btn').addEventListener('click',e=>{e.preventDefault(); e.stopPropagation(); resetAll();});
 
-    // カメラボタン（モバイル）
-    if (cameraBtn) {
-        cameraBtn.addEventListener('click', () => {
-            isAddingMore = false;
-            fileInput.removeAttribute('multiple');
-            fileInput.setAttribute('capture', 'environment');
-            fileInput.click();
-        });
+  zone.addEventListener('dragover',e=>{e.preventDefault(); zone.classList.add('drag-over');});
+  zone.addEventListener('dragleave',e=>{e.preventDefault(); zone.classList.remove('drag-over');});
+  zone.addEventListener('drop',e=>{e.preventDefault(); zone.classList.remove('drag-over'); if(e.dataTransfer.files.length) process(e.dataTransfer.files, true);});
+  zone.addEventListener('click',e=>{ if(e.target===zone||e.target.closest('.up-drop-body')&&!e.target.closest('button')) fileInput.click(); });
+  fileInput.addEventListener('change',e=>{ if(e.target.files?.length) process(e.target.files, files.length>0); });
+
+  toggleBtn.addEventListener('click',()=>{
+    const exp=toggleBtn.getAttribute('aria-expanded')==='true';
+    toggleBtn.setAttribute('aria-expanded',String(!exp));
+    togglePanel.classList.toggle('hidden');
+  });
+
+  document.getElementById('upload-form').addEventListener('submit',function(e){
+    syncInput();
+    if(!files.length){ e.preventDefault(); alert({% if is_english %}'Please select a file.'{% elif is_chinese %}'请选择文件。'{% else %}'ファイルを選択してください。'{% endif %}); return false; }
+    const btn = this.querySelector('button[type="submit"]');
+    if (btn) {
+      btn.disabled = true;
+      btn.style.opacity = '0.7';
+      btn.style.cursor = 'wait';
     }
-
-    // ファイル選択ボタン
-    if (fileSelectBtn) {
-        fileSelectBtn.addEventListener('click', (e) => {
-            e.preventDefault();
-            e.stopPropagation();
-            isAddingMore = false;
-            fileInput.removeAttribute('capture');
-            fileInput.setAttribute('multiple', 'multiple');
-            fileInput.click();
-        });
-    }
-
-    // 変更カメラボタン（プレビュー表示中）
-    if (changeCameraBtn) {
-        changeCameraBtn.addEventListener('click', () => {
-            isAddingMore = true;
-            fileInput.removeAttribute('multiple');
-            fileInput.setAttribute('capture', 'environment');
-            fileInput.click();
-        });
-    }
-
-    // ファイル追加ボタン（プレビュー表示中）
-    if (changeFileBtn) {
-        changeFileBtn.addEventListener('click', () => {
-            isAddingMore = true;
-            fileInput.removeAttribute('capture');
-            fileInput.setAttribute('multiple', 'multiple');
-            fileInput.click();
-        });
-    }
-
-    // ============================
-    // ドラッグ&ドロップ
-    // ============================
-    uploadArea.addEventListener('dragover', (e) => {
-        e.preventDefault();
-        uploadArea.classList.add('drag-over');
-    });
-
-    uploadArea.addEventListener('dragleave', (e) => {
-        e.preventDefault();
-        uploadArea.classList.remove('drag-over');
-    });
-
-    uploadArea.addEventListener('drop', (e) => {
-        e.preventDefault();
-        uploadArea.classList.remove('drag-over');
-        
-        const files = e.dataTransfer.files;
-        if (files.length > 0) {
-            // ドロップは常に追加
-            processFiles(files, true);
-        }
-    });
-
-    // ============================
-    // ファイル入力のchangeイベント
-    // ============================
-    fileInput.addEventListener('change', (e) => {
-        const files = e.target.files;
-        if (files && files.length > 0) {
-            processFiles(files, isAddingMore);
-        }
-        // 次回の選択に備えてリセット（同じファイルを再選択可能にする）
-        // ※ selectedFiles配列は保持されているので問題なし
-        isAddingMore = false;
-    });
-
-    // ============================
-    // ファイル処理
-    // ============================
-    function processFiles(files, addToExisting) {
-        const newFiles = Array.from(files);
-        
-        // バリデーション
-        const validFiles = [];
-        for (const file of newFiles) {
-            if (!isImageFile(file) && !isPDFFile(file)) {
-                continue;
-            }
-            const maxSize = isPDFFile(file) ? 25 * 1024 * 1024 : 10 * 1024 * 1024;
-            if (file.size > maxSize) {
-                continue;
-            }
-            validFiles.push(file);
-        }
-
-        if (validFiles.length === 0) {
-            {% if is_english %}
-            alert('Please select valid image files or PDFs (max 10MB for images, 25MB for PDFs).');
-            {% elif is_chinese %}
-            alert('请选择有效的图片或PDF文件（图片最大10MB，PDF最大25MB）。');
-            {% else %}
-            alert('有効な画像またはPDFを選択してください（画像: 最大10MB、PDF: 最大25MB）。');
-            {% endif %}
-            return;
-        }
-
-        if (addToExisting && selectedFiles.length > 0) {
-            selectedFiles = [...selectedFiles, ...validFiles];
-        } else {
-            selectedFiles = validFiles;
-        }
-
-        // 10ファイル制限
-        const MAX_FILES = 10;
-        if (selectedFiles.length > MAX_FILES) {
-            selectedFiles = selectedFiles.slice(0, MAX_FILES);
-            {% if is_english %}
-            alert('You can upload up to 10 files at a time. Only the first 10 files have been kept.');
-            {% elif is_chinese %}
-            alert('一次最多可上传10个文件。仅保留前10个文件。');
-            {% elif is_spanish %}
-            alert('Puedes subir hasta 10 archivos a la vez. Solo se han conservado los primeros 10.');
-            {% elif is_german %}
-            alert('Sie können maximal 10 Dateien gleichzeitig hochladen. Nur die ersten 10 wurden beibehalten.');
-            {% elif is_portuguese %}
-            alert('Você pode enviar até 10 arquivos por vez. Apenas os 10 primeiros foram mantidos.');
-            {% else %}
-            alert('一度にアップロードできるのは最大10ファイルです。最初の10ファイルのみ保持されます。');
-            {% endif %}
-        }
-
-        syncFileInput();
-        updatePreview();
-    }
-
-    // ============================
-    // FileInputとselectedFilesの同期
-    // ============================
-    function syncFileInput() {
-        try {
-            const dt = new DataTransfer();
-            selectedFiles.forEach(file => dt.items.add(file));
-            fileInput.files = dt.files;
-        } catch (e) {
-            // DataTransferをサポートしない古いブラウザのフォールバック
-            console.warn('DataTransfer not supported:', e);
-        }
-    }
-
-    // ============================
-    // プレビュー更新
-    // ============================
-    function updatePreview() {
-        if (selectedFiles.length === 0) {
-            resetToUploadState();
-            return;
-        }
-
-        // UIを表示
-        uploadContent.style.display = 'none';
-        uploadPreview.style.display = 'block';
-        actionButtons.style.display = 'flex';
-        actionButtons.style.justifyContent = 'center';
-        document.getElementById('custom-request-section').style.display = 'block';
-
-        // ファイル数の表示
-        const totalSize = selectedFiles.reduce((sum, f) => sum + f.size, 0);
-        const imageCount = selectedFiles.filter(f => isImageFile(f)).length;
-        const pdfCount = selectedFiles.length - imageCount;
-        
-        let fileInfo = '';
-        {% if is_english %}
-        if (imageCount > 0 && pdfCount > 0) {
-            fileInfo = `${imageCount} images + ${pdfCount} PDFs selected (${formatFileSize(totalSize)})`;
-        } else if (imageCount > 0) {
-            fileInfo = `${imageCount} image${imageCount > 1 ? 's' : ''} selected (${formatFileSize(totalSize)})`;
-        } else {
-            fileInfo = `${pdfCount} PDF${pdfCount > 1 ? 's' : ''} selected (${formatFileSize(totalSize)})`;
-        }
-        {% elif is_chinese %}
-        if (imageCount > 0 && pdfCount > 0) {
-            fileInfo = `已选择 ${imageCount} 张图片 + ${pdfCount} 个PDF (${formatFileSize(totalSize)})`;
-        } else if (imageCount > 0) {
-            fileInfo = `已选择 ${imageCount} 张图片 (${formatFileSize(totalSize)})`;
-        } else {
-            fileInfo = `已选择 ${pdfCount} 个PDF (${formatFileSize(totalSize)})`;
-        }
-        {% else %}
-        if (imageCount > 0 && pdfCount > 0) {
-            fileInfo = `${imageCount}枚の画像 + ${pdfCount}件のPDFを選択中 (${formatFileSize(totalSize)})`;
-        } else if (imageCount > 0) {
-            fileInfo = `${imageCount}枚の画像を選択中 (${formatFileSize(totalSize)})`;
-        } else {
-            fileInfo = `${pdfCount}件のPDFを選択中 (${formatFileSize(totalSize)})`;
-        }
-        {% endif %}
-        fileSize.textContent = fileInfo;
-
-        if (selectedFiles.length === 1) {
-            // 単一ファイル：従来のプレビュー
-            singlePreview.style.display = 'flex';
-            multiPreview.style.display = 'none';
-            
-            const file = selectedFiles[0];
-            
-            if (isPDFFile(file)) {
-                previewImage.src = 'data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSIxMjgiIGhlaWdodD0iMTI4IiB2aWV3Qm94PSIwIDAgMjQgMjQiIGZpbGw9Im5vbmUiIHN0cm9rZT0iI2RjMzU0NSIgc3Ryb2tlLXdpZHRoPSIyIiBzdHJva2UtbGluZWNhcD0icm91bmQiIHN0cm9rZS1saW5lam9pbj0icm91bmQiPjxwYXRoIGQ9Ik0xNCAySDZhMiAyIDAgMCAwLTIgMnYxNmEyIDIgMCAwIDAgMiAyaDEyYTIgMiAwIDAgMCAyLTJWOHoiPjwvcGF0aD48cG9seWxpbmUgcG9pbnRzPSIxNCAyIDE0IDggMjAgOCI+PC9wb2x5bGluZT48bGluZSB4MT0iMTYiIHkxPSIxMyIgeDI9IjgiIHkyPSIxMyI+PC9saW5lPjxsaW5lIHgxPSIxNiIgeTE9IjE3IiB4Mj0iOCIgeTI9IjE3Ij48L2xpbmU+PC9zdmc+';
-            } else {
-                const reader = new FileReader();
-                reader.onload = (e) => {
-                    previewImage.src = e.target.result;
-                };
-                reader.readAsDataURL(file);
-            }
-        } else {
-            // 複数ファイル：グリッドプレビュー
-            singlePreview.style.display = 'none';
-            multiPreview.style.display = 'grid';
-            multiPreview.innerHTML = '';
-            
-            selectedFiles.forEach((file, index) => {
-                const item = document.createElement('div');
-                item.className = 'multi-preview-item';
-                
-                if (isPDFFile(file)) {
-                    item.innerHTML = `
-                        <div class="pdf-icon"><i class="bi bi-file-pdf"></i></div>
-                        <button type="button" class="remove-btn" data-index="${index}"><i class="bi bi-x"></i></button>
-                    `;
-                } else {
-                    const img = document.createElement('img');
-                    const reader = new FileReader();
-                    reader.onload = (e) => {
-                        img.src = e.target.result;
-                    };
-                    reader.readAsDataURL(file);
-                    item.appendChild(img);
-                    
-                    const removeBtn = document.createElement('button');
-                    removeBtn.type = 'button';
-                    removeBtn.className = 'remove-btn';
-                    removeBtn.dataset.index = index;
-                    removeBtn.innerHTML = '<i class="bi bi-x"></i>';
-                    item.appendChild(removeBtn);
-                }
-                
-                multiPreview.appendChild(item);
-            });
-            
-            // 削除ボタンのイベント（クロージャでインデックスをキャプチャ）
-            multiPreview.querySelectorAll('.remove-btn').forEach(btn => {
-                btn.addEventListener('click', (e) => {
-                    e.preventDefault();
-                    e.stopPropagation();
-                    const idx = parseInt(btn.dataset.index);
-                    if (idx >= 0 && idx < selectedFiles.length) {
-                        selectedFiles.splice(idx, 1);
-                        syncFileInput();
-                        if (selectedFiles.length === 0) {
-                            resetToUploadState();
-                        } else {
-                            updatePreview();
-                        }
-                    }
-                });
-            });
-        }
-    }
-
-    // ============================
-    // フォーム送信
-    // ============================
-    document.getElementById('upload-form').addEventListener('submit', function(e) {
-        // 送信前にファイル入力を最新に同期
-        syncFileInput();
-        
-        if (selectedFiles.length === 0) {
-            e.preventDefault();
-            {% if is_english %}
-            alert('Please select a file.');
-            {% elif is_chinese %}
-            alert('请选择文件。');
-            {% else %}
-            alert('ファイルを選択してください。');
-            {% endif %}
-            return false;
-        }
-        
-        // 即座にローディングオーバーレイを表示
-        const overlay = document.getElementById('loading-overlay');
-        overlay.style.display = 'block';
-        document.body.style.overflow = 'hidden';
-        
-        // ボタンを無効化
-        const submitBtn = this.querySelector('button[type="submit"]');
-        if (submitBtn) {
-            submitBtn.disabled = true;
-        }
-        
-        // プログレスバーアニメーション
-        const progressFill = document.getElementById('loading-progress-fill');
-        const stepUpload = document.getElementById('step-upload');
-        const stepOcr = document.getElementById('step-ocr');
-        const stepCheck = document.getElementById('step-check');
-        const loadingTitle = document.getElementById('loading-title');
-        
-        // ステップ1: アップロード中（即座に開始）
-        progressFill.style.width = '15%';
-        stepUpload.classList.add('active');
-        
-        // ステップ2: 1.5秒後にOCR読取中へ
-        setTimeout(function() {
-            progressFill.style.width = '40%';
-            stepUpload.classList.remove('active');
-            stepUpload.classList.add('done');
-            stepUpload.querySelector('i').className = 'bi bi-check-circle-fill';
-            stepOcr.classList.add('active');
-            {% if is_english %}
-            loadingTitle.textContent = 'Reading text from file...';
-            {% elif is_chinese %}
-            loadingTitle.textContent = 'AI正在读取文字...';
-            {% else %}
-            loadingTitle.textContent = 'AIがテキストを読み取り中...';
-            {% endif %}
-        }, 1500);
-        
-        // ステップ3: 5秒後にチェック中へ
-        setTimeout(function() {
-            progressFill.style.width = '70%';
-            stepOcr.classList.remove('active');
-            stepOcr.classList.add('done');
-            stepOcr.querySelector('i').className = 'bi bi-check-circle-fill';
-            stepCheck.classList.add('active');
-            {% if is_english %}
-            loadingTitle.textContent = 'Almost done...';
-            {% elif is_chinese %}
-            loadingTitle.textContent = '即将完成...';
-            {% else %}
-            loadingTitle.textContent = 'もうすぐ完了...';
-            {% endif %}
-        }, 5000);
-        
-        // ゆっくり進むプログレス（サーバー応答待ち用）
-        setTimeout(function() { progressFill.style.width = '80%'; }, 8000);
-        setTimeout(function() { progressFill.style.width = '85%'; }, 12000);
-        setTimeout(function() { progressFill.style.width = '90%'; }, 18000);
-        
-        // フォーム送信を続行
-        return true;
-    });
-    
-    console.log('Upload page initialized');
+    return true;
+  });
 });
 </script>
 {% endblock %}

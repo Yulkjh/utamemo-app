@@ -486,7 +486,7 @@
 
             <!-- 暗記カードセクション -->
             {% if user == song.created_by %}
-            <div class="flashcard-section fade-in" style="background: white; border-radius: 16px; padding: 1.5rem; border: 1px solid var(--border-color, #f0e6e0); box-shadow: 0 2px 8px rgba(0,0,0,0.04); margin-bottom: 1.5rem;">
+            <div class="flashcard-section fade-in" style="background: var(--surface-elevated); border: 1px solid var(--border-color); padding: 1.5rem; margin-bottom: 1.5rem;">
                 <h4 style="margin-bottom: 1rem;">
                     <i class="bi bi-card-text me-2" style="color: var(--primary-color);"></i>
                     {% if is_english %}Flashcards{% elif is_chinese %}闪卡{% elif is_spanish %}Tarjetas{% elif is_german %}Lernkarten{% elif is_portuguese %}Flashcards{% else %}暗記カード{% endif %}
@@ -640,12 +640,9 @@
 
 /* 楽曲ヘッダーカード */
 .song-header-card {
-    background: var(--surface);
-    border-radius: var(--radius-xl);
-    overflow: hidden;
-    box-shadow: var(--shadow-lg);
+    background: var(--surface-elevated);
+    border: 1px solid var(--border-color);
     margin-bottom: 2rem;
-    border: 1px solid rgba(255, 121, 64, 0.1);
 }
 
 .song-cover-section {
@@ -663,7 +660,7 @@
 .song-main-placeholder {
     width: 100%;
     height: 100%;
-    background: linear-gradient(135deg, rgba(255, 121, 64, 0.1) 0%, rgba(255, 107, 53, 0.2) 100%);
+    background: var(--surface-muted);
     display: flex;
     align-items: center;
     justify-content: center;
@@ -695,9 +692,7 @@
     align-items: center;
     gap: 1rem;
     padding: 1rem;
-    background: var(--surface-elevated);
-    border-radius: var(--radius-lg);
-    border: 1px solid var(--border-color);
+    background: var(--surface-muted);
 }
 
 .creator-avatar-large {
@@ -762,21 +757,20 @@
 
 /* 音楽プレイヤーカード */
 .music-player-card {
-    background: var(--surface);
-    border-radius: var(--radius-xl);
-    box-shadow: var(--shadow-md);
+    background: var(--surface-elevated);
+    border: 1px solid var(--border-color);
     margin-bottom: 2rem;
-    border: 1px solid rgba(255, 121, 64, 0.1);
     overflow: hidden;
 }
 
 .player-header {
-    background: var(--primary-gradient);
-    color: white;
-    padding: 1.5rem;
+    background: var(--surface-muted);
+    color: var(--text-primary);
+    padding: 1.25rem 1.5rem;
     display: flex;
     align-items: center;
     gap: 1rem;
+    border-bottom: 1px solid var(--border-color);
 }
 
 .player-icon {
@@ -858,11 +852,9 @@
 
 /* 歌詞カード */
 .lyrics-card {
-    background: var(--surface);
-    border-radius: var(--radius-xl);
-    box-shadow: var(--shadow-md);
+    background: var(--surface-elevated);
+    border: 1px solid var(--border-color);
     margin-bottom: 2rem;
-    border: 1px solid rgba(255, 121, 64, 0.1);
 }
 
 .lyrics-header {
@@ -921,7 +913,7 @@
     font-size: 1.1rem;
     line-height: 1.8;
     color: var(--text-primary);
-    background: linear-gradient(135deg, rgba(255, 255, 255, 0.8) 0%, rgba(255, 244, 240, 0.5) 100%);
+    background: var(--surface);
 }
 
 .lyrics-content p {
@@ -960,11 +952,9 @@
 
 /* コメントカード */
 .comments-card {
-    background: var(--surface);
-    border-radius: var(--radius-xl);
-    box-shadow: var(--shadow-md);
+    background: var(--surface-elevated);
+    border: 1px solid var(--border-color);
     margin-bottom: 2rem;
-    border: 1px solid rgba(255, 121, 64, 0.1);
 }
 
 .comments-header {
@@ -1066,12 +1056,10 @@
 
 /* サイドバー */
 .action-panel {
-    background: var(--surface);
-    border-radius: var(--radius-xl);
-    padding: 2rem;
-    box-shadow: var(--shadow-md);
+    background: var(--surface-elevated);
+    border: 1px solid var(--border-color);
+    padding: 1.5rem;
     margin-bottom: 2rem;
-    border: 1px solid rgba(255, 121, 64, 0.1);
 }
 
 .action-panel h4 {
@@ -1271,11 +1259,9 @@
 }
 
 .related-songs {
-    background: var(--surface);
-    border-radius: var(--radius-xl);
-    padding: 2rem;
-    box-shadow: var(--shadow-md);
-    border: 1px solid rgba(255, 121, 64, 0.1);
+    background: var(--surface-elevated);
+    border: 1px solid var(--border-color);
+    padding: 1.5rem;
     margin-bottom: 1.5rem;
 }
 

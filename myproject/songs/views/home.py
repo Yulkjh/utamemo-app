@@ -312,6 +312,26 @@ class TheaterSurveyView(TemplateView):
         context['survey_success_message'] = kwargs.get('survey_success_message', '')
         return context
 
+    def _notify_admin(self, survey_name, survey_show, survey_memo):
+        admin_email = getattr(settings, 'ADMIN_NOTIFICATION_EMAIL', 'admin@utamemo.com')
+        subject = '【UNITE CINEMA MINATO】アンケート回答が届きました'
+        display_name = survey_name or '匿名'
+        message = (
+            f'お名前: {display_name}\n'
+            f'見たい作品: {survey_show}\n'
+            f'ひとこと: {survey_memo or "(未入力)"}\n'
+        )
+        try:
+            send_mail(
+                subject=subject,
+                message=message,
+                from_email=getattr(settings, 'DEFAULT_FROM_EMAIL', 'noreply@utamemo.com'),
+                recipient_list=[admin_email],
+                fail_silently=True,
+            )
+        except Exception as exc:
+            logger.warning('Survey admin notify failed: %s', exc)
+
     def post(self, request, *args, **kwargs):
         survey_name = request.POST.get('survey_name', '').strip()
         survey_show = request.POST.get('survey_show', '').strip()
@@ -332,6 +352,8 @@ class TheaterSurveyView(TemplateView):
             desired_show=survey_show,
             memo=survey_memo,
         )
+
+        self._notify_admin(survey_name, survey_show, survey_memo)
 
         context = self.get_context_data(
             survey_success_message='アンケートを受け付けました。',

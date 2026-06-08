@@ -148,18 +148,17 @@
 <style>
 /* リストスタイル */
 .song-list {
-    background: white;
-    border-radius: 16px;
+    background: var(--surface-elevated);
+    border: 1px solid var(--border-color);
     overflow: visible;
-    box-shadow: 0 2px 12px rgba(0, 0, 0, 0.06);
 }
 
 .song-row {
     display: flex;
     align-items: center;
     padding: 1rem 1.25rem;
-    border-bottom: 1px solid #f0f0f0;
-    transition: all 0.2s ease;
+    border-bottom: 1px solid var(--border-color);
+    transition: background 0.2s ease;
     text-decoration: none;
     color: inherit;
     cursor: pointer;
@@ -170,12 +169,11 @@
 }
 
 .song-row:hover {
-    background: linear-gradient(135deg, #fff8f5 0%, #fff0eb 100%);
+    background: var(--surface-muted);
 }
 
 .song-row:hover .play-icon {
     transform: scale(1.1);
-    box-shadow: 0 4px 12px rgba(255, 121, 64, 0.3);
 }
 
 .song-row:hover .song-arrow {
@@ -184,8 +182,8 @@
 }
 
 .song-row-failed {
-    border-left: 4px solid #ef4444;
-    background: #fef2f2;
+    border-left: 4px solid var(--danger);
+    background: rgba(211, 47, 47, 0.04);
 }
 
 .song-row-failed:hover {
@@ -211,17 +209,12 @@
 }
 
 .play-icon {
-    width: 40px;
-    height: 40px;
-    border-radius: 50%;
-    background: linear-gradient(135deg, #ff7940 0%, #ff6b35 100%);
+    background: var(--primary-color);
     color: white;
     display: flex;
     align-items: center;
     justify-content: center;
-    font-size: 1.1rem;
-    transition: all 0.25s ease;
-    box-shadow: 0 2px 8px rgba(255, 121, 64, 0.2);
+    transition: transform 0.2s ease;
 }
 
 .play-icon i {
@@ -613,20 +606,17 @@
     align-items: center;
     gap: 0.4rem;
     padding: 0.5rem 1.1rem;
-    background: linear-gradient(135deg, #ff7940 0%, #ff6b35 100%);
+    background: var(--primary-color);
     color: #fff;
     border: none;
-    border-radius: 10px;
     font-weight: 600;
     font-size: 0.85rem;
     text-decoration: none;
-    transition: all 0.2s ease;
-    box-shadow: 0 2px 8px rgba(255, 121, 64, 0.2);
+    transition: background 0.2s ease;
 }
 
 .btn-create-song:hover {
-    transform: translateY(-1px);
-    box-shadow: 0 4px 12px rgba(255, 121, 64, 0.3);
+    background: var(--primary-dark);
     color: #fff;
 }
 
@@ -681,20 +671,17 @@
     align-items: center;
     gap: 0.4rem;
     padding: 0.65rem 1.25rem;
-    background: linear-gradient(135deg, #ff7940 0%, #ff6b35 100%);
+    background: var(--primary-color);
     color: #fff;
     border: none;
-    border-radius: 10px;
     font-weight: 600;
     font-size: 0.9rem;
     text-decoration: none;
-    transition: all 0.2s ease;
-    box-shadow: 0 2px 8px rgba(255, 121, 64, 0.2);
+    transition: background 0.2s ease;
 }
 
 .btn-empty-primary:hover {
-    transform: translateY(-1px);
-    box-shadow: 0 4px 12px rgba(255, 121, 64, 0.3);
+    background: var(--primary-dark);
     color: #fff;
 }
 
@@ -790,8 +777,8 @@
 }
 
 .page-item.active .page-link {
-    background: linear-gradient(135deg, #ff7940 0%, #ff6b35 100%);
-    border-color: #ff7940;
+    background: var(--primary-color);
+    border-color: var(--primary-color);
     color: white;
 }
 

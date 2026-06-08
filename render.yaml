@@ -11,6 +11,8 @@ services:
         value: false
       - key: SKIP_POST_DEPLOY_TASKS
         value: true
+      - key: AUTO_MAKE_STAFF_USERNAME
+        value: Mitumitu
       - key: SITE_BASE_URL
         sync: false
       - key: PUBLIC_ALLOWED_HOSTS

@@ -7,109 +7,120 @@
     <style>
         * { margin: 0; padding: 0; box-sizing: border-box; }
         body {
-            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-            background: linear-gradient(135deg, #0a0a1a 0%, #1a1a3e 50%, #0a0a1a 100%);
-            color: #e0e0e0;
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif;
+            background: var(--bg, oklch(98% 0.004 240));
+            color: var(--fg, oklch(20% 0.02 240));
             min-height: 100vh;
             display: flex;
             align-items: center;
             justify-content: center;
+            padding: 1rem;
         }
         .container {
-            background: rgba(255, 255, 255, 0.05);
-            border: 1px solid rgba(255, 255, 255, 0.1);
-            border-radius: 16px;
+            background: var(--surface, oklch(100% 0 0));
+            border: 1px solid var(--border, oklch(90% 0.006 240));
+            border-radius: 12px;
             padding: 2.5rem;
             max-width: 420px;
-            width: 90%;
+            width: 100%;
             text-align: center;
         }
         .title {
-            font-size: 1.5rem;
+            font-size: 1.4rem;
             font-weight: 700;
-            color: #fff;
+            color: var(--fg, oklch(20% 0.02 240));
             margin-bottom: 0.5rem;
+            letter-spacing: -0.02em;
         }
         .subtitle {
-            color: #a0a0b0;
-            font-size: 0.9rem;
+            color: var(--muted, oklch(50% 0.018 240));
+            font-size: 0.88rem;
             margin-bottom: 2rem;
-            line-height: 1.6;
+            line-height: 1.7;
         }
         .email-display {
-            color: #667eea;
+            color: var(--accent, oklch(56% 0.12 170));
             font-weight: 600;
         }
         .error-msg {
-            background: rgba(255, 82, 82, 0.15);
-            border: 1px solid rgba(255, 82, 82, 0.3);
-            color: #ff5252;
-            padding: 0.75rem 1rem;
+            background: rgba(239, 68, 68, 0.06);
+            border: 1px solid rgba(239, 68, 68, 0.2);
+            color: #dc2626;
+            padding: 0.7rem 1rem;
             border-radius: 8px;
             margin-bottom: 1.5rem;
             font-size: 0.85rem;
         }
         .success-msg {
-            background: rgba(76, 175, 80, 0.15);
-            border: 1px solid rgba(76, 175, 80, 0.3);
-            color: #4caf50;
-            padding: 0.75rem 1rem;
+            background: rgba(34, 197, 94, 0.06);
+            border: 1px solid rgba(34, 197, 94, 0.2);
+            color: #16a34a;
+            padding: 0.7rem 1rem;
             border-radius: 8px;
             margin-bottom: 1.5rem;
             font-size: 0.85rem;
         }
         .code-input {
             width: 100%;
-            padding: 1rem;
+            padding: 0.9rem 1rem;
             font-size: 1.5rem;
             text-align: center;
             letter-spacing: 0.5em;
-            background: rgba(255, 255, 255, 0.08);
-            border: 1px solid rgba(255, 255, 255, 0.2);
-            border-radius: 12px;
-            color: #fff;
+            background: var(--bg, oklch(98% 0.004 240));
+            border: 1px solid var(--border, oklch(90% 0.006 240));
+            border-radius: 8px;
+            color: var(--fg, oklch(20% 0.02 240));
             outline: none;
             margin-bottom: 1.5rem;
             transition: border-color 0.2s;
+            font-family: 'JetBrains Mono', 'SF Mono', ui-monospace, monospace;
+            font-variant-numeric: tabular-nums;
         }
         .code-input:focus {
-            border-color: #667eea;
+            border-color: var(--accent, oklch(56% 0.12 170));
+            box-shadow: 0 0 0 3px rgba(0,0,0,0.04);
         }
         .code-input::placeholder {
             letter-spacing: 0.2em;
             font-size: 1rem;
-            color: #666;
+            color: var(--muted, oklch(50% 0.018 240));
         }
         .btn {
             display: block;
             width: 100%;
-            padding: 0.875rem;
-            border: none;
-            border-radius: 12px;
-            font-size: 1rem;
+            padding: 0.8rem;
+            border: 1px solid var(--border, oklch(90% 0.006 240));
+            border-radius: 8px;
+            font-size: 0.92rem;
             font-weight: 600;
             cursor: pointer;
-            transition: opacity 0.2s;
+            transition: all 0.15s;
+            font-family: inherit;
         }
-        .btn:hover { opacity: 0.85; }
         .btn-primary {
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            color: #fff;
+            background: var(--fg, oklch(20% 0.02 240));
+            color: var(--surface, oklch(100% 0 0));
+            border: none;
             margin-bottom: 0.75rem;
         }
+        .btn-primary:hover { opacity: 0.85; }
         .btn-secondary {
-            background: rgba(255, 255, 255, 0.08);
-            color: #a0a0b0;
-            border: 1px solid rgba(255, 255, 255, 0.1);
+            background: transparent;
+            color: var(--muted, oklch(50% 0.018 240));
+        }
+        .btn-secondary:hover {
+            border-color: var(--muted, oklch(50% 0.018 240));
+            color: var(--fg, oklch(20% 0.02 240));
         }
         .back-link {
             display: inline-block;
             margin-top: 1.5rem;
-            color: #667eea;
+            color: var(--muted, oklch(50% 0.018 240));
             text-decoration: none;
-            font-size: 0.85rem;
+            font-size: 0.82rem;
+            transition: color 0.15s;
         }
-        .back-link:hover { text-decoration: underline; }
+        .back-link:hover { color: var(--fg, oklch(20% 0.02 240)); }
     </style>
 </head>
 <body>
