@@ -180,6 +180,25 @@
     .back-link:hover {
         color: #ff7940;
     }
+    .assignment-card {
+        background: #fffaf7;
+        border: 1px solid #ffd9c7;
+        border-radius: 12px;
+        padding: 1rem;
+        margin-bottom: 1rem;
+    }
+    .assignment-item {
+        border: 1px solid #f0e6e0;
+        border-radius: 10px;
+        padding: 0.75rem;
+        margin-bottom: 0.6rem;
+        background: #fff;
+    }
+    .student-meta {
+        font-size: 0.82rem;
+        color: #6f625b;
+        margin-top: 0.2rem;
+    }
 </style>
 
 <div class="container" style="max-width: 900px; margin: 0 auto; padding: 2rem 1rem;">
@@ -225,6 +244,66 @@
     
     <div class="row">
         <div class="col-lg-8">
+            {% if is_teacher_view and is_host %}
+            <div class="assignment-card">
+                <h3 class="section-title" style="border: none; padding: 0; margin-bottom: 0.75rem;">
+                    <i class="bi bi-journal-check" style="color: #ff7940;"></i>
+                    {% if is_english %}Teacher Dashboard{% elif is_chinese %}教师管理面板{% else %}先生管理パネル{% endif %}
+                </h3>
+                <form action="{% url 'songs:classroom_assign_song' classroom.id %}" method="post" class="row g-2">
+                    {% csrf_token %}
+                    <div class="col-md-5">
+                        <select name="song_id" class="form-select" required>
+                            <option value="">{% if is_english %}Select song for assignment{% elif is_chinese %}选择要布置的歌曲{% else %}課題にする曲を選択{% endif %}</option>
+                            {% for song in teacher_songs %}
+                            <option value="{{ song.id }}">{{ song.title }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    <div class="col-md-3">
+                        <input type="date" name="due_date" class="form-control" placeholder="{% if is_english %}Due date{% elif is_chinese %}截止日期{% else %}期限日{% endif %}">
+                    </div>
+                    <div class="col-md-4">
+                        <button type="submit" class="action-btn w-100" style="justify-content:center;">
+                            <i class="bi bi-send"></i>
+                            {% if is_english %}Assign{% elif is_chinese %}发布课题{% else %}課題を出題{% endif %}
+                        </button>
+                    </div>
+                    <div class="col-12">
+                        <input type="text" name="note" maxlength="300" class="form-control" placeholder="{% if is_english %}Optional note for students{% elif is_chinese %}给学生的备注（可选）{% else %}生徒向けメモ（任意）{% endif %}">
+                    </div>
+                </form>
+
+                <div style="margin-top: 0.9rem;">
+                    <div class="section-title" style="border: none; padding: 0; margin-bottom: 0.5rem;">
+                        {% if is_english %}Current Assignments{% elif is_chinese %}当前课题{% else %}現在の課題{% endif %}
+                    </div>
+                    {% if assignments %}
+                        {% for assignment in assignments %}
+                        <div class="assignment-item">
+                            <div style="font-weight: 600; color: #2d1b13;">{{ assignment.song.title }}</div>
+                            <div class="student-meta">
+                                {% if assignment.due_date %}
+                                {% if is_english %}Due{% elif is_chinese %}截止{% else %}期限{% endif %}: {{ assignment.due_date|date:"Y/m/d" }}
+                                {% else %}
+                                {% if is_english %}No due date{% elif is_chinese %}无截止日期{% else %}期限なし{% endif %}
+                                {% endif %}
+                                <span style="margin:0 0.4rem;">|</span>{{ assignment.created_at|date:"Y/m/d H:i" }}
+                            </div>
+                            {% if assignment.note %}
+                            <div class="student-meta">{{ assignment.note }}</div>
+                            {% endif %}
+                        </div>
+                        {% endfor %}
+                    {% else %}
+                        <div class="empty-state" style="padding: 0.6rem 0;">
+                            {% if is_english %}No assignments yet{% elif is_chinese %}还没有发布课题{% else %}まだ課題はありません{% endif %}
+                        </div>
+                    {% endif %}
+                </div>
+            </div>
+            {% endif %}
+
             <div style="background: white; border-radius: 12px; padding: 1.5rem; margin-bottom: 1.5rem; border: 1px solid #e5e5e5;">
                 <div class="d-flex justify-content-between align-items-center mb-3">
                     <h3 class="section-title" style="margin: 0; border: none; padding: 0;">
@@ -242,7 +321,7 @@
                     <a href="{% url 'songs:song_detail' shared.song.id %}" class="song-card d-block text-decoration-none">
                         <div class="song-title">{{ shared.song.title }}</div>
                         <div class="song-meta">
-                            <i class="bi bi-person"></i> {{ shared.song.user.username }}
+                            <i class="bi bi-person"></i> {{ shared.song.created_by.username }}
                             <span style="margin: 0 0.5rem;">|</span>
                             <i class="bi bi-calendar"></i> {{ shared.shared_at|date:"Y/m/d" }}
                         </div>
@@ -284,6 +363,37 @@
                     {% endif %}
                 {% endfor %}
             </div>
+
+            {% if is_teacher_view and is_host %}
+            <div style="background: white; border-radius: 12px; padding: 1.5rem; border: 1px solid #e5e5e5; margin-top: 1rem;">
+                <h3 class="section-title">
+                    <i class="bi bi-person-vcard" style="color: #ff7940;"></i>
+                    {% if is_english %}Student Information{% elif is_chinese %}学生信息{% else %}生徒情報{% endif %}
+                </h3>
+
+                {% if student_members %}
+                    {% for item in student_members %}
+                    <div class="member-item" style="display:block;">
+                        <div style="display:flex; align-items:center;">
+                            <div class="member-avatar">{{ item.membership.user.username|slice:":1"|upper }}</div>
+                            <span class="member-name">{{ item.membership.user.username }}</span>
+                        </div>
+                        <div class="student-meta">
+                            {% if is_english %}Joined{% elif is_chinese %}加入时间{% else %}参加日{% endif %}: {{ item.membership.joined_at|date:"Y/m/d" }}
+                            <span style="margin:0 0.4rem;">|</span>
+                            {% if is_english %}Completed songs{% elif is_chinese %}完成歌曲数{% else %}生成完了曲{% endif %}: {{ item.completed_song_count }}
+                            <span style="margin:0 0.4rem;">|</span>
+                            {% if is_english %}Public songs{% elif is_chinese %}公开歌曲数{% else %}公開曲{% endif %}: {{ item.public_song_count }}
+                        </div>
+                    </div>
+                    {% endfor %}
+                {% else %}
+                    <div class="empty-state" style="padding: 0.6rem 0;">
+                        {% if is_english %}No students yet{% elif is_chinese %}还没有学生{% else %}まだ生徒はいません{% endif %}
+                    </div>
+                {% endif %}
+            </div>
+            {% endif %}
         </div>
     </div>
 </div>

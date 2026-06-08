@@ -671,6 +671,59 @@ class ClassroomSong(models.Model):
         return f"{self.song.title} in {self.classroom.name}"
 
 
+class ClassroomAssignment(models.Model):
+    """先生がクラスへ配布する課題曲"""
+    classroom = models.ForeignKey(
+        Classroom,
+        on_delete=models.CASCADE,
+        related_name='assignments',
+        verbose_name='クラス'
+    )
+    song = models.ForeignKey(
+        Song,
+        on_delete=models.CASCADE,
+        related_name='classroom_assignments',
+        verbose_name='課題曲'
+    )
+    assigned_by = models.ForeignKey(
+        User,
+        on_delete=models.CASCADE,
+        related_name='assigned_classroom_tasks',
+        verbose_name='出題者'
+    )
+    due_date = models.DateField(
+        blank=True,
+        null=True,
+        verbose_name='期限日'
+    )
+    note = models.TextField(
+        blank=True,
+        verbose_name='課題メモ'
+    )
+    created_at = models.DateTimeField(
+        auto_now_add=True,
+        verbose_name='作成日時'
+    )
+    updated_at = models.DateTimeField(
+        auto_now=True,
+        verbose_name='更新日時'
+    )
+
+    class Meta:
+        verbose_name = 'クラス課題'
+        verbose_name_plural = 'クラス課題'
+        ordering = ['-created_at']
+        constraints = [
+            models.UniqueConstraint(
+                fields=['classroom', 'song'],
+                name='unique_classroom_assignment_song'
+            )
+        ]
+
+    def __str__(self):
+        return f"{self.classroom.name}: {self.song.title}"
+
+
 class FlashcardDeck(models.Model):
     """フラッシュカードデッキモデル"""
     user = models.ForeignKey(

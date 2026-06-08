@@ -80,6 +80,14 @@ class User(AbstractUser):
         default=False,
         verbose_name='BAN済み'
     )
+
+    # 先生権限（運営が付与）
+    is_teacher = models.BooleanField(
+        default=False,
+        verbose_name='先生権限',
+        help_text='運営が付与する先生向けクラス管理権限'
+    )
+
     ban_reason = models.TextField(
         blank=True,
         default='',

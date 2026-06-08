@@ -3,6 +3,7 @@ from django.utils import timezone
 from .models import (
     Song, Lyrics, Like, Favorite, Comment, UploadedImage,
     Tag, PlayHistory, Classroom, ClassroomMembership, ClassroomSong,
+    ClassroomAssignment,
     FlashcardDeck, Flashcard, TrainingSession, PromptTemplate,
     TrainingData, TheaterSurveyResponse,
 )
@@ -204,6 +205,17 @@ class ClassroomSongAdmin(admin.ModelAdmin):
     list_per_page = 50
     readonly_fields = ('shared_at',)
     raw_id_fields = ('classroom', 'song', 'shared_by')
+
+
+@admin.register(ClassroomAssignment)
+class ClassroomAssignmentAdmin(admin.ModelAdmin):
+    list_display = ('id', 'classroom', 'song', 'assigned_by', 'due_date', 'created_at')
+    list_filter = ('due_date', 'created_at')
+    search_fields = ('classroom__name', 'song__title', 'assigned_by__username')
+    ordering = ('-created_at',)
+    list_per_page = 50
+    readonly_fields = ('created_at', 'updated_at')
+    raw_id_fields = ('classroom', 'song', 'assigned_by')
 
 
 class FlashcardInline(admin.TabularInline):

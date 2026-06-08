@@ -67,7 +67,7 @@ class UserAdmin(BaseUserAdmin):
     fieldsets = (
         ('認証情報', {'fields': ('username', 'password')}),
         ('個人情報', {'fields': ('first_name', 'last_name', 'email')}),
-        ('権限', {'fields': ('is_active', 'is_staff', 'groups', 'user_permissions')}),
+        ('権限', {'fields': ('is_active', 'is_staff', 'is_teacher', 'groups', 'user_permissions')}),
         ('BAN管理', {'fields': ('is_banned', 'ban_reason', 'banned_at')}),
         ('日時', {'fields': ('last_login', 'date_joined')}),
         ('利用規約', {'fields': ('tos_agreed_at',)}),
@@ -85,10 +85,10 @@ class UserAdmin(BaseUserAdmin):
     list_display = (
         'id', 'username', 'email', 'plan', 'plan_expires_at',
         'birth_date', 'is_minor_display',
-        'song_count', 'is_banned', 'is_staff', 'is_active', 'date_joined',
+        'song_count', 'is_banned', 'is_teacher', 'is_staff', 'is_active', 'date_joined',
     )
     list_display_links = ('id', 'username')
-    list_filter = ('is_banned', 'is_staff', 'is_active', 'plan')
+    list_filter = ('is_banned', 'is_teacher', 'is_staff', 'is_active', 'plan')
     ordering = ('-date_joined',)
     date_hierarchy = 'date_joined'
     list_per_page = 30

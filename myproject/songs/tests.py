@@ -2,7 +2,7 @@ from django.test import TestCase, Client
 from django.contrib.auth import get_user_model
 from django.urls import reverse
 from django.db import IntegrityError
-from .models import Song, Lyrics, Tag, Like, Favorite, Classroom, ClassroomMembership, FlashcardDeck, Flashcard, TheaterReservation
+from .models import Song, Lyrics, Tag, Like, Favorite, Classroom, ClassroomMembership, ClassroomAssignment, FlashcardDeck, Flashcard, TheaterReservation
 from .content_filter import check_text_for_inappropriate_content
 
 User = get_user_model()
@@ -327,6 +327,14 @@ class ClassroomTest(TestCase):
         self.client = Client()
         self.teacher = User.objects.create_user(username='teacher', password='testpass123')
         self.student = User.objects.create_user(username='student', password='testpass123')
+        self.teacher.plan = 'school'
+        self.teacher.save(update_fields=['plan'])
+        self.student.plan = 'school'
+        self.student.save(update_fields=['plan'])
+        self.teacher.plan = 'school'
+        self.teacher.save(update_fields=['plan'])
+        self.student.plan = 'school'
+        self.student.save(update_fields=['plan'])
         # スクールプラン設定（クラス機能はスクールプラン限定）
         self.teacher.plan = 'school'
         self.teacher.save()
@@ -426,6 +434,10 @@ class ClassroomTest(TestCase):
         self.client = Client()
         self.teacher = User.objects.create_user(username='teacher', password='testpass123')
         self.student = User.objects.create_user(username='student', password='testpass123')
+        self.teacher.plan = 'school'
+        self.teacher.save(update_fields=['plan'])
+        self.student.plan = 'school'
+        self.student.save(update_fields=['plan'])
 
     def test_classroom_list_loads(self):
         """ログイン時にクラス一覧が読み込めること"""
@@ -489,6 +501,33 @@ class ClassroomTest(TestCase):
         response = self.client.post(reverse('songs:classroom_delete', args=[classroom.pk]))
         classroom.refresh_from_db()
         self.assertTrue(classroom.is_active)
+
+    def test_teacher_permission_can_open_classroom_create(self):
+        """先生権限ユーザーはクラス作成ページにアクセスできること"""
+        self.teacher.is_teacher = True
+        self.teacher.save(update_fields=['is_teacher'])
+        self.client.login(username='teacher', password='testpass123')
+        response = self.client.get(reverse('songs:classroom_create'))
+        self.assertEqual(response.status_code, 200)
+
+    def test_classroom_assignment_model_creation(self):
+        """クラス課題モデルが作成できること"""
+        classroom = Classroom.objects.create(
+            name='テストクラス', code='ASG001', host=self.teacher
+        )
+        song = Song.objects.create(
+            title='課題曲',
+            created_by=self.teacher,
+            generation_status='completed',
+        )
+        assignment = ClassroomAssignment.objects.create(
+            classroom=classroom,
+            song=song,
+            assigned_by=self.teacher,
+            note='1番を覚える',
+        )
+        self.assertEqual(assignment.classroom, classroom)
+        self.assertEqual(assignment.song, song)
 
 
 class FlashcardTest(TestCase):

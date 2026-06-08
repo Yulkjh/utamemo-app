@@ -2,14 +2,20 @@ from django.shortcuts import render, get_object_or_404, redirect
 from django.contrib.auth.decorators import login_required
 from django.contrib import messages
 from django.views.decorators.http import require_POST
-from django.http import JsonResponse
+from datetime import datetime
 
-from ..models import Song, Classroom, ClassroomMembership, ClassroomSong
+from ..models import Song, Classroom, ClassroomMembership, ClassroomSong, ClassroomAssignment
+from ..content_filter import check_name_for_inappropriate_content
 import random
 import string
-import logging
 
-logger = logging.getLogger(__name__)
+
+def _is_teacher_user(user):
+    return getattr(user, 'is_teacher', False) or user.is_staff
+
+
+def _can_use_classroom(user):
+    return user.is_school or _is_teacher_user(user)
 
 def generate_classroom_code():
     """ユニークなクラスコードを生成"""
@@ -26,14 +32,14 @@ def classroom_list(request):
     is_english = app_language == 'en'
     is_chinese = app_language == 'zh'
     
-    # スクールプラン限定
-    if not request.user.is_school:
+    # スクールプラン or 先生権限限定
+    if not _can_use_classroom(request.user):
         if is_english:
-            messages.warning(request, 'Classroom feature is available for School Plan subscribers only.')
+            messages.warning(request, 'Classroom feature is available for School Plan users or teacher accounts only.')
         elif is_chinese:
-            messages.warning(request, '教室功能仅限学校计划订阅者使用。')
+            messages.warning(request, '教室功能仅限学校计划用户或教师账号使用。')
         else:
-            messages.warning(request, 'クラス機能はスクールプラン限定です。')
+            messages.warning(request, 'クラス機能はスクールプランまたは先生権限ユーザー限定です。')
         return redirect('users:upgrade')
     
     # ホストしているクラス
@@ -56,14 +62,14 @@ def classroom_join(request):
     is_english = app_language == 'en'
     is_chinese = app_language == 'zh'
     
-    # スクールプラン限定
-    if not request.user.is_school:
+    # スクールプラン or 先生権限限定
+    if not _can_use_classroom(request.user):
         if is_english:
-            messages.warning(request, 'Classroom feature is available for School Plan subscribers only.')
+            messages.warning(request, 'Classroom feature is available for School Plan users or teacher accounts only.')
         elif is_chinese:
-            messages.warning(request, '教室功能仅限学校计划订阅者使用。')
+            messages.warning(request, '教室功能仅限学校计划用户或教师账号使用。')
         else:
-            messages.warning(request, 'クラス機能はスクールプラン限定です。')
+            messages.warning(request, 'クラス機能はスクールプランまたは先生権限ユーザー限定です。')
         return redirect('users:upgrade')
     
     if request.method == 'POST':
@@ -116,19 +122,19 @@ def classroom_join(request):
 
 @login_required
 def classroom_create(request):
-    """クラスを作成（スクールプラン契約者のみ）"""
+    """クラスを作成（先生権限ユーザーのみ）"""
     app_language = request.session.get('app_language', 'ja')
     is_english = app_language == 'en'
     is_chinese = app_language == 'zh'
     
-    # スクールプランのチェック
-    if not request.user.is_school:
+    # 先生権限のチェック（運営が付与）
+    if not _is_teacher_user(request.user):
         if is_english:
-            messages.error(request, 'You need a School Plan to create classes.')
+            messages.error(request, 'Teacher permission is required to create classes.')
         elif is_chinese:
-            messages.error(request, '创建班级需要订阅学校套餐。')
+            messages.error(request, '创建班级需要教师权限。')
         else:
-            messages.error(request, 'クラスを作成するにはスクールプランの契約が必要です。')
+            messages.error(request, 'クラス作成には先生権限が必要です。運営に付与をご依頼ください。')
         return redirect('users:upgrade')
     
     if request.method == 'POST':
@@ -187,14 +193,14 @@ def classroom_detail(request, pk):
     is_english = app_language == 'en'
     is_chinese = app_language == 'zh'
     
-    # スクールプラン限定
-    if not request.user.is_school:
+    # スクールプラン or 先生権限限定
+    if not _can_use_classroom(request.user):
         if is_english:
-            messages.warning(request, 'Classroom feature is available for School Plan subscribers only.')
+            messages.warning(request, 'Classroom feature is available for School Plan users or teacher accounts only.')
         elif is_chinese:
-            messages.warning(request, '教室功能仅限学校计划订阅者使用。')
+            messages.warning(request, '教室功能仅限学校计划用户或教师账号使用。')
         else:
-            messages.warning(request, 'クラス機能はスクールプラン限定です。')
+            messages.warning(request, 'クラス機能はスクールプランまたは先生権限ユーザー限定です。')
         return redirect('users:upgrade')
     
     classroom = get_object_or_404(Classroom, pk=pk, is_active=True)
@@ -217,15 +223,139 @@ def classroom_detail(request, pk):
     
     # メンバー一覧
     members = ClassroomMembership.objects.filter(classroom=classroom).select_related('user')
+
+    # 先生向け情報
+    is_teacher_view = _is_teacher_user(request.user)
+    student_members = []
+    if is_teacher_view and is_host:
+        member_qs = members.exclude(user=classroom.host).select_related('user')
+        for membership in member_qs:
+            student_user = membership.user
+            completed_songs = Song.objects.filter(created_by=student_user, generation_status='completed')
+            student_members.append({
+                'membership': membership,
+                'completed_song_count': completed_songs.count(),
+                'public_song_count': completed_songs.filter(is_public=True).count(),
+            })
+
+    assignments = ClassroomAssignment.objects.filter(classroom=classroom).select_related('song', 'assigned_by')
+    teacher_songs = Song.objects.none()
+    if is_host and is_teacher_view:
+        teacher_songs = Song.objects.filter(
+            created_by=request.user,
+            generation_status='completed',
+        ).order_by('-created_at')
     
     return render(request, 'songs/classroom_detail.html', {
         'classroom': classroom,
         'shared_songs': shared_songs,
         'members': members,
+        'student_members': student_members,
+        'assignments': assignments,
+        'teacher_songs': teacher_songs,
+        'is_teacher_view': is_teacher_view,
         'is_host': is_host,
         'is_english': is_english,
         'is_chinese': is_chinese,
     })
+
+
+@login_required
+@require_POST
+def classroom_assign_song(request, pk):
+    """先生がクラスへ課題曲を出題"""
+    app_language = request.session.get('app_language', 'ja')
+    is_english = app_language == 'en'
+    is_chinese = app_language == 'zh'
+
+    classroom = get_object_or_404(Classroom, pk=pk, is_active=True)
+
+    if classroom.host != request.user:
+        if is_english:
+            messages.error(request, 'Only the class host can assign tasks.')
+        elif is_chinese:
+            messages.error(request, '只有班级主持人可以发布课题。')
+        else:
+            messages.error(request, '課題を出題できるのはクラスホストのみです。')
+        return redirect('songs:classroom_detail', pk=pk)
+
+    if not _is_teacher_user(request.user):
+        if is_english:
+            messages.error(request, 'Teacher permission is required.')
+        elif is_chinese:
+            messages.error(request, '需要教师权限。')
+        else:
+            messages.error(request, '先生権限が必要です。')
+        return redirect('songs:classroom_detail', pk=pk)
+
+    song_id = request.POST.get('song_id', '').strip()
+    due_date_raw = request.POST.get('due_date', '').strip()
+    note = request.POST.get('note', '').strip()
+
+    if not song_id:
+        if is_english:
+            messages.error(request, 'Please select a song to assign.')
+        elif is_chinese:
+            messages.error(request, '请选择要布置的歌曲。')
+        else:
+            messages.error(request, '課題にする曲を選んでください。')
+        return redirect('songs:classroom_detail', pk=pk)
+
+    try:
+        song = Song.objects.get(pk=song_id, created_by=request.user, generation_status='completed')
+    except Song.DoesNotExist:
+        if is_english:
+            messages.error(request, 'Selected song is not available.')
+        elif is_chinese:
+            messages.error(request, '所选歌曲不可用。')
+        else:
+            messages.error(request, '選択した曲は利用できません。')
+        return redirect('songs:classroom_detail', pk=pk)
+
+    due_date = None
+    if due_date_raw:
+        try:
+            due_date = datetime.strptime(due_date_raw, '%Y-%m-%d').date()
+        except ValueError:
+            if is_english:
+                messages.error(request, 'Due date format is invalid.')
+            elif is_chinese:
+                messages.error(request, '截止日期格式无效。')
+            else:
+                messages.error(request, '期限日の形式が不正です。')
+            return redirect('songs:classroom_detail', pk=pk)
+
+    assignment, created = ClassroomAssignment.objects.get_or_create(
+        classroom=classroom,
+        song=song,
+        defaults={
+            'assigned_by': request.user,
+            'due_date': due_date,
+            'note': note,
+        },
+    )
+
+    if not created:
+        assignment.assigned_by = request.user
+        assignment.due_date = due_date
+        assignment.note = note
+        assignment.save(update_fields=['assigned_by', 'due_date', 'note'])
+
+    # 課題化した曲はクラス共有一覧にも掲載
+    ClassroomSong.objects.get_or_create(
+        classroom=classroom,
+        song=song,
+        defaults={'shared_by': request.user},
+    )
+
+    if is_english:
+        messages.success(request, 'Task has been assigned to the class.')
+    elif is_chinese:
+        messages.success(request, '课题已发布到班级。')
+    else:
+        messages.success(request, 'クラスに課題を出題しました。')
+
+    return redirect('songs:classroom_detail', pk=pk)
 
 
 @login_required
