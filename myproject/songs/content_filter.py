@@ -323,7 +323,6 @@ class ContentFilter:
         'ヒゲダン', 'Official髭男dism',
         'King Gnu', 'キングヌー',
         'ARASHI',
-        'SMAP', 'スマップ',
         '宇多田ヒカル', 'うただひかる',
         '浜崎あゆみ', 'はまさきあゆみ',
         '安室奈美恵', 'あむろなみえ',

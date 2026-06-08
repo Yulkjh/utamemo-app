@@ -222,6 +222,11 @@ class ContentFilterTest(TestCase):
         result = check_text_for_inappropriate_content('戦国時代の戦いについて学ぶ')
         self.assertFalse(result['is_inappropriate'])
 
+    def test_university_content_with_smap_passes(self):
+        """大学文脈でのSMAP表記が誤検知されないこと"""
+        result = check_text_for_inappropriate_content('大学の授業でSMAPモデルについて学習する')
+        self.assertFalse(result['is_inappropriate'])
+
 
 class SetLanguageTest(TestCase):
     """言語切り替えのテスト"""
