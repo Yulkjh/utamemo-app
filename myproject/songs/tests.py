@@ -261,6 +261,20 @@ class SetLanguageTest(TestCase):
         self.assertEqual(response.status_code, 302)
         session = self.client.session
         self.assertEqual(session.get('app_language'), 'es')
+
+    def test_set_language_de(self):
+        """ドイツ語に設定できること"""
+        response = self.client.get(reverse('songs:set_language', args=['de']))
+        self.assertEqual(response.status_code, 302)
+        session = self.client.session
+        self.assertEqual(session.get('app_language'), 'de')
+
+    def test_set_language_pt(self):
+        """ポルトガル語に設定できること"""
+        response = self.client.get(reverse('songs:set_language', args=['pt']))
+        self.assertEqual(response.status_code, 302)
+        session = self.client.session
+        self.assertEqual(session.get('app_language'), 'pt')
     
     def test_set_invalid_language(self):
         """無効な言語コードが設定されないこと"""

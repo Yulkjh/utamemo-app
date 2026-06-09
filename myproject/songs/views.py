@@ -983,12 +983,34 @@ def retry_song_generation(request, pk):
 
 def set_language(request, lang):
     """アプリの言語を切り替える"""
-    if lang in ['ja', 'en', 'zh']:
+    supported_languages = {'ja', 'en', 'zh', 'es', 'de', 'pt'}
+    if lang in supported_languages:
         request.session['app_language'] = lang
-    
-    # リファラーがあればそこに戻る、なければホームに
+        request.session.modified = True
+
+        try:
+            request.session.save()
+        except Exception as e:
+            logger.error(f"Session save error: {e}")
+
+    # リファラーがあればそこに戻る（キャッシュ防止パラメータを追加）、なければホームに
     referer = request.META.get('HTTP_REFERER')
     if referer:
-        return redirect(referer)
-    return redirect('songs:home')
+        from urllib.parse import urlparse, parse_qs, urlencode, urlunparse
+        import time
+        parsed = urlparse(referer)
+        query_params = parse_qs(parsed.query)
+        query_params['_t'] = [str(int(time.time() * 1000))]
+        query_params['_lang'] = [lang]
+        new_query = urlencode(query_params, doseq=True)
+        new_url = urlunparse((parsed.scheme, parsed.netloc, parsed.path, parsed.params, new_query, parsed.fragment))
+        response = redirect(new_url)
+    else:
+        response = redirect('songs:home')
+
+    response['Cache-Control'] = 'no-cache, no-store, must-revalidate, private'
+    response['Pragma'] = 'no-cache'
+    response['Expires'] = '0'
+    response['Vary'] = 'Cookie'
+    return response
 

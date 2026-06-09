@@ -14,19 +14,25 @@
                 <div class="hm-title-group">
                     <div class="hm-eyebrow">
                         <span class="hm-eyebrow-line"></span>
-                        <span><span class="sc-el sc-text">{% if is_english %}AI × Music × Memory{% elif is_chinese %}AI × 音乐 × 记忆{% else %}AI × 音楽 × 暗記{% endif %}</span></span>
+                        <span><span class="sc-el sc-text">{% if is_english %}AI × Music × Memory{% elif is_spanish %}IA × Música × Memoria{% elif is_german %}KI × Musik × Gedächtnis{% elif is_portuguese %}IA × Música × Memória{% elif is_chinese %}AI × 音乐 × 记忆{% else %}AI × 音楽 × 暗記{% endif %}</span></span>
                         <span class="hm-eyebrow-line"></span>
                     </div>
                     <h1 class="hero-title" id="heroTitle">
     <span class="hl" data-i="0">U</span><span class="hl" data-i="1">T</span><span class="hl" data-i="2">A</span><span class="hl" data-i="3">M</span><span class="hl" data-i="4">E</span><span class="hl" data-i="5">M</span><span class="hl" data-i="6">O</span>
 </h1>
-                    <p class="hero-subtitle"><span class="sc-el sc-text">{% if is_english %}Learning, transformed into music.{% elif is_chinese %}学习，化为旋律。{% else %}暗記に革命を。{% endif %}</span></p>
+                    <p class="hero-subtitle"><span class="sc-el sc-text">{% if is_english %}Learning, transformed into music.{% elif is_spanish %}Aprender, transformado en música.{% elif is_german %}Lernen, in Musik verwandelt.{% elif is_portuguese %}Aprender, transformado em música.{% elif is_chinese %}学习，化为旋律。{% else %}暗記に革命を。{% endif %}</span></p>
                 </div>
 
                 <div class="hm-desc-group">
                     <p class="hm-description" id="hmDesc">
                         {% if is_english %}
                         <span class="sc-desc">Upload your study material — AI analyzes it and generates a custom song. What you need to remember becomes music that stays with you.</span>
+                        {% elif is_spanish %}
+                        <span class="sc-desc">Sube una imagen de tu material y la IA analizará los puntos clave para generar una canción.<br>Convierte lo que necesitas memorizar en un aprendizaje que se queda contigo.</span>
+                        {% elif is_german %}
+                        <span class="sc-desc">Lade ein Bild deines Lernmaterials hoch, und die KI analysiert die Kernpunkte und erstellt einen Song.<br>Was du dir merken musst, wird zu Lernen, das im Ohr bleibt.</span>
+                        {% elif is_portuguese %}
+                        <span class="sc-desc">Envie uma imagem do seu material, e a IA analisará os pontos principais para gerar uma música.<br>Transforme o que você precisa memorizar em um aprendizado que fica na mente.</span>
                         {% elif is_chinese %}
                         <span class="sc-desc">上传学习资料，AI分析内容并生成专属歌曲。需要记忆的内容，化为绕梁的旋律。</span>
                         {% else %}
@@ -38,14 +44,14 @@
                 <div class="hero-cta">
                     {% if user.is_authenticated %}
                             <a href="{% url 'songs:upload_image' %}?new=true" class="btn-hero-primary">
-                                <span class="btn-label">{% if is_english %}Create a Song{% elif is_chinese %}创作歌曲{% else %}楽曲を作成する{% endif %}</span>
+                                <span class="btn-label">{% if is_english %}Create a Song{% elif is_spanish %}Crear una Canción{% elif is_german %}Song Erstellen{% elif is_portuguese %}Criar uma Música{% elif is_chinese %}创作歌曲{% else %}楽曲を作成する{% endif %}</span>
                             </a>
                             <a href="{% url 'songs:my_songs' %}" class="btn-hero-secondary">
-                                <span class="btn-label">{% if is_english %}My Songs{% elif is_chinese %}我的歌曲{% else %}MY楽曲{% endif %}</span>
+                                <span class="btn-label">{% if is_english %}My Songs{% elif is_spanish %}Mis Canciones{% elif is_german %}Meine Songs{% elif is_portuguese %}Minhas Músicas{% elif is_chinese %}我的歌曲{% else %}MY楽曲{% endif %}</span>
                             </a>
                     {% else %}
                             <a href="{% url 'users:register' %}" class="btn-hero-primary">
-                                <span class="btn-label">{% if is_english %}Get Started{% elif is_chinese %}开始使用{% else %}始める{% endif %}</span>
+                                <span class="btn-label">{% if is_english %}Get Started{% elif is_spanish %}Comenzar{% elif is_german %}Loslegen{% elif is_portuguese %}Começar{% elif is_chinese %}开始使用{% else %}始める{% endif %}</span>
                             </a>
                     {% endif %}
                 </div>
