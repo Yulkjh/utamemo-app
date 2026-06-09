@@ -481,8 +481,7 @@
         }
 
         .language-dropdown-btn,
-        .user-dropdown-btn,
-        .usage-counter {
+        .user-dropdown-btn {
             display: flex;
             align-items: center;
             gap: 0.45rem;
@@ -495,6 +494,26 @@
             text-decoration: none;
             font-size: 0.85rem;
             transition: border-color 0.2s ease, box-shadow 0.2s ease, background 0.2s ease;
+            cursor: pointer;
+        }
+
+        .usage-counter {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.4rem;
+            height: 40px;
+            padding: 0.44rem 0.9rem;
+            background: linear-gradient(180deg, #fff 0%, #fff8f3 100%);
+            border: 1px solid rgba(255, 121, 64, 0.22);
+            border-radius: var(--radius-pill);
+            color: var(--text-primary);
+            text-decoration: none;
+            font-size: 0.85rem;
+            width: auto;
+            max-width: 100%;
+            white-space: nowrap;
+            box-shadow: 0 2px 8px rgba(255, 121, 64, 0.08);
+            transition: border-color 0.2s ease, box-shadow 0.2s ease, transform 0.2s ease;
             cursor: pointer;
         }
 
@@ -515,6 +534,7 @@
         .usage-counter .usage-count {
             font-weight: 700;
             color: var(--primary-dark);
+            letter-spacing: 0.01em;
         }
 
         .usage-counter.usage-low .usage-count {
@@ -528,6 +548,10 @@
         .usage-counter .upgrade-hint {
             color: var(--primary-color);
             font-size: 0.72rem;
+        }
+
+        .usage-counter:hover {
+            transform: translateY(-1px);
         }
 
         .dropdown-arrow {
@@ -804,6 +828,12 @@
                 margin-left: auto;
             }
 
+            .user-dropdown-menu,
+            .language-dropdown-menu {
+                left: 0;
+                right: auto;
+            }
+
             .mobile-language-switcher .language-dropdown-btn {
                 border-radius: var(--radius-pill);
                 padding: 0.38rem 0.68rem;
@@ -872,9 +902,9 @@
             }
 
             .usage-counter {
-                width: 100%;
-                justify-content: center;
-                margin-bottom: 0.5rem;
+                width: auto;
+                justify-content: flex-start;
+                margin-bottom: 0.35rem;
             }
 
             .user-dropdown-menu,
