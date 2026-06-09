@@ -12,12 +12,6 @@
             <h1 class="my-songs-title">{% if is_english %}My Songs{% elif is_spanish %}Mis Canciones{% elif is_german %}Meine Songs{% elif is_portuguese %}Minhas Músicas{% elif is_chinese %}我的歌曲{% else %}MY楽曲{% endif %}</h1>
         </div>
         <div class="my-songs-header-actions">
-            {% if songs %}
-            <span class="song-count-chip">
-                <i class="bi bi-music-note-list"></i>
-                {{ songs|length }} {% if is_english %}songs{% elif is_chinese %}首{% elif is_spanish %}canciones{% elif is_german %}Songs{% elif is_portuguese %}músicas{% else %}件{% endif %}
-            </span>
-            {% endif %}
             <a href="{% url 'songs:upload_image' %}?new=true" class="btn-create-song">
                 <i class="bi bi-plus-lg"></i>
                 {% if is_english %}New{% elif is_chinese %}新建{% elif is_spanish %}Crear{% elif is_german %}Neu{% elif is_portuguese %}Criar{% else %}新規作成{% endif %}
