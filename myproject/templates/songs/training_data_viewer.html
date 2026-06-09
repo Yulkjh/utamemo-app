@@ -288,6 +288,49 @@
 .navbar-modern, .footer-modern { display: none !important; }
 main { padding-top: 0 !important; }
 
+/* ── Page Dark Theme ── */
+body.training-data-dark {
+    --surface: #131a24;
+    --bg: #0f1620;
+    --fg: #e5edf7;
+    --muted: #9fb0c3;
+    --border: #2a3442;
+    --accent: #38bdf8;
+    background: #0b1119;
+    color: var(--fg);
+}
+
+body.training-data-dark .td-container {
+    color: var(--fg);
+}
+
+body.training-data-dark .td-header {
+    border-bottom-color: var(--border);
+}
+
+body.training-data-dark .td-btn:hover {
+    border-color: #4a5b72;
+    color: #f4f9ff;
+}
+
+body.training-data-dark .td-input:focus,
+body.training-data-dark .td-select:focus,
+body.training-data-dark .td-textarea:focus {
+    box-shadow: 0 0 0 2px rgba(56, 189, 248, 0.14);
+}
+
+body.training-data-dark .td-card:hover {
+    border-color: #40516a;
+}
+
+body.training-data-dark .td-modal-overlay {
+    background: rgba(2, 6, 23, 0.72);
+}
+
+body.training-data-dark .td-toast {
+    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.45);
+}
+
 /* ── Base ── */
 .td-container {
     max-width: 1400px;
@@ -814,6 +857,8 @@ main { padding-top: 0 !important; }
 </style>
 
 <script>
+document.body.classList.add('training-data-dark');
+
 const CSRF_TOKEN = '{{ csrf_token }}';
 const API_URL = '{% url "songs:training_data_api" %}';
 const GENERATE_URL = '{% url "songs:training_data_generate" %}';
