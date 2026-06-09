@@ -233,6 +233,7 @@
 }
 .hero-cta.visible .btn-hero-primary {
     --btn-text: #fff;
+    animation: heroBtnIn 1.1s cubic-bezier(0.22, 0.9, 0.3, 1) forwards;
 }
 .hero-cta.visible .btn-hero-secondary {
     --btn-text: var(--text-primary);
@@ -279,6 +280,18 @@
     transition: opacity 0.35s ease;
 }
 
+.btn-hero-primary::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    border-radius: inherit;
+    background: linear-gradient(112deg, transparent 20%, rgba(255, 255, 255, 0.38) 48%, transparent 76%);
+    transform: translateX(-130%);
+    opacity: 0;
+    z-index: 1;
+    pointer-events: none;
+}
+
 .btn-label {
     position: relative;
     z-index: 3;
@@ -315,6 +328,20 @@
     }
 }
 
+@keyframes heroBtnSheen {
+    0% {
+        transform: translateX(-130%);
+        opacity: 0;
+    }
+    35% {
+        opacity: 0.62;
+    }
+    100% {
+        transform: translateX(125%);
+        opacity: 0;
+    }
+}
+
 .btn-hero-primary:hover {
     transform: translateY(-2px);
     box-shadow: 0 8px 28px rgba(255, 121, 64, 0.28);
@@ -322,6 +349,10 @@
 
 .btn-hero-primary:hover::before {
     opacity: 0.9;
+}
+
+.btn-hero-primary:hover::after {
+    animation: heroBtnSheen 0.95s ease-out;
 }
 
 .btn-hero-primary:active {
@@ -380,6 +411,13 @@
 
 .btn-hero-secondary:hover::before {
     background: rgba(255, 121, 64, 0.9);
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .btn-hero-primary::after,
+    .hero-cta.visible .btn-hero-primary {
+        animation: none !important;
+    }
 }
 
 .hm-plan-badge {
