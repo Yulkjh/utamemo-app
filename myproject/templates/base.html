@@ -1,9 +1,9 @@
 <!DOCTYPE html>
-<html lang="{% if is_english %}en{% elif is_chinese %}zh{% elif is_spanish %}es{% elif is_german %}de{% elif is_portuguese %}pt{% else %}ja{% endif %}">
+<html lang="{% if is_english %}en{% elif is_chinese %}zh{% elif is_spanish %}es{% elif is_german %}de{% elif is_portuguese %}pt{% elif is_dutch %}nl{% else %}ja{% endif %}">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>{% block title %}UTAMEMO - {% if is_english %}Revolutionize Your Learning{% elif is_spanish %}Revoluciona tu aprendizaje{% elif is_german %}Revolutioniere dein Lernen{% elif is_portuguese %}Revolucione seu Aprendizado{% elif is_chinese %}革命性学习{% else %}暗記に革命を{% endif %}{% endblock %}</title>
+    <title>{% block title %}UTAMEMO - {% if is_english %}Revolutionize Your Learning{% elif is_spanish %}Revoluciona tu aprendizaje{% elif is_german %}Revolutioniere dein Lernen{% elif is_portuguese %}Revolucione seu Aprendizado{% elif is_dutch %}Vernieuw je leren{% elif is_chinese %}革命性学习{% else %}暗記に革命を{% endif %}{% endblock %}</title>
     
     <!-- SEO Meta Tags -->
     <meta name="description" content="{% block meta_description %}{% if is_english %}UTAMEMO - Create original songs from your study notes with AI. Memorize through music!{% else %}UTAMEMO（うためも・ウタメモ）- AIで勉強ノートからオリジナル楽曲を作成。歌で暗記する新しい学習法！{% endif %}{% endblock %}">
@@ -991,6 +991,7 @@
             {% elif is_spanish %}VERSIÓN DEMO - Algunas funciones pueden estar limitadas o en desarrollo
             {% elif is_german %}DEMO-VERSION - Einige Funktionen können eingeschränkt sein oder sich in Entwicklung befinden
             {% elif is_portuguese %}VERSÃO DEMO - Alguns recursos podem estar limitados ou em desenvolvimento
+            {% elif is_dutch %}DEMO-VERSIE - Sommige functies kunnen beperkt zijn of nog in ontwikkeling
             {% else %}DEMO版 - 一部機能が制限されている場合があります
             {% endif %}
             </span>
@@ -1011,6 +1012,7 @@
                         {% elif is_spanish %}Acerca de la versión DEMO
                         {% elif is_german %}Über die DEMO-Version
                         {% elif is_portuguese %}Sobre a versão DEMO
+                        {% elif is_dutch %}Over de DEMO-versie
                         {% else %}DEMO版について
                         {% endif %}
                     </h5>
@@ -1057,6 +1059,14 @@
                         <li>Alguns recursos premium podem ser limitados</li>
                     </ul>
                     <p style="margin-bottom: 0;">Agradecemos sua compreensão. Todos os recursos gratuitos permanecem totalmente disponíveis.</p>
+                    {% elif is_dutch %}
+                    <p>Om operationele redenen zijn abonnementen momenteel beperkt.</p>
+                    <p>Daardoor kunnen de volgende beperkingen gelden:</p>
+                    <ul>
+                        <li>Upgrades naar Starter / Pro zijn niet beschikbaar</li>
+                        <li>Sommige premiumfuncties kunnen beperkt zijn</li>
+                    </ul>
+                    <p style="margin-bottom: 0;">Bedankt voor je begrip. Alle gratis functies blijven volledig beschikbaar.</p>
                     {% else %}
                     <p>諸事情により、現在サブスクリプション課金プランの仕様が制限されております。</p>
                     <p>そのため、以下の制限がある場合があります：</p>
@@ -1086,7 +1096,7 @@
             <div class="d-flex align-items-center d-lg-none mobile-right-controls">
                 <div class="language-switcher mobile-language-switcher">
                     <div class="language-dropdown-btn">
-                        <span class="lang-name">{% if is_english %}Language{% elif is_chinese %}语言{% elif is_spanish %}Idioma{% elif is_german %}Sprache{% elif is_portuguese %}Idioma{% else %}言語{% endif %}</span>
+                        <span class="lang-name">{% if is_english %}Language{% elif is_chinese %}语言{% elif is_spanish %}Idioma{% elif is_german %}Sprache{% elif is_portuguese %}Idioma{% elif is_dutch %}Taal{% else %}言語{% endif %}</span>
                         <span class="dropdown-arrow">▼</span>
                     </div>
                     <div class="language-dropdown-menu">
@@ -1106,12 +1116,12 @@
                 <ul class="navbar-nav me-auto mobile-nav-left">
                     {% if user.is_authenticated %}
                     <li class="nav-item">
-                        <a class="nav-link-modern" href="{% url 'songs:upload_image' %}?new=true">{% if is_english %}Create{% elif is_chinese %}创作{% elif is_spanish %}Crear{% elif is_german %}Erstellen{% elif is_portuguese %}Criar{% else %}楽曲作成{% endif %}</a>
+                        <a class="nav-link-modern" href="{% url 'songs:upload_image' %}?new=true">{% if is_english %}Create{% elif is_chinese %}创作{% elif is_spanish %}Crear{% elif is_german %}Erstellen{% elif is_portuguese %}Criar{% elif is_dutch %}Maken{% else %}楽曲作成{% endif %}</a>
                     </li>
                     {% endif %}
                     {% if user.is_authenticated and user.is_school %}
                     <li class="nav-item">
-                        <a class="nav-link-modern" href="{% url 'songs:classroom_list' %}">{% if is_english %}Class{% elif is_chinese %}班级{% elif is_spanish %}Clase{% elif is_german %}Klasse{% elif is_portuguese %}Turma{% else %}クラス{% endif %}</a>
+                        <a class="nav-link-modern" href="{% url 'songs:classroom_list' %}">{% if is_english %}Class{% elif is_chinese %}班级{% elif is_spanish %}Clase{% elif is_german %}Klasse{% elif is_portuguese %}Turma{% elif is_dutch %}Klas{% else %}クラス{% endif %}</a>
                     </li>
                     {% endif %}
                 </ul>
@@ -1122,7 +1132,7 @@
                     <li class="nav-item me-2 d-none d-md-block">
                         <a href="{% url 'users:upgrade' %}" class="usage-counter {% if user_total_remaining == -1 %}usage-unlimited{% elif user_total_remaining <= 3 %}usage-low{% endif %}">
                             <span class="usage-text">
-                                {% if is_english %}Remaining{% elif is_chinese %}剩余{% elif is_spanish %}Restante{% elif is_german %}Verbleibend{% elif is_portuguese %}Restante{% else %}残り{% endif %}:
+                                {% if is_english %}Remaining{% elif is_chinese %}剩余{% elif is_spanish %}Restante{% elif is_german %}Verbleibend{% elif is_portuguese %}Restante{% elif is_dutch %}Resterend{% else %}残り{% endif %}:
                             </span>
                             <span class="usage-count">
                                 {% if user_total_remaining == -1 %}
@@ -1159,19 +1169,19 @@
                             <div class="user-dropdown-menu">
                                 <a href="{% url 'users:profile' user.username %}" class="user-option">
                                     <i class="bi bi-person"></i>
-                                    <span>{% if is_english %}Profile{% elif is_chinese %}个人资料{% elif is_spanish %}Perfil{% elif is_german %}Profil{% elif is_portuguese %}Perfil{% else %}プロフィール{% endif %}</span>
+                                    <span>{% if is_english %}Profile{% elif is_chinese %}个人资料{% elif is_spanish %}Perfil{% elif is_german %}Profil{% elif is_portuguese %}Perfil{% elif is_dutch %}Profiel{% else %}プロフィール{% endif %}</span>
                                 </a>
                                 <a href="{% url 'songs:my_songs' %}" class="user-option">
                                     <i class="bi bi-music-note-list"></i>
-                                    <span>{% if is_english %}My Songs{% elif is_chinese %}我的歌曲{% elif is_spanish %}Mis Canciones{% elif is_german %}Meine Lieder{% elif is_portuguese %}Minhas Músicas{% else %}MY楽曲{% endif %}</span>
+                                    <span>{% if is_english %}My Songs{% elif is_chinese %}我的歌曲{% elif is_spanish %}Mis Canciones{% elif is_german %}Meine Lieder{% elif is_portuguese %}Minhas Músicas{% elif is_dutch %}Mijn Liedjes{% else %}MY楽曲{% endif %}</span>
                                 </a>
                                 <a href="{% url 'users:favorites' %}" class="user-option">
                                     <i class="bi bi-bookmark"></i>
-                                    <span>{% if is_english %}Favorites{% elif is_chinese %}收藏{% elif is_spanish %}Favoritos{% elif is_german %}Favoriten{% elif is_portuguese %}Favoritos{% else %}お気に入り{% endif %}</span>
+                                    <span>{% if is_english %}Favorites{% elif is_chinese %}收藏{% elif is_spanish %}Favoritos{% elif is_german %}Favoriten{% elif is_portuguese %}Favoritos{% elif is_dutch %}Favorieten{% else %}お気に入り{% endif %}</span>
                                 </a>
                                 <a href="{% url 'users:upgrade' %}" class="user-option">
                                     <i class="bi bi-gem"></i>
-                                    <span>{% if is_english %}Plans{% elif is_chinese %}套餐{% elif is_spanish %}Planes{% elif is_german %}Pläne{% elif is_portuguese %}Planos{% else %}料金プラン{% endif %}</span>
+                                    <span>{% if is_english %}Plans{% elif is_chinese %}套餐{% elif is_spanish %}Planes{% elif is_german %}Pläne{% elif is_portuguese %}Planos{% elif is_dutch %}Abonnementen{% else %}料金プラン{% endif %}</span>
                                 </a>
                                 {% if user.is_staff %}
                                 <div class="user-divider"></div>
@@ -1185,7 +1195,7 @@
                                     {% csrf_token %}
                                     <button type="submit" class="user-option logout-btn">
                                         <i class="bi bi-box-arrow-right"></i>
-                                        <span>{% if is_english %}Logout{% elif is_chinese %}退出登录{% elif is_spanish %}Cerrar sesión{% elif is_german %}Abmelden{% elif is_portuguese %}Sair{% else %}ログアウト{% endif %}</span>
+                                        <span>{% if is_english %}Logout{% elif is_chinese %}退出登录{% elif is_spanish %}Cerrar sesión{% elif is_german %}Abmelden{% elif is_portuguese %}Sair{% elif is_dutch %}Uitloggen{% else %}ログアウト{% endif %}</span>
                                     </button>
                                 </form>
                             </div>
@@ -1193,10 +1203,10 @@
                     </li>
                     {% else %}
                     <li class="nav-item me-2">
-                        <a class="btn-nav-login" href="{% url 'users:login' %}">{% if is_english %}Login{% elif is_chinese %}登录{% elif is_spanish %}Iniciar sesión{% elif is_german %}Anmelden{% elif is_portuguese %}Entrar{% else %}ログイン{% endif %}</a>
+                        <a class="btn-nav-login" href="{% url 'users:login' %}">{% if is_english %}Login{% elif is_chinese %}登录{% elif is_spanish %}Iniciar sesión{% elif is_german %}Anmelden{% elif is_portuguese %}Entrar{% elif is_dutch %}Inloggen{% else %}ログイン{% endif %}</a>
                     </li>
                     <li class="nav-item me-3">
-                        <a class="btn-nav-register" href="{% url 'users:register' %}">{% if is_english %}Sign Up{% elif is_chinese %}注册{% elif is_spanish %}Registrarse{% elif is_german %}Registrieren{% elif is_portuguese %}Cadastrar{% else %}新規登録{% endif %}</a>
+                        <a class="btn-nav-register" href="{% url 'users:register' %}">{% if is_english %}Sign Up{% elif is_chinese %}注册{% elif is_spanish %}Registrarse{% elif is_german %}Registrieren{% elif is_portuguese %}Cadastrar{% elif is_dutch %}Registreren{% else %}新規登録{% endif %}</a>
                     </li>
                     {% endif %}
                     
@@ -1204,7 +1214,7 @@
                     <li class="nav-item d-none d-lg-flex" style="display: flex; align-items: center;">
                         <div class="language-switcher desktop-language-switcher">
                             <div class="language-dropdown-btn">
-                                <span class="lang-name">{% if is_english %}Language{% elif is_chinese %}语言{% elif is_spanish %}Idioma{% elif is_german %}Sprache{% elif is_portuguese %}Idioma{% else %}言語{% endif %}</span>
+                                <span class="lang-name">{% if is_english %}Language{% elif is_chinese %}语言{% elif is_spanish %}Idioma{% elif is_german %}Sprache{% elif is_portuguese %}Idioma{% elif is_dutch %}Taal{% else %}言語{% endif %}</span>
                                 <span class="dropdown-arrow">▼</span>
                             </div>
                             <div class="language-dropdown-menu">
@@ -1245,29 +1255,29 @@
             <div class="row">
                 <div class="col-md-6">
                     <h5 class="text-gradient">UTAMEMO</h5>
-                    <p class="footer-description">{% if is_english %}Revolutionize your learning.<br>An innovative platform that transforms studying into music with AI technology.{% elif is_chinese %}学习革命。<br>用AI技术将学习转化为音乐的创新平台。{% elif is_spanish %}Revoluciona tu aprendizaje.<br>Una plataforma innovadora que transforma el estudio en música con tecnología de IA.{% elif is_german %}Revolutioniere dein Lernen.<br>Eine innovative Plattform, die das Lernen mit KI-Technologie in Musik verwandelt.{% elif is_portuguese %}Revolucione seu aprendizado.<br>Uma plataforma inovadora que transforma o estudo em música com tecnologia de IA.{% else %}暗記に革命を。<br>AI技術で学習を音楽に変える革新的なプラットフォーム。{% endif %}</p>
+                    <p class="footer-description">{% if is_english %}Revolutionize your learning.<br>An innovative platform that transforms studying into music with AI technology.{% elif is_chinese %}学习革命。<br>用AI技术将学习转化为音乐的创新平台。{% elif is_spanish %}Revoluciona tu aprendizaje.<br>Una plataforma innovadora que transforma el estudio en música con tecnología de IA.{% elif is_german %}Revolutioniere dein Lernen.<br>Eine innovative Plattform, die das Lernen mit KI-Technologie in Musik verwandelt.{% elif is_portuguese %}Revolucione seu aprendizado.<br>Uma plataforma inovadora que transforma o estudo em música com tecnologia de IA.{% elif is_dutch %}Vernieuw je leren.<br>Een innovatief platform dat studeren met AI-technologie in muziek verandert.{% else %}暗記に革命を。<br>AI技術で学習を音楽に変える革新的なプラットフォーム。{% endif %}</p>
                 </div>
                 <div class="col-md-3">
-                    <h6>{% if is_english %}Services{% elif is_chinese %}服务{% elif is_spanish %}Servicios{% elif is_german %}Dienste{% elif is_portuguese %}Serviços{% else %}サービス{% endif %}</h6>
+                    <h6>{% if is_english %}Services{% elif is_chinese %}服务{% elif is_spanish %}Servicios{% elif is_german %}Dienste{% elif is_portuguese %}Serviços{% elif is_dutch %}Diensten{% else %}サービス{% endif %}</h6>
                     <ul class="list-unstyled">
-                        <li><a href="{% url 'songs:upload_image' %}?new=true" class="footer-link">{% if is_english %}Create Song{% elif is_chinese %}创作歌曲{% elif is_spanish %}Crear Canción{% elif is_german %}Lied erstellen{% elif is_portuguese %}Criar Música{% else %}楽曲作成{% endif %}</a></li>
-                        <li><a href="{% url 'terms' %}" class="footer-link">{% if is_english %}Terms of Service{% elif is_chinese %}服务条款{% elif is_spanish %}Términos de Servicio{% elif is_german %}Nutzungsbedingungen{% elif is_portuguese %}Termos de Serviço{% else %}利用規約{% endif %}</a></li>
-                        <li><a href="{% url 'privacy' %}" class="footer-link">{% if is_english %}Privacy Policy{% elif is_chinese %}隐私政策{% elif is_spanish %}Política de Privacidad{% elif is_german %}Datenschutzrichtlinie{% elif is_portuguese %}Política de Privacidade{% else %}プライバシーポリシー{% endif %}</a></li>
-                        <li><a href="{% url 'tokushoho' %}" class="footer-link">{% if is_english %}Commercial Transactions Act{% elif is_chinese %}特定商业交易法{% elif is_spanish %}Ley de Transacciones{% elif is_german %}Handelsgesetz{% elif is_portuguese %}Lei de Transações{% else %}特定商取引法に基づく表記{% endif %}</a></li>
-                        <li><a href="{% url 'contact' %}" class="footer-link">{% if is_english %}Contact{% elif is_chinese %}联系我们{% elif is_spanish %}Contacto{% elif is_german %}Kontakt{% elif is_portuguese %}Contato{% else %}お問い合わせ{% endif %}</a></li>
+                        <li><a href="{% url 'songs:upload_image' %}?new=true" class="footer-link">{% if is_english %}Create Song{% elif is_chinese %}创作歌曲{% elif is_spanish %}Crear Canción{% elif is_german %}Lied erstellen{% elif is_portuguese %}Criar Música{% elif is_dutch %}Lied maken{% else %}楽曲作成{% endif %}</a></li>
+                        <li><a href="{% url 'terms' %}" class="footer-link">{% if is_english %}Terms of Service{% elif is_chinese %}服务条款{% elif is_spanish %}Términos de Servicio{% elif is_german %}Nutzungsbedingungen{% elif is_portuguese %}Termos de Serviço{% elif is_dutch %}Servicevoorwaarden{% else %}利用規約{% endif %}</a></li>
+                        <li><a href="{% url 'privacy' %}" class="footer-link">{% if is_english %}Privacy Policy{% elif is_chinese %}隐私政策{% elif is_spanish %}Política de Privacidad{% elif is_german %}Datenschutzrichtlinie{% elif is_portuguese %}Política de Privacidade{% elif is_dutch %}Privacybeleid{% else %}プライバシーポリシー{% endif %}</a></li>
+                        <li><a href="{% url 'tokushoho' %}" class="footer-link">{% if is_english %}Commercial Transactions Act{% elif is_chinese %}特定商业交易法{% elif is_spanish %}Ley de Transacciones{% elif is_german %}Handelsgesetz{% elif is_portuguese %}Lei de Transações{% elif is_dutch %}Wet op Handelsverrichtingen{% else %}特定商取引法に基づく表記{% endif %}</a></li>
+                        <li><a href="{% url 'contact' %}" class="footer-link">{% if is_english %}Contact{% elif is_chinese %}联系我们{% elif is_spanish %}Contacto{% elif is_german %}Kontakt{% elif is_portuguese %}Contato{% elif is_dutch %}Contact{% else %}お問い合わせ{% endif %}</a></li>
                     </ul>
                 </div>
                 <div class="col-md-3">
-                    <h6>{% if is_english %}Account{% elif is_chinese %}账户{% elif is_spanish %}Cuenta{% elif is_german %}Konto{% elif is_portuguese %}Conta{% else %}アカウント{% endif %}</h6>
+                    <h6>{% if is_english %}Account{% elif is_chinese %}账户{% elif is_spanish %}Cuenta{% elif is_german %}Konto{% elif is_portuguese %}Conta{% elif is_dutch %}Account{% else %}アカウント{% endif %}</h6>
                     <ul class="list-unstyled">
                         {% if user.is_authenticated %}
-                        <li><a href="{% url 'users:profile' user.username %}" class="footer-link">{% if is_english %}Profile{% elif is_chinese %}个人资料{% elif is_spanish %}Perfil{% elif is_german %}Profil{% elif is_portuguese %}Perfil{% else %}プロフィール{% endif %}</a></li>
-                        <li><a href="{% url 'users:favorites' %}" class="footer-link">{% if is_english %}Favorites{% elif is_chinese %}收藏{% elif is_spanish %}Favoritos{% elif is_german %}Favoriten{% elif is_portuguese %}Favoritos{% else %}お気に入り{% endif %}</a></li>
-                        <li><a href="{% url 'users:upgrade' %}" class="footer-link">{% if is_english %}Plans{% elif is_chinese %}套餐{% elif is_spanish %}Planes{% elif is_german %}Pläne{% elif is_portuguese %}Planos{% else %}料金プラン{% endif %}</a></li>
+                        <li><a href="{% url 'users:profile' user.username %}" class="footer-link">{% if is_english %}Profile{% elif is_chinese %}个人资料{% elif is_spanish %}Perfil{% elif is_german %}Profil{% elif is_portuguese %}Perfil{% elif is_dutch %}Profiel{% else %}プロフィール{% endif %}</a></li>
+                        <li><a href="{% url 'users:favorites' %}" class="footer-link">{% if is_english %}Favorites{% elif is_chinese %}收藏{% elif is_spanish %}Favoritos{% elif is_german %}Favoriten{% elif is_portuguese %}Favoritos{% elif is_dutch %}Favorieten{% else %}お気に入り{% endif %}</a></li>
+                        <li><a href="{% url 'users:upgrade' %}" class="footer-link">{% if is_english %}Plans{% elif is_chinese %}套餐{% elif is_spanish %}Planes{% elif is_german %}Pläne{% elif is_portuguese %}Planos{% elif is_dutch %}Abonnementen{% else %}料金プラン{% endif %}</a></li>
                         {% else %}
-                        <li><a href="{% url 'users:login' %}" class="footer-link">{% if is_english %}Login{% elif is_chinese %}登录{% elif is_spanish %}Iniciar sesión{% elif is_german %}Anmelden{% elif is_portuguese %}Entrar{% else %}ログイン{% endif %}</a></li>
-                        <li><a href="{% url 'users:register' %}" class="footer-link">{% if is_english %}Sign Up{% elif is_chinese %}注册{% elif is_spanish %}Registrarse{% elif is_german %}Registrieren{% elif is_portuguese %}Cadastrar{% else %}新規登録{% endif %}</a></li>
-                        <li><a href="{% url 'users:upgrade' %}" class="footer-link">{% if is_english %}Plans{% elif is_chinese %}套餐{% elif is_spanish %}Planes{% elif is_german %}Pläne{% elif is_portuguese %}Planos{% else %}料金プラン{% endif %}</a></li>
+                        <li><a href="{% url 'users:login' %}" class="footer-link">{% if is_english %}Login{% elif is_chinese %}登录{% elif is_spanish %}Iniciar sesión{% elif is_german %}Anmelden{% elif is_portuguese %}Entrar{% elif is_dutch %}Inloggen{% else %}ログイン{% endif %}</a></li>
+                        <li><a href="{% url 'users:register' %}" class="footer-link">{% if is_english %}Sign Up{% elif is_chinese %}注册{% elif is_spanish %}Registrarse{% elif is_german %}Registrieren{% elif is_portuguese %}Cadastrar{% elif is_dutch %}Registreren{% else %}新規登録{% endif %}</a></li>
+                        <li><a href="{% url 'users:upgrade' %}" class="footer-link">{% if is_english %}Plans{% elif is_chinese %}套餐{% elif is_spanish %}Planes{% elif is_german %}Pläne{% elif is_portuguese %}Planos{% elif is_dutch %}Abonnementen{% else %}料金プラン{% endif %}</a></li>
                         {% endif %}
                     </ul>
                 </div>

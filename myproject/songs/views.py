@@ -983,7 +983,7 @@ def retry_song_generation(request, pk):
 
 def set_language(request, lang):
     """アプリの言語を切り替える"""
-    supported_languages = {'ja', 'en', 'zh', 'es', 'de', 'pt'}
+    supported_languages = {'ja', 'en', 'zh', 'es', 'de', 'pt', 'nl'}
     if lang in supported_languages:
         request.session['app_language'] = lang
         request.session.modified = True
