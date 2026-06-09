@@ -41,7 +41,7 @@
                                 <span class="btn-label">{% if is_english %}Create a Song{% elif is_chinese %}创作歌曲{% else %}楽曲を作成する{% endif %}</span>
                             </a>
                             <a href="{% url 'songs:my_songs' %}" class="btn-hero-secondary">
-                                <span class="btn-label">{% if is_english %}My Songs{% elif is_chinese %}我的歌曲{% else %}マイ楽曲{% endif %}</span>
+                                <span class="btn-label">{% if is_english %}My Songs{% elif is_chinese %}我的歌曲{% else %}MY楽曲{% endif %}</span>
                             </a>
                     {% else %}
                             <a href="{% url 'users:register' %}" class="btn-hero-primary">
@@ -276,6 +276,7 @@
     background: linear-gradient(135deg, #ffa87a 0%, var(--primary-color) 40%, #e85d20 100%);
     z-index: 0;
     pointer-events: none;
+    transition: opacity 0.35s ease;
 }
 
 .btn-label {
@@ -315,8 +316,12 @@
 }
 
 .btn-hero-primary:hover {
-    transform: translateY(-3px) scale(1.02);
-    box-shadow: 0 8px 40px rgba(255, 121, 64, 0.35);
+    transform: translateY(-2px);
+    box-shadow: 0 8px 28px rgba(255, 121, 64, 0.28);
+}
+
+.btn-hero-primary:hover::before {
+    opacity: 0.9;
 }
 
 .btn-hero-primary:active {
@@ -362,14 +367,19 @@
     background: rgba(255, 255, 255, 0.78);
     z-index: 0;
     pointer-events: none;
+    transition: background 0.35s ease;
 }
 
 .btn-hero-secondary:hover {
     border-color: var(--primary-color);
     color: #fff;
-    background: var(--primary-color);
+    background: rgba(255, 121, 64, 0.9);
     transform: translateY(-2px);
-    box-shadow: 0 4px 20px rgba(255, 121, 64, 0.12);
+    box-shadow: 0 8px 28px rgba(255, 121, 64, 0.2);
+}
+
+.btn-hero-secondary:hover::before {
+    background: rgba(255, 121, 64, 0.9);
 }
 
 .hm-plan-badge {
