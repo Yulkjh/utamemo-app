@@ -55,7 +55,7 @@ class MurekaAIGenerator:
             raise Exception("Lyrics too short for song generation (minimum 50 characters)")
 
         # モデルバージョンの検証
-        if model != 'mureka-v8':
+        if model not in ('mureka-v8', 'mureka-v9'):
             logger.warning(f"Invalid model '{model}', defaulting to mureka-v8")
             model = 'mureka-v8'
 
