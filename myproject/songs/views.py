@@ -10,10 +10,13 @@ from django.contrib.admin.views.decorators import staff_member_required
 from django.views.decorators.http import require_POST
 from django.db.models import Q, Count
 import json
+import logging
 
 from .models import Song, Like, Favorite, Comment, UploadedImage, Lyrics, PlayHistory, Tag
 from .forms import SongCreateForm, ImageUploadForm, CommentForm, SongPrivacyForm
-from .ai_services import GeminiLyricsGenerator, GeminiOCR, MurekaAIGenerator
+from .ai_services import GeminiLyricsGenerator, GeminiOCR, LyriaAIGenerator
+
+logger = logging.getLogger(__name__)
 
 
 class HomeView(TemplateView):
@@ -726,13 +729,12 @@ def api_status_view(request):
         'health': 'unknown'
     }
     
-    # Mureka Status
-    mureka_gen = MurekaAIGenerator()
-    mureka_status = {
-        'available': mureka_gen.use_real_api,
-        'api_key_set': bool(mureka_gen.api_key),
-        'api_url': mureka_gen.base_url,
-        'status': 'Active' if mureka_gen.use_real_api else 'Not Configured',
+    # Lyria Status
+    lyria_gen = LyriaAIGenerator()
+    lyria_status = {
+        'available': lyria_gen.use_real_api,
+        'api_key_set': bool(lyria_gen.api_key),
+        'status': 'Active' if lyria_gen.use_real_api else 'Not Configured',
         'health': 'unknown'
     }
     
@@ -774,7 +776,7 @@ def api_status_view(request):
     context = {
         'gemini_ocr_status': gemini_ocr_status,
         'gemini_lyrics_status': gemini_lyrics_status,
-        'mureka_status': mureka_status,
+        'lyria_status': lyria_status,
         'queue_stats': queue_stats,
         'recent_errors': list(recent_errors),
         'stuck_jobs': list(stuck_jobs),

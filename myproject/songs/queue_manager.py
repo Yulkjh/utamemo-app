@@ -216,7 +216,10 @@ class SongGenerationQueue:
     def _generate_song(self, song_id):
         """リトライロジックとエラー追跡付きの曲生成"""
         from datetime import timedelta
-        from .ai_services import MurekaAIGenerator
+        from .ai_services import (
+            get_default_song_generation_model,
+            get_song_generator,
+        )
         
         max_retries = getattr(settings, 'MAX_GENERATION_RETRIES', 3)
         backoff_base = getattr(settings, 'RETRY_BACKOFF_BASE', 5)  # 5秒（30秒→5秒に短縮）
@@ -249,6 +252,12 @@ class SongGenerationQueue:
             genre = song.genre or 'pop'
             vocal_style = song.vocal_style or 'female'
             music_prompt = getattr(song, 'music_prompt', '') or ''
+            song_provider = getattr(song, 'song_provider', 'lyria') or 'lyria'
+            provider_model = (
+                getattr(song, 'provider_model', '')
+                or getattr(song, 'mureka_model', '')
+                or get_default_song_generation_model(song_provider)
+            )
 
             from .ai_services import convert_lyrics_to_hiragana_with_context, detect_lyrics_language
             logger.info(f"Song {song_id}: Original lyrics length: {len(lyrics_content)} chars")
@@ -265,9 +274,9 @@ class SongGenerationQueue:
                 except Exception as e:
                     logger.warning(f"Song {song_id}: Hiragana conversion failed: {e}")
                     hiragana_lyrics = lyrics_content
-                    
+
                 logger.info(f"Song {song_id}: After hiragana conversion: {len(hiragana_lyrics)} chars")
-                
+
                 # 変換後の長さが大幅に増加した場合は警告
                 if len(hiragana_lyrics) > len(lyrics_content) * 1.5:
                     logger.warning(f"Song {song_id}: Lyrics expanded significantly after hiragana conversion")
@@ -281,21 +290,26 @@ class SongGenerationQueue:
                     logger.info(f"Song {song_id}: Starting generation (Attempt {retry_count + 1}/{max_retries})")
                     
                     # 進捗更新を送信 - API呼び出し開始
-                    send_progress_update(song_id, 'generating', 40, f'Mureka APIで生成中... (試行 {retry_count + 1}/{max_retries})')
+                    send_progress_update(
+                        song_id,
+                        'generating',
+                        40,
+                        f'{song_provider.upper()}で生成中... (試行 {retry_count + 1}/{max_retries})'
+                    )
                     
-                    mureka_generator = MurekaAIGenerator()
+                    song_generator = get_song_generator(song_provider)
                     
-                    if not mureka_generator.use_real_api:
-                        error_msg = "Mureka APIが設定されていません"
+                    if not getattr(song_generator, 'use_real_api', False):
+                        error_msg = f"{song_provider.upper()} APIが設定されていません"
                         logger.error(f"Song {song_id}: {error_msg}")
                         raise Exception(error_msg)
                     
-                    song_result = mureka_generator.generate_song(
+                    song_result = song_generator.generate_song(
                         lyrics=hiragana_lyrics,
                         title=title,
                         genre=genre.lower() if genre else 'pop',
                         vocal_style=vocal_style,
-                        model=song.mureka_model or 'mureka-v8',
+                        model=provider_model,
                         music_prompt=music_prompt
                     )
                     
@@ -319,6 +333,10 @@ class SongGenerationQueue:
                         audio_url = song_result.get('audio_url')
                         if audio_url:
                             song.audio_url = audio_url
+                        song.song_provider = song_result.get('api_provider', song_provider)
+                        song.provider_model = song_result.get('provider_model', provider_model)
+                        if song.song_provider == 'mureka':
+                            song.mureka_model = song.provider_model or song.mureka_model
                         
                         song.generation_status = 'completed'
                         song.completed_at = timezone.now()
@@ -335,9 +353,9 @@ class SongGenerationQueue:
                             pass
                         
                         # lyrics_sectionsの情報もログに残す
-                        mureka_sections = song_result.get('lyrics_sections', [])
-                        if mureka_sections:
-                            logger.info(f"Song {song_id}: Mureka lyrics_sections: {mureka_sections}")
+                        provider_sections = song_result.get('lyrics_sections', [])
+                        if provider_sections:
+                            logger.info(f"Song {song_id}: Provider lyrics_sections: {provider_sections}")
                         
                         # アップロード画像を削除（生成完了後）
                         if song.source_image:

@@ -1377,13 +1377,13 @@ def api_status_view(request):
         'status': '有効' if cloud_llm.is_available else '未設定',
     }
     
-    # Murekaステータス
-    mureka_gen = MurekaAIGenerator()
-    mureka_status = {
-        'available': mureka_gen.use_real_api,
-        'api_key_set': bool(mureka_gen.api_key),
-        'api_url': mureka_gen.base_url,
-        'status': '有効' if mureka_gen.use_real_api else '未設定',
+    # Lyriaステータス
+    from ..ai_services import LyriaAIGenerator
+    lyria_gen = LyriaAIGenerator()
+    lyria_status = {
+        'available': lyria_gen.use_real_api,
+        'api_key_set': bool(lyria_gen.api_key),
+        'status': '有効' if lyria_gen.use_real_api else '未設定',
         'health': 'unknown'
     }
     
@@ -1427,7 +1427,7 @@ def api_status_view(request):
         'gemini_lyrics_status': gemini_lyrics_status,
         'local_llm_status': local_llm_status,
         'cloud_llm_status': cloud_llm_status,
-        'mureka_status': mureka_status,
+        'lyria_status': lyria_status,
         'queue_stats': queue_stats,
         'recent_errors': list(recent_errors),
         'stuck_jobs': list(stuck_jobs),

@@ -36,6 +36,11 @@ class Tag(models.Model):
 
 class Song(models.Model):
     """楽曲モデル"""
+    SONG_PROVIDER_CHOICES = [
+        ('mureka', 'Mureka'),
+        ('lyria', 'Lyria'),
+    ]
+
     title = models.CharField(
         max_length=200,
         verbose_name='タイトル'
@@ -78,6 +83,20 @@ class Song(models.Model):
         ],
         default='female',
         verbose_name='ボーカルスタイル'
+    )
+    song_provider = models.CharField(
+        max_length=20,
+        choices=SONG_PROVIDER_CHOICES,
+        default='mureka',
+        verbose_name='楽曲生成プロバイダ',
+        help_text='楽曲生成に使用するAIプロバイダ'
+    )
+    provider_model = models.CharField(
+        max_length=100,
+        blank=True,
+        default='mureka-v8',
+        verbose_name='プロバイダモデル',
+        help_text='プロバイダごとの実際のモデル名'
     )
     mureka_model = models.CharField(
         max_length=20,
@@ -256,12 +275,29 @@ class Song(models.Model):
         from django.urls import reverse
         return reverse('songs:song_share', kwargs={'share_id': self.share_id})
 
+    def get_effective_generation_model(self):
+        """プロバイダ非依存で現在の生成モデル名を返す"""
+        if self.provider_model:
+            return self.provider_model
+        if self.song_provider == 'lyria':
+            from .services.song_generation import get_default_song_generation_model
+            return get_default_song_generation_model('lyria')
+        return self.mureka_model or 'mureka-v8'
+
     def save(self, *args, **kwargs):
         if not self.share_id:
             self.share_id = generate_share_id()
             # ユニーク制約の衝突を回避
             while Song.objects.filter(share_id=self.share_id).exists():
                 self.share_id = generate_share_id()
+        if not self.song_provider:
+            from .services.song_generation import get_default_song_generation_provider
+            self.song_provider = get_default_song_generation_provider()
+        if not self.provider_model:
+            from .services.song_generation import get_default_song_generation_model
+            self.provider_model = get_default_song_generation_model(self.song_provider)
+        if self.song_provider == 'mureka' and not self.mureka_model:
+            self.mureka_model = self.provider_model or 'mureka-v8'
         super().save(*args, **kwargs)
 
 

@@ -198,9 +198,18 @@ LOGOUT_REDIRECT_URL = '/'
 
 GEMINI_API_KEY = os.getenv('GEMINI_API_KEY')
 
+DEFAULT_SONG_GENERATION_PROVIDER = os.getenv('DEFAULT_SONG_GENERATION_PROVIDER', 'lyria').lower()
+MUREKA_DEFAULT_MODEL = os.getenv('MUREKA_DEFAULT_MODEL', 'mureka-v8')
 MUREKA_API_KEY = os.getenv('MUREKA_API_KEY')
 USE_MUREKA_API = os.getenv('USE_MUREKA_API', 'False').lower() == 'true'
 MUREKA_API_URL = os.getenv('MUREKA_API_URL', 'https://platform.mureka.ai')
+
+USE_LYRIA_API = os.getenv('USE_LYRIA_API', 'False').lower() == 'true'
+LYRIA_API_URL = os.getenv('LYRIA_API_URL', '')
+LYRIA_API_KEY = os.getenv('LYRIA_API_KEY', '')
+LYRIA_MODEL = os.getenv('LYRIA_MODEL', 'lyria-3-pro-preview')
+LYRIA_API_TIMEOUT = int(os.getenv('LYRIA_API_TIMEOUT', '120'))
+LYRIA_STATUS_URL_TEMPLATE = os.getenv('LYRIA_STATUS_URL_TEMPLATE', '')
 
 # ローカルLLM歌詞生成設定
 # 'gemini' = Geminiのみ, 'cloud' = クラウドLLM, 'local' = ローカルLLMのみ, 'ollama' = Ollama, 'auto' = cloud→ollama→local→Geminiフォールバック

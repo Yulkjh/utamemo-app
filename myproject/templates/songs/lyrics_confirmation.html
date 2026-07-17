@@ -125,8 +125,10 @@
                                         </div>
                                     </div>
                                     
-                                    <!-- AIモデルはV8（プレミアム）固定 -->
-                                    <input type="hidden" name="mureka_model" value="mureka-v8">
+                                    <!-- 楽曲生成プロバイダは設定値に追従 -->
+                                    <input type="hidden" name="song_provider" value="{{ default_song_provider }}">
+                                    <input type="hidden" name="provider_model" value="{{ default_provider_model }}">
+                                    <input type="hidden" name="mureka_model" value="{{ default_provider_model }}">
                                 </div>
                                 
                                 <!-- カスタマイズ入力欄（自由記述） -->

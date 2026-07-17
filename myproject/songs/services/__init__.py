@@ -21,6 +21,14 @@ from .text_processing import (
     _build_importance_instruction_block,
     _is_explosive_lyrics_mode,
 )
+from .song_generation import (
+    SUPPORTED_SONG_PROVIDERS,
+    get_default_song_generation_model,
+    get_default_song_generation_provider,
+    get_song_generator,
+    normalize_song_provider,
+)
+from .lyria import LyriaAIGenerator
 from .mureka import MurekaAIGenerator
 from .pdf_extractor import PDFTextExtractor
 from .gemini_ocr import GeminiOCR
@@ -45,6 +53,12 @@ __all__ = [
     '_normalize_keyword_term',
     '_build_importance_instruction_block',
     '_is_explosive_lyrics_mode',
+    'SUPPORTED_SONG_PROVIDERS',
+    'get_default_song_generation_model',
+    'get_default_song_generation_provider',
+    'get_song_generator',
+    'normalize_song_provider',
+    'LyriaAIGenerator',
     'MurekaAIGenerator',
     'PDFTextExtractor',
     'GeminiOCR',

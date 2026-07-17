@@ -8,12 +8,18 @@ from django.http import JsonResponse
 from django.urls import reverse_lazy
 from django.views.decorators.http import require_POST
 from django.db.models import Q, Count, Sum, F
+from django.conf import settings
 import json
 import logging
 
 from ..models import Song, Lyrics, UploadedImage, Tag, PlayHistory, Like, Favorite
 from ..forms import SongCreateForm, SongPrivacyForm
 from ..content_filter import check_text_for_inappropriate_content, check_name_for_inappropriate_content
+from ..ai_services import (
+    get_default_song_generation_model,
+    get_default_song_generation_provider,
+    normalize_song_provider,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -54,6 +60,9 @@ class CreateSongView(LoginRequiredMixin, CreateView):
         
         # セッションからプリフィルデータを取得（再生成時）
         context['prefill_music_prompt'] = self.request.session.pop('prefill_music_prompt', '')
+        default_provider = get_default_song_generation_provider()
+        context['default_song_provider'] = default_provider
+        context['default_provider_model'] = get_default_song_generation_model(default_provider)
         
         return context
     
@@ -102,9 +111,15 @@ class CreateSongView(LoginRequiredMixin, CreateView):
         # カスタム音楽プロンプトを取得
         music_prompt = self.request.POST.get('music_prompt', '').strip()
         form.instance.music_prompt = music_prompt
-        
-        # AIモデルはV8（プレミアム）に固定
-        mureka_model = 'mureka-v8'
+
+        requested_provider = normalize_song_provider(
+            self.request.POST.get('song_provider') or getattr(settings, 'DEFAULT_SONG_GENERATION_PROVIDER', 'mureka')
+        )
+        requested_model = (
+            self.request.POST.get('provider_model', '').strip()
+            or self.request.POST.get('mureka_model', '').strip()
+            or get_default_song_generation_model(requested_provider)
+        )
         
         # 使用制限のチェック
         if not self.request.user.can_use_model('v8'):
@@ -116,8 +131,11 @@ class CreateSongView(LoginRequiredMixin, CreateView):
             else:
                 messages.error(self.request, '今月の楽曲作成上限に達しました。')
             return redirect('users:upgrade')
-        
-        form.instance.mureka_model = mureka_model
+
+        form.instance.song_provider = requested_provider
+        form.instance.provider_model = requested_model
+        if requested_provider == 'mureka':
+            form.instance.mureka_model = requested_model
         
         generated_lyrics = self.request.POST.get('generated_lyrics', '')
         if not generated_lyrics:
