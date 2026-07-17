@@ -96,6 +96,11 @@ def audio_proxy(request, pk):
         'storage.googleapis.com',
     }
     parsed = urlparse(audio_url)
+
+    # ローカル保存された /media/ 音声はそのまま配信ビューへ委譲
+    if (not parsed.scheme and audio_url.startswith('/media/')) or parsed.path.startswith('/media/'):
+        return redirect(parsed.path or audio_url)
+
     if parsed.hostname not in ALLOWED_AUDIO_DOMAINS:
         logger.warning(f"Audio proxy blocked unauthorized domain: {parsed.hostname} for song {pk}")
         return HttpResponse('Forbidden', status=403)
