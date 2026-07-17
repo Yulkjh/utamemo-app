@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import base64
 import logging
+import random
 import uuid
 
 from django.conf import settings
@@ -17,6 +18,59 @@ except ImportError:  # pragma: no cover - dependency is validated at runtime
     genai = None
 
 logger = logging.getLogger(__name__)
+
+
+GENRE_TO_ENGLISH = {
+    'ポップ': 'Pop', 'ロック': 'Rock', 'バラード': 'Ballad',
+    'ラップ': 'Rap', '電子音楽': 'Electronic', 'クラシック': 'Classical',
+    'ジャズ': 'Jazz', 'おまかせ': '',
+    '流行': 'Pop', '摇滚': 'Rock', '抒情': 'Ballad',
+    '说唱': 'Rap', '电子': 'Electronic', '古典': 'Classical', '爵士': 'Jazz',
+    '自动': '',
+    'Balada': 'Ballad', 'Electrónica': 'Electronic', 'Clásica': 'Classical',
+    'Ballade': 'Ballad', 'Elektronisch': 'Electronic', 'Klassik': 'Classical',
+    'Eletrônica': 'Electronic', 'Clássica': 'Classical',
+}
+
+VOCAL_TONE_TRAITS = [
+    'warm', 'bright', 'husky', 'clear', 'soft', 'powerful',
+    'smooth', 'raspy', 'airy', 'rich', 'delicate', 'soulful',
+    'silky', 'crisp', 'mellow', 'vibrant', 'breathy', 'deep',
+]
+VOCAL_SINGING_STYLES = [
+    'with natural vibrato', 'with gentle expression', 'with emotional delivery',
+    'with dynamic range', 'with relaxed phrasing', 'with energetic performance',
+    'with intimate tone', 'with lyrical flow', 'with passionate intensity',
+    'with subtle nuance', 'with playful articulation', 'with steady control',
+]
+VOCAL_AGE_RANGE = ['young adult', 'mature', 'youthful', 'seasoned']
+
+FIXED_VOCAL_PROMPTS = {
+    'vocaloid_female': 'high-pitched cute synthesized female vocal, Vocaloid-style electronic voice, bright and airy digital vocal tone',
+    'vocaloid_male': 'synthesized male vocal, Vocaloid-style electronic voice, clear digital vocal tone with auto-tune effect',
+    'duet': 'male and female duet vocal, harmonizing together, call and response singing',
+    'choir': 'choral ensemble vocal, rich harmonies, layered group singing',
+    'whisper': 'soft whispery vocal, intimate and breathy, ASMR-like gentle singing',
+    'child': 'young child vocal, innocent and bright, youthful pure singing voice',
+}
+
+RANDOM_VOCAL_BASE = {
+    'female': ('female', ''),
+    'female_cute': ('female', 'cute high-pitched sweet'),
+    'female_cool': ('female', 'cool sophisticated alto'),
+    'female_powerful': ('female', 'powerful belting strong'),
+    'male': ('male', ''),
+    'male_high': ('male', 'high-pitched tenor bright'),
+    'male_low': ('male', 'deep low bass baritone'),
+    'male_rough': ('male', 'rough gritty rock raspy'),
+}
+
+VOICE_KEYWORDS = [
+    'vocal', 'voice', 'singer', 'singing', 'female', 'male', 'man', 'woman',
+    'soprano', 'alto', 'tenor', 'bass', 'baritone', 'husky', 'breathy', 'raspy',
+    'falsetto', 'whisper', 'choir', 'duet', 'ボーカル', '歌声', '男声', '女声',
+    '声', '男性', '女性', 'ハスキー', 'ウィスパー', 'コーラス', 'デュエット',
+]
 
 
 class LyriaAIGenerator:
@@ -75,10 +129,14 @@ class LyriaAIGenerator:
         parts = []
         if title:
             parts.append(f"Song title: {title}")
-        if genre:
-            parts.append(f"Genre: {genre}")
-        if vocal_style:
-            parts.append(f"Vocal style: {vocal_style}")
+        normalized_genre = GENRE_TO_ENGLISH.get(genre, genre)
+        if normalized_genre:
+            parts.append(f"Genre: {normalized_genre}")
+
+        custom_voice_direction = music_prompt if self._prompt_has_voice_direction(music_prompt) else ''
+        vocal_instruction = self._build_vocal_instruction(vocal_style) if not custom_voice_direction else ''
+        if vocal_instruction:
+            parts.append(f"Vocal direction: {vocal_instruction}")
         if music_prompt:
             parts.append(f"Creative direction: {music_prompt}")
         if lyrics:
@@ -88,6 +146,29 @@ class LyriaAIGenerator:
             "Keep the arrangement polished and coherent."
         )
         return "\n\n".join(parts)
+
+    def _prompt_has_voice_direction(self, music_prompt):
+        if not music_prompt:
+            return False
+        prompt_lower = music_prompt.lower()
+        return any(keyword in prompt_lower for keyword in VOICE_KEYWORDS)
+
+    def _build_vocal_instruction(self, vocal_style):
+        if not vocal_style:
+            return ''
+
+        if vocal_style in FIXED_VOCAL_PROMPTS:
+            return FIXED_VOCAL_PROMPTS[vocal_style]
+
+        if vocal_style in RANDOM_VOCAL_BASE:
+            gender, extra = RANDOM_VOCAL_BASE[vocal_style]
+            tone = random.choice(VOCAL_TONE_TRAITS)
+            style = random.choice(VOCAL_SINGING_STYLES)
+            age = random.choice(VOCAL_AGE_RANGE)
+            base = f"{tone} {age} {gender} vocal {style}"
+            return f"{extra} {base}".strip() if extra else base
+
+        return vocal_style.replace('_', ' ')
 
     def _extract_audio_bytes(self, interaction):
         generated_audio = getattr(interaction, 'output_audio', None)
