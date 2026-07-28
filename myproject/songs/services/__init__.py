@@ -29,7 +29,6 @@ from .song_generation import (
     normalize_song_provider,
 )
 from .lyria import LyriaAIGenerator
-from .mureka import MurekaAIGenerator
 from .pdf_extractor import PDFTextExtractor
 from .gemini_ocr import GeminiOCR
 from .gemini_lyrics import GeminiLyricsGenerator
@@ -59,7 +58,6 @@ __all__ = [
     'get_song_generator',
     'normalize_song_provider',
     'LyriaAIGenerator',
-    'MurekaAIGenerator',
     'PDFTextExtractor',
     'GeminiOCR',
     'GeminiLyricsGenerator',

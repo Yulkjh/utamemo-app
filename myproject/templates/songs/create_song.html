@@ -216,7 +216,6 @@
                         <!-- 楽曲生成プロバイダは設定値に追従 -->
                         <input type="hidden" name="song_provider" value="{{ default_song_provider }}">
                         <input type="hidden" name="provider_model" value="{{ default_provider_model }}">
-                        <input type="hidden" name="mureka_model" value="{{ default_provider_model }}">
                         
                         <!-- カスタマイズ入力欄（自由記述） -->
                         <div class="form-group mb-4">
@@ -272,17 +271,17 @@
                         </div>
                         {% endif %}
                         
-                        <!-- Murekaライセンス同意確認 -->
+                        <!-- AI生成物ライセンス同意確認 -->
                         <div class="mt-3 p-3" style="background: rgba(255, 193, 7, 0.08); border-radius: 10px; border: 1px solid rgba(255, 193, 7, 0.3);">
                             <div class="form-check">
                                 <input class="form-check-input" type="checkbox" id="mureka_license_agree" required>
                                 <label class="form-check-label" for="mureka_license_agree" style="font-size: 0.85rem; color: #666;">
-                                    {% if is_english %}I agree to the <a href="{% url 'terms' %}" target="_blank">Terms of Service</a> and understand that: generated music is licensed to <a href="https://mureka.ai/terms" target="_blank" rel="noopener">Mureka</a> (unrestricted, irrevocable, royalty-free), copyright registration of AI-generated content is not guaranteed, and I have the legal right to use any uploaded content.
-                                    {% elif is_spanish %}Acepto los <a href="{% url 'terms' %}" target="_blank">Términos de Servicio</a> y entiendo que: la música generada se licencia a <a href="https://mureka.ai/terms" target="_blank" rel="noopener">Mureka</a> (sin restricciones, irrevocable, libre de regalías), no se garantiza el registro de derechos de autor del contenido generado por IA, y tengo el derecho legal de usar cualquier contenido subido.
-                                    {% elif is_german %}Ich stimme den <a href="{% url 'terms' %}" target="_blank">Nutzungsbedingungen</a> zu und verstehe: Generierte Musik wird an <a href="https://mureka.ai/terms" target="_blank" rel="noopener">Mureka</a> lizenziert (unbeschränkt, unwiderruflich, lizenzgebührenfrei), eine Urheberrechtsregistrierung von KI-generierten Inhalten ist nicht garantiert, und ich habe das Recht, hochgeladene Inhalte zu verwenden.
-                                    {% elif is_portuguese %}Concordo com os <a href="{% url 'terms' %}" target="_blank">Termos de Serviço</a> e entendo que: a música gerada é licenciada à <a href="https://mureka.ai/terms" target="_blank" rel="noopener">Mureka</a> (irrestrita, irrevogável, isenta de royalties), o registro de direitos autorais do conteúdo gerado por IA não é garantido, e tenho o direito legal de usar qualquer conteúdo enviado.
-                                    {% elif is_chinese %}我同意<a href="{% url 'terms' %}" target="_blank">服务条款</a>，并理解：生成的音乐将授权给<a href="https://mureka.ai/terms" target="_blank" rel="noopener">Mureka</a>（无限制、不可撤销、免版税），AI生成内容的版权注册不被保证，且我有合法权利使用所上传的内容。
-                                    {% else %}<a href="{% url 'terms' %}" target="_blank">利用規約</a>に同意し、以下を理解しました：生成された楽曲は<a href="https://mureka.ai/terms" target="_blank" rel="noopener">Mureka</a>に対してライセンス（無制限・取消不能・ロイヤリティフリー）が付与されること、AI生成コンテンツの著作権登録は保証されないこと、アップロードした素材について適法な利用権を有していること。
+                                    {% if is_english %}I agree to the <a href="{% url 'terms' %}" target="_blank">Terms of Service</a> and understand that: generated music uses a third-party AI provider whose terms of service govern the generated output, copyright registration of AI-generated content is not guaranteed, and I have the legal right to use any uploaded content.
+                                    {% elif is_spanish %}Acepto los <a href="{% url 'terms' %}" target="_blank">Términos de Servicio</a> y entiendo que: la música generada utiliza un proveedor de IA de terceros cuyos términos de servicio rigen el resultado generado, no se garantiza el registro de derechos de autor del contenido generado por IA, y tengo el derecho legal de usar cualquier contenido subido.
+                                    {% elif is_german %}Ich stimme den <a href="{% url 'terms' %}" target="_blank">Nutzungsbedingungen</a> zu und verstehe: Generierte Musik nutzt einen KI-Anbieter eines Drittanbieters, dessen Nutzungsbedingungen für das generierte Ergebnis gelten, eine Urheberrechtsregistrierung von KI-generierten Inhalten ist nicht garantiert, und ich habe das Recht, hochgeladene Inhalte zu verwenden.
+                                    {% elif is_portuguese %}Concordo com os <a href="{% url 'terms' %}" target="_blank">Termos de Serviço</a> e entendo que: a música gerada utiliza um provedor de IA de terceiros cujos termos de serviço regem o resultado gerado, o registro de direitos autorais do conteúdo gerado por IA não é garantido, e tenho o direito legal de usar qualquer conteúdo enviado.
+                                    {% elif is_chinese %}我同意<a href="{% url 'terms' %}" target="_blank">服务条款</a>，并理解：生成的音乐使用第三方AI提供商，生成结果受该提供商服务条款约束，AI生成内容的版权注册不被保证，且我有合法权利使用所上传的内容。
+                                    {% else %}<a href="{% url 'terms' %}" target="_blank">利用規約</a>に同意し、以下を理解しました：生成された楽曲は第三者AIプロバイダを利用しており、生成結果は当該プロバイダの利用規約に従うこと、AI生成コンテンツの著作権登録は保証されないこと、アップロードした素材について適法な利用権を有していること。
                                     {% endif %}
                                 </label>
                             </div>

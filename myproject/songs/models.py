@@ -87,24 +87,26 @@ class Song(models.Model):
     song_provider = models.CharField(
         max_length=20,
         choices=SONG_PROVIDER_CHOICES,
-        default='mureka',
+        default='lyria',
         verbose_name='楽曲生成プロバイダ',
         help_text='楽曲生成に使用するAIプロバイダ'
     )
     provider_model = models.CharField(
         max_length=100,
         blank=True,
-        default='mureka-v8',
+        default='lyria-3-pro-preview',
         verbose_name='プロバイダモデル',
         help_text='プロバイダごとの実際のモデル名'
     )
+    # 注意: mureka_modelはMureka提供終了に伴い新規使用を停止。
+    # 過去に生成された楽曲のDB互換性維持のためフィールド自体は残している。
     mureka_model = models.CharField(
         max_length=20,
         choices=[
             ('mureka-v8', 'V8 - 最新モデル'),
         ],
         default='mureka-v8',
-        verbose_name='Murekaモデル'
+        verbose_name='Murekaモデル（旧・参照専用）'
     )
     music_prompt = models.TextField(
         blank=True,

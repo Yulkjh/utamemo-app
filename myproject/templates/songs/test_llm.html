@@ -10,28 +10,12 @@
             <h1>AI Song Lab</h1>
             <div class="ut-header-dots">
                 <span class="ut-dot {% if inference_url %}ut-dot-pending{% else %}ut-dot-off{% endif %}" id="llmDot" title="LLM"></span>
-                <span class="ut-dot {% if api_configured %}ut-dot-ok{% else %}ut-dot-off{% endif %}" title="Mureka"></span>
             </div>
         </div>
         <a href="{% url 'songs:llm_guide' %}" class="ut-btn ut-btn-back">
             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M19 12H5M12 19l-7-7 7-7"/></svg>
             Portal
         </a>
-    </div>
-
-    <!-- Step indicator -->
-    <div class="ut-steps">
-        <div class="ut-step ut-step-active" id="stepInd1">
-            <span class="ut-step-num">1</span>
-            <span class="ut-step-label">歌詞生成</span>
-        </div>
-        <div class="ut-step-arrow">
-            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#444" stroke-width="2"><path d="M5 12h14M12 5l7 7-7 7"/></svg>
-        </div>
-        <div class="ut-step" id="stepInd2">
-            <span class="ut-step-num">2</span>
-            <span class="ut-step-label">楽曲生成</span>
-        </div>
     </div>
 
     <!-- === STEP 1: LLM Lyrics Generation === -->
@@ -129,104 +113,10 @@
                 </div>
             </div>
             <pre class="ut-lyrics-pre" id="resultLyrics"></pre>
-            <button class="ut-btn ut-btn-proceed" onclick="proceedToStep2()">
-                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M5 12h14M12 5l7 7-7 7"/></svg>
-                この歌詞で楽曲を生成 (Step 2)
+            <button class="ut-btn ut-btn-sm" onclick="copyLyrics()">
+                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 01-2-2V4a2 2 0 012-2h9a2 2 0 012 2v1"/></svg>
+                Copy
             </button>
-        </div>
-    </div>
-
-    <!-- === STEP 2: Mureka Song Generation === -->
-    <div id="step2Section" style="display:none;">
-        <div class="ut-grid">
-            <div class="ut-panel">
-                <h2>Step 2 — 楽曲生成</h2>
-                <label class="ut-label">歌詞 <span class="ut-hint">(編集可能)</span></label>
-                <textarea id="murekaLyrics" class="ut-textarea ut-textarea-mono" rows="16" placeholder="[Verse 1]&#10;歌詞を入力..."></textarea>
-            </div>
-            <div class="ut-panel">
-                <h2>Mureka 設定</h2>
-
-                <label class="ut-label">タイトル</label>
-                <input type="text" id="titleInput" class="ut-input" value="Test Song" placeholder="楽曲タイトル">
-
-                <label class="ut-label">ジャンル</label>
-                <select id="murekaGenre" class="ut-select">
-                    <option value="auto" selected>Auto (おまかせ)</option>
-                    <option value="pop">Pop</option>
-                    <option value="rock">Rock</option>
-                    <option value="hip-hop">Hip-Hop</option>
-                    <option value="EDM">EDM</option>
-                    <option value="jazz">Jazz</option>
-                    <option value="R&B">R&B</option>
-                    <option value="ballad">Ballad</option>
-                    <option value="folk">Folk</option>
-                </select>
-
-                <label class="ut-label">ボーカル</label>
-                <select id="vocalSelect" class="ut-select">
-                    <option value="female">Female</option>
-                    <option value="male">Male</option>
-                    <option value="female_cute">Female (Cute)</option>
-                    <option value="female_cool">Female (Cool)</option>
-                    <option value="male_high">Male (High)</option>
-                    <option value="male_low">Male (Low)</option>
-                    <option value="duet">Duet</option>
-                    <option value="choir">Choir</option>
-                    <option value="vocaloid_female">Vocaloid Female</option>
-                    <option value="vocaloid_male">Vocaloid Male</option>
-                </select>
-
-                <label class="ut-label">Music Prompt <span class="ut-hint">(任意)</span></label>
-                <input type="text" id="promptInput" class="ut-input" placeholder="例: アップテンポ、ピアノ、爽やか">
-
-                <button id="step2Btn" class="ut-btn ut-btn-generate" onclick="startMurekaGeneration()" {% if not api_configured %}disabled{% endif %}>
-                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="5 3 19 12 5 21 5 3"/></svg>
-                    Generate Song
-                </button>
-
-                {% if not api_configured %}
-                <div class="ut-warning-mini">Mureka API が未設定です</div>
-                {% endif %}
-            </div>
-        </div>
-
-        <!-- Back to Step 1 -->
-        <button class="ut-btn ut-btn-back-step" onclick="backToStep1()">
-            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M19 12H5M12 19l-7-7 7-7"/></svg>
-            Step 1 に戻る
-        </button>
-
-        <!-- Mureka Status -->
-        <div id="murekaStatus" class="ut-panel ut-status-panel" style="display:none;">
-            <div class="ut-progress-bar"><div class="ut-progress-fill" id="progressFill"></div></div>
-            <div class="ut-status-text" id="statusText">準備中...</div>
-            <div class="ut-prompt-used" id="promptUsed" style="display:none;"></div>
-        </div>
-
-        <!-- Mureka Result -->
-        <div id="murekaResult" class="ut-panel ut-song-result" style="display:none;">
-            <h2>
-                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="vertical-align: -2px; margin-right: 4px;"><path d="M9 18V5l12-2v13"/><circle cx="6" cy="18" r="3"/><circle cx="18" cy="16" r="3"/></svg>
-                Generated Song
-            </h2>
-            <div class="ut-player-wrap">
-                <audio id="audioPlayer" controls class="ut-audio"></audio>
-            </div>
-            <div class="ut-result-info">
-                <span class="ut-chip" id="resultDuration"></span>
-                <span class="ut-chip" id="resultPrompt"></span>
-            </div>
-            <button class="ut-btn ut-btn-sm" onclick="resetAll()" style="margin-top:1rem;">
-                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 5v14M5 12h14"/></svg>
-                New Test
-            </button>
-        </div>
-
-        <!-- Step 2 Error -->
-        <div id="step2Error" class="ut-error" style="display:none;">
-            <span class="ut-error-icon">x</span>
-            <span id="step2ErrorText"></span>
         </div>
     </div>
 </div>
@@ -420,24 +310,13 @@ main { padding-top: 0 !important; }
 const CSRF = '{{ csrf_token }}';
 const HEALTH_URL = '{% url "songs:test_llm_health" %}';
 const LLM_GEN_URL = '{% url "songs:test_llm_generate" %}';
-const MUREKA_SUBMIT_URL = '{% url "songs:test_mureka_submit" %}';
-const MUREKA_POLL_URL = '{% url "songs:test_mureka_poll" %}';
 
 let timerInterval = null;
 let healthTimer = null;
-let pollingTimer = null;
-let pollCount = 0;
 
 // Init
 document.addEventListener('DOMContentLoaded', () => {
     checkHealth();
-    // URL params: ?lyrics=... で Step 2 に直接遷移
-    const params = new URLSearchParams(window.location.search);
-    const prefillLyrics = params.get('lyrics');
-    if (prefillLyrics) {
-        document.getElementById('murekaLyrics').value = prefillLyrics;
-        showStep2();
-    }
 });
 
 // === Health Check ===
@@ -554,140 +433,5 @@ function copyLyrics() {
     });
 }
 
-// === Step transitions ===
-function proceedToStep2() {
-    const lyrics = document.getElementById('resultLyrics').textContent;
-    document.getElementById('murekaLyrics').value = lyrics;
-    showStep2();
-}
-
-function showStep2() {
-    document.getElementById('step1Section').style.display = 'none';
-    document.getElementById('step2Section').style.display = 'block';
-    document.getElementById('stepInd1').classList.remove('ut-step-active');
-    document.getElementById('stepInd2').classList.add('ut-step-active');
-    window.scrollTo(0, 0);
-}
-
-function backToStep1() {
-    document.getElementById('step1Section').style.display = 'block';
-    document.getElementById('step2Section').style.display = 'none';
-    document.getElementById('stepInd1').classList.add('ut-step-active');
-    document.getElementById('stepInd2').classList.remove('ut-step-active');
-    document.getElementById('murekaStatus').style.display = 'none';
-    document.getElementById('murekaResult').style.display = 'none';
-    document.getElementById('step2Error').style.display = 'none';
-    if (pollingTimer) clearInterval(pollingTimer);
-    window.scrollTo(0, 0);
-}
-
-// === Step 2: Mureka Song Generation ===
-async function startMurekaGeneration() {
-    const lyrics = document.getElementById('murekaLyrics').value.trim();
-    if (!lyrics || lyrics.length < 30) {
-        showStep2Error('歌詞を30文字以上入力してください');
-        return;
-    }
-
-    const btn = document.getElementById('step2Btn');
-    btn.disabled = true;
-    btn.innerHTML = '<span>Generating...</span>';
-    btn.classList.add('ut-btn-generating');
-
-    document.getElementById('murekaStatus').style.display = 'block';
-    document.getElementById('murekaResult').style.display = 'none';
-    document.getElementById('step2Error').style.display = 'none';
-    document.getElementById('progressFill').style.width = '5%';
-    document.getElementById('statusText').textContent = 'Mureka API に送信中...';
-
-    try {
-        const res = await fetch(MUREKA_SUBMIT_URL, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json', 'X-CSRFToken': CSRF },
-            body: JSON.stringify({
-                lyrics: lyrics,
-                title: document.getElementById('titleInput').value.trim() || 'Test Song',
-                genre: document.getElementById('murekaGenre').value,
-                vocal_style: document.getElementById('vocalSelect').value,
-                music_prompt: document.getElementById('promptInput').value.trim(),
-            }),
-        });
-        const data = await res.json();
-        if (data.success && data.task_id) {
-            document.getElementById('progressFill').style.width = '15%';
-            document.getElementById('statusText').textContent = 'タスク送信完了 (ID: ' + data.task_id.substring(0, 8) + '...) — 楽曲生成中...';
-            if (data.prompt_used) {
-                const el = document.getElementById('promptUsed');
-                el.textContent = 'Prompt: ' + data.prompt_used;
-                el.style.display = 'block';
-            }
-            pollCount = 0;
-            pollingTimer = setInterval(() => pollMurekaStatus(data.task_id), 4000);
-        } else {
-            showStep2Error(data.error || '送信に失敗しました');
-            resetStep2Btn();
-        }
-    } catch(e) {
-        showStep2Error('通信エラー: ' + e.message);
-        resetStep2Btn();
-    }
-}
-
-async function pollMurekaStatus(taskId) {
-    pollCount++;
-    const maxPolls = 90;
-    if (pollCount > maxPolls) {
-        clearInterval(pollingTimer);
-        showStep2Error('タイムアウト: 楽曲生成に時間がかかりすぎています');
-        resetStep2Btn();
-        return;
-    }
-    const progress = Math.min(15 + (pollCount / maxPolls) * 80, 95);
-    document.getElementById('progressFill').style.width = progress + '%';
-    document.getElementById('statusText').textContent = '楽曲生成中... (' + (pollCount * 4) + '秒経過)';
-
-    try {
-        const res = await fetch(MUREKA_POLL_URL + '?task_id=' + taskId);
-        const data = await res.json();
-        if (data.status === 'completed') {
-            clearInterval(pollingTimer);
-            document.getElementById('progressFill').style.width = '100%';
-            document.getElementById('statusText').textContent = 'Complete';
-            document.getElementById('audioPlayer').src = data.audio_url;
-            document.getElementById('resultDuration').textContent = data.duration ? 'Duration: ' + Math.round(data.duration) + 's' : '';
-            document.getElementById('resultPrompt').textContent = document.getElementById('promptUsed').textContent || '';
-            document.getElementById('murekaResult').style.display = 'block';
-            resetStep2Btn();
-        } else if (data.status === 'failed') {
-            clearInterval(pollingTimer);
-            showStep2Error(data.error || '楽曲生成に失敗しました');
-            resetStep2Btn();
-        }
-    } catch(e) {
-        console.warn('Poll error:', e);
-    }
-}
-
-function showStep2Error(msg) {
-    document.getElementById('step2Error').style.display = 'flex';
-    document.getElementById('step2ErrorText').textContent = msg;
-}
-
-function resetStep2Btn() {
-    const btn = document.getElementById('step2Btn');
-    btn.disabled = {% if not api_configured %}true{% else %}false{% endif %};
-    btn.innerHTML = '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="5 3 19 12 5 21 5 3"/></svg> Generate Song';
-    btn.classList.remove('ut-btn-generating');
-}
-
-function resetAll() {
-    document.getElementById('murekaStatus').style.display = 'none';
-    document.getElementById('murekaResult').style.display = 'none';
-    document.getElementById('step2Error').style.display = 'none';
-    document.getElementById('promptUsed').style.display = 'none';
-    document.getElementById('audioPlayer').src = '';
-    if (pollingTimer) clearInterval(pollingTimer);
-    backToStep1();
-}
 </script>
 {% endblock %}

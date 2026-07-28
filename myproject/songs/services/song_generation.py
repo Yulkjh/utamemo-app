@@ -3,9 +3,8 @@
 from django.conf import settings
 
 from .lyria import LyriaAIGenerator
-from .mureka import MurekaAIGenerator
 
-SUPPORTED_SONG_PROVIDERS = ('mureka', 'lyria')
+SUPPORTED_SONG_PROVIDERS = ('lyria',)
 
 
 def normalize_song_provider(provider):
@@ -22,13 +21,9 @@ def get_default_song_generation_provider():
 
 def get_default_song_generation_model(provider=None):
     provider = normalize_song_provider(provider or get_default_song_generation_provider())
-    if provider == 'lyria':
-        return getattr(settings, 'LYRIA_MODEL', 'lyria-3-pro-preview')
-    return getattr(settings, 'MUREKA_DEFAULT_MODEL', 'mureka-v8')
+    return getattr(settings, 'LYRIA_MODEL', 'lyria-3-pro-preview')
 
 
 def get_song_generator(provider=None):
-    provider = normalize_song_provider(provider or get_default_song_generation_provider())
-    if provider == 'lyria':
-        return LyriaAIGenerator()
-    return MurekaAIGenerator()
+    normalize_song_provider(provider or get_default_song_generation_provider())
+    return LyriaAIGenerator()

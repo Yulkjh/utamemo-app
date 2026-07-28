@@ -113,11 +113,10 @@ class CreateSongView(LoginRequiredMixin, CreateView):
         form.instance.music_prompt = music_prompt
 
         requested_provider = normalize_song_provider(
-            self.request.POST.get('song_provider') or getattr(settings, 'DEFAULT_SONG_GENERATION_PROVIDER', 'mureka')
+            self.request.POST.get('song_provider') or getattr(settings, 'DEFAULT_SONG_GENERATION_PROVIDER', 'lyria')
         )
         requested_model = (
             self.request.POST.get('provider_model', '').strip()
-            or self.request.POST.get('mureka_model', '').strip()
             or get_default_song_generation_model(requested_provider)
         )
         
@@ -134,9 +133,7 @@ class CreateSongView(LoginRequiredMixin, CreateView):
 
         form.instance.song_provider = requested_provider
         form.instance.provider_model = requested_model
-        if requested_provider == 'mureka':
-            form.instance.mureka_model = requested_model
-        
+
         generated_lyrics = self.request.POST.get('generated_lyrics', '')
         if not generated_lyrics:
             generated_lyrics = self.request.session.get('generated_lyrics', '')

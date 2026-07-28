@@ -1,0 +1,48 @@
+{% extends 'base.html' %}
+
+{% block title %}{% if is_english %}Parental Consent{% elif is_spanish %}Consentimiento Parental{% elif is_german %}Elterliche Zustimmung{% elif is_portuguese %}Consentimento dos Pais{% elif is_chinese %}家长同意{% else %}保護者の同意{% endif %} - UTAMEMO{% endblock %}
+
+{% block content %}
+<div class="password-reset-container">
+    <div class="password-reset-wrapper">
+        <div class="password-reset-card fade-in">
+            <div class="password-reset-body text-center">
+                {% if success %}
+                <div class="success-icon mb-4">
+                    <svg width="80" height="80" viewBox="0 0 24 24" fill="none" stroke="#22c55e" stroke-width="1.5">
+                        <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/>
+                        <polyline points="22,4 12,14.01 9,11.01"/>
+                    </svg>
+                </div>
+                <h1 class="h3 mb-3">
+                    {% if is_english %}Consent Confirmed{% elif is_spanish %}Consentimiento Confirmado{% elif is_german %}Zustimmung Bestätigt{% elif is_portuguese %}Consentimento Confirmado{% elif is_chinese %}同意已确认{% else %}同意が確認されました{% endif %}
+                </h1>
+                <p class="text-muted mb-4">
+                    {% if is_english %}Thank you. Parental consent for {{ username }}'s UTAMEMO subscription has been recorded. They can now continue with the purchase.{% elif is_spanish %}Gracias. El consentimiento parental para la suscripción de {{ username }} a UTAMEMO ha sido registrado. Ahora puede continuar con la compra.{% elif is_german %}Vielen Dank. Die elterliche Zustimmung für das UTAMEMO-Abonnement von {{ username }} wurde erfasst. Der Kauf kann nun fortgesetzt werden.{% elif is_portuguese %}Obrigado. O consentimento dos pais para a assinatura do UTAMEMO de {{ username }} foi registrado. Agora é possível continuar com a compra.{% elif is_chinese %}谢谢。已记录{{ username }}的UTAMEMO订阅家长同意。现在可以继续购买。{% else %}ご確認いただきありがとうございます。{{ username }} さんのUTAMEMO有料プランへの保護者同意が記録されました。購入手続きを続けることができます。{% endif %}
+                </p>
+                {% else %}
+                <div class="mb-4">
+                    <svg width="80" height="80" viewBox="0 0 24 24" fill="none" stroke="#ef4444" stroke-width="1.5">
+                        <circle cx="12" cy="12" r="10"/>
+                        <line x1="12" y1="8" x2="12" y2="12"/>
+                        <line x1="12" y1="16" x2="12.01" y2="16"/>
+                    </svg>
+                </div>
+                <h1 class="h3 mb-3">
+                    {% if is_english %}Link Invalid or Expired{% elif is_spanish %}Enlace Inválido o Caducado{% elif is_german %}Link Ungültig oder Abgelaufen{% elif is_portuguese %}Link Inválido ou Expirado{% elif is_chinese %}链接无效或已过期{% else %}リンクが無効または期限切れです{% endif %}
+                </h1>
+                <p class="text-muted mb-4">
+                    {% if is_english %}This consent link is no longer valid. It may have already been used or expired (links are valid for 7 days). Please ask {{ username }} to send a new request from the upgrade page.{% elif is_spanish %}Este enlace de consentimiento ya no es válido. Es posible que ya se haya usado o haya caducado (los enlaces son válidos por 7 días). Pida a {{ username }} que envíe una nueva solicitud desde la página de actualización.{% elif is_german %}Dieser Zustimmungslink ist nicht mehr gültig. Er wurde möglicherweise bereits verwendet oder ist abgelaufen (Links sind 7 Tage gültig). Bitten Sie {{ username }}, eine neue Anfrage über die Upgrade-Seite zu senden.{% elif is_portuguese %}Este link de consentimento não é mais válido. Ele pode já ter sido usado ou expirado (os links são válidos por 7 dias). Peça a {{ username }} para enviar uma nova solicitação a partir da página de upgrade.{% elif is_chinese %}此同意链接已失效，可能已被使用或已过期（链接有效期为7天）。请让{{ username }}从升级页面重新发送请求。{% else %}この同意リンクは無効です。すでに使用済みか、有効期限（7日間）が切れている可能性があります。お手数ですが、{{ username }} さんにアップグレードページから再度リクエストを送ってもらってください。{% endif %}
+                </p>
+                {% endif %}
+
+                <a href="{% url 'songs:home' %}" class="btn-primary-modern">
+                    {% if is_english %}Back to Home{% elif is_spanish %}Volver al Inicio{% elif is_german %}Zurück zur Startseite{% elif is_portuguese %}Voltar ao Início{% elif is_chinese %}返回首页{% else %}ホームに戻る{% endif %}
+                </a>
+            </div>
+        </div>
+    </div>
+</div>
+
+{% include 'users/_password_reset_styles.html' %}
+{% endblock %}

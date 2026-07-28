@@ -2,7 +2,7 @@
 
 変更点（スケーラビリティ改善）:
 - ThreadPoolExecutorで同時に最大3曲を並列生成
-- タイムアウトを5分→8分に延長（Mureka APIの遅延に対応）
+- タイムアウトを5分→8分に延長（AI楽曲生成APIの遅延に対応）
 - 処理中の曲数をトラッキング
 """
 import threading
@@ -18,8 +18,7 @@ from .models import Song
 logger = logging.getLogger(__name__)
 
 # 並列処理の設定（環境変数で変更可能）
-# Mureka APIの同時リクエスト制限に合わせること:
-#   $30プラン → 1, $1,000プラン → 5, $3,000プラン → 15
+# 使用するAI楽曲生成APIの同時リクエスト制限に合わせること
 MAX_CONCURRENT_GENERATIONS = int(getattr(settings, 'MAX_CONCURRENT_GENERATIONS', 1))
 STUCK_TIMEOUT_MINUTES = int(getattr(settings, 'STUCK_TIMEOUT_MINUTES', 8))
 
@@ -219,6 +218,7 @@ class SongGenerationQueue:
         from .ai_services import (
             get_default_song_generation_model,
             get_song_generator,
+            normalize_song_provider,
         )
         
         max_retries = getattr(settings, 'MAX_GENERATION_RETRIES', 3)
@@ -252,11 +252,15 @@ class SongGenerationQueue:
             genre = song.genre or 'pop'
             vocal_style = song.vocal_style or 'female'
             music_prompt = getattr(song, 'music_prompt', '') or ''
-            song_provider = getattr(song, 'song_provider', 'lyria') or 'lyria'
+            stored_provider = getattr(song, 'song_provider', 'lyria') or 'lyria'
+            song_provider = normalize_song_provider(stored_provider)
+            stored_model = getattr(song, 'provider_model', '') or ''
+            # 旧プロバイダ（例: mureka）から現行プロバイダへ切り替わった曲は、
+            # 保存済みモデル名が現行プロバイダで無効なためデフォルトモデルを使う
             provider_model = (
-                getattr(song, 'provider_model', '')
-                or getattr(song, 'mureka_model', '')
-                or get_default_song_generation_model(song_provider)
+                stored_model
+                if stored_model and stored_provider == song_provider
+                else get_default_song_generation_model(song_provider)
             )
 
             from .ai_services import convert_lyrics_to_hiragana_with_context, detect_lyrics_language
@@ -335,9 +339,7 @@ class SongGenerationQueue:
                             song.audio_url = audio_url
                         song.song_provider = song_result.get('api_provider', song_provider)
                         song.provider_model = song_result.get('provider_model', provider_model)
-                        if song.song_provider == 'mureka':
-                            song.mureka_model = song.provider_model or song.mureka_model
-                        
+
                         song.generation_status = 'completed'
                         song.completed_at = timezone.now()
                         song.queue_position = None

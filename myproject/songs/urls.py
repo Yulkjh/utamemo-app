@@ -57,9 +57,6 @@ urlpatterns = [
     # 音声プロキシ（CORS対策）
     path('songs/<int:pk>/audio-proxy/', views.audio_proxy, name='audio_proxy'),
     
-    # Mureka APIデバッグ（管理者のみ）
-    path('staff/mureka-debug/', views.mureka_api_debug, name='mureka_debug'),
-    
     # 曲クオリティチェック（管理者のみ）
     path('staff/quality-check/', views.quality_check, name='quality_check'),
     
@@ -82,11 +79,8 @@ urlpatterns = [
     path('api/training/prompt/', views.training_prompt_api, name='training_prompt_api'),
     path('staff/llm-guide/', views.llm_guide, name='llm_guide'),
     path('staff/test-llm/', views.test_llm_page, name='test_llm'),
-    path('staff/test-mureka/', views.test_mureka_page, name='test_mureka'),
     path('api/llm/health/', views.test_llm_health, name='test_llm_health'),
     path('api/llm/generate/', views.test_llm_generate, name='test_llm_generate'),
-    path('api/mureka/test-submit/', views.test_mureka_submit, name='test_mureka_submit'),
-    path('api/mureka/test-poll/', views.test_mureka_poll, name='test_mureka_poll'),
     path('api/training/update/', views.training_api_update, name='training_api_update'),
     path('api/training/reviewed/', views.training_reviewed_indices, name='training_reviewed_indices'),
     path('api/training/data/download/', views.training_data_download, name='training_data_download'),

@@ -17,7 +17,7 @@ from pathlib import Path
 
 from ..models import Song, Like, Favorite, Comment, UploadedImage, Lyrics, PlayHistory, Tag
 from ..forms import SongCreateForm, ImageUploadForm, CommentForm, SongPrivacyForm
-from ..ai_services import GeminiLyricsGenerator, GeminiOCR, MurekaAIGenerator, get_lyrics_generator
+from ..ai_services import GeminiLyricsGenerator, GeminiOCR, get_lyrics_generator
 from ..content_filter import check_text_for_inappropriate_content, check_name_for_inappropriate_content
 
 # ロガー設定
@@ -273,10 +273,7 @@ class CreateSongView(LoginRequiredMixin, CreateView):
         music_prompt = self.request.POST.get('music_prompt', '').strip()
         form.instance.music_prompt = music_prompt
         
-        # AIモデルはV8（プレミアム）に固定
-        mureka_model = 'mureka-v8'
-        
-        # 使用制限のチェック
+        # 使用制限のチェック（プレミアム品質モデル）
         if not self.request.user.can_use_model('v8'):
             app_language = self.request.session.get('app_language', 'ja')
             if app_language == 'en':
@@ -286,9 +283,7 @@ class CreateSongView(LoginRequiredMixin, CreateView):
             else:
                 messages.error(self.request, '今月の楽曲作成上限に達しました。')
             return redirect('users:upgrade')
-        
-        form.instance.mureka_model = mureka_model
-        
+
         generated_lyrics = self.request.POST.get('generated_lyrics', '')
         if not generated_lyrics:
             generated_lyrics = self.request.session.get('generated_lyrics', '')
@@ -2031,110 +2026,5 @@ def recreate_with_lyrics(request, pk):
     
     # 楽曲作成画面にリダイレクト（歌詞確認画面をスキップ）
     return redirect('songs:lyrics_confirmation')
-
-
-@staff_member_required
-def mureka_api_debug(request):
-    """Mureka APIのレスポンスフィールド調査用（スタッフのみ）"""
-    
-    from ..ai_services import MurekaAIGenerator
-    
-    mureka = MurekaAIGenerator()
-    
-    action = request.GET.get('action', 'endpoints')
-    
-    if action == 'endpoints':
-        # 利用可能エンドポイントの調査
-        results = mureka.list_api_endpoints()
-        return JsonResponse({'action': 'endpoints', 'results': results})
-    
-    elif action == 'describe':
-        # 特定の曲を分析（song_id省略時は最新の公開曲を使用）
-        song_id = request.GET.get('song_id')
-        if song_id:
-            song = get_object_or_404(Song, pk=song_id)
-        else:
-            song = Song.objects.filter(audio_url__isnull=False).exclude(audio_url='').order_by('-created_at').first()
-            if not song:
-                return JsonResponse({'error': 'No song with audio found'}, status=400)
-        
-        audio_url = song.audio_url
-        if not audio_url:
-            return JsonResponse({'error': 'No audio URL'}, status=400)
-        
-        result = mureka.describe_song(audio_url)
-        return JsonResponse({
-            'action': 'describe',
-            'song_id': song.pk,
-            'song_title': str(song),
-            'audio_url': audio_url[:100],
-            'result': result
-        })
-    
-    elif action == 'query_task':
-        # タスクの全フィールドを確認（最近の生成タスクIDを指定）
-        task_id = request.GET.get('task_id')
-        if not task_id:
-            # 最新の曲のtrace_idを使用
-            return JsonResponse({'error': 'task_id required'}, status=400)
-        
-        import requests as req
-        headers = {
-            'Authorization': f'Bearer {mureka.api_key}',
-            'Content-Type': 'application/json'
-        }
-        try:
-            response = req.get(f"{mureka.base_url}/v1/song/query/{task_id}", headers=headers, timeout=30)
-            if response.status_code == 200:
-                data = response.json()
-                return JsonResponse({'action': 'query_task', 'task_id': task_id, 'result': data})
-            else:
-                return JsonResponse({'action': 'query_task', 'status': response.status_code, 'body': response.text[:1000]})
-        except Exception as e:
-            return JsonResponse({'error': str(e)}, status=500)
-    
-    elif action == 'list_songs':
-        # Mureka APIの曲リストを取得（GET & POST両方試す）
-        import requests as req
-        headers = {
-            'Authorization': f'Bearer {mureka.api_key}',
-            'Content-Type': 'application/json'
-        }
-        results = {}
-        try:
-            # GET
-            response = req.get(f"{mureka.base_url}/v1/song/list", headers=headers, timeout=30)
-            results['GET /v1/song/list'] = {'status': response.status_code, 'body': response.text[:500]}
-        except Exception as e:
-            results['GET /v1/song/list'] = {'error': str(e)}
-        try:
-            # POST
-            response = req.post(f"{mureka.base_url}/v1/song/list", headers=headers, json={}, timeout=30)
-            results['POST /v1/song/list'] = {'status': response.status_code, 'body': response.text[:500]}
-        except Exception as e:
-            results['POST /v1/song/list'] = {'error': str(e)}
-        try:
-            # POST with page
-            response = req.post(f"{mureka.base_url}/v1/song/list", headers=headers, json={"page": 1, "page_size": 5}, timeout=30)
-            results['POST /v1/song/list (paged)'] = {'status': response.status_code, 'body': response.text[:500]}
-        except Exception as e:
-            results['POST /v1/song/list (paged)'] = {'error': str(e)}
-        return JsonResponse({'action': 'list_songs', 'results': results})
-    
-    elif action == 'recent_songs':
-        # DB内の最近の曲とそのメタデータを一覧表示
-        recent = Song.objects.filter(audio_url__isnull=False).exclude(audio_url='').order_by('-created_at')[:10]
-        songs_data = []
-        for s in recent:
-            songs_data.append({
-                'id': s.pk,
-                'title': str(s),
-                'created': s.created_at.isoformat() if s.created_at else None,
-                'audio_url': s.audio_url[:80] if s.audio_url else None,
-                'generation_status': s.generation_status if hasattr(s, 'generation_status') else None,
-            })
-        return JsonResponse({'action': 'recent_songs', 'songs': songs_data})
-    
-    return JsonResponse({'error': 'Unknown action. Use: endpoints, describe, query_task, list_songs, recent_songs'}, status=400)
 
 

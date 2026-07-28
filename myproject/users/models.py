@@ -112,7 +112,26 @@ class User(AbstractUser):
         verbose_name='保護者同意日時',
         help_text='未成年ユーザーが課金する際の保護者同意記録'
     )
-    
+    parent_email = models.EmailField(
+        blank=True,
+        null=True,
+        verbose_name='保護者のメールアドレス',
+        help_text='未成年ユーザーの保護者同意確認メールの送付先'
+    )
+    parental_consent_token = models.CharField(
+        max_length=64,
+        blank=True,
+        null=True,
+        verbose_name='保護者同意確認トークン',
+        help_text='保護者に送付する同意確認リンクのトークン（使用後は失効）'
+    )
+    parental_consent_requested_at = models.DateTimeField(
+        blank=True,
+        null=True,
+        verbose_name='保護者同意リクエスト日時',
+        help_text='保護者宛ての同意確認メールを送信した日時'
+    )
+
     # リマインドメール
     last_reminder_sent = models.DateTimeField(
         blank=True,
@@ -167,7 +186,45 @@ class User(AbstractUser):
     def has_parental_consent(self):
         """保護者同意があるかどうか"""
         return self.parental_consent_at is not None
-    
+
+    @property
+    def parental_consent_pending(self):
+        """保護者への確認メールを送付済みで、まだ同意リンクが押されていない状態か"""
+        return bool(self.parental_consent_token) and not self.has_parental_consent
+
+    def start_parental_consent(self, parent_email):
+        """保護者宛ての同意確認メールを送るためのトークンを発行する"""
+        import secrets
+        from django.utils import timezone
+
+        self.parent_email = parent_email
+        self.parental_consent_token = secrets.token_urlsafe(32)
+        self.parental_consent_requested_at = timezone.now()
+        self.save(update_fields=[
+            'parent_email', 'parental_consent_token', 'parental_consent_requested_at',
+        ])
+        return self.parental_consent_token
+
+    def confirm_parental_consent(self, token):
+        """保護者がメール内リンクを開いたときにトークンを検証して同意を確定する"""
+        import secrets
+        from datetime import timedelta
+        from django.utils import timezone
+
+        if not token or not self.parental_consent_token:
+            return False, 'invalid_token'
+        if not secrets.compare_digest(token, self.parental_consent_token):
+            return False, 'invalid_token'
+        if not self.parental_consent_requested_at:
+            return False, 'invalid_token'
+        if timezone.now() - self.parental_consent_requested_at > timedelta(days=7):
+            return False, 'token_expired'
+
+        self.parental_consent_at = timezone.now()
+        self.parental_consent_token = None
+        self.save(update_fields=['parental_consent_at', 'parental_consent_token'])
+        return True, 'ok'
+
     def can_purchase(self):
         """課金可能かチェック（未成年は保護者同意が必要）"""
         if self.is_minor is None:
