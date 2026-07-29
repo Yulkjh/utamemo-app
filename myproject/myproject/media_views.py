@@ -1,12 +1,10 @@
 from django.http import FileResponse, Http404
-from django.contrib.auth.decorators import login_required
 from django.conf import settings
 from django.db import models
 import os
 import mimetypes
 
 
-@login_required
 def serve_protected_media(request, path):
     """
     ログインユーザーのみがアクセスできる保護されたメディアファイル配信
@@ -33,6 +31,8 @@ def serve_protected_media(request, path):
     # ファイルタイプに応じたパーミッションチェック
     if 'uploaded_images' in path:
         # アップロード画像: 所有者のみアクセス可能
+        if not request.user.is_authenticated:
+            raise Http404("Access denied")
         from songs.models import UploadedImage
         filename = os.path.basename(requested_path)
         uploaded_image = UploadedImage.objects.filter(
@@ -43,20 +43,23 @@ def serve_protected_media(request, path):
         if not uploaded_image:
             raise Http404("Access denied")
             
-    elif 'songs/' in path or 'covers/' in path:
-        # 楽曲ファイル/カバー画像: 所有者または公開設定の場合のみアクセス可能
+    elif 'songs/' in path or 'covers/' in path or 'generated_audio/' in path:
+        # 楽曲関連ファイル: 所有者または公開設定の場合のみアクセス可能
         from songs.models import Song
         filename = os.path.basename(requested_path)
         
-        # 楽曲を検索（ファイル名で）
+        # 楽曲を検索（FileField/URLFieldの両方を許可）
         song = Song.objects.filter(
             models.Q(audio_file__endswith=filename) | 
-            models.Q(cover_image__endswith=filename)
+            models.Q(cover_image__endswith=filename) |
+            models.Q(audio_url__endswith=filename)
         ).first()
         
         if song:
-            # 所有者または公開楽曲のみアクセス許可
-            if song.created_by != request.user and not song.is_public:
+            # 公開楽曲は誰でも、非公開は所有者/スタッフのみ
+            is_owner = request.user.is_authenticated and song.created_by == request.user
+            is_staff = request.user.is_authenticated and request.user.is_staff
+            if not song.is_public and not (is_owner or is_staff):
                 raise Http404("Access denied")
         else:
             # 楽曲に紐付いていないファイルはアクセス拒否

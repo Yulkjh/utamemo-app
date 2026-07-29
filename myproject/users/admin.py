@@ -72,7 +72,7 @@ class UserAdmin(BaseUserAdmin):
         ('日時', {'fields': ('last_login', 'date_joined')}),
         ('利用規約', {'fields': ('tos_agreed_at',)}),
         ('年齢確認・保護者同意', {
-            'fields': ('birth_date', 'parental_consent_at')
+            'fields': ('birth_date', 'parent_email', 'parental_consent_requested_at', 'parental_consent_at')
         }),
         ('プラン・課金', {
             'fields': ('plan', 'plan_expires_at', 'stripe_customer_id', 'stripe_subscription_id')
@@ -96,7 +96,10 @@ class UserAdmin(BaseUserAdmin):
     search_fields = ('username', 'email', 'first_name', 'last_name', 'stripe_customer_id')
     
     # 読み取り専用フィールド
-    readonly_fields = ('last_login', 'date_joined', 'banned_at', 'last_reminder_sent', 'tos_agreed_at', 'parental_consent_at')
+    readonly_fields = (
+        'last_login', 'date_joined', 'banned_at', 'last_reminder_sent', 'tos_agreed_at',
+        'parental_consent_at', 'parental_consent_requested_at',
+    )
     
     # 一括アクション
     actions = ['ban_users', 'unban_users', 'reset_to_free_plan']

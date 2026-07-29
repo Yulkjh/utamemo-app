@@ -165,20 +165,35 @@
         </div>
         
         <p style="color:#666; font-size:0.95rem; line-height:1.6; margin-bottom:20px;">
-            {% if is_english %}Since you are under 18, parental or guardian consent is required before purchasing a paid plan. Please confirm that your parent or guardian has reviewed and approved this purchase.{% elif is_spanish %}Como eres menor de 18 años, se requiere el consentimiento de un padre o tutor antes de comprar un plan de pago. Por favor confirma que tu padre o tutor ha revisado y aprobado esta compra.{% elif is_german %}Da Sie unter 18 Jahre alt sind, ist die Zustimmung eines Elternteils oder Erziehungsberechtigten erforderlich, bevor Sie einen kostenpflichtigen Plan kaufen. Bitte bestätigen Sie, dass Ihr Elternteil oder Erziehungsberechtigter diesen Kauf überprüft und genehmigt hat.{% elif is_portuguese %}Como você é menor de 18 anos, o consentimento dos pais ou responsável é necessário antes de adquirir um plano pago. Por favor, confirme que seu pai ou responsável revisou e aprovou esta compra.{% elif is_chinese %}由于您未满18岁，在购买付费方案之前需要获得家长或监护人的同意。请确认您的家长或监护人已审查并批准了此次购买。{% else %}あなたは18歳未満のため、有料プランを購入するには保護者の同意が必要です。保護者がこの購入を確認し、承認したことを確認してください。{% endif %}
+            {% if is_english %}Since you are under 18, parental or guardian consent is required before purchasing a paid plan. Enter your parent or guardian's email address below — we'll send them a confirmation link. Once they approve it, you'll be able to complete your purchase.{% elif is_spanish %}Como eres menor de 18 años, se requiere el consentimiento de un padre o tutor antes de comprar un plan de pago. Introduce el correo electrónico de tu padre o tutor a continuación; le enviaremos un enlace de confirmación. Una vez que lo apruebe, podrás completar tu compra.{% elif is_german %}Da Sie unter 18 Jahre alt sind, ist die Zustimmung eines Elternteils oder Erziehungsberechtigten erforderlich, bevor Sie einen kostenpflichtigen Plan kaufen. Geben Sie unten die E-Mail-Adresse Ihres Elternteils oder Erziehungsberechtigten ein — wir senden ihm/ihr einen Bestätigungslink. Sobald die Zustimmung erfolgt ist, können Sie den Kauf abschließen.{% elif is_portuguese %}Como você é menor de 18 anos, o consentimento dos pais ou responsável é necessário antes de adquirir um plano pago. Informe abaixo o e-mail do seu pai ou responsável — enviaremos um link de confirmação. Assim que ele for aprovado, você poderá concluir a compra.{% elif is_chinese %}由于您未满18岁，在购买付费方案之前需要获得家长或监护人的同意。请在下方输入您家长或监护人的电子邮件地址，我们会向其发送确认链接。获得批准后，您就可以完成购买。{% else %}あなたは18歳未満のため、有料プランを購入するには保護者の同意が必要です。以下に保護者の方のメールアドレスを入力してください。確認用のリンクをお送りし、保護者の方がリンクを開いて承認すると購入手続きに進めます。{% endif %}
         </p>
-        
-        <label style="display:flex; align-items:flex-start; gap:10px; padding:16px; background:#fff8f5; border-radius:10px; border:1px solid #ffe0d0; cursor:pointer; margin-bottom:20px;">
-            <input type="checkbox" id="consentCheckbox" style="margin-top:3px; accent-color:#ff7940; width:18px; height:18px; flex-shrink:0;">
-            <span style="color:#444; font-size:0.9rem; line-height:1.5;">
-                {% if is_english %}I confirm that my parent or legal guardian has reviewed and consents to this subscription purchase.{% elif is_spanish %}Confirmo que mi padre o tutor legal ha revisado y consiente esta compra de suscripción.{% elif is_german %}Ich bestätige, dass mein Elternteil oder gesetzlicher Vormund diesen Abonnementkauf überprüft hat und zustimmt.{% elif is_portuguese %}Confirmo que meu pai ou responsável legal revisou e consente com esta compra de assinatura.{% elif is_chinese %}我确认我的父母或法定监护人已审查并同意此订阅购买。{% else %}保護者または法定代理人がこのサブスクリプション購入を確認し、同意したことを確認します。{% endif %}
-            </span>
-        </label>
-        
-        <button id="consentSubmitBtn" onclick="submitParentalConsent()" disabled
-            style="width:100%; padding:14px; background:linear-gradient(135deg, #ff7940, #ff6020); color:#fff; border:none; border-radius:10px; font-size:1rem; font-weight:600; cursor:not-allowed; opacity:0.5; transition:all 0.3s;">
-            {% if is_english %}Agree and Continue{% elif is_spanish %}Aceptar y Continuar{% elif is_german %}Zustimmen und Fortfahren{% elif is_portuguese %}Concordar e Continuar{% elif is_chinese %}同意并继续{% else %}同意して続行{% endif %}
+
+        <div style="margin-bottom:20px;">
+            <label for="parentEmailInput" style="display:block; font-size:0.9rem; color:#444; margin-bottom:6px; font-weight:600;">
+                {% if is_english %}Parent/Guardian Email{% elif is_spanish %}Correo del Padre/Tutor{% elif is_german %}E-Mail des Elternteils{% elif is_portuguese %}E-mail do Responsável{% elif is_chinese %}家长/监护人邮箱{% else %}保護者のメールアドレス{% endif %}
+            </label>
+            <input type="email" id="parentEmailInput" value="{{ parent_email|default:'' }}"
+                placeholder="parent@example.com"
+                style="width:100%; padding:12px 14px; border:1px solid #ddd; border-radius:8px; font-size:0.95rem;">
+        </div>
+
+        <button id="consentSubmitBtn" onclick="submitParentalConsent()"
+            style="width:100%; padding:14px; background:linear-gradient(135deg, #ff7940, #ff6020); color:#fff; border:none; border-radius:10px; font-size:1rem; font-weight:600; cursor:pointer; transition:all 0.3s;">
+            {% if is_english %}Send Confirmation Email{% elif is_spanish %}Enviar Correo de Confirmación{% elif is_german %}Bestätigungs-E-Mail Senden{% elif is_portuguese %}Enviar E-mail de Confirmação{% elif is_chinese %}发送确认邮件{% else %}確認メールを送信{% endif %}
         </button>
+    </div>
+</div>
+
+<!-- 保護者同意 保留中モーダル -->
+<div id="parentalConsentPendingModal" style="display:none; position:fixed; top:0; left:0; right:0; bottom:0; background:rgba(0,0,0,0.6); z-index:9999; align-items:center; justify-content:center;">
+    <div style="background:#fff; border-radius:16px; max-width:500px; width:90%; padding:32px; margin:auto; position:relative; box-shadow:0 20px 40px rgba(0,0,0,0.2); text-align:center;">
+        <button onclick="document.getElementById('parentalConsentPendingModal').style.display='none';" style="position:absolute; top:12px; right:16px; background:none; border:none; font-size:24px; cursor:pointer; color:#999;">&times;</button>
+        <h3 style="font-size:1.3rem; font-weight:700; color:#333; margin-bottom:16px;">
+            {% if is_english %}Waiting for Parental Confirmation{% elif is_spanish %}Esperando Confirmación Parental{% elif is_german %}Warten auf Elterliche Bestätigung{% elif is_portuguese %}Aguardando Confirmação dos Pais{% elif is_chinese %}等待家长确认{% else %}保護者の確認待ちです{% endif %}
+        </h3>
+        <p style="color:#666; font-size:0.95rem; line-height:1.6;">
+            {% if is_english %}We've sent a confirmation email to <span class="pending-parent-email">{{ parent_email }}</span>. Once your parent or guardian clicks the link in that email, you'll be able to complete your purchase.{% elif is_spanish %}Hemos enviado un correo de confirmación a <span class="pending-parent-email">{{ parent_email }}</span>. Una vez que tu padre o tutor haga clic en el enlace de ese correo, podrás completar tu compra.{% elif is_german %}Wir haben eine Bestätigungs-E-Mail an <span class="pending-parent-email">{{ parent_email }}</span> gesendet. Sobald Ihr Elternteil auf den Link in dieser E-Mail klickt, können Sie den Kauf abschließen.{% elif is_portuguese %}Enviamos um e-mail de confirmação para <span class="pending-parent-email">{{ parent_email }}</span>. Assim que seu responsável clicar no link desse e-mail, você poderá concluir a compra.{% elif is_chinese %}我们已向<span class="pending-parent-email">{{ parent_email }}</span>发送了确认邮件。家长点击邮件中的链接后，您就可以完成购买。{% else %}<span class="pending-parent-email">{{ parent_email }}</span> 宛てに確認メールを送信しました。保護者の方がメール内のリンクをクリックすると、購入手続きに進めるようになります。{% endif %}
+        </p>
     </div>
 </div>
 
@@ -434,22 +449,12 @@
 <script>
 document.addEventListener('DOMContentLoaded', function() {
     const isLoggedIn = {{ user.is_authenticated|yesno:"true,false" }};
-    const needsConsent = {% if needs_parental_consent %}true{% else %}false{% endif %};
+    let needsConsent = {% if needs_parental_consent %}true{% else %}false{% endif %};
+    let consentPending = {% if parental_consent_pending %}true{% else %}false{% endif %};
     const birthDateMissing = {% if birth_date_missing %}true{% else %}false{% endif %};
     const checkoutBtns = document.querySelectorAll('.checkout-btn');
     let pendingPlan = null;
     let pendingBtn = null;
-
-    // 保護者同意チェックボックスの制御
-    const consentCheckbox = document.getElementById('consentCheckbox');
-    const consentSubmitBtn = document.getElementById('consentSubmitBtn');
-    if (consentCheckbox) {
-        consentCheckbox.addEventListener('change', function() {
-            consentSubmitBtn.disabled = !this.checked;
-            consentSubmitBtn.style.opacity = this.checked ? '1' : '0.5';
-            consentSubmitBtn.style.cursor = this.checked ? 'pointer' : 'not-allowed';
-        });
-    }
 
     checkoutBtns.forEach(btn => {
         btn.addEventListener('click', async function() {
@@ -469,6 +474,12 @@ document.addEventListener('DOMContentLoaded', function() {
                 return;
             }
 
+            // 未成年で保護者の確認待ちの場合
+            if (consentPending) {
+                document.getElementById('parentalConsentPendingModal').style.display = 'flex';
+                return;
+            }
+
             // 未成年で保護者同意が必要な場合
             if (needsConsent) {
                 pendingPlan = plan;
@@ -476,7 +487,7 @@ document.addEventListener('DOMContentLoaded', function() {
                 showConsentModal();
                 return;
             }
-            
+
             await proceedToCheckout(plan, this);
         });
     });
@@ -500,6 +511,8 @@ document.addEventListener('DOMContentLoaded', function() {
             
             if (data.checkout_url) {
                 window.location.href = data.checkout_url;
+            } else if (data.reason === 'parental_consent_required' && consentPending) {
+                document.getElementById('parentalConsentPendingModal').style.display = 'flex';
             } else if (data.reason === 'parental_consent_required') {
                 pendingPlan = plan;
                 pendingBtn = btn;
@@ -524,18 +537,20 @@ document.addEventListener('DOMContentLoaded', function() {
     window.closeConsentModal = function() {
         const modal = document.getElementById('parentalConsentModal');
         modal.style.display = 'none';
-        if (consentCheckbox) consentCheckbox.checked = false;
-        if (consentSubmitBtn) {
-            consentSubmitBtn.disabled = true;
-            consentSubmitBtn.style.opacity = '0.5';
-            consentSubmitBtn.style.cursor = 'not-allowed';
-        }
     };
 
     window.submitParentalConsent = async function() {
         const btn = document.getElementById('consentSubmitBtn');
+        const emailInput = document.getElementById('parentEmailInput');
+        const parentEmail = (emailInput.value || '').trim();
+
+        if (!parentEmail) {
+            emailInput.focus();
+            return;
+        }
+
         btn.disabled = true;
-        btn.textContent = {% if is_english %}'Processing...'{% elif is_spanish %}'Procesando...'{% elif is_german %}'Verarbeitung...'{% elif is_portuguese %}'Processando...'{% elif is_chinese %}'处理中...'{% else %}'処理中...'{% endif %};
+        btn.textContent = {% if is_english %}'Sending...'{% elif is_spanish %}'Enviando...'{% elif is_german %}'Senden...'{% elif is_portuguese %}'Enviando...'{% elif is_chinese %}'发送中...'{% else %}'送信中...'{% endif %};
 
         try {
             const response = await fetch('{% url "users:parental_consent" %}', {
@@ -543,17 +558,17 @@ document.addEventListener('DOMContentLoaded', function() {
                 headers: {
                     'Content-Type': 'application/json',
                     'X-CSRFToken': '{{ csrf_token }}',
-                }
+                },
+                body: JSON.stringify({ parent_email: parentEmail })
             });
             const data = await response.json();
             if (data.success) {
                 closeConsentModal();
-                // 同意完了後、チェックアウトに進む
-                if (pendingPlan && pendingBtn) {
-                    await proceedToCheckout(pendingPlan, pendingBtn);
-                } else {
-                    location.reload();
-                }
+                // メール送信直後はまだ同意が確定していないため、保留中モーダルへ切り替える
+                consentPending = true;
+                needsConsent = false;
+                document.querySelectorAll('.pending-parent-email').forEach(el => { el.textContent = parentEmail; });
+                document.getElementById('parentalConsentPendingModal').style.display = 'flex';
             } else {
                 alert(data.error || 'Error');
             }
@@ -563,7 +578,7 @@ document.addEventListener('DOMContentLoaded', function() {
         }
 
         btn.disabled = false;
-        btn.textContent = {% if is_english %}'Agree and Continue'{% elif is_spanish %}'Aceptar y Continuar'{% elif is_german %}'Zustimmen und Fortfahren'{% elif is_portuguese %}'Concordar e Continuar'{% elif is_chinese %}'同意并继续'{% else %}'同意して続行'{% endif %};
+        btn.textContent = {% if is_english %}'Send Confirmation Email'{% elif is_spanish %}'Enviar Correo de Confirmación'{% elif is_german %}'Bestätigungs-E-Mail Senden'{% elif is_portuguese %}'Enviar E-mail de Confirmação'{% elif is_chinese %}'发送确认邮件'{% else %}'確認メールを送信'{% endif %};
     };
 });
 </script>

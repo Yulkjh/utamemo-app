@@ -102,16 +102,16 @@
             </div>
         </div>
         
-        <!-- Mureka AI -->
+        <!-- Lyria AI -->
         <div class="col-md-4 mb-3">
             <div class="card h-100">
                 <div class="card-header text-white" style="background-color: #6f42c1;">
-                    <i class="bi bi-music-note-beamed"></i> Mureka AI
+                    <i class="bi bi-music-note-beamed"></i> Lyria AI
                 </div>
                 <div class="card-body">
                     <p>
                         <strong>ステータス:</strong>
-                        {% if mureka_status.available %}
+                        {% if lyria_status.available %}
                         <span class="badge bg-success">Active</span>
                         {% else %}
                         <span class="badge bg-warning">Not Configured</span>
@@ -119,13 +119,12 @@
                     </p>
                     <p>
                         <strong>APIキー:</strong>
-                        {% if mureka_status.api_key_set %}
+                        {% if lyria_status.api_key_set %}
                         <i class="bi bi-check-circle text-success"></i> 設定済み
                         {% else %}
                         <i class="bi bi-x-circle text-danger"></i> 未設定
                         {% endif %}
                     </p>
-                    <p><small><strong>URL:</strong> {{ mureka_status.api_url }}</small></p>
                     <small class="text-muted">歌詞から楽曲を生成します</small>
                 </div>
             </div>

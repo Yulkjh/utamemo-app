@@ -3,6 +3,7 @@ Pillow>=10.4.0
 requests==2.31.0
 python-dotenv==1.0.0
 google-generativeai
+google-genai
 gunicorn==20.1.0
 whitenoise==6.5.0
 dj-database-url==2.1.0

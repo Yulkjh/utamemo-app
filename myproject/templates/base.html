@@ -785,14 +785,23 @@
             transform: translateY(-50%);
             width: 24px;
             height: 24px;
+            padding: 0;
             border-radius: 50%;
             border: none;
             display: grid;
             place-items: center;
             background: rgba(255, 255, 255, 0.2);
             color: #fff;
+            line-height: 1;
             cursor: pointer;
             transition: background 0.18s ease;
+        }
+
+        .demo-banner-close i {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            line-height: 1;
         }
 
         .demo-banner-close:hover {

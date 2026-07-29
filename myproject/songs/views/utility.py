@@ -2,13 +2,12 @@
 from django.shortcuts import render, get_object_or_404, redirect
 from django.contrib.auth.decorators import login_required
 from django.contrib.admin.views.decorators import staff_member_required
-from django.http import JsonResponse
 from django.conf import settings
 import json
 import logging
 
 from ..models import Song
-from ..ai_services import GeminiLyricsGenerator, GeminiOCR, MurekaAIGenerator
+from ..ai_services import GeminiLyricsGenerator, GeminiOCR
 
 logger = logging.getLogger(__name__)
 
@@ -96,6 +95,11 @@ def audio_proxy(request, pk):
         'storage.googleapis.com',
     }
     parsed = urlparse(audio_url)
+
+    # ローカル保存された /media/ 音声はそのまま配信ビューへ委譲
+    if (not parsed.scheme and audio_url.startswith('/media/')) or parsed.path.startswith('/media/'):
+        return redirect(parsed.path or audio_url)
+
     if parsed.hostname not in ALLOWED_AUDIO_DOMAINS:
         logger.warning(f"Audio proxy blocked unauthorized domain: {parsed.hostname} for song {pk}")
         return HttpResponse('Forbidden', status=403)
@@ -328,16 +332,6 @@ def api_status_view(request):
         'status': '有効' if cloud_llm.is_available else '未設定',
     }
     
-    # Murekaステータス
-    mureka_gen = MurekaAIGenerator()
-    mureka_status = {
-        'available': mureka_gen.use_real_api,
-        'api_key_set': bool(mureka_gen.api_key),
-        'api_url': mureka_gen.base_url,
-        'status': '有効' if mureka_gen.use_real_api else '未設定',
-        'health': 'unknown'
-    }
-    
     # キュー統計
     now = timezone.now()
     last_24h = now - timedelta(hours=24)
@@ -378,7 +372,6 @@ def api_status_view(request):
         'gemini_lyrics_status': gemini_lyrics_status,
         'local_llm_status': local_llm_status,
         'cloud_llm_status': cloud_llm_status,
-        'mureka_status': mureka_status,
         'queue_stats': queue_stats,
         'recent_errors': list(recent_errors),
         'stuck_jobs': list(stuck_jobs),
@@ -388,106 +381,3 @@ def api_status_view(request):
     return render(request, 'songs/api_status.html', context)
 
 
-@staff_member_required
-def mureka_api_debug(request):
-    """Mureka APIのレスポンスフィールド調査用（スタッフのみ）"""
-    
-    from ..ai_services import MurekaAIGenerator
-    
-    mureka = MurekaAIGenerator()
-    
-    action = request.GET.get('action', 'endpoints')
-    
-    if action == 'endpoints':
-        # 利用可能エンドポイントの調査
-        results = mureka.list_api_endpoints()
-        return JsonResponse({'action': 'endpoints', 'results': results})
-    
-    elif action == 'describe':
-        # 特定の曲を分析（song_id省略時は最新の公開曲を使用）
-        song_id = request.GET.get('song_id')
-        if song_id:
-            song = get_object_or_404(Song, pk=song_id)
-        else:
-            song = Song.objects.filter(audio_url__isnull=False).exclude(audio_url='').order_by('-created_at').first()
-            if not song:
-                return JsonResponse({'error': 'No song with audio found'}, status=400)
-        
-        audio_url = song.audio_url
-        if not audio_url:
-            return JsonResponse({'error': 'No audio URL'}, status=400)
-        
-        result = mureka.describe_song(audio_url)
-        return JsonResponse({
-            'action': 'describe',
-            'song_id': song.pk,
-            'song_title': str(song),
-            'audio_url': audio_url[:100],
-            'result': result
-        })
-    
-    elif action == 'query_task':
-        # タスクの全フィールドを確認（最近の生成タスクIDを指定）
-        task_id = request.GET.get('task_id')
-        if not task_id:
-            # 最新の曲のtrace_idを使用
-            return JsonResponse({'error': 'task_id required'}, status=400)
-        
-        import requests as req
-        headers = {
-            'Authorization': f'Bearer {mureka.api_key}',
-            'Content-Type': 'application/json'
-        }
-        try:
-            response = req.get(f"{mureka.base_url}/v1/song/query/{task_id}", headers=headers, timeout=30)
-            if response.status_code == 200:
-                data = response.json()
-                return JsonResponse({'action': 'query_task', 'task_id': task_id, 'result': data})
-            else:
-                return JsonResponse({'action': 'query_task', 'status': response.status_code, 'body': response.text[:1000]})
-        except Exception as e:
-            return JsonResponse({'error': str(e)}, status=500)
-    
-    elif action == 'list_songs':
-        # Mureka APIの曲リストを取得（GET & POST両方試す）
-        import requests as req
-        headers = {
-            'Authorization': f'Bearer {mureka.api_key}',
-            'Content-Type': 'application/json'
-        }
-        results = {}
-        try:
-            # GET
-            response = req.get(f"{mureka.base_url}/v1/song/list", headers=headers, timeout=30)
-            results['GET /v1/song/list'] = {'status': response.status_code, 'body': response.text[:500]}
-        except Exception as e:
-            results['GET /v1/song/list'] = {'error': str(e)}
-        try:
-            # POST
-            response = req.post(f"{mureka.base_url}/v1/song/list", headers=headers, json={}, timeout=30)
-            results['POST /v1/song/list'] = {'status': response.status_code, 'body': response.text[:500]}
-        except Exception as e:
-            results['POST /v1/song/list'] = {'error': str(e)}
-        try:
-            # POST with page
-            response = req.post(f"{mureka.base_url}/v1/song/list", headers=headers, json={"page": 1, "page_size": 5}, timeout=30)
-            results['POST /v1/song/list (paged)'] = {'status': response.status_code, 'body': response.text[:500]}
-        except Exception as e:
-            results['POST /v1/song/list (paged)'] = {'error': str(e)}
-        return JsonResponse({'action': 'list_songs', 'results': results})
-    
-    elif action == 'recent_songs':
-        # DB内の最近の曲とそのメタデータを一覧表示
-        recent = Song.objects.filter(audio_url__isnull=False).exclude(audio_url='').order_by('-created_at')[:10]
-        songs_data = []
-        for s in recent:
-            songs_data.append({
-                'id': s.pk,
-                'title': str(s),
-                'created': s.created_at.isoformat() if s.created_at else None,
-                'audio_url': s.audio_url[:80] if s.audio_url else None,
-                'generation_status': s.generation_status if hasattr(s, 'generation_status') else None,
-            })
-        return JsonResponse({'action': 'recent_songs', 'songs': songs_data})
-    
-    return JsonResponse({'error': 'Unknown action. Use: endpoints, describe, query_task, list_songs, recent_songs'}, status=400)

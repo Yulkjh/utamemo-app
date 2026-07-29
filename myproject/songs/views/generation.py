@@ -14,7 +14,12 @@ from pathlib import Path
 
 from ..models import Song, Lyrics, UploadedImage
 from ..forms import ImageUploadForm
-from ..ai_services import GeminiOCR, get_lyrics_generator
+from ..ai_services import (
+    GeminiOCR,
+    get_default_song_generation_model,
+    get_default_song_generation_provider,
+    get_lyrics_generator,
+)
 from ..content_filter import check_text_for_inappropriate_content
 
 logger = logging.getLogger(__name__)
@@ -491,6 +496,9 @@ class LyricsConfirmationView(LoginRequiredMixin, TemplateView):
             context['extracted_text'] = ""
         
         context['generated_lyrics'] = generated_lyrics
+        default_provider = get_default_song_generation_provider()
+        context['default_song_provider'] = default_provider
+        context['default_provider_model'] = get_default_song_generation_model(default_provider)
         
         return context
     

@@ -684,7 +684,7 @@ Create {genre} style lyrics in PURE ENGLISH from the following text.
 """
     
     def convert_to_hiragana(self, lyrics):
-        """歌詞の漢字と数字をひらがなに変換（Mureka API送信用）
+        """歌詞の漢字と数字をひらがなに変換（楽曲生成API送信用）
         Gemini AIで文脈を考慮した正確な読みを生成"""
         return convert_lyrics_to_hiragana_with_context(lyrics)
     

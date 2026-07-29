@@ -20,6 +20,7 @@ class LyricsInline(admin.StackedInline):
 class SongAdmin(admin.ModelAdmin):
     list_display = (
         'id', 'share_id', 'title', 'artist', 'created_by', 'genre', 'vocal_style',
+        'song_provider', 'provider_model',
         'mureka_model', 'generation_status', 'is_public', 'is_encrypted',
         'likes_count', 'total_plays', 'retry_count',
         'karaoke_status', 'created_at',
@@ -27,7 +28,7 @@ class SongAdmin(admin.ModelAdmin):
     list_display_links = ('id', 'title')
     list_filter = (
         'generation_status', 'is_public', 'is_encrypted', 'genre',
-        'vocal_style', 'mureka_model', 'karaoke_status', 'created_at',
+        'vocal_style', 'song_provider', 'mureka_model', 'karaoke_status', 'created_at',
     )
     search_fields = ('title', 'artist', 'created_by__username', 'music_prompt', 'error_message', 'share_id')
     ordering = ('-created_at',)
@@ -42,7 +43,7 @@ class SongAdmin(admin.ModelAdmin):
             'fields': ('title', 'artist', 'genre', 'vocal_style', 'tags')
         }),
         ('AI生成設定', {
-            'fields': ('mureka_model', 'music_prompt')
+            'fields': ('song_provider', 'provider_model', 'mureka_model', 'music_prompt')
         }),
         ('音声・メディア', {
             'fields': ('audio_file', 'audio_url', 'cover_image', 'duration',

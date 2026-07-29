@@ -2,7 +2,7 @@ from django.shortcuts import render, get_object_or_404, redirect
 from django.views.generic import CreateView, TemplateView, ListView, UpdateView, FormView
 from django.contrib.auth.views import LoginView as AuthLoginView, LogoutView as AuthLogoutView
 from django.contrib.auth.mixins import LoginRequiredMixin
-from django.urls import reverse_lazy
+from django.urls import reverse_lazy, reverse
 from django.contrib import messages
 from django.http import JsonResponse, HttpResponse
 from django.views.decorators.http import require_POST
@@ -303,6 +303,8 @@ class UpgradeView(TemplateView):
             context['is_minor'] = self.request.user.is_minor
             context['has_parental_consent'] = self.request.user.has_parental_consent
             context['needs_parental_consent'] = self.request.user.is_minor and not self.request.user.has_parental_consent
+            context['parental_consent_pending'] = self.request.user.parental_consent_pending
+            context['parent_email'] = self.request.user.parent_email
             context['birth_date_missing'] = self.request.user.birth_date is None
         else:
             context['current_plan'] = None
@@ -310,6 +312,8 @@ class UpgradeView(TemplateView):
             context['is_minor'] = False
             context['has_parental_consent'] = False
             context['needs_parental_consent'] = False
+            context['parental_consent_pending'] = False
+            context['parent_email'] = ''
             context['birth_date_missing'] = False
         context['stripe_publishable_key'] = getattr(settings, 'STRIPE_PUBLISHABLE_KEY', '')
         context['stripe_price_ids'] = getattr(settings, 'STRIPE_PRICE_IDS', {})
@@ -680,26 +684,78 @@ def delete_account(request):
 
 @login_required
 @require_POST
-def record_parental_consent(request):
-    """未成年ユーザーの保護者同意を記録"""
-    import logging
-    logger = logging.getLogger(__name__)
-    
+def request_parental_consent(request):
+    """未成年ユーザーの保護者宛てに同意確認メールを送付する"""
     user = request.user
-    
+
     if not user.birth_date:
         return JsonResponse({'error': 'Birth date is required'}, status=400)
-    
+
     if not user.is_minor:
         return JsonResponse({'error': 'Not a minor'}, status=400)
-    
+
     if user.has_parental_consent:
         return JsonResponse({'success': True, 'message': 'Already consented'})
-    
-    user.parental_consent_at = timezone.now()
-    user.save(update_fields=['parental_consent_at'])
-    
-    logger.info(f'保護者同意記録: user_id={user.id}, username={user.username}')
-    
-    return JsonResponse({'success': True})
+
+    try:
+        data = json.loads(request.body or b'{}')
+    except ValueError:
+        data = {}
+    parent_email = (data.get('parent_email') or '').strip()
+
+    if not parent_email:
+        return JsonResponse({'error': 'Parent email is required'}, status=400)
+
+    token = user.start_parental_consent(parent_email)
+    confirm_url = request.build_absolute_uri(
+        reverse('users:confirm_parental_consent', kwargs={'user_id': user.id, 'token': token})
+    )
+
+    app_language = request.session.get('app_language', 'ja')
+    if app_language == 'en':
+        subject = 'UTAMEMO - Parental Consent Requested'
+        body = (
+            f'{user.username} has requested to purchase a paid UTAMEMO subscription '
+            f'and needs your consent as a parent or guardian.\n\n'
+            f'If you approve, please open the link below (valid for 7 days):\n{confirm_url}\n\n'
+            f'If you did not expect this email, you can safely ignore it.'
+        )
+    else:
+        subject = 'UTAMEMO - 保護者の同意確認のお願い'
+        body = (
+            f'{user.username} さんがUTAMEMOの有料プランへの登録を希望しており、保護者の方の同意が必要です。\n\n'
+            f'同意される場合は、以下のリンクを開いてください（リンクの有効期限は7日間です）:\n{confirm_url}\n\n'
+            f'このメールに心当たりがない場合は、何も操作せず破棄してください。'
+        )
+
+    try:
+        send_mail(
+            subject=subject,
+            message=body,
+            from_email=getattr(settings, 'DEFAULT_FROM_EMAIL', 'noreply@utamemo.com'),
+            recipient_list=[parent_email],
+            fail_silently=False,
+        )
+    except Exception:
+        logger.exception('保護者同意メール送信失敗: user_id=%s', user.id)
+        return JsonResponse({'error': 'Failed to send email. Please try again later.'}, status=500)
+
+    logger.info('保護者同意リクエスト送信: user_id=%s, username=%s', user.id, user.username)
+
+    return JsonResponse({'success': True, 'pending': True})
+
+
+def confirm_parental_consent(request, user_id, token):
+    """保護者がメール内リンクを開いたときに同意を確定する"""
+    user = get_object_or_404(User, id=user_id)
+    success, reason = user.confirm_parental_consent(token)
+
+    if success:
+        logger.info('保護者同意確定: user_id=%s, username=%s', user.id, user.username)
+
+    return render(request, 'users/parental_consent_confirm.html', {
+        'success': success,
+        'reason': reason,
+        'username': user.username,
+    })
 

@@ -21,7 +21,7 @@ SECTION_LABEL_PATTERN = re.compile(
 def remove_section_labels(value):
     """歌詞からセクションラベル（[Verse], [Chorus], Verse, Chorus等）を除去するフィルター
 
-    Mureka API / Gemini が返す歌詞に含まれる [Verse 1], Pre-Chorus, [Chorus] 等の
+    AI楽曲生成APIやGeminiが返す歌詞に含まれる [Verse 1], Pre-Chorus, [Chorus] 等の
     構造ラベルを除去し、空行（セクション区切り）として残す。
     角括弧あり・なし両方に対応。\r\n の正規化も行う。
     """
