@@ -943,6 +943,15 @@ class TrainingSession(models.Model):
                                        help_text='例: 04:7C:16:4D:E2:69')
     wol_target_host = models.CharField(max_length=255, blank=True, verbose_name='WoL送信先ホスト',
                                        help_text='DDNSホスト名またはグローバルIP')
+    operated_by = models.ForeignKey(
+        User,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='operated_training_sessions',
+        verbose_name='運用担当者',
+        help_text='このマシンを操作するスタッフ。パートナーデータのダウンロード可否判定に使用。',
+    )
 
     class Meta:
         verbose_name = 'トレーニングセッション'
@@ -1096,6 +1105,117 @@ class PromptTemplate(models.Model):
         return obj
 
 
+class TrainingDataQuerySet(models.QuerySet):
+    def visible_to(self, user):
+        """データ提供元の覚書（Art.3: 限定されたメンバーのみ取扱可）に基づく可視範囲を返す
+
+        - 未認証/Noneの場合は自社データ（data_partner未設定）のみ
+        - superuserは全件
+        - それ以外のスタッフは「自社データ」+「自分が認可されている提供元のデータ」のみ
+        """
+        if user is None or not user.is_authenticated:
+            return self.filter(data_partner__isnull=True)
+        if user.is_superuser:
+            return self
+        return self.filter(
+            models.Q(data_partner__isnull=True) | models.Q(data_partner__authorized_users=user)
+        )
+
+
+class DataPartner(models.Model):
+    """外部データ提供元（覚書等の契約に基づき学習データを提供する提携企業・団体）
+
+    Clearnote/コクヨのような、ノートデータ提供の覚書を締結した相手先を表す。
+    - authorized_users が空の提供元のデータは superuser 以外閲覧不可（フェイルクローズ）
+    - is_active=False は削除依頼を受けて完全削除済み、または契約終了を示す
+    """
+    slug = models.SlugField(max_length=50, unique=True, verbose_name='識別子', help_text='例: clearnote, kokuyo')
+    name = models.CharField(max_length=200, verbose_name='提供元名称')
+    contract_reference = models.CharField(
+        max_length=200, blank=True, verbose_name='契約書/覚書の参照', help_text='覚書の名称・締結日など'
+    )
+    permitted_scope = models.TextField(
+        blank=True, verbose_name='利用許諾範囲', help_text='覚書で許可された用途・データ範囲の要約（第2条相当）'
+    )
+    authorized_users = models.ManyToManyField(
+        User,
+        through='DataPartnerAuthorization',
+        through_fields=('data_partner', 'user'),
+        blank=True,
+        related_name='authorized_data_partners',
+        verbose_name='取扱許可メンバー',
+        help_text='この提供元のデータを取り扱ってよいと事前通知済みのスタッフ（第3条相当）',
+    )
+    is_active = models.BooleanField(default=True, verbose_name='有効')
+    deletion_requested_at = models.DateTimeField(
+        null=True, blank=True, verbose_name='削除依頼受領日時', help_text='提供元から削除依頼を受けた日時（第4条相当）'
+    )
+    created_at = models.DateTimeField(auto_now_add=True, verbose_name='作成日時')
+    updated_at = models.DateTimeField(auto_now=True, verbose_name='更新日時')
+
+    class Meta:
+        verbose_name = 'データ提供元'
+        verbose_name_plural = 'データ提供元'
+        ordering = ['name']
+
+    def __str__(self):
+        return f'{self.name} ({self.slug})'
+
+
+class DataPartnerAuthorization(models.Model):
+    """DataPartner.authorized_users の中間テーブル（誰が・いつ・誰の承認で許可されたか）"""
+    data_partner = models.ForeignKey(DataPartner, on_delete=models.CASCADE, verbose_name='データ提供元')
+    user = models.ForeignKey(User, on_delete=models.CASCADE, verbose_name='ユーザー')
+    granted_by = models.ForeignKey(
+        User, on_delete=models.SET_NULL, null=True, blank=True,
+        related_name='granted_data_partner_authorizations', verbose_name='許可者',
+    )
+    granted_at = models.DateTimeField(auto_now_add=True, verbose_name='許可日時')
+
+    class Meta:
+        verbose_name = 'データ提供元アクセス許可'
+        verbose_name_plural = 'データ提供元アクセス許可'
+        unique_together = ('data_partner', 'user')
+
+    def __str__(self):
+        return f'{self.user.username} -> {self.data_partner.slug}'
+
+
+class PartnerDataAccessLog(models.Model):
+    """パートナー提供データへのアクセス（インポート/ダウンロード/削除）を記録する監査ログ
+
+    覚書 第4条（安全管理）・第5条（成果報告）の証跡として使う。
+    このログ自体は削除・変更を行わない（admin.py側でreadonly）。
+    """
+    ACTION_CHOICES = [
+        ('import', 'インポート'),
+        ('download', 'ダウンロード'),
+        ('delete', '削除'),
+    ]
+
+    data_partner = models.ForeignKey(
+        DataPartner, on_delete=models.PROTECT, related_name='access_logs', verbose_name='データ提供元'
+    )
+    action = models.CharField(max_length=20, choices=ACTION_CHOICES, verbose_name='操作')
+    training_session = models.ForeignKey(
+        'TrainingSession', on_delete=models.SET_NULL, null=True, blank=True, verbose_name='学習セッション（機械アクセスの場合）'
+    )
+    user = models.ForeignKey(
+        User, on_delete=models.SET_NULL, null=True, blank=True, verbose_name='操作ユーザー'
+    )
+    record_count = models.IntegerField(default=0, verbose_name='対象件数')
+    detail = models.CharField(max_length=255, blank=True, verbose_name='備考')
+    created_at = models.DateTimeField(auto_now_add=True, verbose_name='実行日時')
+
+    class Meta:
+        verbose_name = 'パートナーデータアクセスログ'
+        verbose_name_plural = 'パートナーデータアクセスログ'
+        ordering = ['-created_at']
+
+    def __str__(self):
+        return f'{self.get_action_display()} {self.data_partner.slug} ({self.record_count}件)'
+
+
 class TrainingData(models.Model):
     """学習データレコード（PostgreSQL永続化）
 
@@ -1112,8 +1232,19 @@ class TrainingData(models.Model):
         help_text='input先頭100文字のSHA256先頭16文字',
         db_index=True,
     )
+    data_partner = models.ForeignKey(
+        DataPartner,
+        on_delete=models.PROTECT,
+        null=True,
+        blank=True,
+        related_name='training_data',
+        verbose_name='データ提供元',
+        help_text='外部提供データの場合のみ設定。自社生成/ユーザー生成データはNULL。',
+    )
     created_at = models.DateTimeField(auto_now_add=True, verbose_name='作成日時')
     updated_at = models.DateTimeField(auto_now=True, verbose_name='更新日時')
+
+    objects = TrainingDataQuerySet.as_manager()
 
     class Meta:
         verbose_name = '学習データ'

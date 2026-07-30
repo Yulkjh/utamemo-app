@@ -1,8 +1,17 @@
+import json
+from io import StringIO
+
 from django.test import TestCase, Client
 from django.contrib.auth import get_user_model
 from django.urls import reverse
 from django.db import IntegrityError
-from .models import Song, Lyrics, Tag, Like, Favorite, Classroom, ClassroomMembership, ClassroomAssignment, FlashcardDeck, Flashcard, TheaterReservation
+from django.core.management import call_command
+from django.core.management.base import CommandError
+from .models import (
+    Song, Lyrics, Tag, Like, Favorite, Classroom, ClassroomMembership, ClassroomAssignment,
+    FlashcardDeck, Flashcard, TheaterReservation,
+    TrainingData, TrainingSession, DataPartner, DataPartnerAuthorization, PartnerDataAccessLog,
+)
 from .content_filter import check_text_for_inappropriate_content
 
 User = get_user_model()
@@ -633,3 +642,161 @@ class FlashcardTest(TestCase):
         self.client.login(username='other', password='testpass123')
         response = self.client.post(reverse('songs:flashcard_deck_delete', args=[deck.pk]))
         self.assertTrue(FlashcardDeck.objects.filter(pk=deck.pk).exists())
+
+
+class DataPartnerVisibilityTest(TestCase):
+    """TrainingData.objects.visible_to() のアクセス制御テスト（データ提供元の覚書 第3条対応）"""
+
+    def setUp(self):
+        self.superuser = User.objects.create_superuser(username='super', password='testpass123')
+        self.staff_authorized = User.objects.create_user(username='staff_ok', password='testpass123', is_staff=True)
+        self.staff_other = User.objects.create_user(username='staff_no', password='testpass123', is_staff=True)
+        self.partner = DataPartner.objects.create(slug='clearnote', name='Clearnote')
+        DataPartnerAuthorization.objects.create(data_partner=self.partner, user=self.staff_authorized)
+        self.organic = TrainingData.objects.create(instruction='i', input_text='organic input', output_text='o')
+        self.partner_row = TrainingData.objects.create(
+            instruction='i', input_text='partner input', output_text='o', data_partner=self.partner,
+        )
+
+    def test_superuser_sees_all(self):
+        visible = TrainingData.objects.visible_to(self.superuser)
+        self.assertIn(self.organic, visible)
+        self.assertIn(self.partner_row, visible)
+
+    def test_unauthorized_staff_excludes_partner_data(self):
+        visible = TrainingData.objects.visible_to(self.staff_other)
+        self.assertIn(self.organic, visible)
+        self.assertNotIn(self.partner_row, visible)
+
+    def test_authorized_staff_sees_partner_data(self):
+        visible = TrainingData.objects.visible_to(self.staff_authorized)
+        self.assertIn(self.organic, visible)
+        self.assertIn(self.partner_row, visible)
+
+    def test_none_user_sees_only_organic(self):
+        visible = TrainingData.objects.visible_to(None)
+        self.assertIn(self.organic, visible)
+        self.assertNotIn(self.partner_row, visible)
+
+
+class TrainingDataDownloadApiTest(TestCase):
+    """training_data_download API のパートナーデータ・ゲーティングと監査ログのテスト"""
+
+    def setUp(self):
+        self.operator = User.objects.create_user(username='operator', password='testpass123', is_staff=True)
+        self.partner = DataPartner.objects.create(slug='clearnote', name='Clearnote')
+        DataPartnerAuthorization.objects.create(data_partner=self.partner, user=self.operator)
+        TrainingData.objects.create(instruction='i', input_text='organic', output_text='o')
+        TrainingData.objects.create(
+            instruction='i', input_text='partner data', output_text='o', data_partner=self.partner,
+        )
+
+    def test_missing_api_key(self):
+        response = self.client.get(reverse('songs:training_data_download'))
+        self.assertEqual(response.status_code, 401)
+
+    def test_invalid_api_key(self):
+        response = self.client.get(
+            reverse('songs:training_data_download'), HTTP_X_TRAINING_API_KEY='bogus-key',
+        )
+        self.assertEqual(response.status_code, 403)
+
+    def test_session_without_operator_excludes_partner_data(self):
+        """operated_by未設定のセッションはパートナーデータを取得できない（フェイルクローズ）"""
+        session = TrainingSession.objects.create(machine_name='home-pc')
+        response = self.client.get(
+            reverse('songs:training_data_download'), HTTP_X_TRAINING_API_KEY=session.api_key,
+        )
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.json()['total'], 1)
+        self.assertEqual(PartnerDataAccessLog.objects.filter(action='download').count(), 0)
+
+    def test_session_with_authorized_operator_includes_partner_data_and_logs(self):
+        session = TrainingSession.objects.create(machine_name='school-pc', operated_by=self.operator)
+        response = self.client.get(
+            reverse('songs:training_data_download'), HTTP_X_TRAINING_API_KEY=session.api_key,
+        )
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.json()['total'], 2)
+        log = PartnerDataAccessLog.objects.get(action='download')
+        self.assertEqual(log.data_partner, self.partner)
+        self.assertEqual(log.record_count, 1)
+        self.assertEqual(log.training_session, session)
+
+
+class TrainingDataUploadReplaceGuardTest(TestCase):
+    """training_data_upload の mode=replace がパートナーデータを保持し、hash衝突でも500にならないことのテスト"""
+
+    def setUp(self):
+        self.session = TrainingSession.objects.create(machine_name='home-pc')
+        self.partner = DataPartner.objects.create(slug='clearnote', name='Clearnote')
+        self.partner_row = TrainingData.objects.create(
+            instruction='i', input_text='partner input text', output_text='partner output',
+            data_partner=self.partner,
+        )
+        self.organic_row = TrainingData.objects.create(
+            instruction='i', input_text='organic input text', output_text='organic output',
+        )
+
+    def test_replace_preserves_partner_rows(self):
+        response = self.client.post(
+            reverse('songs:training_data_upload'),
+            data=json.dumps({
+                'mode': 'replace',
+                'records': [{'instruction': 'new', 'input': 'brand new organic text', 'output': 'new output'}],
+            }),
+            content_type='application/json',
+            HTTP_X_TRAINING_API_KEY=self.session.api_key,
+        )
+        self.assertEqual(response.status_code, 200)
+        self.assertFalse(TrainingData.objects.filter(pk=self.organic_row.pk).exists())
+        self.assertTrue(TrainingData.objects.filter(pk=self.partner_row.pk).exists())
+        self.assertTrue(TrainingData.objects.filter(input_text='brand new organic text').exists())
+
+    def test_replace_skips_hash_collision_with_partner_row_without_error(self):
+        response = self.client.post(
+            reverse('songs:training_data_upload'),
+            data=json.dumps({
+                'mode': 'replace',
+                'records': [{'instruction': 'i', 'input': 'partner input text', 'output': 'different output'}],
+            }),
+            content_type='application/json',
+            HTTP_X_TRAINING_API_KEY=self.session.api_key,
+        )
+        self.assertEqual(response.status_code, 200)
+        self.partner_row.refresh_from_db()
+        self.assertEqual(self.partner_row.output_text, 'partner output')
+        self.assertEqual(TrainingData.objects.filter(input_text='partner input text').count(), 1)
+
+
+class PurgePartnerDataCommandTest(TestCase):
+    """purge_partner_data management command のテスト（データ提供元の覚書 第4条対応）"""
+
+    def setUp(self):
+        self.partner = DataPartner.objects.create(slug='testpartner', name='Test Partner')
+        self.row = TrainingData.objects.create(
+            instruction='i', input_text='unique purge test input xyz123', output_text='o',
+            data_partner=self.partner,
+        )
+
+    def test_dry_run_makes_no_changes(self):
+        out = StringIO()
+        call_command('purge_partner_data', 'testpartner', stdout=out)
+        self.assertTrue(TrainingData.objects.filter(pk=self.row.pk).exists())
+        self.partner.refresh_from_db()
+        self.assertTrue(self.partner.is_active)
+        self.assertEqual(PartnerDataAccessLog.objects.count(), 0)
+
+    def test_yes_purges_and_logs(self):
+        out = StringIO()
+        call_command('purge_partner_data', 'testpartner', '--yes', '--reason', 'test', stdout=out)
+        self.assertFalse(TrainingData.objects.filter(pk=self.row.pk).exists())
+        self.partner.refresh_from_db()
+        self.assertFalse(self.partner.is_active)
+        log = PartnerDataAccessLog.objects.get(action='delete')
+        self.assertEqual(log.data_partner, self.partner)
+        self.assertEqual(log.record_count, 1)
+
+    def test_unknown_partner_raises(self):
+        with self.assertRaises(CommandError):
+            call_command('purge_partner_data', 'doesnotexist')

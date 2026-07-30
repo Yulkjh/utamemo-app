@@ -5,7 +5,7 @@ from django.views.decorators.http import require_POST, require_http_methods
 from django.views.decorators.csrf import csrf_exempt
 from django.http import JsonResponse, HttpResponse
 from django.conf import settings
-from django.db.models import Q, F
+from django.db.models import Q, F, Count
 
 from ..models import Song, TrainingSession, PromptTemplate, TrainingData
 import json
@@ -60,7 +60,7 @@ def training_data_viewer(request):
                 )
 
     from ..models import TrainingData
-    data_records = TrainingData.objects.all()
+    data_records = TrainingData.objects.visible_to(request.user)
     records = [r.to_dict() for r in data_records]
 
     # ジャンル抽出
@@ -136,7 +136,7 @@ def training_data_api(request):
             return JsonResponse({'error': 'data_hash required'}, status=400)
 
         try:
-            record = TrainingData.objects.get(data_hash=data_hash)
+            record = TrainingData.objects.visible_to(request.user).get(data_hash=data_hash)
         except TrainingData.DoesNotExist:
             return JsonResponse({'error': f'Record not found: {data_hash}'}, status=404)
 
@@ -161,16 +161,27 @@ def training_data_api(request):
         if not data_hash:
             return JsonResponse({'error': 'data_hash required'}, status=400)
 
-        deleted_count, _ = TrainingData.objects.filter(data_hash=data_hash).delete()
-        if deleted_count == 0:
+        visible_qs = TrainingData.objects.visible_to(request.user)
+        try:
+            record = visible_qs.get(data_hash=data_hash)
+        except TrainingData.DoesNotExist:
             return JsonResponse({'error': f'Record not found: {data_hash}'}, status=404)
 
-        total = TrainingData.objects.count()
+        data_partner = record.data_partner
+        record.delete()
+        if data_partner is not None:
+            from ..models import PartnerDataAccessLog
+            PartnerDataAccessLog.objects.create(
+                data_partner=data_partner, action='delete', user=request.user,
+                record_count=1, detail=f'training_data_api delete (hash={data_hash})',
+            )
+
+        total = TrainingData.objects.visible_to(request.user).count()
         display_idx = (index + 1) if isinstance(index, int) else '?'
         return JsonResponse({'ok': True, 'message': f'#{display_idx} を削除しました', 'total': total})
 
     elif action == 'reload':
-        records = [r.to_dict() for r in TrainingData.objects.all()]
+        records = [r.to_dict() for r in TrainingData.objects.visible_to(request.user)]
         return JsonResponse({'ok': True, 'records': records, 'total': len(records)})
 
     elif action == 'mark_reviewed':
@@ -178,6 +189,8 @@ def training_data_api(request):
         index = body.get('index')
         if not data_hash:
             return JsonResponse({'error': 'data_hash required'}, status=400)
+        if not TrainingData.objects.visible_to(request.user).filter(data_hash=data_hash).exists():
+            return JsonResponse({'error': f'Record not found: {data_hash}'}, status=404)
         from users.models import TrainingDataReview
         # ソフトデリート済みのレコードがあれば復元、なければ新規作成
         existing = TrainingDataReview.all_objects.filter(
@@ -218,6 +231,8 @@ def training_data_api(request):
         index = body.get('index')
         if not data_hash:
             return JsonResponse({'error': 'data_hash required'}, status=400)
+        if not TrainingData.objects.visible_to(request.user).filter(data_hash=data_hash).exists():
+            return JsonResponse({'error': f'Record not found: {data_hash}'}, status=404)
         from users.models import TrainingDataReview
         # ソフトデリート（復元可能）
         from django.utils import timezone as tz
@@ -385,13 +400,19 @@ def training_data_generate(request):
 
     # 保存はDBに直接行われるため、ファイル書き込み不要
 
+    # レスポンスは呼び出しユーザーが閲覧可能な範囲で再取得する
+    # (records は既存データ全件ベースでdedup用に構築しているため、
+    #  他パートナーの提供データを含みうる。生成した新規レコードは
+    #  常に data_partner=NULL なので visible_to には必ず含まれる)
+    visible_records = [r.to_dict() for r in TrainingData.objects.visible_to(request.user)]
+
     return JsonResponse({
         'ok': True,
         'generated': generated,
         'generated_count': len(generated),
-        'total': len(records),
+        'total': len(visible_records),
         'errors': errors,
-        'records': records,
+        'records': visible_records,
     })
 
 
@@ -615,19 +636,40 @@ def training_data_download(request):
     GET /api/training/data/download/
     Header: X-Training-Api-Key: <api_key>
     Response: 学習データJSON配列 + プロンプトテンプレート
+
+    パートナー提供データ（覚書 第3条: 限定されたメンバーのみ取扱可）は、
+    このセッションの operated_by が許可されている場合のみ含まれる。
+    operated_by 未設定のセッションは自社データのみ（フェイルクローズ）。
     """
-    from ..models import TrainingSession, PromptTemplate, TrainingData
+    from ..models import TrainingSession, PromptTemplate, TrainingData, PartnerDataAccessLog
 
     api_key = request.headers.get('X-Training-Api-Key', '')
     if not api_key:
         return JsonResponse({'error': 'API key required'}, status=401)
 
     try:
-        TrainingSession.objects.get(api_key=api_key)
+        session = TrainingSession.objects.get(api_key=api_key)
     except TrainingSession.DoesNotExist:
         return JsonResponse({'error': 'Invalid API key'}, status=403)
 
-    records = [r.to_dict() for r in TrainingData.objects.all()]
+    visible_qs = TrainingData.objects.visible_to(session.operated_by)
+    records = [r.to_dict() for r in visible_qs]
+
+    # パートナー提供データが含まれる場合は監査ログを記録（第4条/第5条の証跡）
+    partner_counts = (
+        visible_qs.filter(data_partner__isnull=False)
+        .values('data_partner')
+        .annotate(n=Count('id'))
+    )
+    for row in partner_counts:
+        PartnerDataAccessLog.objects.create(
+            data_partner_id=row['data_partner'],
+            action='download',
+            training_session=session,
+            user=session.operated_by,
+            record_count=row['n'],
+            detail=f'training_data_download (machine={session.machine_name})',
+        )
 
     # プロンプトテンプレートも返す
     prompt = PromptTemplate.get_template('lyrics_instruction')
@@ -688,18 +730,31 @@ def training_data_upload(request):
             return JsonResponse({'error': f'records[{i}] に input/output がありません'}, status=400)
 
     if mode == 'replace':
-        # 完全置き換え
+        # 完全置き換え（自社/Gemini生成データのみ。パートナー提供データ(data_partner設定済み)は
+        # GPUマシン側が把握していない可能性があるため、誤って巻き込んで削除しない）
         with transaction.atomic():
-            TrainingData.objects.all().delete()
+            TrainingData.objects.filter(data_partner__isnull=True).delete()
+            # 残存するパートナーデータとのhash衝突を避けるため、mergeと同じ重複判定を行う
+            existing_hashes = set(TrainingData.objects.values_list('data_hash', flat=True))
+            added = 0
+            skipped_collisions = 0
             for rec in upload_records:
+                h = make_data_hash(rec.get('input', ''))
+                if h in existing_hashes:
+                    skipped_collisions += 1
+                    continue
                 TrainingData.objects.create(
                     instruction=rec.get('instruction', ''),
                     input_text=rec.get('input', ''),
                     output_text=rec.get('output', ''),
                 )
-        added = len(upload_records)
-        total = added
-        logger.info('学習データ置換: %d 件 (by session %s)', added, session.machine_name)
+                existing_hashes.add(h)
+                added += 1
+        total = TrainingData.objects.count()
+        logger.info(
+            '学習データ置換: %d 件追加 (%d 件はパートナーデータと衝突しスキップ, by session %s)',
+            added, skipped_collisions, session.machine_name,
+        )
     else:
         # マージ: data_hash で重複判定
         existing_hashes = set(TrainingData.objects.values_list('data_hash', flat=True))

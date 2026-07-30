@@ -6,6 +6,7 @@ from .models import (
     ClassroomAssignment,
     FlashcardDeck, Flashcard, TrainingSession, PromptTemplate,
     TrainingData, TheaterSurveyResponse,
+    DataPartner, DataPartnerAuthorization, PartnerDataAccessLog,
 )
 
 
@@ -274,12 +275,59 @@ class TheaterSurveyResponseAdmin(admin.ModelAdmin):
 
 @admin.register(TrainingSession)
 class TrainingSessionAdmin(admin.ModelAdmin):
-    list_display = ('id', 'machine_name', 'status', 'model_name', 'current_epoch', 'total_epochs', 'train_loss', 'eval_loss', 'updated_at')
+    list_display = ('id', 'machine_name', 'status', 'model_name', 'operated_by', 'current_epoch', 'total_epochs', 'train_loss', 'eval_loss', 'updated_at')
     list_filter = ('status', 'machine_name')
     search_fields = ('machine_name', 'model_name')
     readonly_fields = ('api_key', 'created_at', 'updated_at')
+    raw_id_fields = ('operated_by',)
     ordering = ('-updated_at',)
     list_per_page = 20
+
+
+@admin.register(DataPartner)
+class DataPartnerAdmin(admin.ModelAdmin):
+    list_display = ('name', 'slug', 'is_active', 'authorized_count', 'deletion_requested_at', 'updated_at')
+    list_filter = ('is_active',)
+    search_fields = ('name', 'slug', 'contract_reference')
+    prepopulated_fields = {'slug': ('name',)}
+    readonly_fields = ('created_at', 'updated_at')
+    ordering = ('name',)
+    list_per_page = 50
+
+    def authorized_count(self, obj):
+        return obj.authorized_users.count()
+    authorized_count.short_description = '許可メンバー数'
+
+
+@admin.register(DataPartnerAuthorization)
+class DataPartnerAuthorizationAdmin(admin.ModelAdmin):
+    list_display = ('id', 'user', 'data_partner', 'granted_by', 'granted_at')
+    list_filter = ('data_partner',)
+    search_fields = ('user__username', 'data_partner__name')
+    ordering = ('-granted_at',)
+    list_per_page = 50
+    readonly_fields = ('granted_at',)
+    raw_id_fields = ('user', 'data_partner', 'granted_by')
+
+
+@admin.register(PartnerDataAccessLog)
+class PartnerDataAccessLogAdmin(admin.ModelAdmin):
+    """パートナーデータの操作監査ログ。証跡のため作成・変更・削除は不可（表示のみ）。"""
+    list_display = ('id', 'data_partner', 'action', 'record_count', 'user', 'training_session', 'created_at')
+    list_filter = ('action', 'data_partner')
+    search_fields = ('detail', 'data_partner__name')
+    ordering = ('-created_at',)
+    list_per_page = 50
+    raw_id_fields = ('data_partner', 'training_session', 'user')
+
+    def has_add_permission(self, request):
+        return False
+
+    def has_change_permission(self, request, obj=None):
+        return False
+
+    def has_delete_permission(self, request, obj=None):
+        return False
 
 
 @admin.register(PromptTemplate)
@@ -298,9 +346,11 @@ class PromptTemplateAdmin(admin.ModelAdmin):
 
 @admin.register(TrainingData)
 class TrainingDataAdmin(admin.ModelAdmin):
-    list_display = ('id', 'data_hash', 'short_input', 'created_at', 'updated_at')
+    list_display = ('id', 'data_hash', 'data_partner', 'short_input', 'created_at', 'updated_at')
+    list_filter = ('data_partner',)
     search_fields = ('input_text', 'output_text', 'data_hash')
     readonly_fields = ('data_hash', 'created_at', 'updated_at')
+    raw_id_fields = ('data_partner',)
     list_per_page = 50
     ordering = ('id',)
 

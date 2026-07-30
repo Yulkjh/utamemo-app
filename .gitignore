@@ -29,3 +29,12 @@ training/data/lyrics_seeds.json
 training/data/lyrics_dataset.json
 training/data/lyrics_final.json
 training/ssh_config.json
+
+# 学習データ本体（データ提供元の覚書における「複製の管理」対象になりうるため追跡しない）
+training/data/lyrics_training_data.json
+training/data/lyrics_training_data.json.bak
+training/data/lyrics_training_data_hq.json
+training/data/sample_training_data.json
+training/data/snapshots/
+training/data/prompt_template.txt
+data/lyrics_training_data.json
