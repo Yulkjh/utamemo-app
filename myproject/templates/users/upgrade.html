@@ -18,7 +18,7 @@
                 <div class="plan-header">
                     <h3 class="plan-name">{% if is_english %}Free{% elif is_spanish %}Gratis{% elif is_german %}Kostenlos{% elif is_portuguese %}Grátis{% elif is_chinese %}免费{% else %}フリー{% endif %}</h3>
                     <div class="plan-price">
-                        <span class="price-amount">¥0</span>
+                        <span class="price-amount">{{ plan_prices.free.display }}</span>
                         <span class="price-period">/{% if is_english %}mo{% elif is_spanish %}mes{% elif is_german %}Monat{% elif is_portuguese %}mês{% elif is_chinese %}月{% else %}月{% endif %}</span>
                     </div>
                 </div>
@@ -42,9 +42,12 @@
                 <div class="plan-header">
                     <h3 class="plan-name">{% if is_english %}Starter{% elif is_spanish %}Inicial{% elif is_german %}Starter{% elif is_portuguese %}Iniciante{% elif is_chinese %}入门{% else %}スターター{% endif %}</h3>
                     <div class="plan-price">
-                        <span class="price-amount">¥780</span>
+                        <span class="price-amount">{{ plan_prices.starter.display }}</span>
                         <span class="price-period">/{% if is_english %}mo{% elif is_spanish %}mes{% elif is_german %}Monat{% elif is_portuguese %}mês{% elif is_chinese %}月{% else %}月{% endif %}</span>
                     </div>
+                    {% if app_language != 'ja' %}
+                    <div class="price-jpy-note">{% if is_english %}Billed as {{ plan_prices.starter.jpy_display }} (JPY){% elif is_spanish %}Se factura como {{ plan_prices.starter.jpy_display }} (JPY){% elif is_german %}Abgerechnet als {{ plan_prices.starter.jpy_display }} (JPY){% elif is_portuguese %}Cobrado como {{ plan_prices.starter.jpy_display }} (JPY){% elif is_chinese %}实际扣款 {{ plan_prices.starter.jpy_display }}（日元）{% else %}実際の請求額は{{ plan_prices.starter.jpy_display }}（日本円）です{% endif %}</div>
+                    {% endif %}
                 </div>
                 <div class="plan-description">{% if is_english %}For individual serious users{% elif is_spanish %}Para usuarios individuales serios{% elif is_german %}Für ernsthafte Einzelnutzer{% elif is_portuguese %}Para usuários individuais sérios{% elif is_chinese %}适合认真使用的个人用户{% else %}個人でしっかり使いたい方に{% endif %}</div>
                 <ul class="plan-features">
@@ -65,9 +68,12 @@
                 <div class="plan-header">
                     <h3 class="plan-name">{% if is_english %}Pro{% elif is_spanish %}Pro{% elif is_german %}Pro{% elif is_portuguese %}Pro{% elif is_chinese %}专业{% else %}プロ{% endif %}</h3>
                     <div class="plan-price">
-                        <span class="price-amount">¥1,900</span>
+                        <span class="price-amount">{{ plan_prices.pro.display }}</span>
                         <span class="price-period">/{% if is_english %}mo{% elif is_spanish %}mes{% elif is_german %}Monat{% elif is_portuguese %}mês{% elif is_chinese %}月{% else %}月{% endif %}</span>
                     </div>
+                    {% if app_language != 'ja' %}
+                    <div class="price-jpy-note">{% if is_english %}Billed as {{ plan_prices.pro.jpy_display }} (JPY){% elif is_spanish %}Se factura como {{ plan_prices.pro.jpy_display }} (JPY){% elif is_german %}Abgerechnet als {{ plan_prices.pro.jpy_display }} (JPY){% elif is_portuguese %}Cobrado como {{ plan_prices.pro.jpy_display }} (JPY){% elif is_chinese %}实际扣款 {{ plan_prices.pro.jpy_display }}（日元）{% else %}実際の請求額は{{ plan_prices.pro.jpy_display }}（日本円）です{% endif %}</div>
+                    {% endif %}
                 </div>
                 <div class="plan-description">{% if is_english %}For heavy users{% elif is_spanish %}Para usuarios intensivos{% elif is_german %}Für Power-User{% elif is_portuguese %}Para usuários intensivos{% elif is_chinese %}适合重度用户{% else %}ヘビーユーザー向け{% endif %}</div>
                 <ul class="plan-features">
@@ -88,9 +94,12 @@
                 <div class="plan-header">
                     <h3 class="plan-name">{% if is_english %}School{% elif is_spanish %}Escuela{% elif is_german %}Schule{% elif is_portuguese %}Escola{% elif is_chinese %}学校{% else %}スクール{% endif %}</h3>
                     <div class="plan-price">
-                        <span class="price-amount">¥450</span>
+                        <span class="price-amount">{{ plan_prices.school.display }}</span>
                         <span class="price-period">/{% if is_english %}student/mo{% elif is_spanish %}estudiante/mes{% elif is_german %}Schüler/Monat{% elif is_portuguese %}aluno/mês{% elif is_chinese %}学生/月{% else %}生徒/月{% endif %}</span>
                     </div>
+                    {% if app_language != 'ja' %}
+                    <div class="price-jpy-note">{% if is_english %}Billed as {{ plan_prices.school.jpy_display }}/student (JPY){% elif is_spanish %}Se factura como {{ plan_prices.school.jpy_display }}/estudiante (JPY){% elif is_german %}Abgerechnet als {{ plan_prices.school.jpy_display }}/Schüler (JPY){% elif is_portuguese %}Cobrado como {{ plan_prices.school.jpy_display }}/aluno (JPY){% elif is_chinese %}实际扣款 {{ plan_prices.school.jpy_display }}/学生（日元）{% else %}実際の請求額は生徒1人あたり{{ plan_prices.school.jpy_display }}（日本円）です{% endif %}</div>
+                    {% endif %}
                 </div>
                 <div class="plan-description">{% if is_english %}For educational institutions{% elif is_spanish %}Para instituciones educativas{% elif is_german %}Für Bildungseinrichtungen{% elif is_portuguese %}Para instituições educacionais{% elif is_chinese %}适合教育机构{% else %}教育機関向け{% endif %}</div>
                 <ul class="plan-features">
@@ -294,6 +303,12 @@
 .price-period {
     font-size: 0.9rem;
     color: var(--text-muted);
+}
+
+.price-jpy-note {
+    font-size: 0.75rem;
+    color: var(--text-muted);
+    margin-top: 2px;
 }
 
 .plan-description {

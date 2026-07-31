@@ -21,8 +21,11 @@
                     <li>{% if is_english %}Bulk management & billing{% elif is_spanish %}Gestión y facturación masiva{% elif is_german %}Massenverwaltung & Abrechnung{% elif is_chinese %}批量管理和计费{% else %}一括管理・請求{% endif %}</li>
                 </ul>
                 <div class="plan-price-info">
-                    <span class="price">¥450</span>
+                    <span class="price">{{ plan_prices.school.display }}</span>
                     <span class="unit">/{% if is_english %}student/mo{% elif is_spanish %}estudiante/mes{% elif is_german %}Schüler/Monat{% elif is_chinese %}学生/月{% else %}生徒/月{% endif %}</span>
+                    {% if app_language != 'ja' %}
+                    <span class="price-jpy-note">{% if is_english %}Billed as {{ plan_prices.school.jpy_display }}/student (JPY){% elif is_spanish %}Se factura como {{ plan_prices.school.jpy_display }}/estudiante (JPY){% elif is_german %}Abgerechnet als {{ plan_prices.school.jpy_display }}/Schüler (JPY){% elif is_chinese %}实际扣款 {{ plan_prices.school.jpy_display }}/学生（日元）{% else %}実際の請求額は生徒1人あたり{{ plan_prices.school.jpy_display }}（日本円）です{% endif %}</span>
+                    {% endif %}
                 </div>
             </div>
 
@@ -177,6 +180,7 @@
 .plan-price-info {
     display: flex;
     align-items: baseline;
+    flex-wrap: wrap;
     gap: 4px;
 }
 
@@ -189,6 +193,13 @@
 .plan-price-info .unit {
     font-size: 0.9rem;
     color: #888;
+}
+
+.price-jpy-note {
+    flex-basis: 100%;
+    font-size: 0.75rem;
+    color: #888;
+    margin-top: 2px;
 }
 
 .inquiry-form {
