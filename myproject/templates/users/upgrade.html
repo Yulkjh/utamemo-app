@@ -24,10 +24,10 @@
                 </div>
                 <div class="plan-description">{% if is_english %}For those who want to try first{% elif is_spanish %}Para quienes quieren probar primero{% elif is_german %}Für alle, die es erst ausprobieren möchten{% elif is_portuguese %}Para quem quer experimentar primeiro{% elif is_chinese %}适合想先试用的用户{% else %}まずは試してみたい方に{% endif %}</div>
                 <ul class="plan-features">
-                    <li class="available"><i class="bi bi-check"></i>{% if is_english %}Up to 5 songs/month{% elif is_spanish %}Hasta 5 canciones/mes{% elif is_german %}Bis zu 5 Lieder/Monat{% elif is_portuguese %}Até 5 músicas/mês{% elif is_chinese %}每月最多5首{% else %}月5曲まで生成{% endif %}</li>
-                    <li class="available"><i class="bi bi-check"></i>{% if is_english %}AI song generation{% elif is_spanish %}Generación de canciones con IA{% elif is_german %}KI-Songsgenerierung{% elif is_portuguese %}Geração de músicas com IA{% elif is_chinese %}AI歌曲生成{% else %}AI楽曲生成{% endif %}</li>
-                    <li class="available"><i class="bi bi-check"></i>{% if is_english %}Flashcards{% elif is_spanish %}Tarjetas{% elif is_german %}Lernkarten{% elif is_portuguese %}Flashcards{% elif is_chinese %}闪卡{% else %}暗記カード{% endif %}</li>
-                    <li class="unavailable"><i class="bi bi-x"></i>{% if is_english %}Karaoke mode{% elif is_spanish %}Modo karaoke{% elif is_german %}Karaoke-Modus{% elif is_portuguese %}Modo karaokê{% elif is_chinese %}卡拉OK模式{% else %}カラオケモード{% endif %}</li>
+                    <li class="available"><i class="bi bi-patch-check-fill"></i>{% if is_english %}Up to 5 songs/month{% elif is_spanish %}Hasta 5 canciones/mes{% elif is_german %}Bis zu 5 Lieder/Monat{% elif is_portuguese %}Até 5 músicas/mês{% elif is_chinese %}每月最多5首{% else %}月5曲まで生成{% endif %}</li>
+                    <li class="available"><i class="bi bi-patch-check-fill"></i>{% if is_english %}AI song generation{% elif is_spanish %}Generación de canciones con IA{% elif is_german %}KI-Songsgenerierung{% elif is_portuguese %}Geração de músicas com IA{% elif is_chinese %}AI歌曲生成{% else %}AI楽曲生成{% endif %}</li>
+                    <li class="available"><i class="bi bi-patch-check-fill"></i>{% if is_english %}Flashcards{% elif is_spanish %}Tarjetas{% elif is_german %}Lernkarten{% elif is_portuguese %}Flashcards{% elif is_chinese %}闪卡{% else %}暗記カード{% endif %}</li>
+                    <li class="unavailable"><i class="bi bi-x-circle"></i>{% if is_english %}Karaoke mode{% elif is_spanish %}Modo karaoke{% elif is_german %}Karaoke-Modus{% elif is_portuguese %}Modo karaokê{% elif is_chinese %}卡拉OK模式{% else %}カラオケモード{% endif %}</li>
                 </ul>
                 {% if current_plan == 'free' %}
                 <button class="plan-btn current" disabled>{% if is_english %}Current Plan{% elif is_spanish %}Plan Actual{% elif is_german %}Aktueller Plan{% elif is_portuguese %}Plano Atual{% elif is_chinese %}当前方案{% else %}現在のプラン{% endif %}</button>
@@ -37,10 +37,12 @@
             </div>
 
             <!-- Starter Plan -->
-            <div class="plan-card recommended {% if current_plan == 'starter' %}current{% endif %}">
-                <div class="recommend-badge">{% if is_english %}Recommended{% elif is_spanish %}Recomendado{% elif is_german %}Empfohlen{% elif is_portuguese %}Recomendado{% elif is_chinese %}推荐{% else %}おすすめ{% endif %}</div>
+            <div class="plan-card popular {% if current_plan == 'starter' %}current{% endif %}">
                 <div class="plan-header">
-                    <h3 class="plan-name">{% if is_english %}Starter{% elif is_spanish %}Inicial{% elif is_german %}Starter{% elif is_portuguese %}Iniciante{% elif is_chinese %}入门{% else %}スターター{% endif %}</h3>
+                    <h3 class="plan-name">
+                        {% if is_english %}Starter{% elif is_spanish %}Inicial{% elif is_german %}Starter{% elif is_portuguese %}Iniciante{% elif is_chinese %}入门{% else %}スターター{% endif %}
+                        <span class="popular-badge"><i class="bi bi-star-fill"></i>{% if is_english %}Most Popular{% elif is_spanish %}Más Popular{% elif is_german %}Am Beliebtesten{% elif is_portuguese %}Mais Popular{% elif is_chinese %}最受欢迎{% else %}人気No.1{% endif %}</span>
+                    </h3>
                     <div class="plan-price">
                         <span class="price-amount">{{ plan_prices.starter.display }}</span>
                         <span class="price-period">/{% if is_english %}mo{% elif is_spanish %}mes{% elif is_german %}Monat{% elif is_portuguese %}mês{% elif is_chinese %}月{% else %}月{% endif %}</span>
@@ -51,15 +53,15 @@
                 </div>
                 <div class="plan-description">{% if is_english %}For individual serious users{% elif is_spanish %}Para usuarios individuales serios{% elif is_german %}Für ernsthafte Einzelnutzer{% elif is_portuguese %}Para usuários individuais sérios{% elif is_chinese %}适合认真使用的个人用户{% else %}個人でしっかり使いたい方に{% endif %}</div>
                 <ul class="plan-features">
-                    <li class="available"><i class="bi bi-check"></i>{% if is_english %}Up to 70 songs/month{% elif is_spanish %}Hasta 70 canciones/mes{% elif is_german %}Bis zu 70 Lieder/Monat{% elif is_portuguese %}Até 70 músicas/mês{% elif is_chinese %}每月最多70首{% else %}月70曲まで生成{% endif %}</li>
-                    <li class="available"><i class="bi bi-check"></i>{% if is_english %}Karaoke mode{% elif is_spanish %}Modo karaoke{% elif is_german %}Karaoke-Modus{% elif is_portuguese %}Modo karaokê{% elif is_chinese %}卡拉OK模式{% else %}カラオケモード{% endif %}</li>
-                    <li class="available"><i class="bi bi-check"></i>{% if is_english %}Flashcards{% elif is_spanish %}Tarjetas{% elif is_german %}Lernkarten{% elif is_portuguese %}Flashcards{% elif is_chinese %}闪卡{% else %}暗記カード{% endif %}</li>
-                    <li class="available"><i class="bi bi-check"></i>{% if is_english %}No ads{% elif is_spanish %}Sin anuncios{% elif is_german %}Keine Werbung{% elif is_portuguese %}Sem anúncios{% elif is_chinese %}无广告{% else %}広告非表示{% endif %}</li>
+                    <li class="available"><i class="bi bi-patch-check-fill"></i>{% if is_english %}Up to 70 songs/month{% elif is_spanish %}Hasta 70 canciones/mes{% elif is_german %}Bis zu 70 Lieder/Monat{% elif is_portuguese %}Até 70 músicas/mês{% elif is_chinese %}每月最多70首{% else %}月70曲まで生成{% endif %}</li>
+                    <li class="available"><i class="bi bi-patch-check-fill"></i>{% if is_english %}Karaoke mode{% elif is_spanish %}Modo karaoke{% elif is_german %}Karaoke-Modus{% elif is_portuguese %}Modo karaokê{% elif is_chinese %}卡拉OK模式{% else %}カラオケモード{% endif %}</li>
+                    <li class="available"><i class="bi bi-patch-check-fill"></i>{% if is_english %}Flashcards{% elif is_spanish %}Tarjetas{% elif is_german %}Lernkarten{% elif is_portuguese %}Flashcards{% elif is_chinese %}闪卡{% else %}暗記カード{% endif %}</li>
+                    <li class="available"><i class="bi bi-patch-check-fill"></i>{% if is_english %}No ads{% elif is_spanish %}Sin anuncios{% elif is_german %}Keine Werbung{% elif is_portuguese %}Sem anúncios{% elif is_chinese %}无广告{% else %}広告非表示{% endif %}</li>
                 </ul>
                 {% if current_plan == 'starter' %}
                 <button class="plan-btn current" disabled>{% if is_english %}Current Plan{% elif is_spanish %}Plan Actual{% elif is_german %}Aktueller Plan{% elif is_portuguese %}Plano Atual{% elif is_chinese %}当前方案{% else %}現在のプラン{% endif %}</button>
                 {% else %}
-                <button class="plan-btn primary checkout-btn" data-plan="starter">{% if is_english %}Start Starter{% elif is_spanish %}Comenzar Inicial{% elif is_german %}Starter Beginnen{% elif is_portuguese %}Começar Iniciante{% elif is_chinese %}开始入门{% else %}スターターを始める{% endif %}</button>
+                <button class="plan-btn primary checkout-btn" data-plan="starter">{% if is_english %}Start Starter{% elif is_spanish %}Comenzar Inicial{% elif is_german %}Starter Beginnen{% elif is_portuguese %}Começar Iniciante{% elif is_chinese %}开始入门{% else %}スターターを始める{% endif %}<i class="bi bi-arrow-right"></i></button>
                 {% endif %}
             </div>
 
@@ -77,20 +79,20 @@
                 </div>
                 <div class="plan-description">{% if is_english %}For heavy users{% elif is_spanish %}Para usuarios intensivos{% elif is_german %}Für Power-User{% elif is_portuguese %}Para usuários intensivos{% elif is_chinese %}适合重度用户{% else %}ヘビーユーザー向け{% endif %}</div>
                 <ul class="plan-features">
-                    <li class="available"><i class="bi bi-check"></i>{% if is_english %}Unlimited songs{% elif is_spanish %}Canciones ilimitadas{% elif is_german %}Unbegrenzte Lieder{% elif is_portuguese %}Músicas ilimitadas{% elif is_chinese %}无限歌曲{% else %}曲数無制限{% endif %}</li>
-                    <li class="available"><i class="bi bi-check"></i>{% if is_english %}Karaoke mode{% elif is_spanish %}Modo karaoke{% elif is_german %}Karaoke-Modus{% elif is_portuguese %}Modo karaokê{% elif is_chinese %}卡拉OK模式{% else %}カラオケモード{% endif %}</li>
-                    <li class="available"><i class="bi bi-check"></i>{% if is_english %}Flashcards{% elif is_spanish %}Tarjetas{% elif is_german %}Lernkarten{% elif is_portuguese %}Flashcards{% elif is_chinese %}闪卡{% else %}暗記カード{% endif %}</li>
-                    <li class="available"><i class="bi bi-check"></i>{% if is_english %}Priority queue{% elif is_spanish %}Cola prioritaria{% elif is_german %}Prioritätswarteschlange{% elif is_portuguese %}Fila prioritária{% elif is_chinese %}优先队列{% else %}優先キュー{% endif %}</li>
+                    <li class="available"><i class="bi bi-patch-check-fill"></i>{% if is_english %}Unlimited songs{% elif is_spanish %}Canciones ilimitadas{% elif is_german %}Unbegrenzte Lieder{% elif is_portuguese %}Músicas ilimitadas{% elif is_chinese %}无限歌曲{% else %}曲数無制限{% endif %}</li>
+                    <li class="available"><i class="bi bi-patch-check-fill"></i>{% if is_english %}Karaoke mode{% elif is_spanish %}Modo karaoke{% elif is_german %}Karaoke-Modus{% elif is_portuguese %}Modo karaokê{% elif is_chinese %}卡拉OK模式{% else %}カラオケモード{% endif %}</li>
+                    <li class="available"><i class="bi bi-patch-check-fill"></i>{% if is_english %}Flashcards{% elif is_spanish %}Tarjetas{% elif is_german %}Lernkarten{% elif is_portuguese %}Flashcards{% elif is_chinese %}闪卡{% else %}暗記カード{% endif %}</li>
+                    <li class="available"><i class="bi bi-patch-check-fill"></i>{% if is_english %}Priority queue{% elif is_spanish %}Cola prioritaria{% elif is_german %}Prioritätswarteschlange{% elif is_portuguese %}Fila prioritária{% elif is_chinese %}优先队列{% else %}優先キュー{% endif %}</li>
                 </ul>
                 {% if current_plan == 'pro' %}
                 <button class="plan-btn current" disabled>{% if is_english %}Current Plan{% elif is_spanish %}Plan Actual{% elif is_german %}Aktueller Plan{% elif is_portuguese %}Plano Atual{% elif is_chinese %}当前方案{% else %}現在のプラン{% endif %}</button>
                 {% else %}
-                <button class="plan-btn primary checkout-btn" data-plan="pro">{% if is_english %}Start Pro{% elif is_spanish %}Comenzar Pro{% elif is_german %}Pro Beginnen{% elif is_portuguese %}Começar Pro{% elif is_chinese %}开始专业{% else %}プロを始める{% endif %}</button>
+                <button class="plan-btn primary checkout-btn" data-plan="pro">{% if is_english %}Start Pro{% elif is_spanish %}Comenzar Pro{% elif is_german %}Pro Beginnen{% elif is_portuguese %}Começar Pro{% elif is_chinese %}开始专业{% else %}プロを始める{% endif %}<i class="bi bi-arrow-right"></i></button>
                 {% endif %}
             </div>
 
             <!-- School Plan -->
-            <div class="plan-card {% if current_plan == 'school' %}current{% endif %}">
+            <div class="plan-card highlighted {% if current_plan == 'school' %}current{% endif %}">
                 <div class="plan-header">
                     <h3 class="plan-name">{% if is_english %}School{% elif is_spanish %}Escuela{% elif is_german %}Schule{% elif is_portuguese %}Escola{% elif is_chinese %}学校{% else %}スクール{% endif %}</h3>
                     <div class="plan-price">
@@ -103,16 +105,16 @@
                 </div>
                 <div class="plan-description">{% if is_english %}For educational institutions{% elif is_spanish %}Para instituciones educativas{% elif is_german %}Für Bildungseinrichtungen{% elif is_portuguese %}Para instituições educacionais{% elif is_chinese %}适合教育机构{% else %}教育機関向け{% endif %}</div>
                 <ul class="plan-features">
-                    <li class="available"><i class="bi bi-check"></i>{% if is_english %}100 songs/student/month{% elif is_spanish %}100 canciones/estudiante/mes{% elif is_german %}100 Lieder/Schüler/Monat{% elif is_portuguese %}100 músicas/aluno/mês{% elif is_chinese %}每学生每月100首{% else %}生徒1人あたり月100曲{% endif %}</li>
-                    <li class="available"><i class="bi bi-check"></i>{% if is_english %}Karaoke mode{% elif is_spanish %}Modo karaoke{% elif is_german %}Karaoke-Modus{% elif is_portuguese %}Modo karaokê{% elif is_chinese %}卡拉OK模式{% else %}カラオケモード{% endif %}</li>
-                    <li class="available"><i class="bi bi-check"></i>{% if is_english %}Class sharing{% elif is_spanish %}Compartir en clase{% elif is_german %}Klassenfreigabe{% elif is_portuguese %}Compartilhamento de turma{% elif is_chinese %}班级共享{% else %}クラス共有機能{% endif %}</li>
-                    <li class="available"><i class="bi bi-check"></i>{% if is_english %}Teacher dashboard{% elif is_spanish %}Panel del profesor{% elif is_german %}Lehrer-Dashboard{% elif is_portuguese %}Painel do professor{% elif is_chinese %}教师仪表板{% else %}教師用ダッシュボード{% endif %}</li>
-                    <li class="available"><i class="bi bi-check"></i>{% if is_english %}Bulk management{% elif is_spanish %}Gestión masiva{% elif is_german %}Massenverwaltung{% elif is_portuguese %}Gerenciamento em massa{% elif is_chinese %}批量管理{% else %}一括管理{% endif %}</li>
+                    <li class="available"><i class="bi bi-patch-check-fill"></i>{% if is_english %}100 songs/student/month{% elif is_spanish %}100 canciones/estudiante/mes{% elif is_german %}100 Lieder/Schüler/Monat{% elif is_portuguese %}100 músicas/aluno/mês{% elif is_chinese %}每学生每月100首{% else %}生徒1人あたり月100曲{% endif %}</li>
+                    <li class="available"><i class="bi bi-patch-check-fill"></i>{% if is_english %}Karaoke mode{% elif is_spanish %}Modo karaoke{% elif is_german %}Karaoke-Modus{% elif is_portuguese %}Modo karaokê{% elif is_chinese %}卡拉OK模式{% else %}カラオケモード{% endif %}</li>
+                    <li class="available"><i class="bi bi-patch-check-fill"></i>{% if is_english %}Class sharing{% elif is_spanish %}Compartir en clase{% elif is_german %}Klassenfreigabe{% elif is_portuguese %}Compartilhamento de turma{% elif is_chinese %}班级共享{% else %}クラス共有機能{% endif %}</li>
+                    <li class="available"><i class="bi bi-patch-check-fill"></i>{% if is_english %}Teacher dashboard{% elif is_spanish %}Panel del profesor{% elif is_german %}Lehrer-Dashboard{% elif is_portuguese %}Painel do professor{% elif is_chinese %}教师仪表板{% else %}教師用ダッシュボード{% endif %}</li>
+                    <li class="available"><i class="bi bi-patch-check-fill"></i>{% if is_english %}Bulk management{% elif is_spanish %}Gestión masiva{% elif is_german %}Massenverwaltung{% elif is_portuguese %}Gerenciamento em massa{% elif is_chinese %}批量管理{% else %}一括管理{% endif %}</li>
                 </ul>
                 {% if current_plan == 'school' %}
                 <button class="plan-btn current" disabled>{% if is_english %}Current Plan{% elif is_spanish %}Plan Actual{% elif is_german %}Aktueller Plan{% elif is_portuguese %}Plano Atual{% elif is_chinese %}当前方案{% else %}現在のプラン{% endif %}</button>
                 {% else %}
-                <a href="{% url 'users:school_inquiry' %}" class="plan-btn secondary" style="text-decoration: none; text-align: center; display: block;">{% if is_english %}Contact Us{% elif is_spanish %}Contáctenos{% elif is_german %}Kontaktieren Sie uns{% elif is_portuguese %}Fale Conosco{% elif is_chinese %}联系我们{% else %}お問い合わせ{% endif %}</a>
+                <a href="{% url 'users:school_inquiry' %}" class="plan-btn secondary">{% if is_english %}Contact Us{% elif is_spanish %}Contáctenos{% elif is_german %}Kontaktieren Sie uns{% elif is_portuguese %}Fale Conosco{% elif is_chinese %}联系我们{% else %}お問い合わせ{% endif %}<i class="bi bi-arrow-right"></i></a>
                 {% endif %}
             </div>
         </div>
@@ -248,32 +250,57 @@
 
 .plan-card {
     background: var(--surface-elevated);
+    border-radius: 0;
     padding: 28px 24px;
     position: relative;
-    transition: box-shadow 0.25s ease;
+    transition: box-shadow 0.25s ease, transform 0.25s ease;
     border: 1px solid var(--border-color);
+    box-shadow: var(--shadow-xs);
     display: flex;
     flex-direction: column;
 }
 
 .plan-card:hover {
     box-shadow: var(--shadow-md);
+    transform: translateY(-2px);
 }
 
-.plan-card.recommended {
+.plan-card.popular {
     border-color: var(--primary-color);
+    box-shadow: 0 0 0 2px var(--primary-color);
 }
 
-.recommend-badge {
-    position: absolute;
-    top: -10px;
-    right: 16px;
-    background: var(--primary-color);
-    color: white;
-    padding: 3px 10px;
-    font-size: 0.68rem;
-    font-weight: 700;
-    letter-spacing: 0.04em;
+.plan-card.popular:hover {
+    box-shadow: 0 0 0 2px var(--primary-color), var(--shadow-md);
+}
+
+.plan-card.highlighted {
+    background: var(--dark-gradient);
+    border-color: transparent;
+    color: #fff;
+}
+
+.plan-card.highlighted .plan-name,
+.plan-card.highlighted .price-amount {
+    color: #fff;
+}
+
+.plan-card.highlighted .price-period,
+.plan-card.highlighted .price-jpy-note,
+.plan-card.highlighted .plan-description {
+    color: rgba(255, 255, 255, 0.65);
+}
+
+.plan-card.highlighted .plan-description {
+    border-bottom-color: rgba(255, 255, 255, 0.12);
+}
+
+.plan-card.highlighted .plan-features li.available {
+    color: rgba(255, 255, 255, 0.9);
+}
+
+.plan-card.highlighted .plan-features li.available i {
+    color: #fff;
 }
 
 .plan-header {
@@ -285,6 +312,28 @@
     font-weight: 700;
     color: var(--text-primary);
     margin-bottom: 8px;
+    display: flex;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 8px;
+}
+
+.popular-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    background: var(--surface-muted);
+    color: var(--primary-color);
+    border-radius: var(--radius-pill);
+    padding: 3px 10px;
+    font-size: 0.68rem;
+    font-weight: 700;
+    letter-spacing: 0.02em;
+    white-space: nowrap;
+}
+
+.popular-badge i {
+    font-size: 0.85em;
 }
 
 .plan-price {
@@ -359,6 +408,20 @@
     font-weight: 700;
     cursor: pointer;
     transition: all 0.2s ease;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    text-decoration: none;
+}
+
+.plan-btn i {
+    font-size: 0.9em;
+    transition: transform 0.2s ease;
+}
+
+.plan-btn:hover i {
+    transform: translateX(3px);
 }
 
 .plan-btn.primary {
@@ -384,11 +447,28 @@
     color: var(--primary-color);
 }
 
+.plan-card.highlighted .plan-btn.secondary {
+    background: #fff;
+    color: var(--text-primary);
+    border-color: transparent;
+}
+
+.plan-card.highlighted .plan-btn.secondary:hover {
+    background: rgba(255, 255, 255, 0.9);
+    color: var(--primary-color);
+}
+
 .plan-btn.current {
     background: rgba(42, 157, 69, 0.08);
     color: var(--success);
     cursor: default;
     border: 1px solid rgba(42, 157, 69, 0.2);
+}
+
+.plan-card.highlighted .plan-btn.current {
+    background: rgba(255, 255, 255, 0.12);
+    color: #fff;
+    border-color: rgba(255, 255, 255, 0.2);
 }
 
 /* FAQ Section */

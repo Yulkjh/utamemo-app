@@ -9,7 +9,6 @@
         <div class="generating-visual">
             <div class="music-icon-wrapper" id="music-icon-wrapper">
                 <div class="music-pulse"></div>
-                <div class="music-pulse music-pulse-2"></div>
                 <div class="music-icon-svg" id="main-icon">
                     <svg width="44" height="44" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
                         <path d="M9 18V5l12-2v13"/>
@@ -36,45 +35,6 @@
             </div>
         </div>
 
-        <!-- ステップインジケーター -->
-        <div class="generating-steps" id="generating-steps">
-            <div class="step active" id="step-1">
-                <div class="step-icon">
-                    <i class="bi bi-hourglass-split"></i>
-                </div>
-                <div class="step-label">
-                    {% if is_english %}Queued{% elif is_chinese %}排队中{% else %}待機中{% endif %}
-                </div>
-            </div>
-            <div class="step-line" id="step-line-1"></div>
-            <div class="step" id="step-2">
-                <div class="step-icon">
-                    <i class="bi bi-file-text"></i>
-                </div>
-                <div class="step-label">
-                    {% if is_english %}Processing Lyrics{% elif is_chinese %}处理歌词{% else %}歌詞処理{% endif %}
-                </div>
-            </div>
-            <div class="step-line" id="step-line-2"></div>
-            <div class="step" id="step-3">
-                <div class="step-icon">
-                    <i class="bi bi-cpu"></i>
-                </div>
-                <div class="step-label">
-                    {% if is_english %}AI Composing{% elif is_chinese %}AI作曲{% else %}AI作曲中{% endif %}
-                </div>
-            </div>
-            <div class="step-line" id="step-line-3"></div>
-            <div class="step" id="step-4">
-                <div class="step-icon">
-                    <i class="bi bi-check-circle"></i>
-                </div>
-                <div class="step-label">
-                    {% if is_english %}Complete{% elif is_chinese %}完成{% else %}完了{% endif %}
-                </div>
-            </div>
-        </div>
-
         <!-- ステータスメッセージ -->
         <div class="generating-status" id="generating-status">
             <p class="status-main" id="status-main">
@@ -89,14 +49,6 @@
             <p class="status-sub" id="status-sub">
                 {% if is_english %}Usually takes 1-2 minutes{% elif is_chinese %}通常需要1-2分钟{% else %}通常1〜2分で完成します{% endif %}
             </p>
-        </div>
-
-        <!-- ヒント（ランダム表示） -->
-        <div class="generating-tip" id="generating-tip">
-            <i class="bi bi-lightbulb"></i>
-            <span id="tip-text">
-                {% if is_english %}Tip: Songs are a great way to memorize vocabulary and formulas!{% elif is_chinese %}提示：歌曲是记忆词汇和公式的好方法！{% else %}ヒント：リピート再生で自然と頭に残ります♪{% endif %}
-            </span>
         </div>
 
         <!-- キュー情報（pending時のみ表示） -->
@@ -172,19 +124,28 @@
     display: inline-flex;
     align-items: center;
     justify-content: center;
-    width: 100px;
-    height: 100px;
+    width: 112px;
+    height: 112px;
+}
+
+.music-icon-svg svg {
+    width: 60%;
+    height: 60%;
+    transform: translateX(-2px);
 }
 
 .music-icon-svg {
     z-index: 2;
-    color: #ff7940;
-    animation: bounce-icon 2s ease-in-out infinite;
+    color: #fff;
+    background: var(--primary-gradient);
+    border-radius: 50%;
+    box-shadow: var(--shadow-lg), 0 0 0 6px rgba(255, 121, 64, 0.1);
+    animation: bounce-icon 2.4s ease-in-out infinite;
     display: flex;
     align-items: center;
     justify-content: center;
-    width: 48px;
-    height: 48px;
+    width: 68px;
+    height: 68px;
 }
 
 .music-pulse {
@@ -192,17 +153,13 @@
     width: 100%;
     height: 100%;
     border-radius: 50%;
-    border: 2px solid rgba(255, 121, 64, 0.25);
-    animation: pulse-ring 2s ease-out infinite;
+    background: radial-gradient(circle, rgba(255, 121, 64, 0.22), transparent 70%);
+    animation: pulse-glow 2.4s ease-out infinite;
 }
 
-.music-pulse-2 {
-    animation-delay: 1s;
-}
-
-@keyframes pulse-ring {
-    0% { transform: scale(0.8); opacity: 0.8; }
-    100% { transform: scale(1.8); opacity: 0; }
+@keyframes pulse-glow {
+    0% { transform: scale(0.55); opacity: 0.9; }
+    100% { transform: scale(1.5); opacity: 0; }
 }
 
 @keyframes bounce-icon {
@@ -212,15 +169,16 @@
 
 /* タイトル */
 .generating-title {
-    font-size: 1.5rem;
+    font-size: 1.6rem;
     font-weight: 700;
-    color: #2d1b13;
+    color: var(--text-primary);
     margin-bottom: 0.5rem;
+    letter-spacing: -0.01em;
 }
 
 .generating-song-name {
     font-size: 1.1rem;
-    color: #5c3a2a;
+    color: var(--text-secondary);
     margin-bottom: 2rem;
     font-weight: 500;
 }
@@ -233,16 +191,16 @@
 
 .generating-progress-bar {
     width: 100%;
-    height: 8px;
-    background: rgba(255, 121, 64, 0.12);
-    border-radius: 4px;
+    height: 10px;
+    background: var(--surface-muted);
+    border-radius: var(--radius-pill);
     overflow: hidden;
     position: relative;
 }
 
 .generating-progress-fill {
     height: 100%;
-    border-radius: 4px;
+    border-radius: var(--radius-pill);
     background: linear-gradient(90deg, #ff7940, #ff9a6c, #ff7940);
     background-size: 200% 100%;
     animation: shimmer 2s linear infinite;
@@ -262,94 +220,9 @@
 
 #progress-percent {
     font-size: 0.85rem;
-    color: #5c3a2a;
+    color: var(--text-secondary);
     font-weight: 600;
     font-variant-numeric: tabular-nums;
-}
-
-/* ステップインジケーター */
-.generating-steps {
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    gap: 0;
-    margin-bottom: 2rem;
-    padding: 0 0.5rem;
-}
-
-.step {
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    gap: 0.5rem;
-    opacity: 0.35;
-    transition: all 0.5s ease;
-}
-
-.step.active {
-    opacity: 1;
-}
-
-.step.completed {
-    opacity: 0.7;
-}
-
-.step.completed .step-icon {
-    background: rgba(16, 185, 129, 0.1);
-    border-color: #10b981;
-    color: #10b981;
-}
-
-.step-icon {
-    width: 40px;
-    height: 40px;
-    border-radius: 50%;
-    background: #ffffff;
-    border: 2px solid #f0e6e0;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    color: #8a6b5a;
-    font-size: 1rem;
-    transition: all 0.5s ease;
-}
-
-.step.active .step-icon {
-    background: rgba(255, 121, 64, 0.08);
-    border-color: #ff7940;
-    color: #ff7940;
-    box-shadow: 0 0 16px rgba(255, 121, 64, 0.15);
-    animation: step-glow 2s ease-in-out infinite;
-}
-
-@keyframes step-glow {
-    0%, 100% { box-shadow: 0 0 12px rgba(255, 121, 64, 0.1); }
-    50% { box-shadow: 0 0 20px rgba(255, 121, 64, 0.2); }
-}
-
-.step-label {
-    font-size: 0.7rem;
-    color: #8a6b5a;
-    white-space: nowrap;
-    transition: color 0.5s ease;
-}
-
-.step.active .step-label {
-    color: #2d1b13;
-    font-weight: 600;
-}
-
-.step-line {
-    width: 30px;
-    height: 2px;
-    background: #f0e6e0;
-    margin: 0 4px;
-    margin-bottom: 1.5rem;
-    transition: background 0.5s ease;
-}
-
-.step-line.active {
-    background: linear-gradient(90deg, #ff7940, rgba(255, 121, 64, 0.3));
 }
 
 /* ステータスメッセージ */
@@ -358,39 +231,21 @@
 }
 
 .status-main {
+    display: none;
     font-size: 1rem;
     font-weight: 600;
-    color: #2d1b13;
+    color: var(--text-primary);
     margin-bottom: 0.3rem;
+}
+
+.generating-page.failed .status-main {
+    display: block;
 }
 
 .status-sub {
     font-size: 0.8rem;
-    color: #8a6b5a;
+    color: var(--text-muted);
     margin-bottom: 0;
-}
-
-/* ヒント */
-.generating-tip {
-    background: #ffffff;
-    border: 1px solid #f0e6e0;
-    border-radius: 12px;
-    padding: 0.8rem 1.2rem;
-    display: inline-flex;
-    align-items: center;
-    gap: 0.5rem;
-    margin-bottom: 1.5rem;
-    box-shadow: 0 2px 8px rgba(45, 27, 19, 0.04);
-}
-
-.generating-tip i {
-    color: #ff7940;
-    font-size: 1rem;
-}
-
-.generating-tip span {
-    font-size: 0.8rem;
-    color: #5c3a2a;
 }
 
 /* キュー情報 */
@@ -404,19 +259,19 @@
     gap: 0.3rem;
     background: rgba(255, 121, 64, 0.08);
     border: 1px solid rgba(255, 121, 64, 0.15);
-    border-radius: 20px;
+    border-radius: var(--radius-pill);
     padding: 0.4rem 1rem;
 }
 
 .queue-number {
     font-size: 1.2rem;
     font-weight: 700;
-    color: #ff7940;
+    color: var(--primary-color);
 }
 
 .queue-label {
     font-size: 0.8rem;
-    color: #8a6b5a;
+    color: var(--text-muted);
 }
 
 /* 完了アニメーション */
@@ -426,7 +281,7 @@
 }
 
 .generating-page.completed .music-pulse {
-    border-color: rgba(16, 185, 129, 0.25);
+    background: radial-gradient(circle, rgba(16, 185, 129, 0.22), transparent 70%);
 }
 
 .generating-page.completed .generating-progress-fill {
@@ -450,10 +305,10 @@
     align-items: center;
     gap: 0.5rem;
     padding: 0.7rem 1.5rem;
-    background: linear-gradient(135deg, #ff7940 0%, #ff6b35 100%);
+    background: var(--primary-gradient);
     color: #fff;
     border: none;
-    border-radius: 12px;
+    border-radius: var(--radius-md);
     font-size: 0.9rem;
     font-weight: 600;
     cursor: pointer;
@@ -475,9 +330,9 @@
     gap: 0.5rem;
     padding: 0.6rem 1.2rem;
     background: transparent;
-    color: #8a6b5a;
-    border: 1px solid #f0e6e0;
-    border-radius: 12px;
+    color: var(--text-muted);
+    border: 1px solid var(--border-light);
+    border-radius: var(--radius-md);
     font-size: 0.85rem;
     font-weight: 500;
     cursor: pointer;
@@ -486,8 +341,8 @@
 }
 
 .new-song-link:hover {
-    color: #ff7940;
-    border-color: #ff7940;
+    color: var(--primary-color);
+    border-color: var(--primary-color);
     background: rgba(255, 121, 64, 0.05);
     text-decoration: none;
 }
@@ -501,21 +356,7 @@
     .generating-song-name {
         font-size: 0.95rem;
     }
-    
-    .step-label {
-        font-size: 0.6rem;
-    }
-    
-    .step-icon {
-        width: 34px;
-        height: 34px;
-        font-size: 0.85rem;
-    }
-    
-    .step-line {
-        width: 20px;
-    }
-    
+
     .music-icon-wrapper {
         width: 80px;
         height: 80px;
@@ -543,84 +384,11 @@ document.addEventListener('DOMContentLoaded', function() {
     const statusSub = document.getElementById('status-sub');
     const mainIcon = document.getElementById('main-icon');
     const page = document.querySelector('.generating-page');
-    const tipText = document.getElementById('tip-text');
-    
+
     // 現在の進捗
     let currentProgress = 5;
     let targetProgress = 5;
-    
-    // ヒントのローテーション
-    const tips = [
-        {% if is_english %}
-        'Tip: Songs are a great way to memorize vocabulary and formulas!',
-        'Tip: Add tags to help organize your songs.',
-        'Tip: Try different genres to find the perfect sound for your study material!',
-        'Tip: Repeat listening helps you naturally remember the content.'
-        {% elif is_chinese %}
-        '提示：歌曲是记忆词汇和公式的好方法！',
-        '提示：添加标签来整理你的歌曲。',
-        '提示：尝试不同的风格，找到最适合你学习内容的音乐！',
-        '提示：反复收听能让内容自然留在脑海中。'
-        {% else %}
-        'ヒント：リピート再生で自然と頭に残ります♪',
-        'ヒント：タグを追加すると楽曲を整理しやすくなります。',
-        'ヒント：ジャンルを変えると、同じ内容でも全く違う曲に！',
-        'ヒント：歌で覚えると記憶に定着しやすいです♪'
-        {% endif %}
-    ];
-    let tipIndex = 0;
-    
-    // ヒントを定期的に切り替え
-    setInterval(function() {
-        tipIndex = (tipIndex + 1) % tips.length;
-        tipText.style.opacity = '0';
-        setTimeout(function() {
-            tipText.textContent = tips[tipIndex];
-            tipText.style.opacity = '1';
-        }, 300);
-    }, 8000);
-    tipText.style.transition = 'opacity 0.3s ease';
-    
-    // フェーズに応じたステップをアクティブに
-    function updateSteps(phase) {
-        const steps = [
-            document.getElementById('step-1'),
-            document.getElementById('step-2'),
-            document.getElementById('step-3'),
-            document.getElementById('step-4')
-        ];
-        const lines = [
-            document.getElementById('step-line-1'),
-            document.getElementById('step-line-2'),
-            document.getElementById('step-line-3')
-        ];
-        
-        let activeIndex = 0;
-        switch(phase) {
-            case 'pending': activeIndex = 0; break;
-            case 'starting':
-            case 'lyrics_processing': activeIndex = 1; break;
-            case 'api_calling':
-            case 'generating':
-            case 'finalizing': activeIndex = 2; break;
-            case 'completed': activeIndex = 3; break;
-            default: activeIndex = 0;
-        }
-        
-        steps.forEach(function(step, i) {
-            step.classList.remove('active', 'completed');
-            if (i < activeIndex) {
-                step.classList.add('completed');
-            } else if (i === activeIndex) {
-                step.classList.add('active');
-            }
-        });
-        
-        lines.forEach(function(line, i) {
-            line.classList.toggle('active', i < activeIndex);
-        });
-    }
-    
+
     // フェーズに応じたメッセージ
     function getPhaseMessage(phase, queuePos) {
         const messages = {
@@ -700,8 +468,7 @@ document.addEventListener('DOMContentLoaded', function() {
                 const msgs = getPhaseMessage(data.phase, data.queue_position);
                 statusMain.textContent = msgs.main;
                 statusSub.textContent = msgs.sub;
-                updateSteps(data.phase);
-                
+
                 // キュー番号更新
                 const queueNumEl = document.getElementById('queue-number');
                 if (queueNumEl && data.queue_position) {
@@ -766,9 +533,6 @@ document.addEventListener('DOMContentLoaded', function() {
     
     // 初回チェック
     checkSongStatus();
-    
-    // 初期ステップ設定
-    updateSteps('{{ song.generation_status }}');
 });
 </script>
 {% endblock %}

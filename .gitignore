@@ -13,6 +13,7 @@ node_modules/
 .git/
 *.secret
 .vscode/
+.claude/
 myproject/media/uploaded_images/
 myproject/media/generated_audio/
 myproject/media/profile_images/
