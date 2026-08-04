@@ -3,6 +3,8 @@
 {% block title %}{% if is_english %}Edit Profile{% elif is_spanish %}Editar Perfil{% elif is_german %}Profil Bearbeiten{% elif is_chinese %}编辑个人资料{% else %}プロフィール編集{% endif %} - UTAMEMO{% endblock %}
 
 {% block content %}
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/cropperjs@1.6.2/dist/cropper.min.css">
+<script src="https://cdn.jsdelivr.net/npm/cropperjs@1.6.2/dist/cropper.min.js"></script>
 <div class="profile-edit-container">
     <div class="profile-edit-wrapper fade-in">
         <div class="edit-header">
@@ -83,6 +85,23 @@
                     {% endif %}
                 </div>
                 <p class="image-hint">{% if is_english %}JPG, PNG, GIF (Max 5MB){% elif is_spanish %}JPG, PNG, GIF (Máx 5MB){% elif is_german %}JPG, PNG, GIF (Max 5MB){% elif is_chinese %}JPG、PNG、GIF格式（最大5MB）{% else %}JPG、PNG、GIF形式（最大5MB）{% endif %}</p>
+            </div>
+
+            <!-- 画像トリミングモーダル -->
+            <div class="cropper-modal" id="cropperModal">
+                <div class="cropper-modal-content">
+                    <div class="cropper-modal-header">
+                        <h3>{% if is_english %}Adjust Photo{% elif is_spanish %}Ajustar Foto{% elif is_german %}Foto Anpassen{% elif is_portuguese %}Ajustar Foto{% elif is_chinese %}调整照片{% else %}写真を調整{% endif %}</h3>
+                        <button type="button" class="cropper-close" id="cropperCloseBtn" aria-label="Close">&times;</button>
+                    </div>
+                    <div class="cropper-image-wrap">
+                        <img id="cropperImage" src="" alt="crop preview">
+                    </div>
+                    <div class="cropper-modal-footer">
+                        <button type="button" class="btn-cancel" id="cropperCancelBtn">{% if is_english %}Cancel{% elif is_spanish %}Cancelar{% elif is_german %}Abbrechen{% elif is_portuguese %}Cancelar{% elif is_chinese %}取消{% else %}キャンセル{% endif %}</button>
+                        <button type="button" class="btn-save" id="cropperApplyBtn">{% if is_english %}Apply{% elif is_spanish %}Aplicar{% elif is_german %}Anwenden{% elif is_portuguese %}Aplicar{% elif is_chinese %}应用{% else %}適用{% endif %}</button>
+                    </div>
+                </div>
             </div>
 
             <!-- 自己紹介セクション -->
@@ -310,6 +329,100 @@
     margin: 0;
 }
 
+/* 画像トリミングモーダル */
+.cropper-modal {
+    display: none;
+    position: fixed;
+    inset: 0;
+    background: rgba(0, 0, 0, 0.7);
+    z-index: 1050;
+    align-items: center;
+    justify-content: center;
+    padding: 1rem;
+}
+
+.cropper-modal.active {
+    display: flex;
+}
+
+.cropper-modal-content {
+    background: var(--surface);
+    border-radius: var(--radius-xl);
+    box-shadow: var(--shadow-lg);
+    width: 100%;
+    max-width: 480px;
+    overflow: hidden;
+}
+
+.cropper-modal-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 1.25rem 1.5rem;
+    border-bottom: 1px solid var(--border-color);
+}
+
+.cropper-modal-header h3 {
+    margin: 0;
+    font-size: 1.1rem;
+    font-weight: 700;
+    color: var(--text-primary);
+}
+
+.cropper-close {
+    background: none;
+    border: none;
+    font-size: 1.5rem;
+    line-height: 1;
+    color: var(--text-muted);
+    cursor: pointer;
+    padding: 0;
+}
+
+.cropper-close:hover {
+    color: var(--text-primary);
+}
+
+.cropper-image-wrap {
+    width: 100%;
+    height: 360px;
+    background: #000;
+}
+
+.cropper-image-wrap img {
+    display: block;
+    max-width: 100%;
+}
+
+/* クロップボックスを丸く見せる（Cropper.js公式の丸型クロップ手法） */
+.cropper-image-wrap .cropper-view-box,
+.cropper-image-wrap .cropper-face {
+    border-radius: 50%;
+}
+
+.cropper-modal-footer {
+    display: flex;
+    justify-content: flex-end;
+    gap: 1rem;
+    padding: 1.25rem 1.5rem;
+}
+
+@media (max-width: 576px) {
+    .cropper-image-wrap {
+        height: 280px;
+    }
+
+    .cropper-modal-footer {
+        flex-direction: column-reverse;
+    }
+
+    .cropper-modal-footer .btn-cancel,
+    .cropper-modal-footer .btn-save {
+        width: 100%;
+        justify-content: center;
+    }
+}
+
 /* デスクトップ/モバイルテキスト切り替え */
 .mobile-text {
     display: none;
@@ -521,7 +634,44 @@ document.addEventListener('DOMContentLoaded', function() {
         imageInput.click();
     });
 
-    // 画像選択時のプレビュー
+    // トリミングモーダル要素
+    const cropperModal = document.getElementById('cropperModal');
+    const cropperImage = document.getElementById('cropperImage');
+    const cropperApplyBtn = document.getElementById('cropperApplyBtn');
+    const cropperCancelBtn = document.getElementById('cropperCancelBtn');
+    const cropperCloseBtn = document.getElementById('cropperCloseBtn');
+    let cropper = null;
+
+    function showAvatarPreview(dataUrl) {
+        let img = document.getElementById('preview-image');
+        const placeholder = document.getElementById('placeholder-avatar');
+
+        if (!img) {
+            // 画像要素がない場合は新規作成
+            img = document.createElement('img');
+            img.id = 'preview-image';
+            img.alt = '{{ user.username }}';
+            avatarPreview.insertBefore(img, avatarOverlay);
+        }
+
+        img.src = dataUrl;
+        img.style.display = 'block';
+
+        if (placeholder) {
+            placeholder.style.display = 'none';
+        }
+    }
+
+    function closeCropperModal() {
+        cropperModal.classList.remove('active');
+        if (cropper) {
+            cropper.destroy();
+            cropper = null;
+        }
+        cropperImage.src = '';
+    }
+
+    // 画像選択時：トリミングモーダルを開く
     imageInput.addEventListener('change', function(e) {
         const file = e.target.files[0];
         if (file) {
@@ -532,32 +682,59 @@ document.addEventListener('DOMContentLoaded', function() {
                 return;
             }
 
-            // プレビュー表示
             const reader = new FileReader();
             reader.onload = function(e) {
-                let img = document.getElementById('preview-image');
-                const placeholder = document.getElementById('placeholder-avatar');
-                
-                if (!img) {
-                    // 画像要素がない場合は新規作成
-                    img = document.createElement('img');
-                    img.id = 'preview-image';
-                    img.alt = '{{ user.username }}';
-                    avatarPreview.insertBefore(img, avatarOverlay);
+                cropperImage.src = e.target.result;
+                cropperModal.classList.add('active');
+
+                if (cropper) {
+                    cropper.destroy();
                 }
-                
-                // 画像を表示
-                img.src = e.target.result;
-                img.style.display = 'block';
-                
-                // プレースホルダーを非表示
-                if (placeholder) {
-                    placeholder.style.display = 'none';
-                }
+                cropper = new Cropper(cropperImage, {
+                    aspectRatio: 1,
+                    viewMode: 1,
+                    dragMode: 'move',
+                    autoCropArea: 1,
+                    guides: false,
+                    center: false,
+                    highlight: false,
+                    cropBoxMovable: false,
+                    cropBoxResizable: false,
+                    toggleDragModeOnDblclick: false,
+                });
             };
             reader.readAsDataURL(file);
         }
     });
+
+    // トリミング確定
+    cropperApplyBtn.addEventListener('click', function() {
+        if (!cropper) return;
+
+        const canvas = cropper.getCroppedCanvas({
+            width: 500,
+            height: 500,
+            imageSmoothingQuality: 'high',
+        });
+
+        canvas.toBlob(function(blob) {
+            const croppedFile = new File([blob], 'avatar.jpg', { type: 'image/jpeg' });
+            const dataTransfer = new DataTransfer();
+            dataTransfer.items.add(croppedFile);
+            imageInput.files = dataTransfer.files;
+
+            showAvatarPreview(canvas.toDataURL('image/jpeg', 0.92));
+            closeCropperModal();
+        }, 'image/jpeg', 0.92);
+    });
+
+    // トリミングキャンセル（選択自体を取り消す）
+    function cancelCropper() {
+        imageInput.value = '';
+        closeCropperModal();
+    }
+    cropperCancelBtn.addEventListener('click', cancelCropper);
+    cropperCloseBtn.addEventListener('click', cancelCropper);
 
     // 画像削除
     if (deleteBtn) {
