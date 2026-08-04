@@ -84,11 +84,11 @@
                     </button>
                     {% endif %}
                 </div>
-                <p class="image-hint">{% if is_english %}JPG, PNG, GIF (Max 5MB){% elif is_spanish %}JPG, PNG, GIF (Máx 5MB){% elif is_german %}JPG, PNG, GIF (Max 5MB){% elif is_chinese %}JPG、PNG、GIF格式（最大5MB）{% else %}JPG、PNG、GIF形式（最大5MB）{% endif %}</p>
+                <p class="image-hint">{% if is_english %}{% elif is_spanish %}JPG, PNG, GIF (Máx 5MB){% elif is_german %}JPG, PNG, GIF (Max 5MB){% elif is_chinese %}JPG、PNG、GIF格式（最大5MB）{% else %}JPG、PNG、GIF形式（最大5MB）{% endif %}</p>
             </div>
 
             <!-- 画像トリミングモーダル -->
-            <div class="cropper-modal" id="cropperModal">
+            <div class="avatar-cropper-overlay" id="cropperModal">
                 <div class="cropper-modal-content">
                     <div class="cropper-modal-header">
                         <h3>{% if is_english %}Adjust Photo{% elif is_spanish %}Ajustar Foto{% elif is_german %}Foto Anpassen{% elif is_portuguese %}Ajustar Foto{% elif is_chinese %}调整照片{% else %}写真を調整{% endif %}</h3>
@@ -330,7 +330,9 @@
 }
 
 /* 画像トリミングモーダル */
-.cropper-modal {
+/* 注意: クラス名は Cropper.js 内部の .cropper-modal（暗転オーバーレイ）と
+   衝突するため、意図的に別名にしている */
+.avatar-cropper-overlay {
     display: none;
     position: fixed;
     inset: 0;
@@ -341,7 +343,7 @@
     padding: 1rem;
 }
 
-.cropper-modal.active {
+.avatar-cropper-overlay.active {
     display: flex;
 }
 
