@@ -283,9 +283,16 @@ def generate_lyrics(study_text, genre="pop", language_mode="japanese", custom_re
 
 def _generate_with_transformers(messages):
     """transformers + PEFT で推論"""
-    input_ids = tokenizer.apply_chat_template(
-        messages, add_generation_prompt=True, return_tensors="pt"
-    ).to(model.device)
+    model_inputs = tokenizer.apply_chat_template(
+        messages,
+        add_generation_prompt=True,
+        return_tensors="pt",
+        tokenize=True,
+    )
+
+    # transformers のバージョン差異で Tensor / BatchEncoding の両方が返るため吸収する。
+    input_ids = model_inputs["input_ids"] if hasattr(model_inputs, "keys") else model_inputs
+    input_ids = input_ids.to(model.device)
 
     with torch.no_grad():
         outputs = model.generate(

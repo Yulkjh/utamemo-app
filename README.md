@@ -1,6 +1,6 @@
-# UTAMEMO — AI-Powered Educational Music Platform
+# UTAMEMO — AIが「歌」に変換する教育系音楽プラットフォーム
 
-> **Learn textbooks through AI-generated songs and flashcards.**
+> **教科書やノートをAIで歌にして、歌って覚える。**
 
 [![Django](https://img.shields.io/badge/Django-5.2-green)](https://www.djangoproject.com/)
 [![Python](https://img.shields.io/badge/Python-3.11+-blue)](https://www.python.org/)
@@ -8,37 +8,38 @@
 
 ---
 
-## Overview
+## 概要
 
-UTAMEMO is an AI-powered educational music application that turns textbooks and study notes into songs. Users photograph (or upload a PDF of) their study material, an OCR/vision pipeline extracts the text, an LLM turns it into lyrics, and an AI music-generation API renders those lyrics as a full song with vocals. Songs can then be converted into flashcard decks for spaced-repetition style review, shared into classrooms by teachers, and played back with an optional auto-generated karaoke (instrumental-only) track.
+UTAMEMO（ウタメモ）は、教科書や勉強ノートを「歌」に変換して覚える学習支援アプリです。ユーザーが教材を撮影（またはPDFをアップロード）すると、OCR/AIパイプラインがテキストを抽出し、LLMが歌詞に変換し、AI音楽生成モデルがボーカル入りの楽曲としてレンダリングします。生成した楽曲はフラッシュカードデッキに変換して間隔反復学習に使えるほか、教師がクラスに共有したり、自動生成したカラオケ（インスト）音源で歌いながら再生したりできます。
 
-The repository is a single Django monorepo containing:
+このリポジトリは、以下を含む単一のDjangoモノレポです。
 
-- **`myproject/`** — the production Django web application (the product itself)
-- **`training/`** — a self-hosted LoRA/QLoRA fine-tuning + inference pipeline that runs on the team's own GPUs at home/school, used as an optional lower-cost alternative to cloud LLMs for lyrics generation
-- **`docs/`** — Japanese-language architecture and software-design documentation
-- **`UtaMemo/`** — an early, separate SwiftUI iOS app prototype (its own Xcode project and git repo, not integrated with the Django backend)
+- **`myproject/`** — 本番稼働中のDjango Webアプリケーション（プロダクト本体）
+- **`training/`** — チーム所有のGPUで自前運用する、歌詞生成専用のLoRA/QLoRAファインチューニング＋推論パイプライン（クラウドLLMのコスト削減用オプション）
+- **`docs/`** — 日本語のアーキテクチャ・ソフトウェア設計ドキュメント
+- **`UtaMemo/`** — 独立したSwiftUI製iOSアプリの初期プロトタイプ（独自のXcodeプロジェクト・独自のgitリポジトリを持ち、Djangoバックエンドとは未連携）
 
-### Key Features
+### 主な機能
 
-| Feature | Description |
-|---------|-------------|
-| Photo/PDF → Song | Upload a textbook photo or PDF; Gemini OCR (or PyMuPDF for PDFs) extracts the text |
-| Multi-Backend Lyrics AI | Pluggable lyrics generation: Google Gemini, a self-hosted Local LLM, any OpenAI-compatible Cloud LLM (Together AI / Fireworks / Groq / OpenRouter / vLLM), or Ollama — selectable per-deployment via `LYRICS_BACKEND`, with an `auto` mode that fails over Cloud → Ollama → Local → Gemini |
-| Music Generation | Mureka API renders lyrics into full vocal songs; supports the V9 (default) and V8 model tiers, dozens of vocal-style presets (female/male/vocaloid/duet/choir/whisper/child, each with sub-variants), and genre/reference-song prompting |
-| Karaoke Track | Automatic instrumental-only track extraction (Demucs-based source separation) for sing-along playback |
-| Flashcard System | Auto-generate term/definition flashcards from song lyrics or source images via Gemini, with importance tagging and a 4-level mastery tracker for spaced repetition |
-| Classroom Feature | Teachers create classes with a join code, share songs into the class, and assign songs as homework with due dates |
-| Subscription Plans | Free / Starter (¥780/mo) / Pro (¥1,900/mo) / School (¥450 per student/mo) via Stripe Checkout + webhooks, with monthly generation-count limits per plan |
-| Content Moderation | Rule-based bilingual (JA/EN) content filter with academic/lyrical-context allowlisting to avoid false positives on legitimate historical or poetic vocabulary |
-| Trust & Safety | Admin TOTP 2FA, IP-restricted admin access, BAN system with forced logout, age verification + guardian-consent gating for payments by minors |
-| Self-Hosted LLM Training | A full LoRA/QLoRA fine-tuning pipeline (train/serve/monitor) that runs on team-owned GPUs and plugs into the same lyrics-generation interface as the cloud backends |
-| 6+ Languages | Japanese, English, Chinese, Spanish, German, Portuguese, Dutch — via a custom session-based (non-Django-i18n) language switcher |
-| "UNITE CINEMA MINATO" | A separate, unrelated movie-theater seat-reservation micro-feature (booking + survey) bolted onto the same Django project |
+| 機能 | 説明 |
+|------|------|
+| 写真/PDF → 楽曲 | 教科書の写真やPDFをアップロード。Gemini OCR（画像）またはPyMuPDF（PDF）がテキストを抽出 |
+| マルチバックエンド歌詞AI | 歌詞生成のバックエンドを差し替え可能：Google Gemini（デフォルト）、自前ホストのローカルLLM、OpenAI互換の任意のクラウドLLM（Together AI / Fireworks / Groq / OpenRouter / vLLM）、Ollama。`LYRICS_BACKEND` 環境変数でデプロイごとに選択可能。`auto` モードは クラウドLLM → Ollama → ローカルLLM → Gemini の順にフェイルオーバー |
+| 楽曲生成 | Google の **Lyria**（`lyria-3-pro-preview`、Google GenAI SDK経由）が歌詞をボーカル入りの楽曲としてレンダリング。ジャンル・ボーカルスタイル（女性/男性/ボーカロイド風/デュエット/合唱/ウィスパー/子供など、多数のプリセット）をプロンプトに反映 |
+| カラオケトラック | Demucsによる音源分離で、インスト（ボーカル抜き）音源を自動生成し、一緒に歌える機能を提供 |
+| フラッシュカード機能 | 楽曲の歌詞や元画像からGeminiが用語・定義ペアを自動抽出。重要度タグ付けと4段階の習熟度トラッキングで間隔反復学習をサポート |
+| クラス機能 | 教師が参加コード付きのクラスを作成し、楽曲を共有したり、締切付きの課題として割り当てたりできる |
+| サブスクリプションプラン | Free / Starter（¥780/月）/ Pro（¥1,900/月）/ School（生徒1人あたり¥450/月）をStripe Checkout + Webhookで運用。プランごとに月間生成数の上限あり |
+| コンテンツモデレーション | 日本語・英語・中国語の3言語対応ルールベースフィルタ。歴史用語や詩的表現など正当な語彙の誤検知を避けるための学術/歌詞文脈アローリスト付き |
+| 信頼・安全対策 | 管理画面のメールベース2段階認証、IP制限付き管理アクセス、強制ログアウト付きBANシステム、未成年の決済に対する年齢確認＋保護者同意ゲート |
+| 自前ホストLLM学習基盤 | チーム所有GPU上で動くLoRA/QLoRAファインチューニングパイプライン（学習/配信/監視）。クラウドバックエンドと同じ歌詞生成インターフェースに接続可能（歌詞生成専用、音楽生成は非対応） |
+| データ提携先コンプライアンス | 外部企業とのデータ提供契約（MOU）を管理する仕組み。提供元の記録、アクセス権限の管理、監査ログ、削除リクエスト対応などをDBモデルで管理 |
+| 7言語対応 | 日本語・英語・中国語・スペイン語・ドイツ語・ポルトガル語・オランダ語 — Django標準のi18nではなく、独自のセッションベース言語切替を使用 |
+| 「UNITE CINEMA MINATO」 | 本体アプリとは無関係な、映画館風の座席予約ミニ機能（予約＋アンケート）が同じDjangoプロジェクトに同居 |
 
 ---
 
-## Architecture
+## アーキテクチャ
 
 ```
 +-----------+     +--------------+     +---------------+
@@ -48,405 +49,431 @@ The repository is a single Django monorepo containing:
                          |
         +----------------+-----------------+
         v                v                 v
-  +------------+  +------------+   +--------------------+
-  | Gemini API |  | Mureka API |   |  Cloudflare R2      |
-  | (OCR/LLM)  |  | (V8 / V9)  |   |  (Audio Storage)    |
-  +------------+  +------------+   +--------------------+
+  +------------+  +----------------+  +--------------------+
+  | Gemini API |  | Lyria API      |  |  Cloudflare R2 /    |
+  | (OCR/歌詞) |  | (Google GenAI  |  |  Django Storage     |
+  |            |  |  SDK, 楽曲生成) |  |  (音声ファイル)      |
+  +------------+  +----------------+  +--------------------+
         |
-        v  (optional, LYRICS_BACKEND=local/cloud/auto)
+        v  （任意, LYRICS_BACKEND=local/cloud/auto）
 +-------------------------------------------+
-|  Home / School GPU Server                  |
-|  RTX 4060 Ti (home) / RTX 4080 SUPER x2   |
-|  (school) — LoRA training + Flask/Gradio  |
-|  inference server <-- Cloudflare Tunnel --|
+|  自宅 / 学校 GPUサーバー                     |
+|  RTX 4060 Ti（自宅）/ RTX 4080 x2（学校）    |
+|  LoRA学習 + Flask/Gradio 推論サーバー         |
+|  <-- Cloudflare Tunnel 経由で公開 -->        |
 +-------------------------------------------+
 ```
 
-### Tech Stack
+> かつては音楽生成にMureka APIを使用していましたが、現在はGoogleのLyria（`google-genai` SDK経由）に完全移行済みです。Mureka関連のコードはレガシーDBフィールドやCSPのCDN許可リストとしてのみ残存しています（詳細は[開発タスク・技術的負債](#開発タスク--技術的負債)を参照）。
 
-| Layer | Technology |
-|-------|------------|
-| **Backend** | Django 5.2 + Python 3.11+, Django Channels/Daphne (ASGI, WebSocket progress updates) |
-| **Frontend** | Bootstrap 5 + vanilla JS, server-rendered templates |
-| **Database** | PostgreSQL (production, via `dj-database-url`) / SQLite (development) |
-| **Cache / Channel layer** | Redis in production (`channels-redis`, cache, sessions), in-memory locally |
-| **Storage** | Cloudflare R2 (audio files), WhiteNoise (static files) |
-| **AI Services** | Google Gemini (OCR + lyrics + flashcards), Mureka (music generation), self-hosted LoRA models, any OpenAI-compatible cloud LLM |
-| **Payments** | Stripe Checkout + webhook-verified subscription updates |
-| **Deployment** | Render.com (`render.yaml`, `build.sh`) + gunicorn/daphne |
-| **ML Training** | PyTorch, Transformers, PEFT (LoRA), bitsandbytes (QLoRA 4-bit), TRL (SFTTrainer), Flask (inference API), Gradio (training WebUI) |
+### 技術スタック
+
+| レイヤー | 技術 |
+|---------|------|
+| **バックエンド** | Django 5.2 + Python 3.11+、Django Channels/Daphne（ASGI、WebSocketによる進捗更新） |
+| **フロントエンド** | Bootstrap 5 + Vanilla JS、サーバーサイドレンダリングテンプレート |
+| **データベース** | PostgreSQL（本番、`dj-database-url` 経由）/ SQLite（開発） |
+| **キャッシュ / チャネルレイヤー** | 本番はRedis（`channels-redis`、キャッシュ、セッション）、未設定時はインメモリ |
+| **ストレージ** | Cloudflare R2（音声ファイル）、WhiteNoise（静的ファイル） |
+| **AIサービス** | Google Gemini（OCR＋歌詞＋フラッシュカード）、Google Lyria（楽曲生成、`google-genai` SDK）、自前ホストLoRAモデル、任意のOpenAI互換クラウドLLM |
+| **決済** | Stripe Checkout ＋ Webhook署名検証によるサブスクリプション更新 |
+| **デプロイ** | Render.com（`render.yaml`、`build.sh`）＋ gunicorn（本番のエントリーポイント。Channels/Daphneはローカル開発とWebSocketルーティング用） |
+| **ML学習** | PyTorch、Transformers、PEFT（LoRA）、bitsandbytes（QLoRA 4bit）、TRL（SFTTrainer）、Flask（推論API）、Gradio（学習WebUI） |
 
 ---
 
-## Quick Start
+## クイックスタート
 
-### Prerequisites
+### 前提条件
 
-- Python 3.11 or higher
+- Python 3.11以上
 - Git
-- (Optional) API keys for Gemini, Mureka, Stripe
+- （任意）Gemini / Stripe のAPIキー。Lyria利用にはGeminiのAPIキーと `google-genai` パッケージが必要
 
-### Installation
+### インストール手順
 
 ```bash
-# 1. Clone the repository
+# 1. リポジトリをクローン
 git clone https://github.com/Yulkjh/utamemo-app.git
 cd utamemo-app
 
-# 2. Set up Python virtual environment
+# 2. Python仮想環境をセットアップ
 cd myproject
 python3 -m venv venv
-source venv/bin/activate  # On Windows: venv\Scripts\activate
+source venv/bin/activate  # Windowsの場合: venv\Scripts\activate
 
-# 3. Install dependencies
+# 3. 依存関係をインストール
 pip install -r ../requirements.txt
 
-# 4. Configure environment variables
+# 4. 環境変数を設定
 cp .env.example .env
-# Edit .env with your API keys and settings
+# .env を編集してAPIキーや設定値を入力
+# 注意: 現在 myproject/.env.example は空ファイルです。
+# 下記「環境変数」セクションを参照して手動で設定してください。
 
-# 5. Initialize database
+# 5. データベースを初期化
 python manage.py migrate
 
-# 6. Create admin user (optional)
+# 6. 管理者ユーザーを作成（任意）
 python manage.py createsuperuser
 
-# 7. Start development server
+# 7. 開発サーバーを起動
 python manage.py runserver
-# Visit http://127.0.0.1:8000
+# http://127.0.0.1:8000 にアクセス
 ```
 
-### Environment Variables
+### 環境変数
 
-See `myproject/.env.example` for the full list. Minimum required:
+> **注意**: `myproject/.env.example` は現在空ファイルのため、下記を参考に手動で `.env` を作成してください（技術的負債として記録済み、[開発タスク・技術的負債](#開発タスク--技術的負債)参照）。
 
 ```bash
 DEBUG=True
 SECRET_KEY=your-secret-key-here
 ALLOWED_HOSTS=localhost,127.0.0.1
 
-# AI services (optional — falls back gracefully if unset)
+# AIサービス（任意 — 未設定でも動作はするがAI機能は無効化される）
 GEMINI_API_KEY=your-gemini-key
-MUREKA_API_KEY=your-mureka-key
-USE_MUREKA_API=True
 
-# Lyrics backend selection: gemini | cloud | local | ollama | auto
+# 楽曲生成（Lyria）
+DEFAULT_SONG_GENERATION_PROVIDER=lyria
+LYRIA_MODEL=lyria-3-pro-preview
+USE_LYRIA_API=True
+
+# 歌詞バックエンド選択: gemini | cloud | local | ollama | auto
 LYRICS_BACKEND=gemini
 
-# Stripe (optional, for payments)
+# Stripe（任意、決済機能を使う場合）
 STRIPE_PUBLISHABLE_KEY=pk_test_xxx
 STRIPE_SECRET_KEY=sk_test_xxx
 STRIPE_WEBHOOK_SECRET=whsec_xxx
+STRIPE_STARTER_PRICE_ID=price_xxx
+STRIPE_PRO_PRICE_ID=price_xxx
 ```
 
-Other notable env vars: `MUREKA_V9_URL` / `MUREKA_V9_LOCAL_URL` (Mureka V9 endpoint), `LOCAL_LLM_URL` / `LOCAL_LLM_API_KEY` (self-hosted GPU server), `CLOUD_LLM_PROVIDER` / `CLOUD_LLM_URL` / `CLOUD_LLM_MODEL` (Together AI / Fireworks / Groq / OpenRouter / vLLM), `ADMIN_ALLOWED_IPS` (admin IP allowlist), `MAX_CONCURRENT_GENERATIONS` / `STUCK_TIMEOUT_MINUTES` (generation queue tuning), `MAX_IMAGE_SIZE` / `MAX_PDF_SIZE` / `MAX_LYRICS_LENGTH`.
+その他の主な環境変数: `REDIS_URL`（Redisキャッシュ/チャネルレイヤー/セッション、未設定時はインメモリ）、`DATABASE_URL`（本番PostgreSQL接続先）、`LOCAL_LLM_URL` / `LOCAL_LLM_API_KEY`（自前ホストGPUサーバー）、`CLOUD_LLM_PROVIDER` / `CLOUD_LLM_URL` / `CLOUD_LLM_MODEL`（Together AI / Fireworks / Groq / OpenRouter / vLLM）、`OLLAMA_URL` / `OLLAMA_MODEL`（ローカルOllama）、`ADMIN_ALLOWED_IPS`（管理画面IP許可リスト）、`SITE_BASE_URL` / `PUBLIC_ALLOWED_HOSTS`、`EMAIL_*`（管理者2FAメール送信用）。
 
 ---
 
-## Project Structure
+## プロジェクト構成
 
 ```
 utamemo-app/
 ├── myproject/
-│   ├── myproject/                # Django project settings
-│   │   ├── settings.py           # Configuration (DB, AI, security, Stripe pricing)
-│   │   ├── urls.py                # Root URL routing
-│   │   ├── security.py            # Custom SecurityMiddleware / Admin 2FA
-│   │   ├── legal_views.py         # Privacy/Terms/Contact pages
-│   │   └── queue_manager.py       # (see songs/queue_manager.py)
-│   ├── songs/                     # Main app: songs, lyrics, flashcards, classrooms, AI
-│   │   ├── models.py              # 17 models: Song, Lyrics, Classroom, FlashcardDeck, TrainingSession, ...
-│   │   ├── views/                 # View package, split by domain (7,100+ lines total)
-│   │   │   ├── core.py            # Song CRUD, lyrics flow, likes, playback, tags
-│   │   │   ├── generation.py      # Upload/OCR, lyrics confirmation, generation API
-│   │   │   ├── home.py            # Home, song list/detail
-│   │   │   ├── classroom.py       # Classroom CRUD, join/leave, assignments
-│   │   │   ├── flashcard.py       # Flashcard CRUD/study
-│   │   │   ├── training.py        # Staff-only LLM training dashboard + API
-│   │   │   ├── staff.py           # Staff tools, monitoring
-│   │   │   ├── social.py          # Like/favorite/comment/play tracking
-│   │   │   └── utility.py         # Language switch, audio proxy, content-violation page
-│   │   ├── services/               # AI integration layer (split from ai_services.py)
-│   │   │   ├── mureka.py          # MurekaAIGenerator (music generation, V8/V9)
+│   ├── myproject/                # Djangoプロジェクト設定
+│   │   ├── settings.py           # 設定全般（DB、AI、セキュリティ、Stripe料金）
+│   │   ├── urls.py                # ルートURLルーティング
+│   │   ├── security.py            # カスタムSecurityMiddleware / 管理画面2FA
+│   │   ├── context_processors.py  # 言語切替・料金プラン表示用コンテキスト
+│   │   ├── legal_views.py         # プライバシー/利用規約/お問い合わせページ
+│   │   └── queue_manager.py       # 未使用の残置ファイル（下記「技術的負債」参照）
+│   ├── songs/                     # メインアプリ：楽曲、歌詞、フラッシュカード、クラス、AI連携
+│   │   ├── models.py              # 23モデル：Song, Lyrics, Classroom, FlashcardDeck,
+│   │   │                          #   TrainingSession, DataPartner, TrainingData 他
+│   │   ├── views/                 # ビューパッケージ（機能ごとに分割）
+│   │   │   ├── song_crud.py       # 楽曲のCRUD（作成・一覧・削除・タイトル更新・公開設定・タグ）
+│   │   │   ├── generation.py      # アップロード/OCR、歌詞確認、生成API
+│   │   │   ├── home.py            # ホーム、楽曲一覧/詳細、"UNITE CINEMA MINATO"劇場機能
+│   │   │   ├── classroom.py       # クラスCRUD、参加/退出、課題
+│   │   │   ├── flashcard.py       # フラッシュカードCRUD/学習
+│   │   │   ├── training.py        # スタッフ限定LLM学習ダッシュボード＋API
+│   │   │   ├── staff.py           # スタッフツール、品質チェック
+│   │   │   ├── social.py          # いいね/お気に入り/コメント/再生履歴
+│   │   │   ├── utility.py         # 言語切替、音声プロキシ、違反ページ
+│   │   │   └── core.py            # ※未使用の残置ファイル（下記「技術的負債」参照）
+│   │   ├── services/               # AI連携レイヤー
+│   │   │   ├── lyria.py           # LyriaAIGenerator（楽曲生成、google-genai SDK）
+│   │   │   ├── song_generation.py # プロバイダ非依存の楽曲生成ヘルパー（現状Lyriaのみ対応）
 │   │   │   ├── gemini_lyrics.py   # GeminiLyricsGenerator
 │   │   │   ├── gemini_ocr.py      # GeminiOCR
-│   │   │   ├── local_llm.py       # LocalLLMLyricsGenerator, CloudLLMLyricsGenerator, backend factory
+│   │   │   ├── local_llm.py       # LocalLLM/CloudLLM歌詞生成、バックエンド選択ファクトリ
 │   │   │   ├── ollama.py          # OllamaLyricsGenerator
-│   │   │   ├── pdf_extractor.py   # PyMuPDF text extraction
-│   │   │   ├── hiragana.py        # Furigana/hiragana conversion for lyrics
-│   │   │   └── flashcard_extractor.py  # GeminiFlashcardExtractor
-│   │   ├── ai_services.py         # Backward-compat shim re-exporting services/
-│   │   ├── content_filter.py      # Bilingual rule-based content moderation
-│   │   ├── queue_manager.py       # ThreadPoolExecutor-based generation queue + WebSocket progress
-│   │   ├── consumers.py / routing.py  # Django Channels WebSocket handlers
+│   │   │   ├── pdf_extractor.py   # PyMuPDFによるテキスト抽出
+│   │   │   ├── hiragana.py        # 歌詞のふりがな変換
+│   │   │   ├── flashcard_extractor.py  # GeminiFlashcardExtractor
+│   │   │   ├── text_processing.py # Gemini共通ヘルパー（旧google-generativeai SDK使用）
+│   │   │   └── cache.py           # APIレスポンスキャッシュ
+│   │   ├── ai_services.py         # services/ への後方互換re-exportシム
+│   │   ├── content_filter.py      # 日英中3言語対応ルールベースコンテンツモデレーション
+│   │   ├── queue_manager.py       # ThreadPoolExecutorベースの生成キュー＋WebSocket進捗通知
+│   │   ├── consumers.py / routing.py  # Django Channels WebSocketハンドラ
 │   │   ├── forms.py, admin.py, apps.py
-│   │   ├── templatetags/          # Custom template filters
-│   │   ├── migrations/            # 46 migrations
-│   │   └── tests.py                # ~55 tests
-│   ├── users/                      # User management app
-│   │   ├── models.py               # Custom User (plan/BAN/age-verification fields),
-│   │   │                           #   StaffReviewObligation, TrainingDataReview, StaffMessage, ...
-│   │   ├── views.py                 # Auth, profile, Stripe checkout/webhook
+│   │   ├── templatetags/          # カスタムテンプレートフィルタ
+│   │   ├── management/commands/   # 定期実行コマンド（アンケート送信、パートナーデータ削除等）
+│   │   ├── migrations/            # 45マイグレーション
+│   │   └── tests.py                # 約80テスト
+│   ├── users/                      # ユーザー管理アプリ
+│   │   ├── models.py               # カスタムUser（プラン/BAN/年齢確認フィールド）、
+│   │   │                           #   StaffReviewObligation, TrainingDataReview,
+│   │   │                           #   TrainingDataEditLog, StaffMessage, ReviewBackup 他
+│   │   ├── views.py                 # 認証、プロフィール、Stripe決済/Webhook
 │   │   ├── middleware.py            # BanCheckMiddleware, StaffReviewLockMiddleware
 │   │   ├── forms.py
-│   │   └── tests.py                 # ~23 tests
-│   ├── templates/                   # HTML templates
-│   │   ├── base.html                 # Base template with Bootstrap 5
-│   │   ├── songs/                    # Song, flashcard, classroom, staff-tool, theater templates
-│   │   ├── users/                    # Auth, profile, upgrade/billing templates
-│   │   ├── admin/                    # Admin 2FA, monitoring templates
-│   │   └── legal/                    # Privacy, Terms, Contact
-│   ├── static/                       # CSS, JS, images
+│   │   └── tests.py                 # 約23テスト
+│   ├── templates/                   # HTMLテンプレート
+│   │   ├── base.html                 # Bootstrap 5ベーステンプレート
+│   │   ├── songs/                    # 楽曲、フラッシュカード、クラス、スタッフツール、劇場機能テンプレート
+│   │   ├── users/                    # 認証、プロフィール、アップグレード/請求テンプレート
+│   │   ├── admin/                    # 管理画面2FA、監視テンプレート
+│   │   └── legal/                    # プライバシー、利用規約、お問い合わせ
+│   ├── static/                       # CSS、JS、画像
+│   ├── .env.example                  # ※現在空ファイル（技術的負債）
 │   └── manage.py
-├── training/                        # Self-hosted LoRA training + inference pipeline
-│   ├── train.py                     # QLoRA fine-tuning script (argparse CLI, multi-GPU aware)
-│   ├── serve.py                     # Flask REST inference server (/health, /generate)
-│   ├── training_agent.py            # Orchestration agent: polls Django, drives train.py/serve.py
-│   ├── webui/app.py                 # Gradio WebUI for the training platform
-│   ├── generate_history_data.py     # Gemini-based synthetic training-data generation
-│   ├── lyrics_generation/, note_importance/  # Dataset builders/trainers for two model types
+├── training/                        # 自前ホストLoRA学習＋推論パイプライン（歌詞生成専用）
+│   ├── train.py                     # QLoRAファインチューニングスクリプト（argparse CLI、マルチGPU対応）
+│   ├── serve.py                     # Flask REST推論サーバー（/health, /generate）
+│   ├── training_agent.py            # オーケストレーションエージェント：Djangoをポーリングし train.py/serve.py を起動
+│   ├── webui/app.py                 # 学習基盤用のGradio WebUI
+│   ├── export_training_data.py      # 本番DBから学習データをエクスポート
+│   ├── generate_history_data.py     # Geminiによる学習データの合成生成
+│   ├── build_lyrics_dataset.py / build_importance_dataset.py  # データセット構築
+│   ├── quality_check.py             # 生成データの品質チェック
+│   ├── lyrics_generation/, note_importance/  # 2種のモデルのデータセットビルダー/トレーナー
 │   ├── requirements_training.txt
 │   └── README.md
-├── docs/                            # Design documents (Japanese)
-│   ├── SOFTWARE_DESIGN.md           # Detailed software design, sequence diagrams, tech-debt log
-│   ├── ARCHITECTURE.md              # System configuration, ER diagram, URL routing table
-│   ├── CUSTOM_LLM_ROADMAP.md        # Roadmap for the self-hosted LLM initiative
-│   └── meeting_pitch_*.md           # Business/partner pitch notes (Clearnote, Kokuyo)
-├── UtaMemo/                          # Separate SwiftUI iOS prototype (own git repo, not wired to backend)
-├── requirements.txt                  # Production dependencies (Django app)
-├── render.yaml                       # Render.com deployment config
-├── build.sh                          # Render build script
+├── docs/                             # 設計ドキュメント（日本語）
+│   ├── SOFTWARE_DESIGN.md           # 詳細ソフトウェア設計、シーケンス図、技術的負債ログ
+│   ├── ARCHITECTURE.md              # システム構成、ER図、URLルーティング表
+│   ├── CUSTOM_LLM_ROADMAP.md        # 自前ホストLLM構想のロードマップ
+│   ├── DATA_PARTNER_COMPLIANCE.md   # 外部データ提携先（Clearnote/Kokuyo等）のコンプライアンス管理
+│   └── meeting_pitch_*.md           # 事業提携ピッチ資料（Clearnote、Kokuyo向け）
+├── UtaMemo/                          # 独立したSwiftUI iOSプロトタイプ（独自gitリポジトリ、バックエンド未連携）
+├── requirements.txt                  # 本番依存関係（Djangoアプリ）
+├── render.yaml                       # Render.comデプロイ設定
+├── build.sh                          # Renderビルドスクリプト
 ├── Procfile
-├── DOMAIN_SETUP.md / DOMAIN_SETUP_EN.md  # Domain/DNS setup guide
-└── CONTRIBUTING.md                   # Contributor guide (Japanese)
+├── DOMAIN_SETUP.md / DOMAIN_SETUP_EN.md  # ドメイン/DNS設定ガイド
+└── CONTRIBUTING.md                   # 共同開発ガイド
 ```
 
 ---
 
-## Core Workflows
+## コアワークフロー
 
-### 1. Song Generation Pipeline
-
-```
-User uploads photo or PDF
-       |
-       v
-Gemini OCR (image) or PyMuPDF (PDF) extracts text
-       |
-       v
-ContentFilter validates extracted text
-       |
-       v
-Lyrics generated via LYRICS_BACKEND
-  (gemini | cloud | local | ollama | auto)
-  auto mode tries: Cloud LLM -> Ollama -> Local LLM -> Gemini
-       |
-       v
-User reviews/edits lyrics, confirms
-       |
-       v
-Queued in songs/queue_manager.py (ThreadPoolExecutor,
-  concurrency-limited, retries with backoff)
-       |
-       v
-Mureka API generates the song (async, polled to completion)
-       |
-       v
-Optional: Demucs-based karaoke (instrumental) extraction
-       |
-       v
-Audio stored in Cloudflare R2; progress pushed live via
-  Django Channels WebSocket
-       |
-       v
-Song completed -> shareable via unique share_id
-```
-
-### 2. Flashcard Generation
+### 1. 楽曲生成パイプライン
 
 ```
-Song lyrics or source image
+ユーザーが写真またはPDFをアップロード
        |
        v
-Gemini extracts term/definition pairs (GeminiFlashcardExtractor)
+Gemini OCR（画像）または PyMuPDF（PDF）でテキストを抽出
        |
        v
-FlashcardDeck created, cards tagged by importance (high/normal)
+ContentFilterが抽出テキストを検証
        |
        v
-User studies cards; each tracks a 4-level mastery score
-  (未学習 / 学習中 / もう少し / 覚えた)
+LYRICS_BACKEND に従って歌詞を生成
+  （gemini | cloud | local | ollama | auto）
+  autoモードは クラウドLLM → Ollama → ローカルLLM → Gemini の順に試行
+       |
+       v
+ユーザーが歌詞を確認・編集して確定
+       |
+       v
+songs/queue_manager.py のキューに投入
+  （ThreadPoolExecutor、並列数制限、リトライ＋バックオフ）
+       |
+       v
+Lyria API（Google GenAI SDK）が楽曲を生成
+       |
+       v
+任意: Demucsベースのカラオケ（インスト）音源抽出
+       |
+       v
+音声をストレージに保存。Django ChannelsのWebSocketで
+  進捗をリアルタイム配信
+       |
+       v
+生成完了 -> 一意のshare_idで共有可能に
 ```
 
-### 3. Subscription Flow
+### 2. フラッシュカード生成
 
 ```
-User clicks upgrade
+楽曲の歌詞または元画像
        |
        v
-Age verification (if under 18 -> guardian consent required
-  before any payment can proceed)
+Geminiが用語・定義ペアを抽出（GeminiFlashcardExtractor）
        |
        v
-Stripe Checkout session created (plan-specific price ID)
+FlashcardDeckを作成、重要度でカードにタグ付け（高/通常）
        |
        v
-Payment completed
-       |
-       v
-Stripe webhook signature verified
-       |
-       v
-User.plan updated (starter / pro / school), monthly
-  generation limits recalculated
+ユーザーが学習。カードごとに4段階の習熟度を記録
+  （未学習 / 学習中 / もう少し / 覚えた）
 ```
 
-### 4. Classroom Feature (School Plan)
+### 3. サブスクリプションフロー
 
 ```
-Teacher creates a Classroom -> gets a unique join code
+ユーザーがアップグレードをクリック
        |
        v
-Shares the code with students
+年齢確認（18歳未満は保護者同意が決済前に必須）
        |
        v
-Students join with the code (requires school plan)
+Stripe Checkoutセッションを作成（プラン別の価格ID）
        |
        v
-Teacher shares songs into the class, or creates a
-  ClassroomAssignment (song + due date + note)
+決済完了
        |
        v
-Students study assigned songs via auto-generated flashcards
+Stripe Webhookの署名を検証
+       |
+       v
+User.planを更新（starter / pro / school）、
+  月間生成上限を再計算
 ```
 
-### 5. Self-Hosted LLM Training Loop
+### 4. クラス機能（School プラン）
 
 ```
-Django TrainingSession row created / staff issues a
-  pending_command (start / stop / start_serve)
+教師がClassroomを作成 -> 一意の参加コードを発行
        |
        v
-training_agent.py (running on the GPU machine) polls the
-  Django API, picks up the command
+生徒に参加コードを共有
        |
        v
-train.py runs QLoRA fine-tuning (base model: Qwen2.5-14B-Instruct,
-  auto multi-GPU memory split), reports live loss/step/GPU
-  metrics back to TrainingSession
+生徒が参加コードで参加（Schoolプランが必要）
        |
        v
-serve.py (Flask) or webui/app.py (Gradio) exposes the
-  fine-tuned model over HTTP, tunneled to the internet via
-  Cloudflare Tunnel
+教師が楽曲をクラスに共有、または
+  ClassroomAssignment（楽曲＋締切＋メモ）を作成
        |
        v
-Production sets LOCAL_LLM_URL / LYRICS_BACKEND=local (or auto)
-  to route lyrics generation to the self-hosted model
+生徒は自動生成されたフラッシュカードで課題楽曲を学習
 ```
+
+### 5. 自前ホストLLM学習ループ（歌詞生成専用）
+
+```
+DjangoでTrainingSessionレコードが作成 / スタッフが
+  pending_command を発行（start / stop / start_serve）
+       |
+       v
+training_agent.py（GPUマシン上で稼働）がDjangoのAPIを
+  ポーリングし、コマンドを取得
+       |
+       v
+train.py がQLoRAファインチューニングを実行し、
+  損失/ステップ/GPU使用率などをTrainingSessionに
+  リアルタイム報告
+       |
+       v
+serve.py（Flask）または webui/app.py（Gradio）が
+  ファインチューニング済みモデルをHTTPで公開。
+  Cloudflare Tunnel経由でインターネットに接続
+       |
+       v
+本番環境で LOCAL_LLM_URL / LYRICS_BACKEND=local（またはauto）
+  を設定し、歌詞生成を自前ホストモデルにルーティング
+```
+
+> このパイプラインは**歌詞生成専用**です。楽曲（音声）生成には一切関与せず、音楽生成は常にLyria（`songs/services/lyria.py`）が担当します。
 
 ---
 
-## Data Model (Highlights)
+## データモデル（抜粋）
 
-**`songs` app** — `Song` (title, genre, vocal style, `mureka_model` V8/V9, generation status/queue position/retry count, encryption flag, share_id, like/play counters, karaoke status), `Lyrics` (content, OCR source text, LRC timing data), `Tag`, `Like` / `Favorite` / `Comment` / `PlayHistory`, `UploadedImage`, `Classroom` / `ClassroomMembership` / `ClassroomSong` / `ClassroomAssignment`, `FlashcardDeck` / `Flashcard`, `TrainingSession` (GPU/loss/step metrics, Wake-on-LAN fields, heartbeat), `PromptTemplate` (DB-managed lyric prompts, survives redeploys), `TrainingData` (deduplicated via SHA-256 hash), plus the standalone `TheaterReservation` / `TheaterSurveyResponse` pair for the unrelated cinema-booking feature.
+**`songs` アプリ** — `Song`（タイトル、ジャンル、ボーカルスタイル、生成ステータス/キュー位置/リトライ回数、暗号化フラグ、share_id、いいね/再生カウンタ、カラオケステータス。`mureka_model` フィールドはMureka提供終了に伴いレガシー参照としてのみ残存）、`Lyrics`（本文、OCR元テキスト、LRCタイミングデータ）、`Tag`、`Like` / `Favorite` / `Comment` / `PlayHistory`、`UploadedImage`、`Classroom` / `ClassroomMembership` / `ClassroomSong` / `ClassroomAssignment`、`FlashcardDeck` / `Flashcard`、`TrainingSession`（GPU/損失/ステップ指標、Wake-on-LANフィールド、ハートビート）、`PromptTemplate`（DB管理の歌詞プロンプト、再デプロイ後も保持）、`TrainingData`（SHA-256ハッシュで重複排除、`DataPartner`への任意の外部キーを保持）、`DataPartner` / `DataPartnerAuthorization` / `PartnerDataAccessLog`（外部データ提携先とのMOU管理・アクセス権限・監査ログ）、そして本体とは無関係な `TheaterReservation` / `TheaterSurveyResponse`（劇場予約機能用）。
 
-**`users` app** — a custom `User(AbstractUser)` with plan (`free`/`starter`/`pro`/`school`), Stripe customer/subscription IDs, BAN fields (`is_banned`, `ban_reason`, `banned_at`), teacher flag, birth date + guardian-consent fields with `is_minor`/`can_purchase()` helpers, and plan-based helpers like `get_monthly_song_limit()`. Also: `StaffReviewObligation` (mandatory training-data review workload for staff, auto-accrues and can lock staff out of other admin pages), `TrainingDataReview` (soft-deletable review queue, hash-deduplicated), `StaffMessage`, `ReviewBackup`.
-
----
-
-## Security Features
-
-| Threat | Countermeasure | Implementation |
-|--------|---------------|----------------|
-| Invalid/harmful input | Bilingual rule-based `ContentFilter` with academic/lyrical-context allowlisting | `songs/content_filter.py` |
-| SSRF | Domain allowlist for the audio proxy | `songs/views/utility.py: audio_proxy()` |
-| CSRF | Django CSRF middleware | `settings.py` |
-| Privilege escalation | `@login_required` + per-object ownership checks | Every relevant view |
-| Admin access | TOTP-based two-factor authentication + IP allowlist | `myproject/security.py` |
-| BAN bypass | `BanCheckMiddleware` forces logout on every request for banned users | `users/middleware.py` |
-| Payment forgery | Stripe webhook signature verification | `users/views.py` |
-| Minor payments | Birth date capture + guardian-consent gate before checkout | `users/models.py`, `users/views.py` |
-| Secret leakage | Environment variables only, `.env` gitignored | — |
-| Staff data-review evasion | `StaffReviewLockMiddleware` locks staff to the review queue once their obligation backlog crosses a threshold | `users/middleware.py` |
-
-### Encryption
-
-Songs can be stored encrypted with Fernet symmetric encryption:
-- AES-128-CBC cipher mode
-- 256-bit derived key from Django `SECRET_KEY` + a per-song salt
-- HMAC authentication for integrity verification
+**`users` アプリ** — プラン（`free`/`starter`/`pro`/`school`）、Stripe顧客/サブスクリプションID、BANフィールド（`is_banned`, `ban_reason`, `banned_at`）、教師フラグ、生年月日＋保護者同意フィールドと `is_minor`/`can_purchase()` ヘルパー、`get_monthly_song_limit()` などプラン別ヘルパーを持つカスタム `User(AbstractUser)`。加えて `StaffReviewObligation`（スタッフに課される学習データレビュー義務。自動的に蓄積し、滞留すると他の管理ページをロックする）、`TrainingDataReview`（ソフトデリート可能なレビューキュー、ハッシュで重複排除）、`TrainingDataEditLog`、`StaffMessage`、`ReviewBackup`。
 
 ---
 
-## Subscription Plans
+## セキュリティ機能
 
-| Plan | Price | Monthly Generation Limit | V9/V8 Models | Classroom |
-|------|-------|--------------------------|---------------|-----------|
-| **Free** | ¥0 | 5 songs/mo | Limited | No |
-| **Starter** | ¥780/mo | 70 songs/mo | Yes | No |
-| **Pro** | ¥1,900/mo | Unlimited | Yes | No |
-| **School** | ¥450 / student / mo | 100 songs/mo | Yes | Yes |
-| **Staff** | Free (invited) | Unlimited | Yes | Yes |
+| 脅威 | 対策 | 実装箇所 |
+|------|------|----------|
+| 不正/有害な入力 | 日英中3言語対応のルールベース `ContentFilter`（学術/歌詞文脈アローリスト付き） | `songs/content_filter.py` |
+| SSRF | 音声プロキシのドメイン許可リスト | `songs/views/utility.py: audio_proxy()` |
+| CSRF | DjangoのCSRFミドルウェア | `settings.py` |
+| 権限昇格 | `@login_required` ＋ オブジェクト単位の所有者チェック | 該当する全ビュー |
+| 管理画面アクセス | メールベースの2段階認証 ＋ IP許可リスト | `myproject/security.py` |
+| BAN回避 | `BanCheckMiddleware` がBANされたユーザーを全リクエストで強制ログアウト | `users/middleware.py` |
+| 決済偽造 | Stripe Webhook署名検証 | `users/views.py` |
+| 未成年の決済 | 生年月日の取得＋決済前の保護者同意ゲート | `users/models.py`, `users/views.py` |
+| シークレット漏えい | 環境変数のみで管理、`.env` はgit除外 | — |
+| スタッフのデータレビュー回避 | `StaffReviewLockMiddleware` がレビュー義務の滞留がしきい値を超えたスタッフをレビューキューにロック | `users/middleware.py` |
 
-> Staff/superuser accounts get all features automatically regardless of assigned plan.
+### 暗号化
 
----
-
-## AI Integration Details
-
-- **Lyrics generation** is provider-agnostic behind a common interface, selected via `LYRICS_BACKEND`:
-  - `gemini` (default) — Google Gemini
-  - `cloud` — any OpenAI-compatible endpoint (Together AI, Fireworks AI, Groq, OpenRouter, or a custom vLLM server)
-  - `local` — the team's self-hosted GPU inference server (`training/serve.py`)
-  - `ollama` — local Ollama for development
-  - `auto` — tries Cloud LLM → Ollama → Local LLM → Gemini, in that order, based on live availability checks
-- **Music generation** uses the Mureka API, with a `mureka_model` choice of `mureka-v9` (default) or `mureka-v8` per song; generation is asynchronous (submit → poll `/v1/song/query/{task_id}`) with retry/backoff for rate limits and transient errors, plus a dictionary-based Japanese→English music-style prompt translator and vocal-style-specific prompt engineering.
-- **OCR** uses Gemini for photos and PyMuPDF for PDFs.
-- **Flashcard extraction** uses Gemini to turn lyrics or source text into term/definition pairs with importance tagging.
-- **Karaoke tracks** use Demucs-based source separation to produce an instrumental-only version of a generated song.
+楽曲はFernet対称鍵暗号で暗号化保存できます。
+- AES-128-CBC暗号モード
+- Django `SECRET_KEY` ＋ 楽曲ごとのソルトから導出した256ビット鍵
+- 完全性検証用のHMAC認証
 
 ---
 
-## Self-Hosted LLM Training Platform
+## サブスクリプションプラン
 
-UTAMEMO includes a full pipeline (under `training/`) for fine-tuning and serving a custom lyrics-generation LLM on team-owned hardware, as a cost-control alternative to always calling cloud LLM APIs:
+| プラン | 価格 | 月間生成上限 | クラス機能 |
+|--------|------|--------------|-----------|
+| **Free** | ¥0 | 5曲/月 | なし |
+| **Starter** | ¥780/月 | 70曲/月 | なし |
+| **Pro** | ¥1,900/月 | 無制限 | なし |
+| **School** | ¥450 / 生徒 / 月 | 100曲/月 | あり |
+| **Staff** | 無料（招待制） | 無制限 | あり |
 
-- **Hardware**: home RTX 4060 Ti (16GB) and school dual RTX 4080 SUPER (32GB total)
-- **Base model**: `Qwen/Qwen2.5-14B-Instruct` by default (auto multi-GPU memory splitting when 2+ GPUs are detected), with prior support for Llama 3 (8B/3.1 8B), Gemma 2 9B, Phi-3-mini, and Qwen2.5-32B
-- **Fine-tuning method**: QLoRA (4-bit, via `bitsandbytes` + `peft`), configurable rank/epochs via CLI args in `train.py`
-- **Orchestration**: `training_agent.py` runs on the GPU machine, polls the Django `TrainingSession` model for pending commands (`start`/`stop`/`start_serve`), and reports live metrics (loss, step, GPU/VRAM usage, ETA) back to the web app
-- **Serving**: `serve.py` is a Flask REST API (`/health`, `/generate`, API-key authenticated) supporting both `transformers` and `vllm` inference backends; `webui/app.py` provides a separate Gradio-based management WebUI
-- **Connectivity**: the inference server is exposed to the internet via a Cloudflare Tunnel so Render (production) can reach it as `LOCAL_LLM_URL`
-- **Data pipeline**: training data can be exported from production, sampled, or synthetically generated via Gemini (`generate_history_data.py`); data is deduplicated by a SHA-256 hash and requires staff review (`StaffReviewObligation`/`TrainingDataReview`) before being used for training
-- **Two model tracks**: `lyrics_generation/` (main lyrics model) and `note_importance/` (a secondary model for scoring which extracted text is important enough to include)
-
-See [training/README.md](training/README.md) for the full setup guide.
+> スタッフ/スーパーユーザーアカウントは、割り当てプランに関わらず全機能を自動的に利用できます。
 
 ---
 
-## Testing
+## AI連携の詳細
+
+- **歌詞生成**は共通インターフェースの背後でプロバイダ非依存に実装されており、`LYRICS_BACKEND` で選択します（デフォルトは `gemini`）:
+  - `gemini`（デフォルト） — Google Gemini
+  - `cloud` — OpenAI互換の任意のエンドポイント（Together AI、Fireworks AI、Groq、OpenRouter、または独自のvLLMサーバー）
+  - `local` — チーム自前ホストのGPU推論サーバー（`training/serve.py`）
+  - `ollama` — 開発用のローカルOllama
+  - `auto` — 実際の稼働状況チェックに基づき、クラウドLLM → Ollama → ローカルLLM → Gemini の順に試行
+- **楽曲生成**はGoogleの **Lyria**（`lyria-3-pro-preview`）を、`google-genai` SDK（`client.interactions.create()`）経由で利用します。ジャンル・ボーカルスタイル固有のプロンプトエンジニアリング（日本語→英語のジャンル変換辞書、固定ボイスプリセット、ランダムなトーン/年齢バリエーション）を実装。生成された音声はDjangoのストレージに保存されます。
+  - 旧来使用していたMureka APIは提供終了に伴い完全に廃止され、現行コードでは `SUPPORTED_SONG_PROVIDERS = ('lyria',)` のみがサポートされています。
+- **OCR**は写真にGemini、PDFにPyMuPDFを使用します。
+- **フラッシュカード抽出**はGeminiで歌詞や元テキストから用語・定義ペアを重要度タグ付きで生成します。
+- **カラオケトラック**はDemucsによる音源分離で、生成済み楽曲のインストのみのバージョンを作成します。
+
+---
+
+## 自前ホストLLM学習基盤
+
+UTAMEMOには、チーム所有ハードウェア上で歌詞生成専用のカスタムLLMをファインチューニング・配信するための一連のパイプライン（`training/` 配下）が含まれています。クラウドLLM APIを常時呼び出す代わりのコスト削減策として位置づけられています。
+
+- **ハードウェア**: 自宅のRTX 4060 Ti（16GB）と、学校のRTX 4080 ×2（各16GB）
+- **ベースモデル**: デフォルトはLlama 3 8B。Gemma 2 9B、Qwen2.5（7B/14B/32B）などにも対応、GPUが2台以上の場合は自動でマルチGPUメモリ分割
+- **ファインチューニング手法**: QLoRA（4bit、`bitsandbytes` + `peft`）。ランク/エポック数などは `train.py` のCLI引数で設定可能
+- **オーケストレーション**: `training_agent.py` がGPUマシン上で稼働し、Djangoの `TrainingSession` モデルの保留コマンド（`start`/`stop`/`start_serve`）をポーリングして実行。損失・ステップ・GPU/VRAM使用率・ETAなどのライブ指標をWebアプリに報告
+- **配信**: `serve.py` は `transformers` と `vllm` の両推論バックエンドに対応したFlask REST API（`/health`, `/generate`、APIキー認証）。`webui/app.py` は別途Gradioベースの管理WebUIを提供
+- **接続**: 推論サーバーはCloudflare Tunnel経由でインターネットに公開され、Render（本番）が `LOCAL_LLM_URL` として到達可能
+- **データパイプライン**: 学習データは本番からエクスポート（`export_training_data.py`）、サンプリング、またはGeminiによる合成生成（`generate_history_data.py`）で用意。SHA-256ハッシュで重複排除され、学習に使う前にスタッフレビュー（`StaffReviewObligation`/`TrainingDataReview`）が必要
+- **2つのモデルトラック**: `lyrics_generation/`（メインの歌詞モデル）と `note_importance/`（抽出テキストの重要度をスコアリングする補助モデル）
+- **音楽生成は非対応**: このパイプラインは歌詞生成のみを対象とし、楽曲（音声）生成はLyriaが単独で担当します
+
+セットアップの詳細は [training/README.md](training/README.md) を参照してください。
+
+---
+
+## テスト
 
 ```bash
-# Run all tests
+# 全テストを実行
 python manage.py test --verbosity=2
 
-# Run specific app tests
+# 特定アプリのテストを実行
 python manage.py test songs --verbosity=2
 python manage.py test users --verbosity=2
 ```
 
-**Current test coverage:** ~78 tests (~55 in `songs`, ~23 in `users`). AI service calls are not yet mocked/tested (tracked as tech debt, see below).
+**現在のテストカバレッジ:** 約103テスト（`songs` に約80、`users` に約23）。AIサービス呼び出しはまだモック化/テストされていません（技術的負債として記録、下記参照）。
 
 ---
 
-## Multi-Language Support
+## 多言語対応
 
-UTAMEMO uses a custom **session-based** language switcher (not Django's built-in i18n framework):
+UTAMEMOはDjango標準のi18nフレームワークではなく、独自の**セッションベース**言語切替を使用しています。
 
-Supported languages: `ja` (Japanese), `en` (English), `zh` (Chinese), `es` (Spanish), `de` (German), `pt` (Portuguese), `nl` (Dutch)
+対応言語: `ja`（日本語）、`en`（英語）、`zh`（中国語）、`es`（スペイン語）、`de`（ドイツ語）、`pt`（ポルトガル語）、`nl`（オランダ語）
 
-Template branching example:
+テンプレート分岐の例:
 ```html
 {% if app_language == 'en' %}
   <h1>My Songs</h1>
@@ -457,124 +484,126 @@ Template branching example:
 
 ---
 
-## Branching Strategy
+## ブランチ戦略
 
 ```
-main                 <- Production (direct push prohibited)
-├── feature/xxx      <- New features
-├── fix/xxx          <- Bug fixes
-├── docs/xxx         <- Documentation updates
-└── refactor/xxx     <- Refactoring
+main                 <- 本番（直接pushは禁止）
+├── feature/xxx      <- 新機能
+├── fix/xxx          <- バグ修正
+├── docs/xxx         <- ドキュメント更新
+└── refactor/xxx     <- リファクタリング
 ```
 
-### Commit Message Convention
+### コミットメッセージ規約
 
-| Prefix | Purpose | Example |
-|--------|---------|---------|
-| `feat:` | New feature | `feat: フラッシュカードのフィルタ機能追加` |
-| `fix:` | Bug fix | `fix: ログイン時のリダイレクトエラーを修正` |
-| `docs:` | Documentation | `docs: README にセットアップ手順追加` |
+| プレフィックス | 目的 | 例 |
+|--------|------|------|
+| `feat:` | 新機能 | `feat: フラッシュカードのフィルタ機能追加` |
+| `fix:` | バグ修正 | `fix: ログイン時のリダイレクトエラーを修正` |
+| `docs:` | ドキュメント | `docs: README にセットアップ手順追加` |
 | `style:` | UI/CSS | `style: ソングカードのレスポンシブ対応` |
-| `refactor:` | Refactoring | `refactor: views.py の重複コードを統合` |
-| `test:` | Tests | `test: Song モデルのユニットテスト追加` |
-| `chore:` | Other | `chore: requirements.txt 更新` |
+| `refactor:` | リファクタリング | `refactor: views.py の重複コードを統合` |
+| `test:` | テスト | `test: Song モデルのユニットテスト追加` |
+| `chore:` | その他 | `chore: requirements.txt 更新` |
 
 ---
 
-## Development Tasks & Technical Debt
+## 開発タスク・技術的負債
 
-Tracked in detail in [docs/SOFTWARE_DESIGN.md](docs/SOFTWARE_DESIGN.md):
+[docs/SOFTWARE_DESIGN.md](docs/SOFTWARE_DESIGN.md) で詳細に管理:
 
-| ID | Priority | Task | Status |
-|----|----------|------|--------|
-| D-1 | High | Split `ai_services.py` monolith into `services/` modules | **Done** — now a re-export shim over `songs/services/` |
-| D-2 | High | Split `views/core.py` (still 2,140 lines) into smaller modules | Planned |
-| D-3 | Medium | Split `songs/models.py` (17 models, ~1,100 lines) into modules | Planned |
-| D-4 | Medium | Clarify service layer — some business logic still lives in views | Planned |
-| D-5 | Medium | Add AI-service mock tests (currently zero) | Planned |
-| D-6 | Low | Migrate from session-based i18n to Django's i18n framework | Future |
-| D-7 | Low | Add frontend test coverage (currently none) | Future |
-
----
-
-## Admin & Staff Features
-
-### Admin Tools
-- **2FA Authentication**: TOTP-based two-factor authentication for admin access, plus optional IP allowlisting
-- **Monitoring Dashboard** (`staff_monitor.html`): real-time system/queue monitoring
-- **Content Moderation**: view and manage user-generated content reports and filter violations
-- **BAN Management**: ban/unban users, force logout on next request
-
-### Staff LLM Tools
-- **Training Dashboard**: monitor LoRA training sessions (loss, GPU usage, ETA) in real time
-- **Data Review Queue**: staff must review/approve or reject training-data samples before they're used (with an accruing review-obligation system that can lock staff out of other pages if backlog builds up)
-- **Prompt Template Editor**: manage DB-persisted prompt templates for lyrics generation (survives redeploys, unlike file-based prompts)
-- **LLM/Mureka Test Tools** (`test_llm.html`, `test_mureka.html`): manual testing UIs for the AI backends
-- **Quality Check Tool**: review generated training data quality before it enters a training run
+| ID | 優先度 | タスク | 状態 |
+|----|--------|------|------|
+| D-1 | 高 | `ai_services.py` のモノリスを `services/` モジュールへ分割 | **完了** — `songs/services/` へのre-exportシムに置き換え済み |
+| D-2 | 高 | `views/core.py`（`song_crud.py`/`home.py`等に機能移管済みだが、ファイル自体は未削除で残置） | 削除待ち |
+| D-3 | 高 | `myproject/myproject/queue_manager.py` の削除 — 存在しない `MurekaAIGenerator` をimportしており、実行されればcrashする未使用の残置ファイル | 削除待ち |
+| D-4 | 高 | `myproject/.env.example` が空ファイル。実際に必要な環境変数（`GEMINI_API_KEY`, `LYRIA_*`, `LYRICS_BACKEND`, `STRIPE_*` 等）を反映して再作成 | 未着手 |
+| D-5 | 中 | `songs/models.py`（23モデル）を複数モジュールに分割 | 計画中 |
+| D-6 | 中 | サービス層の明確化 — 一部のビジネスロジックがまだビューに残存 | 計画中 |
+| D-7 | 中 | AIサービスのモックテストを追加（現状ゼロ） | 計画中 |
+| D-8 | 低 | `training/README.md` の `auto` バックエンド説明（「local優先」）が実際のコード（クラウド→Ollama→ローカル→Gemini）と乖離しているため修正 | 未着手 |
+| D-9 | 低 | セッションベースi18nからDjango標準のi18nフレームワークへの移行 | 将来対応 |
+| D-10 | 低 | フロントエンドのテストカバレッジ追加（現状なし） | 将来対応 |
 
 ---
 
-## API Endpoints (Internal, Selected)
+## 管理者・スタッフ機能
 
-`songs/urls.py` defines ~78 routes and `users/urls.py` ~20; highlights:
+### 管理ツール
+- **2段階認証**: 管理画面アクセス用のメールベース2FA（コード有効期限あり、8時間の検証済みセッションウィンドウ）、任意のIP許可リスト
+- **監視ダッシュボード**（`staff_monitor.html`）: リアルタイムのシステム/キュー監視
+- **コンテンツモデレーション**: ユーザー生成コンテンツの通報とフィルタ違反の閲覧・管理
+- **BAN管理**: ユーザーのBAN/解除、次回リクエスト時の強制ログアウト
 
-| URL Pattern | View | Authentication | Description |
-|-------------|------|----------------|-------------|
-| `/songs/create/` | CreateSongView | Login required | Song creation page |
-| `/songs/generate/` | UploadImageView | Login required | Upload textbook photo/PDF |
-| `/songs/lyrics/generate/` (API) | generate_lyrics_api | Login required | Generate lyrics via the active AI backend |
-| `/songs/<id>/` | SongDetailView | Public | Song detail page |
-| `/songs/my/` | MySongsView | Login required | User's song list |
-| `/songs/classroom/` | ClassroomListView | School plan | Classroom management |
-| `/songs/flashcard/` | FlashcardDeckListView | Login required | Flashcard decks |
-| `/accounts/register/` | RegistrationView | Anonymous only | User registration |
-| `/accounts/upgrade/` | upgrade_plan | Login required | Subscription upgrade |
-| `/api/stripe/create-session/` | create_checkout_session | Login required | Create Stripe Checkout session |
-| `/stripe/webhook/` | stripe_webhook | Webhook secret | Stripe webhook handler |
-
-Full route tables are documented in [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md).
+### スタッフ向けLLMツール
+- **学習ダッシュボード**: LoRA学習セッション（損失、GPU使用率、ETA）をリアルタイム監視
+- **データレビューキュー**: 学習データを使用前にスタッフがレビュー/承認/却下する必要あり（レビュー義務が蓄積し、滞留するとスタッフを他ページから締め出す仕組み付き）
+- **プロンプトテンプレートエディタ**: DB永続化された歌詞生成用プロンプトテンプレートを管理（ファイルベースと異なり再デプロイ後も保持）
+- **LLM/Lyriaテストツール**（`test_llm.html` 等）: AIバックエンドの手動テスト用UI
+- **品質チェックツール**: 学習データが学習実行に投入される前の品質レビュー
 
 ---
 
-## Documentation
+## APIエンドポイント（内部、抜粋）
 
-- [CONTRIBUTING.md](CONTRIBUTING.md) — Contributor guide (Japanese)
-- [docs/SOFTWARE_DESIGN.md](docs/SOFTWARE_DESIGN.md) — Detailed software design, sequence diagrams, tech-debt log (Japanese)
-- [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) — System configuration, ER diagram, full URL routing table (Japanese)
-- [docs/CUSTOM_LLM_ROADMAP.md](docs/CUSTOM_LLM_ROADMAP.md) — Roadmap for the self-hosted LLM initiative (Japanese)
-- [DOMAIN_SETUP.md](DOMAIN_SETUP.md) / [DOMAIN_SETUP_EN.md](DOMAIN_SETUP_EN.md) — Domain/DNS setup guide
-- [training/README.md](training/README.md) — Local LLM training server guide
+`songs/urls.py` が約74ルート、`users/urls.py` が約21ルートを定義。主なものを抜粋:
 
-> Note: `docs/SOFTWARE_DESIGN.md` and `docs/ARCHITECTURE.md` were last updated 2026-04-17 and lag behind some recent code changes (e.g. the `ai_services.py` → `services/` split and the Mureka V9 rollout are more advanced in code than in the docs).
+| URLパターン | ビュー | 認証 | 説明 |
+|-------------|--------|------|------|
+| `/songs/create/` | CreateSongView | ログイン必須 | 楽曲作成ページ |
+| `/songs/generate/` | UploadImageView | ログイン必須 | 教科書写真/PDFのアップロード |
+| `/songs/lyrics/generate/`（API） | generate_lyrics_api | ログイン必須 | 現在有効なAIバックエンドで歌詞生成 |
+| `/songs/<id>/` | SongDetailView | 公開 | 楽曲詳細ページ |
+| `/songs/my/` | MySongsView | ログイン必須 | ユーザーの楽曲一覧 |
+| `/songs/classroom/` | ClassroomListView | Schoolプラン | クラス管理 |
+| `/songs/flashcard/` | FlashcardDeckListView | ログイン必須 | フラッシュカードデッキ |
+| `/accounts/register/` | RegistrationView | 未ログインのみ | ユーザー登録 |
+| `/accounts/upgrade/` | upgrade_plan | ログイン必須 | サブスクリプションのアップグレード |
+| `/api/stripe/create-session/` | create_checkout_session | ログイン必須 | Stripe Checkoutセッションの作成 |
+| `/stripe/webhook/` | stripe_webhook | Webhookシークレット | Stripe Webhookハンドラ |
 
----
-
-## Contributing
-
-We welcome contributions! Please see [CONTRIBUTING.md](CONTRIBUTING.md) for setup instructions and development rules.
-
-### Getting Started
-
-1. Fork the repository
-2. Create a feature branch: `git checkout -b feature/your-feature-name`
-3. Make your changes
-4. Commit with conventional commit messages
-5. Push and create a Pull Request
+完全なルート一覧は [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) を参照してください。
 
 ---
 
-## Acknowledgments
+## ドキュメント
 
-- **Django** — The web framework for perfectionists with deadlines
-- **Bootstrap 5** — Frontend framework
-- **Google Gemini** — OCR, lyrics generation, and flashcard extraction
-- **Mureka** — AI music generation API
-- **Stripe** — Payment processing
-- **Cloudflare R2 / Tunnel** — Object storage and self-hosted-server connectivity
-- **PEFT / bitsandbytes / TRL** — LoRA/QLoRA fine-tuning of the self-hosted lyrics model
+- [CONTRIBUTING.md](CONTRIBUTING.md) — 共同開発ガイド
+- [docs/SOFTWARE_DESIGN.md](docs/SOFTWARE_DESIGN.md) — 詳細ソフトウェア設計、シーケンス図、技術的負債ログ
+- [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) — システム構成、ER図、URLルーティング全表
+- [docs/CUSTOM_LLM_ROADMAP.md](docs/CUSTOM_LLM_ROADMAP.md) — 自前ホストLLM構想のロードマップ
+- [docs/DATA_PARTNER_COMPLIANCE.md](docs/DATA_PARTNER_COMPLIANCE.md) — 外部データ提携先（Clearnote、Kokuyo等）とのMOUコンプライアンス管理
+- [DOMAIN_SETUP.md](DOMAIN_SETUP.md) / [DOMAIN_SETUP_EN.md](DOMAIN_SETUP_EN.md) — ドメイン/DNS設定ガイド（日本語版/英語版）
+- [training/README.md](training/README.md) — 自前ホストLLM学習サーバーのセットアップガイド
+
+> 注: `docs/SOFTWARE_DESIGN.md` と `docs/ARCHITECTURE.md` は2026-04-17時点の内容から更新されておらず、一部の最近のコード変更（例: Mureka → Lyriaへの音楽生成基盤の移行、`views/core.py` の分割）に追いついていません。
 
 ---
 
-Built by the UTAMEMO Team
+## コントリビューション
 
-<\!-- coderabbit test -->
+コントリビューションを歓迎します！セットアップ手順と開発ルールは [CONTRIBUTING.md](CONTRIBUTING.md) を参照してください。
+
+### はじめに
+
+1. リポジトリをフォーク
+2. フィーチャーブランチを作成: `git checkout -b feature/your-feature-name`
+3. 変更を実装
+4. コミット規約に従ってコミット
+5. push してプルリクエストを作成
+
+---
+
+## 謝辞
+
+- **Django** — 締め切りに追われる完璧主義者のためのWebフレームワーク
+- **Bootstrap 5** — フロントエンドフレームワーク
+- **Google Gemini** — OCR、歌詞生成、フラッシュカード抽出
+- **Google Lyria** — AI楽曲生成（`google-genai` SDK）
+- **Stripe** — 決済処理
+- **Cloudflare R2 / Tunnel** — オブジェクトストレージと自前ホストサーバーとの接続
+- **PEFT / bitsandbytes / TRL** — 自前ホスト歌詞モデルのLoRA/QLoRAファインチューニング
+
+---
+
+UTAMEMO開発チーム制作

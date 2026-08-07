@@ -39,3 +39,12 @@ training/data/sample_training_data.json
 training/data/snapshots/
 training/data/prompt_template.txt
 data/lyrics_training_data.json
+
+# Artifact JSON files (AI generation artifacts)
+*.artifact.json
+
+# Screenshot files
+mq*.png
+
+# OD Skills
+.od-skills/
