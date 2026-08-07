@@ -8,26 +8,93 @@
 UTAMEMO は、ユーザーが教科書やノートの写真から歌詞を生成し、AI で楽曲化する Web アプリケーション。
 「暗記ソングで楽しく学ぶ」をコンセプトに、教育×音楽 AI を融合。
 
-```
-┌─────────────┐    ┌─────────────┐    ┌──────────────┐
-│   ブラウザ    │───▶│  Django App  │───▶│  PostgreSQL  │
-│ (Bootstrap5) │◀───│  (Render)    │◀───│  (Render DB) │
-└─────────────┘    └──────┬───────┘    └──────────────┘
-                          │
-          ┌───────────────┼───────────────┐
-          ▼               ▼               ▼
-   ┌────────────┐  ┌────────────┐  ┌──────────────┐
-   │ Gemini API │  │ Mureka API │  │ Cloudflare   │
-   │ (歌詞生成/ │  │ (楽曲生成) │  │ R2 (音声     │
-   │  OCR/カード)│  │            │  │  ストレージ)  │
-   └────────────┘  └────────────┘  └──────────────┘
-          ▲
-          │
-   ┌────────────┐
-   │ 自宅/学校PC │
-   │ (LoRA学習+  │
-   │  推論サーバ) │
-   └────────────┘
+```mermaid
+flowchart TB
+    subgraph Clients["クライアント"]
+        U["User（ブラウザ）"]
+    end
+
+    subgraph FE["Frontend — Django Templates / Bootstrap5 / HTMX"]
+        Home["ホーム\n(楽曲一覧・検索)"]
+        Create["楽曲作成\n(画像アップロード→OCR→歌詞確認)"]
+        Detail["楽曲詳細\n(再生・歌詞表示・いいね・コメント)"]
+        Flashcard["フラッシュカード学習\n(Spaced Repetition)"]
+        Classroom["クラス機能\n(共有・参加・管理)"]
+        Profile["プロフィール/マイページ\n(プラン管理・お気に入り)"]
+    end
+
+    subgraph BE["Backend — Django / Python"]
+        Router["URLルーティング\n(myproject/urls + songs/urls + users/urls)"]
+        SongsApp["songs アプリ\n(楽曲CRUD・タグ・いいね・コメント\nPlayHistory・フラッシュカード・クラス)"]
+        UsersApp["users アプリ\n(認証・プロフィール・プラン管理)"]
+        QueueM["Queue Manager\n(生成ジョブ管理・ステータス追跡)"]
+        ContentFilter["コンテンツフィルター\n(禁止ワード・文脈判定)"]
+        OCRsvc["OCR サービス\n(Gemini Vision / PyMuPDF PDF抽出)"]
+        FlashcardSvc["フラッシュカード\n(SpacingExtractor・デッキ/カード管理)"]
+    end
+
+    subgraph AI["AI 生成バックエンド"]
+        Gemini["Gemini API\n(歌詞生成・OCR・ひらがな変換\n言語判定・カード抽出)"]
+        Mureka["Mureka API\n(楽曲生成 V8 / Vocaloid)"]
+        LocalLLM["自作LoRA推論サーバー\n(QLoRA fine-tuned Qwen2.5-14B\nCloudflare Tunnel 経由)"]
+        Ollama["Ollama\n(ローカル推論オプション)"]
+    end
+
+    subgraph Data["データ層"]
+        PostgreSQL[(PostgreSQL\n(Render Managed DB)\n楽曲・ユーザー・セッション・学習データ)]
+        R2Storage[(Cloudflare R2\n音声ファイルストレージ)]
+        MediaStore["Media Uploads\n(画像・プロフィール画像)"]
+    end
+
+    subgraph Pay["決済"]
+        Stripe["Stripe\n(サブスクリプション\nCheckout・Webhook)"]
+    end
+
+    subgraph Train["学習パイプライン (training/)"]
+        DataGen["学習データ自動生成\n(Gemini→履歴ベース)"]
+        QualityCheck["品質チェック\n(手動レビュー・検証)"]
+        LoRATrain["QLoRA 学習\n(rank=64, 3 epoch)"]
+        InferenceSrv["推論サーバー\n(FastAPI serve.py)"]
+    end
+
+    U --> Home & Create & Detail & Flashcard & Classroom & Profile
+
+    Home --> Router
+    Create --> Router
+    Detail --> Router
+    Flashcard --> Router
+    Classroom --> Router
+    Profile --> Router
+
+    Router --> SongsApp & UsersApp
+    Router --> QueueM
+
+    Create --> OCRsvc
+    Create --> ContentFilter
+    SongsApp --> FlashcardSvc
+
+    OCRsvc --> Gemini
+    SongsApp --> Gemini
+    SongsApp --> LocalLLM
+    FlashcardSvc --> Gemini
+
+    SongsApp --> Mureka
+    QueueM --> Mureka
+
+    SongsApp --> PostgreSQL
+    UsersApp --> PostgreSQL
+    FlashcardSvc --> PostgreSQL
+    QueueM --> PostgreSQL
+
+    Mureka --> R2Storage
+    SongsApp --> R2Storage
+
+    UsersApp --> Stripe
+
+    DataGen --> QualityCheck
+    QualityCheck --> LoRATrain
+    LoRATrain -. "merge→deploy" .-> InferenceSrv
+    InferenceSrv --> LocalLLM
 ```
 
 ## 2. Django アプリ構成
